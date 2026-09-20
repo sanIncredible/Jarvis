@@ -78,10 +78,19 @@ active_web_port = 5000
 
 
 def load_upstox_token():
-    """Loads active Upstox access token from environment or config file."""
+    """Loads active Upstox access token from environment, upstoxtoken.txt, or config file."""
     token = os.getenv("UPSTOX_ACCESS_TOKEN", "").strip()
     if token:
         return token
+
+    if os.path.isfile("upstoxtoken.txt"):
+        try:
+            with open("upstoxtoken.txt", "r", encoding="utf-8") as f:
+                tok = f.read().strip()
+                if tok:
+                    return tok
+        except Exception:
+            pass
 
     for cfg_path in [CONFIG_FILE, "credentials.json"]:
         if os.path.exists(cfg_path):
@@ -1908,6 +1917,15 @@ def run_upstox_scanner(once=False, auto_open_web=False):
 
     scanner_thread = threading.Thread(target=periodic_scanner, daemon=True)
     scanner_thread.start()
+
+    # If running headless under systemd (no interactive terminal), stay alive and wait for stop event
+    if not sys.stdin.isatty():
+        try:
+            while not stop_scanner_event.is_set():
+                time.sleep(1)
+        except (KeyboardInterrupt, SystemExit):
+            stop_scanner_event.set()
+        return
 
     # Interactive input loop in terminal
     while True:
