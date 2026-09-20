@@ -3,963 +3,1374 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>⚡ Upstox 3m ORB Scanner — Cloud Static Dashboard</title>
+<title>JARVIS PRO — Institutional 3m ORB & Market Scanner</title>
 <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    body { background: #131722; color: #d1d4dc; padding: 12px; }
-    
-    .header { 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
-        padding: 12px 16px; 
-        background: #1e222d; 
-        border-radius: 8px; 
-        margin-bottom: 12px; 
-        border: 1px solid #2a2e39;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-    .title-group { display: flex; flex-direction: column; gap: 3px; }
-    .title { font-size: 16px; font-weight: bold; color: #2962ff; display: flex; align-items: center; gap: 8px; }
-    .subtitle { font-size: 11px; color: #787b86; }
-    
-    .meta-group { 
-        display: flex; 
-        align-items: center; 
-        gap: 16px; 
-        flex-wrap: wrap; 
-        font-size: 12px;
-    }
-    .status-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: #181b24;
-        border: 1px solid #2a2e39;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 11px;
-    }
-    .pulse-dot {
-        width: 8px;
-        height: 8px;
-        background-color: #089981;
-        border-radius: 50%;
-        display: inline-block;
-        box-shadow: 0 0 8px #089981;
-        animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(8, 153, 129, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(8, 153, 129, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(8, 153, 129, 0); }
-    }
-    
-    .btn-refresh {
-        background: #2a2e39;
-        color: #d1d4dc;
-        border: 1px solid #363a45;
-        border-radius: 6px;
-        padding: 5px 12px;
-        font-size: 12px;
-        font-weight: bold;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        transition: all 0.15s;
-    }
-    .btn-refresh:hover {
-        background: #2962ff;
-        color: #fff;
-        border-color: #2962ff;
-    }
-    .btn-refresh:active {
-        transform: scale(0.96);
-    }
-    
-    .poll-selector {
-        display: inline-flex;
-        background: #181b24;
-        border: 1px solid #2a2e39;
-        border-radius: 6px;
-        overflow: hidden;
-    }
-    .poll-btn {
-        background: transparent;
-        border: none;
-        color: #787b86;
-        padding: 3px 8px;
-        font-size: 11px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-    .poll-btn.active {
-        background: #2962ff;
-        color: #fff;
-    }
+  :root {
+    --bg-main: #0a0d14;
+    --bg-card: #111622;
+    --bg-card-hover: #161c2b;
+    --bg-input: #151b29;
+    --border-subtle: #1e2638;
+    --border-bright: #2d384e;
+    --accent-blue: #2962ff;
+    --accent-blue-hover: #1e4bd8;
+    --accent-green: #00c087;
+    --accent-green-bg: rgba(0, 192, 135, 0.12);
+    --accent-red: #f43f5e;
+    --accent-red-bg: rgba(244, 63, 94, 0.12);
+    --accent-gold: #f59e0b;
+    --accent-gold-bg: rgba(245, 158, 11, 0.12);
+    --accent-cyan: #06b6d4;
+    --text-main: #e2e8f0;
+    --text-muted: #8492a6;
+    --text-dim: #4c566a;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+    --font-mono: 'SF Mono', 'Roboto Mono', 'Fira Code', ui-monospace, monospace;
+  }
 
-    .notice-box {
-        display: none;
-        background: rgba(245, 158, 11, 0.1);
-        border: 1px solid #f59e0b;
-        color: #f59e0b;
-        padding: 10px 14px;
-        border-radius: 8px;
-        margin-bottom: 12px;
-        font-size: 12px;
-        line-height: 1.5;
-    }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    padding: 12px;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
 
-    .table-box { overflow-x: auto; background: #1e222d; border-radius: 8px; border: 1px solid #2a2e39; }
-    table { width: 100%; border-collapse: collapse; min-width: 640px; }
-    th { background: #181b24; color: #787b86; font-size: 11px; text-transform: uppercase; padding: 10px 12px; letter-spacing: 0.5px; border-bottom: 1px solid #2a2e39; }
-    td { padding: 9px 12px; border-bottom: 1px solid #232733; font-size: 13px; vertical-align: middle; }
-    tr:hover { background: #262b3d; }
-    
-    .btn-sym { 
-        display: inline-flex; 
-        align-items: center; 
-        gap: 6px; 
-        padding: 6px 12px; 
-        background: #2962ff; 
-        color: #fff; 
-        font-weight: bold; 
-        border-radius: 6px; 
-        text-decoration: none; 
-        font-size: 13px; 
-        transition: transform 0.1s; 
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3); 
-    }
-    .btn-sym:active { transform: scale(0.95); background: #1e4bd8; }
-    
-    .star { color: #f59e0b; font-size: 16px; }
-    .dot-green { color: #089981; font-size: 15px; }
-    .dot-red { color: #f23645; font-size: 15px; }
-    .badge { display: inline-block; padding: 3px 7px; border-radius: 4px; font-weight: bold; font-size: 11px; }
-    .badge-h { background: rgba(8, 153, 129, 0.2); color: #089981; border: 1px solid #089981; }
-    .badge-l { background: rgba(242, 54, 69, 0.2); color: #f23645; border: 1px solid #f23645; }
-    .badge-m { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
-    .badge-sig { background: #2a2e39; color: #d1d4dc; font-size: 11px; padding: 3px 6px; border-radius: 4px; }
-    .badge-sig-bull { background: rgba(8, 153, 129, 0.25); color: #089981; border: 1px solid #089981; font-weight: bold; }
-    .tag-txt { font-family: monospace; font-size: 12px; color: #a3a6af; }
-    .pos { color: #089981; font-weight: bold; }
-    .neg { color: #f23645; font-weight: bold; }
-    .footer { margin-top: 10px; text-align: center; font-size: 11px; color: #787b86; }
+  /* Header & Navigation */
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
 
-    /* Hover Preview Chart Styles */
-    .btn-preview {
-        background: #2a2e39;
-        color: #787b86;
-        border: 1px solid #363a45;
-        border-radius: 4px;
-        padding: 5px 8px;
-        font-size: 12px;
-        cursor: pointer;
-        transition: all 0.15s;
-    }
-    .btn-preview:hover, .btn-preview:active {
-        background: #2962ff;
-        color: #fff;
-        border-color: #2962ff;
-    }
-    .chart-popup {
-        display: none;
-        position: fixed;
-        z-index: 99999;
-        width: 590px;
-        max-width: 95vw;
-        background: #181b24;
-        border: 1px solid #2962ff;
-        border-radius: 8px;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
-        overflow: hidden;
-        flex-direction: column;
-        pointer-events: auto;
-    }
-    .popup-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #1e222d;
-        padding: 8px 12px;
-        font-weight: bold;
-        font-size: 13px;
-        color: #d1d4dc;
-        border-bottom: 1px solid #2a2e39;
-        flex-wrap: wrap;
-        gap: 6px;
-    }
-    .tf-selector {
-        display: inline-flex;
-        background: #181b24;
-        border: 1px solid #363a45;
-        border-radius: 4px;
-        overflow: hidden;
-        margin-left: 6px;
-    }
-    .tf-btn {
-        background: transparent;
-        border: none;
-        color: #787b86;
-        padding: 2px 9px;
-        font-size: 11px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.15s;
-    }
-    .tf-btn:hover { color: #fff; }
-    .tf-btn.active {
-        background: #2962ff;
-        color: #fff;
-    }
-    .popup-close {
-        background: transparent;
-        border: none;
-        color: #787b86;
-        font-size: 16px;
-        cursor: pointer;
-        padding: 2px 6px;
-        line-height: 1;
-    }
-    .popup-close:hover { color: #fff; }
-    .popup-btn-app {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 11px;
-        color: #fff;
-        text-decoration: none;
-        font-weight: bold;
-        background: #2962ff;
-        padding: 4px 10px;
-        border-radius: 4px;
-        border: 1px solid #2962ff;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-    .popup-btn-app:hover { background: #1e4bd8; }
-    .popup-legend {
-        padding: 6px 12px;
-        background: #141721;
-        font-size: 11px;
-        font-family: monospace;
-        color: #8b949e;
-        border-bottom: 1px solid #232733;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .popup-canvas-wrap {
-        position: relative;
-        background: #131722;
-        width: 100%;
-        height: 330px;
-    }
-    #popup-canvas {
-        display: block;
-        width: 100%;
-        height: 100%;
-        cursor: crosshair;
-    }
+  .brand-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    background: linear-gradient(135deg, #1e40af, #2563eb);
+    border-radius: 8px;
+    font-weight: 900;
+    font-size: 16px;
+    color: #fff;
+    box-shadow: 0 0 12px rgba(37, 99, 235, 0.5);
+  }
+  .brand-title {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .brand-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(41, 98, 255, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .brand-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .nav-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .live-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #0d131f;
+    border: 1px solid var(--border-subtle);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+  }
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    background-color: var(--accent-green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent-green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 192, 135, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(0, 192, 135, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 192, 135, 0); }
+  }
+
+  .clock-pill {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pill-selector {
+    display: inline-flex;
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .pill-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 4px 9px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pill-btn:hover { color: #fff; }
+  .pill-btn.active {
+    background: var(--accent-blue);
+    color: #fff;
+  }
+
+  .btn-action {
+    background: var(--border-subtle);
+    color: var(--text-main);
+    border: 1px solid var(--border-bright);
+    border-radius: 6px;
+    padding: 5px 11px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+  .btn-action:hover {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+    color: #fff;
+  }
+  .btn-action:active { transform: scale(0.97); }
+
+  /* KPI Summary Cards */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .kpi-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+  }
+  .kpi-value {
+    font-size: 18px;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    color: #fff;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .kpi-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Breadth Bar */
+  .ratio-bar {
+    width: 100%;
+    height: 5px;
+    background: #232d42;
+    border-radius: 3px;
+    overflow: hidden;
+    display: flex;
+    margin-top: 4px;
+  }
+  .ratio-bull { background: var(--accent-green); height: 100%; }
+  .ratio-bear { background: var(--accent-red); height: 100%; }
+
+  /* Filter & Search Bar */
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .filter-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    background: #141a26;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .chip:hover { color: #fff; border-color: var(--border-bright); }
+  .chip.active {
+    background: rgba(41, 98, 255, 0.2);
+    border-color: var(--accent-blue);
+    color: #93c5fd;
+  }
+
+  .search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .search-input {
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    color: #fff;
+    padding: 5px 28px 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    width: 180px;
+    transition: all 0.2s;
+    outline: none;
+  }
+  .search-input:focus {
+    width: 220px;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 10px rgba(41, 98, 255, 0.3);
+  }
+  .search-shortcut {
+    position: absolute;
+    right: 8px;
+    font-size: 10px;
+    background: var(--border-subtle);
+    color: var(--text-muted);
+    padding: 1px 5px;
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  /* Table Box */
+  .table-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    overflow-x: auto;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 820px;
+    font-size: 13px;
+  }
+  thead {
+    background: #0e121a;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  th {
+    padding: 10px 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 700;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-bright);
+    user-select: none;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  th:hover { color: #fff; }
+  th.sort-active { color: #60a5fa; }
+  th .sort-icon { font-size: 9px; margin-left: 4px; }
+
+  tbody tr {
+    border-bottom: 1px solid #161c29;
+    transition: background 0.1s;
+  }
+  tbody tr:hover {
+    background: var(--bg-card-hover);
+  }
+
+  td {
+    padding: 8px 12px;
+    vertical-align: middle;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+  }
+
+  /* Stock Cell Components */
+  .stock-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-sans);
+  }
+  .btn-tv-app {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    background: #172136;
+    color: #93c5fd;
+    border: 1px solid #2563eb;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .btn-tv-app:hover {
+    background: var(--accent-blue);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+  }
+  .btn-preview-eye {
+    background: #1a2233;
+    color: var(--text-muted);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 3px 6px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.15s;
+  }
+  .btn-preview-eye:hover {
+    background: var(--accent-blue);
+    color: #fff;
+    border-color: var(--accent-blue);
+  }
+
+  /* Badges & Accents */
+  .star-badge {
+    color: var(--accent-gold);
+    font-size: 15px;
+    text-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+  }
+  .pill-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 11px;
+    font-family: var(--font-mono);
+  }
+  .badge-orb-h { background: var(--accent-green-bg); color: var(--accent-green); border: 1px solid var(--accent-green); }
+  .badge-orb-l { background: var(--accent-red-bg); color: var(--accent-red); border: 1px solid var(--accent-red); }
+  .badge-orb-m { background: var(--accent-gold-bg); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
+
+  .badge-bull-break {
+    background: rgba(0, 192, 135, 0.2);
+    color: #34d399;
+    border: 1px solid #059669;
+    font-weight: 800;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+  }
+  .badge-bear-break {
+    background: rgba(244, 63, 94, 0.2);
+    color: #fb7185;
+    border: 1px solid #e11d48;
+    font-weight: 800;
+    box-shadow: 0 0 10px rgba(244, 63, 94, 0.3);
+  }
+  .badge-range {
+    background: #182030;
+    color: var(--text-muted);
+    border: 1px solid #232e44;
+  }
+
+  .val-pos { color: var(--accent-green); font-weight: 700; }
+  .val-neg { color: var(--accent-red); font-weight: 700; }
+
+  /* Interactive Chart Modal / Popup */
+  .chart-popup {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    width: 680px;
+    max-width: 95vw;
+    background: #0d111a;
+    border: 1px solid #2563eb;
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+    overflow: hidden;
+    flex-direction: column;
+  }
+  .popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #131926;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .popup-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .popup-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #60a5fa;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .popup-hud {
+    background: #0a0e17;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    border-bottom: 1px solid #192233;
+    white-space: nowrap;
+    overflow-x: auto;
+  }
+  .popup-canvas-wrap {
+    position: relative;
+    width: 100%;
+    height: 360px;
+    background: #0a0d14;
+  }
+  #popup-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+  }
+  .popup-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #131926;
+    padding: 8px 14px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .btn-audio {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .btn-audio:hover { color: #fff; }
+
+  .footer {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
 </style>
 </head>
 <body>
-    <div class="header">
-        <div class="title-group">
-            <div class="title">
-                <span>⚡ Upstox 3m Dynamic ORB Scanner</span>
-            </div>
-            <div class="subtitle">Cloud Static View • Decoupled Data Feed (<code id="source-label">Upstox API v2</code>)</div>
+
+  <!-- Top Navigation Bar -->
+  <div class="top-bar">
+    <div class="brand-group">
+      <div class="brand-logo">J</div>
+      <div>
+        <div class="brand-title">
+          JARVIS PRO
+          <span class="brand-tag">SOTA 3M SCANNER</span>
         </div>
-        <div class="meta-group">
-            <div class="status-pill">
-                <span id="pulse-indicator" class="pulse-dot"></span>
-                <span id="status-text" style="font-weight:bold;">Syncing...</span>
-            </div>
-            <div>
-                Updated: <b id="updated-at-display">--:--:--</b>
-            </div>
-            <div style="color:#2962ff; font-weight:bold;">
-                ⏱ Next Sync: <span id="timer-display" style="color:#089981;">01:00</span>
-            </div>
-            <div class="poll-selector">
-                <button class="poll-btn" onclick="setPollInterval(30)">30s</button>
-                <button class="poll-btn active" onclick="setPollInterval(60)">60s</button>
-                <button class="poll-btn" onclick="setPollInterval(180)">3m</button>
-            </div>
-            <button class="btn-refresh" onclick="fetchData(true)" title="Force fetch latest data.json">
-                🔄 Refresh
-            </button>
-        </div>
+        <div class="brand-sub">Cloud-Native Engine • <span id="source-label">Upstox Pro API v2</span></div>
+      </div>
     </div>
 
-    <div id="notice-box" class="notice-box"></div>
+    <div class="nav-controls">
+      <div class="live-pill">
+        <span id="pulse-indicator" class="pulse-dot"></span>
+        <span id="status-text" style="font-weight:700; color:#fff;">CONNECTING</span>
+      </div>
 
-    <div class="table-box">
-        <table>
-            <thead>
-                <tr>
-                    <th style="width:35px; text-align:center;">#</th>
-                    <th>Stock (Hover for Chart)</th>
-                    <th style="text-align:center;">SS</th>
-                    <th style="text-align:center;">PDH</th>
-                    <th style="text-align:right;">H%</th>
-                    <th style="text-align:right;">L%</th>
-                    <th style="text-align:center;">ORB</th>
-                    <th style="text-align:center;">TAG</th>
-                    <th>Signal</th>
-                </tr>
-            </thead>
-            <tbody id="table-body">
-                <tr>
-                    <td colspan="9" style="text-align:center; padding: 40px 10px; color:#787b86;">
-                        ⏳ Connecting to feed & loading <code>data.json</code>...
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+      <div class="clock-pill">
+        <span>🕒</span>
+        <span id="updated-at-display">--:--:--</span>
+      </div>
+
+      <div class="clock-pill" style="color:#60a5fa;">
+        <span>⏱</span>
+        <span id="timer-display">01:00</span>
+      </div>
+
+      <div class="pill-selector">
+        <button class="pill-btn" onclick="setPollInterval(15)">15s</button>
+        <button class="pill-btn" onclick="setPollInterval(30)">30s</button>
+        <button class="pill-btn active" onclick="setPollInterval(60)">60s</button>
+        <button class="pill-btn" onclick="setPollInterval(180)">3m</button>
+      </div>
+
+      <button class="btn-action" onclick="fetchData(true)" title="Force Refresh Data (Shortcut: R)">
+        🔄 Refresh
+      </button>
+
+      <button id="btn-audio" class="btn-audio" onclick="toggleAudio()" title="Sound alert on Breakout">
+        🔔
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Summary Ribbon -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-title">Market Breadth <span id="kpi-total-cnt">16 Stocks</span></div>
+      <div class="kpi-value">
+        <span id="kpi-bull-cnt" style="color:var(--accent-green);">0</span>
+        <span style="font-size:13px; color:var(--text-muted); font-weight:400;">Adv</span>
+        <span style="color:var(--text-dim);">/</span>
+        <span id="kpi-bear-cnt" style="color:var(--accent-red);">0</span>
+        <span style="font-size:13px; color:var(--text-muted); font-weight:400;">Dec</span>
+      </div>
+      <div class="ratio-bar">
+        <div id="ratio-bull-bar" class="ratio-bull" style="width:50%;"></div>
+        <div id="ratio-bear-bar" class="ratio-bear" style="width:50%;"></div>
+      </div>
     </div>
 
-    <div class="footer">
-        💡 <b>Infosec Safe</b>: Static host fetches read-only <code>data.json</code> payload (~40KB). Zero external scripts, zero trackers. Sorted by Institutional Strength Score descending.
+    <div class="kpi-card">
+      <div class="kpi-title">Top Momentum</div>
+      <div class="kpi-value" id="kpi-top-mover">--</div>
+      <div class="kpi-sub" id="kpi-top-score">Highest Institutional Strength</div>
     </div>
 
-    <!-- Floating Hover Chart Popup -->
-    <div id="chart-popup" class="chart-popup" onmouseenter="cancelHidePopup()" onmouseleave="scheduleHidePopup()">
-        <div class="popup-header">
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span id="popup-title" style="font-weight:bold; color:#2962ff; font-size:13px;">📈 Symbol (3m Dynamic ORB)</span>
-                <!-- Timeframe Selector (3m vs Daily D) -->
-                <div class="tf-selector">
-                    <button id="tf-btn-3m" class="tf-btn active" onclick="switchTimeframe('3m')">3m</button>
-                    <button id="tf-btn-d" class="tf-btn" onclick="switchTimeframe('D')">D</button>
-                </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span id="popup-badges" style="display:inline-flex; gap:4px; font-size:11px;"></span>
-                <a id="popup-app-link" href="#" target="_blank" class="popup-btn-app" title="Launch native TradingView App">🚀 Open in TV App ↗</a>
-                <button class="popup-close" onclick="hideChartPopup()">✕</button>
-            </div>
+    <div class="kpi-card">
+      <div class="kpi-title">PDH Breaches</div>
+      <div class="kpi-value" id="kpi-pdh-cnt" style="color:var(--accent-gold);">0</div>
+      <div class="kpi-sub">Trading Above Yesterday's High</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-title">ORB Action Triggers</div>
+      <div class="kpi-value" id="kpi-orb-cnt" style="color:#38bdf8;">0</div>
+      <div class="kpi-sub">Bull Breakouts & High Formations</div>
+    </div>
+  </div>
+
+  <!-- Toolbar: Search & Filter Chips -->
+  <div class="toolbar">
+    <div class="filter-chips">
+      <span class="chip active" onclick="setFilter('all', this)">ALL (<span id="cnt-all">0</span>)</span>
+      <span class="chip" onclick="setFilter('ss', this)">★ Strong Start (<span id="cnt-ss">0</span>)</span>
+      <span class="chip" onclick="setFilter('pdh', this)">📌 PDH Broken (<span id="cnt-pdh">0</span>)</span>
+      <span class="chip" onclick="setFilter('bull', this)">🟢 Bullish (<span id="cnt-bull">0</span>)</span>
+      <span class="chip" onclick="setFilter('bear', this)">🔴 Bearish (<span id="cnt-bear">0</span>)</span>
+    </div>
+
+    <div class="search-wrap">
+      <input type="text" id="search-input" class="search-input" placeholder="Filter stocks (/) ..." oninput="renderFilteredTable()">
+      <span class="search-shortcut">/</span>
+    </div>
+  </div>
+
+  <!-- Live Market Data Table -->
+  <div class="table-box">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="handleSort('idx')" style="width:45px; text-align:center;"># <span id="sort-idx" class="sort-icon">▲</span></th>
+          <th onclick="handleSort('symbol')">Ticker / TV App <span id="sort-symbol" class="sort-icon"></span></th>
+          <th onclick="handleSort('ltp')" style="text-align:right;">LTP (₹) <span id="sort-ltp" class="sort-icon"></span></th>
+          <th onclick="handleSort('chg_pct')" style="text-align:right;">Change % <span id="sort-chg_pct" class="sort-icon"></span></th>
+          <th onclick="handleSort('is_ss')" style="text-align:center;">SS <span id="sort-is_ss" class="sort-icon"></span></th>
+          <th onclick="handleSort('pdh')" style="text-align:center;">PDH <span id="sort-pdh" class="sort-icon"></span></th>
+          <th onclick="handleSort('h_pct')" style="text-align:right;">H% <span id="sort-h_pct" class="sort-icon"></span></th>
+          <th onclick="handleSort('l_pct')" style="text-align:right;">L% <span id="sort-l_pct" class="sort-icon"></span></th>
+          <th onclick="handleSort('orb_status')" style="text-align:center;">ORB <span id="sort-orb_status" class="sort-icon"></span></th>
+          <th onclick="handleSort('tag')" style="text-align:center;">Tag <span id="sort-tag" class="sort-icon"></span></th>
+          <th onclick="handleSort('signal')">Algorithmic Signal <span id="sort-signal" class="sort-icon"></span></th>
+          <th onclick="handleSort('strength_score')" style="text-align:right;">Score <span id="sort-strength_score" class="sort-icon"></span></th>
+        </tr>
+      </thead>
+      <tbody id="table-body">
+        <tr>
+          <td colspan="12" style="text-align:center; padding: 50px 10px; color:var(--text-muted); font-size:14px;">
+            ⏳ Connecting to cloud feed payload (<code>data.json</code>)...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    JARVIS SOTA Dashboard • Pure Vanilla High-Performance Architecture • Zero External Dependencies • 60 FPS Native Canvas • Press [?] for Shortcuts
+  </div>
+
+  <!-- Interactive Candlestick Chart Modal -->
+  <div id="chart-popup" class="chart-popup" onmouseenter="cancelHidePopup()" onmouseleave="scheduleHidePopup()">
+    <div class="popup-header">
+      <div class="popup-title-group">
+        <span id="popup-title" class="popup-title">📈 SYMBOL</span>
+        <div class="pill-selector">
+          <button id="tf-btn-3m" class="pill-btn active" onclick="switchTimeframe('3m')">3m</button>
+          <button id="tf-btn-d" class="pill-btn" onclick="switchTimeframe('D')">Daily</button>
         </div>
-        <div id="popup-legend" class="popup-legend">Hover or touch chart to inspect candle OHLC</div>
-        <div class="popup-canvas-wrap">
-            <canvas id="popup-canvas"></canvas>
-        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span id="popup-badges" style="display:inline-flex; gap:6px;"></span>
+        <a id="popup-app-link" href="#" target="_blank" class="btn-tv-app" title="Launch Native TradingView Desktop / Web">🚀 TV App ↗</a>
+        <button class="btn-preview-eye" onclick="hideChartPopup()" style="font-size:14px; padding:3px 8px;">✕</button>
+      </div>
     </div>
+    <div id="popup-hud" class="popup-hud">
+      Hover crosshair over candles to inspect OHLCV metrics
+    </div>
+    <div class="popup-canvas-wrap">
+      <canvas id="popup-canvas"></canvas>
+    </div>
+    <div class="popup-footer">
+      <span>💡 Gold Line = Previous Day High (PDH) | Cyan/Orange = 3m Dynamic ORB</span>
+      <span id="popup-bar-count">0 Candles</span>
+    </div>
+  </div>
 
-    <script>
-    let CHARTS_DATA = {};
-    let activeSym = "";
-    let currentTimeframe = "3m";
-    let popupTimer = null;
-    let pollIntervalSeconds = 60;
-    let countdown = pollIntervalSeconds;
-    let countdownInterval = null;
+<script>
+  let RAW_STOCKS = [];
+  let CHARTS_DATA = {};
+  let activeSym = '';
+  let currentTimeframe = '3m';
+  let activeFilter = 'all';
+  let sortField = 'strength_score';
+  let sortAsc = false;
+  let pollIntervalSec = 60;
+  let countdown = pollIntervalSec;
+  let timerHandle = null;
+  let popupTimer = null;
+  let audioEnabled = false;
 
-    const popup = document.getElementById('chart-popup');
-    const popupTitle = document.getElementById('popup-title');
-    const popupBadges = document.getElementById('popup-badges');
-    const popupAppLink = document.getElementById('popup-app-link');
-    const canvas = document.getElementById('popup-canvas');
-    const tableBody = document.getElementById('table-body');
-    const timerDisplay = document.getElementById('timer-display');
-    const updatedAtDisplay = document.getElementById('updated-at-display');
-    const statusText = document.getElementById('status-text');
-    const pulseIndicator = document.getElementById('pulse-indicator');
-    const sourceLabel = document.getElementById('source-label');
-    const noticeBox = document.getElementById('notice-box');
+  const tableBody = document.getElementById('table-body');
+  const timerDisplay = document.getElementById('timer-display');
+  const updatedAtDisplay = document.getElementById('updated-at-display');
+  const statusText = document.getElementById('status-text');
+  const pulseIndicator = document.getElementById('pulse-indicator');
+  const sourceLabel = document.getElementById('source-label');
+  const searchInput = document.getElementById('search-input');
+  const popup = document.getElementById('chart-popup');
+  const popupTitle = document.getElementById('popup-title');
+  const popupBadges = document.getElementById('popup-badges');
+  const popupHud = document.getElementById('popup-hud');
+  const popupAppLink = document.getElementById('popup-app-link');
+  const popupBarCount = document.getElementById('popup-bar-count');
+  const canvas = document.getElementById('popup-canvas');
 
-    function setPollInterval(sec) {
-        pollIntervalSeconds = sec;
-        countdown = sec;
-        document.querySelectorAll('.poll-btn').forEach(btn => {
-            if (btn.innerText.includes(sec + 's') || (sec === 180 && btn.innerText === '3m')) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-        updateCountdownDisplay();
+  // Web Audio Synth for Alerts (Zero external audio files)
+  let audioCtx = null;
+  function toggleAudio() {
+    audioEnabled = !audioEnabled;
+    const btn = document.getElementById('btn-audio');
+    if (audioEnabled) {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      btn.innerText = '🔔 On';
+      btn.style.color = '#38bdf8';
+      playChime(600, 0.08);
+    } else {
+      btn.innerText = '🔕 Off';
+      btn.style.color = 'var(--text-muted)';
     }
-
-    function updateCountdownDisplay() {
-        if (!timerDisplay) return;
-        const m = Math.floor(countdown / 60);
-        const s = countdown % 60;
-        timerDisplay.innerText = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
-    }
-
-    function startTimer() {
-        if (countdownInterval) clearInterval(countdownInterval);
-        countdownInterval = setInterval(() => {
-            countdown--;
-            if (countdown <= 0) {
-                countdown = pollIntervalSeconds;
-                fetchData(false);
-            }
-            updateCountdownDisplay();
-        }, 1000);
-    }
-
-    function normalizeCandles(candles) {
-        if (!candles || !candles.length) return [];
-        return candles.map(c => {
-            if (Array.isArray(c)) {
-                return {
-                    t: c[0],
-                    o: Number(c[1]),
-                    h: Number(c[2]),
-                    l: Number(c[3]),
-                    c: Number(c[4]),
-                    v: Number(c[5] || 0)
-                };
-            }
-            return {
-                t: c.t,
-                o: Number(c.o),
-                h: Number(c.h),
-                l: Number(c.l),
-                c: Number(c.c),
-                v: Number(c.v || 0)
-            };
-        });
-    }
-
-    async function fetchData(isManual) {
-        if (isManual) {
-            statusText.innerText = "Syncing...";
-        }
-        try {
-            // Bulletproof path resolution: works whether URL has trailing slash, no trailing slash, or filename
-            let path = window.location.pathname || '/';
-            if (path.endsWith('.html') || path.endsWith('.htm')) {
-                path = path.substring(0, path.lastIndexOf('/') + 1);
-            } else if (!path.endsWith('/')) {
-                path += '/';
-            }
-            const url = (window.location.origin && window.location.origin !== 'null') 
-                ? (window.location.origin + path + 'data.json?t=' + Date.now())
-                : ('data.json?t=' + Date.now());
-
-            const res = await fetch(url, { cache: 'no-store' });
-            if (!res.ok) {
-                throw new Error('HTTP ' + res.status + ' (' + res.statusText + ')');
-            }
-            const data = await res.json();
-            handleDataLoaded(data);
-            noticeBox.style.display = 'none';
-        } catch (err) {
-            console.error('Failed to load data.json:', err);
-            statusText.innerText = "Waiting for data";
-            pulseIndicator.style.backgroundColor = '#f59e0b';
-            pulseIndicator.style.boxShadow = '0 0 8px #f59e0b';
-
-            if (window.location.protocol === 'file:') {
-                noticeBox.style.display = 'block';
-                noticeBox.innerHTML = '⚠️ <b>Local File Protocol Notice:</b> Browsers block <code>fetch()</code> on <code>file:///</code> URLs due to CORS security rules.<br>👉 <b>Solution:</b> Host this directory on <b>GitHub Pages</b> (recommended for laptop viewing) or run <code>python -m http.server 8000</code> in terminal.';
-            } else {
-                noticeBox.style.display = 'block';
-                noticeBox.innerHTML = '⚠️ <b>data.json not found or syncing:</b> ' + err.message + '. Will retry automatically in ' + countdown + 's.';
-            }
-        }
-    }
-
-    function handleDataLoaded(payload) {
-        if (!payload) return;
-        
-        statusText.innerText = "LIVE";
-        pulseIndicator.style.backgroundColor = '#089981';
-        pulseIndicator.style.boxShadow = '0 0 8px #089981';
-
-        if (payload.updated_at) updatedAtDisplay.innerText = payload.updated_at;
-        if (payload.source) sourceLabel.innerText = payload.source;
-
-        const stocks = payload.stocks || [];
-        CHARTS_DATA = {};
-
-        let rowsHtml = '';
-        stocks.forEach((stk, i) => {
-            const sym = stk.symbol;
-            const idx = stk.idx || (i + 1);
-            const is_ss = stk.is_ss;
-            const ss_display = is_ss ? '<span class="star">★</span>' : '<span style="color:#787b86;">-</span>';
-            const pdh_display = stk.pdh_broken ? '<span class="dot-green">●</span>' : '<span class="dot-red">●</span>';
-
-            const h_val = (stk.h_pct !== null && stk.h_pct !== undefined) ? (stk.h_pct >= 0 ? '+' : '') + Number(stk.h_pct).toFixed(1) + '%' : '-';
-            const h_class = (stk.h_pct && stk.h_pct > 0) ? 'pos' : 'neg';
-
-            const l_val = (stk.l_pct !== null && stk.l_pct !== undefined) ? (stk.l_pct >= 0 ? '+' : '') + Number(stk.l_pct).toFixed(1) + '%' : '-';
-            const l_class = (stk.l_pct && stk.l_pct > 0) ? 'pos' : 'neg';
-
-            const orb_status = stk.orb_status || 'M';
-            const orb_class = 'badge-' + orb_status.toLowerCase();
-            const orb_display = `<span class="badge ${orb_class}">${orb_status}</span>`;
-
-            const sig = stk.signal || 'IN RANGE';
-            const sig_class = (sig.includes('BREAKOUT') || sig.includes('ABOVE')) ? 'badge-sig-bull' : 'badge-sig';
-            const sig_display = `<span class="badge ${sig_class}">${sig}</span>`;
-
-            const tv_url = `https://in.tradingview.com/chart/?symbol=NSE:${sym}`;
-
-            // Normalize candle arrays or dicts
-            const c_3m = normalizeCandles(stk.candles_3m || stk.candles || []);
-            const c_d = normalizeCandles(stk.candles_d || []);
-
-            CHARTS_DATA[sym] = {
-                symbol: sym,
-                ltp: stk.ltp,
-                prev_close: stk.prev_close,
-                chg_pct: stk.chg_pct,
-                pdh: stk.pdh,
-                pdh_broken: stk.pdh_broken,
-                orb_high: stk.orb_high,
-                orb_low: stk.orb_low,
-                high_bar_num: stk.high_bar_num,
-                low_bar_num: stk.low_bar_num,
-                orb_status: stk.orb_status,
-                is_strong_start: stk.is_ss,
-                rvol: stk.rvol,
-                signal: stk.signal,
-                sma50: stk.sma50,
-                atr14: stk.atr14,
-                candles_3m: c_3m,
-                candles: c_3m,
-                candles_d: c_d
-            };
-
-            rowsHtml += `
-            <tr onmouseenter="showChartPopup(event, '${sym}')" onmouseleave="scheduleHidePopup()">
-                <td style="color:#787b86; text-align:center; font-weight:bold;">${idx}</td>
-                <td>
-                    <div style="display:inline-flex; align-items:center; gap:6px;">
-                        <a href="${tv_url}" class="btn-sym" title="Click to launch TradingView App">
-                            📈 ${sym}
-                        </a>
-                        <button class="btn-preview" onclick="showChartPopup(event, '${sym}', true)" title="Hover or tap to preview chart">👁</button>
-                    </div>
-                </td>
-                <td style="text-align:center;">${ss_display}</td>
-                <td style="text-align:center;">${pdh_display}</td>
-                <td class="${h_class}" style="text-align:right;">${h_val}</td>
-                <td class="${l_class}" style="text-align:right;">${l_val}</td>
-                <td style="text-align:center;">${orb_display}</td>
-                <td style="text-align:center;" class="tag-txt">${stk.tag || '-'}</td>
-                <td>${sig_display}</td>
-            </tr>
-            `;
-        });
-
-        tableBody.innerHTML = rowsHtml;
-
-        // If the chart popup is currently open for a stock, update it live!
-        if (activeSym && CHARTS_DATA[activeSym] && popup.style.display === 'flex') {
-            updatePopupHeader(CHARTS_DATA[activeSym]);
-            drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
-        }
-    }
-
-    function switchTimeframe(tf) {
-        currentTimeframe = tf;
-        const btn3m = document.getElementById('tf-btn-3m');
-        const btnD = document.getElementById('tf-btn-d');
-        if (btn3m && btnD) {
-            if (tf === 'D') {
-                btn3m.classList.remove('active');
-                btnD.classList.add('active');
-            } else {
-                btn3m.classList.add('active');
-                btnD.classList.remove('active');
-            }
-        }
-        if (activeSym && CHARTS_DATA[activeSym]) {
-            updatePopupHeader(CHARTS_DATA[activeSym]);
-            drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
-        }
-    }
-
-    function updatePopupHeader(data) {
-        if (!data) return;
-        const isDaily = (currentTimeframe === 'D');
-        popupTitle.innerText = "📈 " + data.symbol + (isDaily ? " (Daily Swing Chart)" : " (3m Dynamic ORB)");
-
-        let bHtml = `<span class="badge" style="background:#2a2e39; color:#fff;">LTP: ₹${Number(data.ltp).toFixed(2)}</span>`;
-        if (data.chg_pct !== undefined && data.chg_pct !== null) {
-            const col = data.chg_pct >= 0 ? '#089981' : '#f23645';
-            const sign = data.chg_pct >= 0 ? '+' : '';
-            bHtml += `<span class="badge" style="color:${col}; font-weight:bold;">${sign}${Number(data.chg_pct).toFixed(2)}%</span>`;
-        }
-
-        // Mark PDH in header
-        if (data.pdh) {
-            const pdhCol = data.pdh_broken ? '#089981' : '#f23645';
-            const pdhTxt = data.pdh_broken ? '● PDH Broken' : '● Below PDH';
-            bHtml += `<span class="badge" style="border:1px solid #ffd700; color:#ffd700;" title="Previous Day High">📌 PDH: ₹${Number(data.pdh).toFixed(1)} (<span style="color:${pdhCol}">${pdhTxt}</span>)</span>`;
-        }
-
-        if (!isDaily && data.orb_status) {
-            const col = data.orb_status === 'H' ? '#089981' : (data.orb_status === 'L' ? '#f23645' : '#f59e0b');
-            bHtml += `<span class="badge" style="border:1px solid ${col}; color:${col};">ORB: ${data.orb_status}</span>`;
-        }
-
-        if (data.is_strong_start) {
-            bHtml += `<span class="badge" style="background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid #f59e0b;">★ SS</span>`;
-        }
-
-        popupBadges.innerHTML = bHtml;
-    }
-
-    function drawCanvasChart(canvasEl, data, hoverX) {
-        if (!canvasEl) return;
-        const ctx = canvasEl.getContext('2d');
-        const dpr = window.devicePixelRatio || 1;
-        const rect = canvasEl.getBoundingClientRect();
-        const width = rect.width || 590;
-        const height = rect.height || 330;
-
-        if (canvasEl.width !== Math.floor(width * dpr) || canvasEl.height !== Math.floor(height * dpr)) {
-            canvasEl.width = Math.floor(width * dpr);
-            canvasEl.height = Math.floor(height * dpr);
-        }
-        ctx.resetTransform();
-        ctx.scale(dpr, dpr);
-
-        const W = width;
-        const H = height;
-
-        ctx.fillStyle = "#131722";
-        ctx.fillRect(0, 0, W, H);
-
-        const isDaily = (currentTimeframe === 'D');
-        const candles = isDaily ? ((data && data.candles_d) ? data.candles_d : []) : ((data && (data.candles_3m || data.candles)) ? (data.candles_3m || data.candles) : []);
-
-        if (!candles || candles.length === 0) {
-            ctx.fillStyle = "#787b86";
-            ctx.font = "13px sans-serif";
-            ctx.textAlign = "center";
-            const emptyMsg = isDaily ? "No Daily candle data available" : "No 3m intraday candle data yet (Session starts 09:15 AM)";
-            ctx.fillText(emptyMsg, W / 2, H / 2 - 10);
-            if (data && data.ltp) {
-                ctx.fillStyle = "#089981";
-                ctx.font = "bold 14px monospace";
-                ctx.fillText("LTP: ₹" + Number(data.ltp).toFixed(2), W / 2, H / 2 + 15);
-            }
-            return;
-        }
-
-        const paddingRight = 68;
-        const paddingBottom = 24;
-        const paddingTop = 16;
-        const paddingLeft = 8;
-        const plotW = W - paddingLeft - paddingRight;
-        const plotH = H - paddingTop - paddingBottom;
-        const volH = plotH * 0.18;
-        const pricePlotH = plotH - volH - 8;
-
-        let minPrice = Infinity;
-        let maxPrice = -Infinity;
-        let maxVol = 0;
-
-        for (let i = 0; i < candles.length; i++) {
-            const c = candles[i];
-            if (c.l < minPrice) minPrice = c.l;
-            if (c.h > maxPrice) maxPrice = c.h;
-            if (c.v > maxVol) maxVol = c.v;
-        }
-
-        // Always ensure PDH, LTP, and key levels are included in price bounds
-        if (data.pdh) {
-            maxPrice = Math.max(maxPrice, data.pdh);
-            minPrice = Math.min(minPrice, data.pdh);
-        }
-        if (data.ltp) {
-            maxPrice = Math.max(maxPrice, data.ltp);
-            minPrice = Math.min(minPrice, data.ltp);
-        }
-
-        if (!isDaily) {
-            if (data.orb_high) maxPrice = Math.max(maxPrice, data.orb_high);
-            if (data.orb_low) minPrice = Math.min(minPrice, data.orb_low);
-        } else {
-            if (data.sma50) {
-                maxPrice = Math.max(maxPrice, data.sma50);
-                minPrice = Math.min(minPrice, data.sma50);
-            }
-        }
-
-        const margin = (maxPrice - minPrice) * 0.08 || 1;
-        minPrice -= margin;
-        maxPrice += margin;
-        const priceRange = maxPrice - minPrice;
-
-        function getY(p) {
-            return paddingTop + (1 - (p - minPrice) / priceRange) * pricePlotH;
-        }
-        function getP(y) {
-            return minPrice + (1 - (y - paddingTop) / pricePlotH) * priceRange;
-        }
-
-        // Grid lines
-        ctx.strokeStyle = "#1e222d";
-        ctx.lineWidth = 1;
-        ctx.setLineDash([]);
-        ctx.fillStyle = "#787b86";
-        ctx.font = "10px monospace";
-        ctx.textAlign = "left";
-
-        for (let i = 0; i <= 4; i++) {
-            const y = paddingTop + (i / 4) * pricePlotH;
-            const p = getP(y);
-            ctx.beginPath();
-            ctx.moveTo(paddingLeft, y);
-            ctx.lineTo(W - paddingRight, y);
-            ctx.stroke();
-            ctx.fillText(p.toFixed(1), W - paddingRight + 5, y + 3);
-        }
-
-        function drawLevel(val, color, label, dash) {
-            if (!val || val < minPrice || val > maxPrice) return;
-            const y = getY(val);
-            ctx.save();
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 1.2;
-            ctx.setLineDash(dash || [4, 3]);
-            ctx.beginPath();
-            ctx.moveTo(paddingLeft, y);
-            ctx.lineTo(W - paddingRight, y);
-            ctx.stroke();
-
-            ctx.fillStyle = "rgba(19, 23, 34, 0.85)";
-            const tagStr = label + " " + val.toFixed(1);
-            ctx.font = "bold 9px monospace";
-            const tw = ctx.measureText(tagStr).width;
-            ctx.fillRect(paddingLeft + 4, y - 11, tw + 6, 12);
-
-            ctx.fillStyle = color;
-            ctx.fillText(tagStr, paddingLeft + 7, y - 2);
-            ctx.restore();
-        }
-
-        // 3m Mode Overlays: Dynamic ORB High & Low
-        if (!isDaily) {
-            if (data.orb_high) drawLevel(data.orb_high, "#00bcd4", "ORB-H", [4, 3]);
-            if (data.orb_low) drawLevel(data.orb_low, "#ff9800", "ORB-L", [4, 3]);
-        }
-
-        // Daily Mode Overlay: 50-Day SMA
-        if (isDaily && data.sma50) {
-            drawLevel(data.sma50, "#ab47bc", "50 SMA", [5, 4]);
-        }
-
-        // PDH Line (VIBRANT GOLD - CLEARLY MARKED)
-        if (data.pdh && data.pdh >= minPrice && data.pdh <= maxPrice) {
-            const yPdh = getY(data.pdh);
-            ctx.save();
-            ctx.strokeStyle = "#ffd700";
-            ctx.lineWidth = 1.8;
-            ctx.setLineDash([5, 3]);
-            ctx.beginPath();
-            ctx.moveTo(paddingLeft, yPdh);
-            ctx.lineTo(W - paddingRight, yPdh);
-            ctx.stroke();
-
-            // Left Pill Label
-            const pdhTag = "📌 PDH: ₹" + Number(data.pdh).toFixed(1) + (data.pdh_broken ? " (BREACHED)" : "");
-            ctx.font = "bold 10px monospace";
-            const tw = ctx.measureText(pdhTag).width;
-            ctx.fillStyle = "rgba(19, 23, 34, 0.9)";
-            ctx.fillRect(paddingLeft + 4, yPdh - 13, tw + 8, 14);
-            ctx.strokeStyle = "#ffd700";
-            ctx.lineWidth = 1;
-            ctx.setLineDash([]);
-            ctx.strokeRect(paddingLeft + 4, yPdh - 13, tw + 8, 14);
-
-            ctx.fillStyle = "#ffd700";
-            ctx.fillText(pdhTag, paddingLeft + 8, yPdh - 3);
-
-            // Right Axis Tag
-            ctx.fillStyle = "#ffd700";
-            ctx.fillRect(W - paddingRight + 2, yPdh - 7, paddingRight - 4, 15);
-            ctx.fillStyle = "#000000";
-            ctx.font = "bold 9px monospace";
-            ctx.fillText("PDH " + Number(data.pdh).toFixed(0), W - paddingRight + 4, yPdh + 4);
-            ctx.restore();
-        }
-
-        // LTP Dotted Line
-        if (data.ltp && data.ltp >= minPrice && data.ltp <= maxPrice) {
-            const yLtp = getY(data.ltp);
-            ctx.save();
-            ctx.strokeStyle = "rgba(41, 98, 255, 0.7)";
-            ctx.lineWidth = 1;
-            ctx.setLineDash([2, 2]);
-            ctx.beginPath();
-            ctx.moveTo(paddingLeft, yLtp);
-            ctx.lineTo(W - paddingRight, yLtp);
-            ctx.stroke();
-
-            ctx.fillStyle = "#2962ff";
-            ctx.fillRect(W - paddingRight + 2, yLtp - 8, paddingRight - 4, 16);
-            ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 10px monospace";
-            ctx.fillText(Number(data.ltp).toFixed(1), W - paddingRight + 5, yLtp + 4);
-            ctx.restore();
-        }
-
-        // Candlesticks
-        const n = candles.length;
-        const barSpacing = plotW / Math.max(n, 1);
-        const barWidth = Math.max(Math.min(barSpacing * 0.75, 12), 2);
-
-        let hoveredCandle = null;
-
-        for (let i = 0; i < n; i++) {
-            const c = candles[i];
-            const cx = paddingLeft + i * barSpacing + barSpacing / 2;
-            const oY = getY(c.o);
-            const hY = getY(c.h);
-            const lY = getY(c.l);
-            const cY = getY(c.c);
-            const isBull = c.c >= c.o;
-            const col = isBull ? "#089981" : "#f23645";
-
-            if (hoverX !== undefined && Math.abs(hoverX - cx) <= barSpacing / 2) {
-                hoveredCandle = Object.assign({}, c, { cx: cx, oY: oY, cY: cY, hY: hY, lY: lY, isBull: isBull });
-            }
-
-            const vH = maxVol > 0 ? (c.v / maxVol) * volH : 0;
-            const vY = (H - paddingBottom) - vH;
-            ctx.fillStyle = isBull ? "rgba(8, 153, 129, 0.25)" : "rgba(242, 54, 69, 0.25)";
-            ctx.fillRect(cx - barWidth / 2, vY, barWidth, vH);
-
-            ctx.strokeStyle = col;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(cx, hY);
-            ctx.lineTo(cx, lY);
-            ctx.stroke();
-
-            ctx.fillStyle = col;
-            const bodyTop = Math.min(oY, cY);
-            const bodyHeight = Math.max(Math.abs(cY - oY), 1.5);
-            ctx.fillRect(cx - barWidth / 2, bodyTop, barWidth, bodyHeight);
-
-            const step = Math.max(Math.floor(n / 6), 1);
-            if (i === 0 || i === n - 1 || (i % step === 0)) {
-                ctx.fillStyle = "#787b86";
-                ctx.font = "9px monospace";
-                ctx.textAlign = "center";
-                ctx.fillText(c.t, cx, H - 7);
-            }
-        }
-
-        // Tooltip / Crosshair
-        const legendEl = document.getElementById('popup-legend');
-        const tfLabel = isDaily ? "Date" : "Time";
-        if (hoveredCandle) {
-            ctx.save();
-            ctx.strokeStyle = "rgba(209, 212, 220, 0.4)";
-            ctx.setLineDash([3, 3]);
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(hoveredCandle.cx, paddingTop);
-            ctx.lineTo(hoveredCandle.cx, H - paddingBottom);
-            ctx.stroke();
-            ctx.restore();
-
-            if (legendEl) {
-                const cColor = hoveredCandle.isBull ? '#089981' : '#f23645';
-                legendEl.innerHTML = `<b>${tfLabel}: ${hoveredCandle.t}</b> | O: ₹${hoveredCandle.o.toFixed(2)} | H: ₹${hoveredCandle.h.toFixed(2)} | L: ₹${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor};font-weight:bold;">C: ₹${hoveredCandle.c.toFixed(2)}</span> | Vol: ${hoveredCandle.v.toLocaleString()}`;
-            }
-        } else if (legendEl && candles.length) {
-            const last = candles[candles.length - 1];
-            const cColor = last.c >= last.o ? '#089981' : '#f23645';
-            legendEl.innerHTML = `Latest [${tfLabel}: <b>${last.t}</b>] | O: ₹${last.o.toFixed(2)} | H: ₹${last.h.toFixed(2)} | L: ₹${last.l.toFixed(2)} | <span style="color:${cColor};font-weight:bold;">C: ₹${last.c.toFixed(2)}</span> | Vol: ${last.v.toLocaleString()}`;
-        }
-    }
-
-    function showChartPopup(e, sym, forceTap) {
-        if (popupTimer) {
-            clearTimeout(popupTimer);
-            popupTimer = null;
-        }
-
-        const popupWidth = Math.min(590, window.innerWidth - 20);
-        const popupHeight = 390;
-        let x = e.clientX || (window.innerWidth / 2 - popupWidth / 2);
-        let y = e.clientY || (window.innerHeight / 2 - popupHeight / 2);
-
-        let left = x + 15;
-        let top = y - 40;
-
-        if (left + popupWidth > window.innerWidth) {
-            left = x - popupWidth - 15;
-        }
-        if (left < 10) left = 10;
-
-        if (top + popupHeight > window.innerHeight) {
-            top = window.innerHeight - popupHeight - 15;
-        }
-        if (top < 10) top = 10;
-
-        popup.style.left = left + 'px';
-        popup.style.top = top + 'px';
-        popup.style.display = 'flex';
-
-        activeSym = sym;
-        const data = CHARTS_DATA[sym];
-
-        popupAppLink.href = "https://in.tradingview.com/chart/?symbol=NSE:" + sym;
-
-        if (data) {
-            updatePopupHeader(data);
-            drawCanvasChart(canvas, data);
-        }
-    }
-
-    canvas.addEventListener('mousemove', function(e) {
-        if (!activeSym || !CHARTS_DATA[activeSym]) return;
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        drawCanvasChart(canvas, CHARTS_DATA[activeSym], x);
+  }
+
+  function playChime(freq, dur) {
+    if (!audioEnabled || !audioCtx) return;
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  function setPollInterval(sec) {
+    pollIntervalSec = sec;
+    countdown = sec;
+    document.querySelectorAll('.pill-btn').forEach(btn => {
+      if (btn.innerText === (sec + 's') || (sec === 180 && btn.innerText === '3m')) {
+        btn.classList.add('active');
+      } else if (!btn.id.startsWith('tf-btn')) {
+        btn.classList.remove('active');
+      }
     });
-    canvas.addEventListener('mouseleave', function() {
-        if (!activeSym || !CHARTS_DATA[activeSym]) return;
-        drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    updateTimerText();
+  }
+
+  function updateTimerText() {
+    const m = Math.floor(countdown / 60);
+    const s = countdown % 60;
+    timerDisplay.innerText = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function startCountdown() {
+    if (timerHandle) clearInterval(timerHandle);
+    timerHandle = setInterval(() => {
+      countdown--;
+      if (countdown <= 0) {
+        countdown = pollIntervalSec;
+        fetchData(false);
+      }
+      updateTimerText();
+    }, 1000);
+  }
+
+  function normalizeCandles(candles) {
+    if (!candles || !candles.length) return [];
+    return candles.map(c => {
+      if (Array.isArray(c)) {
+        return { t: c[0], o: Number(c[1]), h: Number(c[2]), l: Number(c[3]), c: Number(c[4]), v: Number(c[5] || 0) };
+      }
+      return { t: c.t, o: Number(c.o), h: Number(c.h), l: Number(c.l), c: Number(c.c), v: Number(c.v || 0) };
     });
-    canvas.addEventListener('touchmove', function(e) {
-        if (!activeSym || !CHARTS_DATA[activeSym]) return;
-        if (e.touches && e.touches[0]) {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.touches[0].clientX - rect.left;
-            drawCanvasChart(canvas, CHARTS_DATA[activeSym], x);
-        }
-    }, { passive: true });
+  }
 
-    function scheduleHidePopup() {
-        popupTimer = setTimeout(function() {
-            hideChartPopup();
-        }, 350);
+  async function fetchData(isManual) {
+    if (isManual) {
+      statusText.innerText = 'SYNCING';
+      pulseIndicator.style.backgroundColor = '#38bdf8';
+    }
+    try {
+      let path = window.location.pathname || '/';
+      if (path.endsWith('.html') || path.endsWith('.htm')) {
+        path = path.substring(0, path.lastIndexOf('/') + 1);
+      } else if (!path.endsWith('/')) {
+        path += '/';
+      }
+      const url = (window.location.origin && window.location.origin !== 'null')
+        ? (window.location.origin + path + 'data.json?t=' + Date.now())
+        : ('data.json?t=' + Date.now());
+
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      processIncomingData(data);
+    } catch (err) {
+      statusText.innerText = 'STANDBY';
+      pulseIndicator.style.backgroundColor = '#f59e0b';
+    }
+  }
+
+  function processIncomingData(data) {
+    if (!data) return;
+    statusText.innerText = 'LIVE';
+    pulseIndicator.style.backgroundColor = '#00c087';
+
+    if (data.updated_at) updatedAtDisplay.innerText = data.updated_at;
+    if (data.source) sourceLabel.innerText = data.source;
+
+    RAW_STOCKS = data.stocks || [];
+    CHARTS_DATA = {};
+
+    let bullCount = 0;
+    let bearCount = 0;
+    let pdhCount = 0;
+    let orbCount = 0;
+    let topMover = null;
+
+    RAW_STOCKS.forEach(stk => {
+      const sym = stk.symbol;
+      const c_3m = normalizeCandles(stk.candles_3m || stk.candles || []);
+      const c_d = normalizeCandles(stk.candles_d || []);
+
+      CHARTS_DATA[sym] = {
+        symbol: sym,
+        ltp: stk.ltp,
+        prev_close: stk.prev_close,
+        chg_pct: stk.chg_pct,
+        pdh: stk.pdh,
+        pdh_broken: stk.pdh_broken,
+        orb_high: stk.orb_high,
+        orb_low: stk.orb_low,
+        high_bar_num: stk.high_bar_num,
+        low_bar_num: stk.low_bar_num,
+        orb_status: stk.orb_status,
+        is_strong_start: stk.is_ss,
+        rvol: stk.rvol,
+        signal: stk.signal,
+        strength_score: stk.strength_score,
+        tag: stk.tag,
+        h_pct: stk.h_pct,
+        l_pct: stk.l_pct,
+        sma50: stk.sma50,
+        atr14: stk.atr14,
+        candles_3m: c_3m,
+        candles_d: c_d
+      };
+
+      if (stk.chg_pct > 0) bullCount++;
+      else if (stk.chg_pct < 0) bearCount++;
+
+      if (stk.pdh_broken) pdhCount++;
+      if (stk.signal && (stk.signal.includes('BREAKOUT') || stk.signal.includes('ABOVE'))) orbCount++;
+
+      if (!topMover || (stk.strength_score > topMover.strength_score)) {
+        topMover = stk;
+      }
+    });
+
+    // Update KPIs
+    document.getElementById('kpi-total-cnt').innerText = RAW_STOCKS.length + ' Stocks';
+    document.getElementById('kpi-bull-cnt').innerText = bullCount;
+    document.getElementById('kpi-bear-cnt').innerText = bearCount;
+    const totalAdvDec = Math.max(bullCount + bearCount, 1);
+    document.getElementById('ratio-bull-bar').style.width = ((bullCount / totalAdvDec) * 100) + '%';
+    document.getElementById('ratio-bear-bar').style.width = ((bearCount / totalAdvDec) * 100) + '%';
+
+    document.getElementById('kpi-pdh-cnt').innerText = pdhCount;
+    document.getElementById('kpi-orb-cnt').innerText = orbCount;
+
+    if (topMover) {
+      const s = topMover.chg_pct >= 0 ? '+' : '';
+      const col = topMover.chg_pct >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+      document.getElementById('kpi-top-mover').innerHTML = `${topMover.symbol} <span style="font-size:14px; color:${col};">(${s}${topMover.chg_pct}%)</span>`;
+      document.getElementById('kpi-top-score').innerText = `Institutional Strength: ${topMover.strength_score}`;
     }
 
-    function cancelHidePopup() {
-        if (popupTimer) {
-            clearTimeout(popupTimer);
-            popupTimer = null;
-        }
+    // Filter counts
+    document.getElementById('cnt-all').innerText = RAW_STOCKS.length;
+    document.getElementById('cnt-ss').innerText = RAW_STOCKS.filter(s => s.is_ss).length;
+    document.getElementById('cnt-pdh').innerText = pdhCount;
+    document.getElementById('cnt-bull').innerText = bullCount;
+    document.getElementById('cnt-bear').innerText = bearCount;
+
+    renderFilteredTable();
+
+    // If modal is active for a stock, refresh its chart live
+    if (activeSym && CHARTS_DATA[activeSym] && popup.style.display === 'flex') {
+      updatePopupHeader(CHARTS_DATA[activeSym]);
+      drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    }
+  }
+
+  function setFilter(f, el) {
+    activeFilter = f;
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    if (el) el.classList.add('active');
+    renderFilteredTable();
+  }
+
+  function handleSort(field) {
+    if (sortField === field) {
+      sortAsc = !sortAsc;
+    } else {
+      sortField = field;
+      sortAsc = (field === 'symbol' || field === 'idx');
+    }
+    updateSortIcons();
+    renderFilteredTable();
+  }
+
+  function updateSortIcons() {
+    document.querySelectorAll('.sort-icon').forEach(si => si.innerText = '');
+    const activeIcon = document.getElementById('sort-' + sortField);
+    if (activeIcon) {
+      activeIcon.innerText = sortAsc ? '▲' : '▼';
+    }
+  }
+
+  function renderFilteredTable() {
+    const q = (searchInput.value || '').trim().toUpperCase();
+
+    let filtered = RAW_STOCKS.filter(stk => {
+      if (activeFilter === 'ss' && !stk.is_ss) return false;
+      if (activeFilter === 'pdh' && !stk.pdh_broken) return false;
+      if (activeFilter === 'bull' && stk.chg_pct <= 0) return false;
+      if (activeFilter === 'bear' && stk.chg_pct >= 0) return false;
+
+      if (q) {
+        const matchSym = stk.symbol.includes(q);
+        const matchTag = stk.tag && stk.tag.includes(q);
+        const matchSig = stk.signal && stk.signal.includes(q);
+        if (!matchSym && !matchTag && !matchSig) return false;
+      }
+      return true;
+    });
+
+    filtered.sort((a, b) => {
+      let va = a[sortField];
+      let vb = b[sortField];
+      if (va === null || va === undefined) va = -Infinity;
+      if (vb === null || vb === undefined) vb = -Infinity;
+      if (typeof va === 'string') {
+        return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+      }
+      return sortAsc ? (va - vb) : (vb - va);
+    });
+
+    let html = '';
+    filtered.forEach((stk, i) => {
+      const sym = stk.symbol;
+      const rank = stk.idx || (i + 1);
+      const tv_url = 'https://in.tradingview.com/chart/?symbol=NSE:' + sym;
+
+      const chg_sign = stk.chg_pct >= 0 ? '+' : '';
+      const chg_col = stk.chg_pct >= 0 ? 'val-pos' : 'val-neg';
+      const ltp_str = stk.ltp ? ('₹' + Number(stk.ltp).toFixed(2)) : '--';
+
+      const ss_html = stk.is_ss ? '<span class="star-badge">★</span>' : '<span style="color:var(--text-dim);">-</span>';
+      const pdh_html = stk.pdh_broken
+        ? '<span style="color:var(--accent-green); font-size:14px; text-shadow:0 0 6px rgba(0,192,135,0.4);">●</span>'
+        : '<span style="color:var(--text-dim); font-size:14px;">○</span>';
+
+      const h_str = (stk.h_pct !== null && stk.h_pct !== undefined) ? ((stk.h_pct >= 0 ? '+' : '') + Number(stk.h_pct).toFixed(1) + '%') : '-';
+      const l_str = (stk.l_pct !== null && stk.l_pct !== undefined) ? ((stk.l_pct >= 0 ? '+' : '') + Number(stk.l_pct).toFixed(1) + '%') : '-';
+
+      const orb_status = stk.orb_status || 'M';
+      const orb_badge = `<span class="pill-badge badge-orb-${orb_status.toLowerCase()}">${orb_status}</span>`;
+
+      const sig = stk.signal || 'IN RANGE';
+      let sig_cls = 'badge-range';
+      if (sig.includes('BREAKOUT') || sig.includes('ABOVE')) sig_cls = 'badge-bull-break';
+      else if (sig.includes('BREAKDOWN') || sig.includes('BELOW')) sig_cls = 'badge-bear-break';
+      const sig_badge = `<span class="pill-badge ${sig_cls}">${sig}</span>`;
+
+      html += `
+        <tr onmouseenter="showChartPopup(event, '${sym}')" onmouseleave="scheduleHidePopup()">
+          <td style="color:var(--text-muted); text-align:center;">${rank}</td>
+          <td>
+            <div class="stock-cell">
+              <a href="${tv_url}" target="_blank" class="btn-tv-app" title="Open in TradingView App">
+                ${sym} ↗
+              </a>
+              <button class="btn-preview-eye" onclick="showChartPopup(event, '${sym}', true)" title="Chart Preview">👁</button>
+            </div>
+          </td>
+          <td style="text-align:right; font-weight:700;">${ltp_str}</td>
+          <td class="${chg_col}" style="text-align:right;">${chg_sign}${Number(stk.chg_pct).toFixed(2)}%</td>
+          <td style="text-align:center;">${ss_html}</td>
+          <td style="text-align:center;">${pdh_html}</td>
+          <td class="${stk.h_pct > 0 ? 'val-pos' : 'val-neg'}" style="text-align:right;">${h_str}</td>
+          <td class="${stk.l_pct > 0 ? 'val-pos' : 'val-neg'}" style="text-align:right;">${l_str}</td>
+          <td style="text-align:center;">${orb_badge}</td>
+          <td style="text-align:center; color:var(--text-muted);">${stk.tag || '-'}</td>
+          <td>${sig_badge}</td>
+          <td style="text-align:right; font-weight:800; color:#93c5fd;">${Number(stk.strength_score).toFixed(1)}</td>
+        </tr>
+      `;
+    });
+
+    tableBody.innerHTML = html || '<tr><td colspan="12" style="text-align:center; padding:30px; color:var(--text-muted);">No stocks match current filter.</td></tr>';
+  }
+
+  // Chart Timeframe Switcher
+  function switchTimeframe(tf) {
+    currentTimeframe = tf;
+    const btn3m = document.getElementById('tf-btn-3m');
+    const btnD = document.getElementById('tf-btn-d');
+    if (tf === 'D') {
+      btn3m.classList.remove('active');
+      btnD.classList.add('active');
+    } else {
+      btn3m.classList.add('active');
+      btnD.classList.remove('active');
+    }
+    if (activeSym && CHARTS_DATA[activeSym]) {
+      updatePopupHeader(CHARTS_DATA[activeSym]);
+      drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    }
+  }
+
+  function updatePopupHeader(data) {
+    if (!data) return;
+    const isDaily = (currentTimeframe === 'D');
+    popupTitle.innerHTML = `📈 ${data.symbol} <span style="font-size:11px; color:var(--text-muted); font-weight:500;">(${isDaily ? 'Daily Swing' : '3m Dynamic ORB'})</span>`;
+
+    let bHtml = `<span class="pill-badge" style="background:#1c2438; color:#fff;">₹${Number(data.ltp).toFixed(2)}</span>`;
+    const col = data.chg_pct >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+    const sign = data.chg_pct >= 0 ? '+' : '';
+    bHtml += `<span class="pill-badge" style="color:${col}; font-weight:800;">${sign}${Number(data.chg_pct).toFixed(2)}%</span>`;
+
+    if (data.pdh) {
+      const pdhStatus = data.pdh_broken ? 'BREACHED' : 'RESISTANCE';
+      const pdhCol = data.pdh_broken ? 'var(--accent-green)' : 'var(--accent-gold)';
+      bHtml += `<span class="pill-badge" style="border:1px solid #f59e0b; color:#f59e0b;">PDH: ₹${Number(data.pdh).toFixed(1)} (<span style="color:${pdhCol}">${pdhStatus}</span>)</span>`;
+    }
+    popupBadges.innerHTML = bHtml;
+  }
+
+  // SOTA Canvas Rendering Engine (Retina High-DPI, Volume, Crosshair, Levels)
+  function drawCanvasChart(canvasEl, data, hoverX) {
+    if (!canvasEl) return;
+    const ctx = canvasEl.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvasEl.getBoundingClientRect();
+    const width = rect.width || 680;
+    const height = rect.height || 360;
+
+    if (canvasEl.width !== Math.floor(width * dpr) || canvasEl.height !== Math.floor(height * dpr)) {
+      canvasEl.width = Math.floor(width * dpr);
+      canvasEl.height = Math.floor(height * dpr);
+    }
+    ctx.resetTransform();
+    ctx.scale(dpr, dpr);
+
+    const W = width;
+    const H = height;
+
+    // Dark Background
+    ctx.fillStyle = '#0a0d14';
+    ctx.fillRect(0, 0, W, H);
+
+    const isDaily = (currentTimeframe === 'D');
+    const candles = isDaily ? (data.candles_d || []) : (data.candles_3m || []);
+
+    if (popupBarCount) popupBarCount.innerText = `${candles.length} Candles`;
+
+    if (!candles || !candles.length) {
+      ctx.fillStyle = '#64748b';
+      ctx.font = '13px var(--font-sans)';
+      ctx.textAlign = 'center';
+      ctx.fillText(isDaily ? 'No Daily candle history available' : 'Awaiting 09:15 AM Market Opening Candle', W / 2, H / 2);
+      return;
     }
 
-    function hideChartPopup() {
-        popup.style.display = 'none';
-        if (popupTimer) {
-            clearTimeout(popupTimer);
-            popupTimer = null;
-        }
+    const padRight = 68;
+    const padBottom = 26;
+    const padTop = 20;
+    const padLeft = 10;
+    const plotW = W - padLeft - padRight;
+    const plotH = H - padTop - padBottom;
+    const volH = plotH * 0.18;
+    const pricePlotH = plotH - volH - 10;
+
+    let minPrice = Infinity;
+    let maxPrice = -Infinity;
+    let maxVol = 0;
+
+    candles.forEach(c => {
+      if (c.l < minPrice) minPrice = c.l;
+      if (c.h > maxPrice) maxPrice = c.h;
+      if (c.v > maxVol) maxVol = c.v;
+    });
+
+    if (data.pdh) {
+      maxPrice = Math.max(maxPrice, data.pdh);
+      minPrice = Math.min(minPrice, data.pdh);
+    }
+    if (data.ltp) {
+      maxPrice = Math.max(maxPrice, data.ltp);
+      minPrice = Math.min(minPrice, data.ltp);
+    }
+    if (!isDaily) {
+      if (data.orb_high) maxPrice = Math.max(maxPrice, data.orb_high);
+      if (data.orb_low) minPrice = Math.min(minPrice, data.orb_low);
     }
 
-    // Initial Load & start polling
-    fetchData(true);
-    startTimer();
-    </script>
+    const margin = (maxPrice - minPrice) * 0.08 || 1;
+    minPrice -= margin;
+    maxPrice += margin;
+    const priceRange = maxPrice - minPrice;
+
+    function getY(p) {
+      return padTop + (1 - (p - minPrice) / priceRange) * pricePlotH;
+    }
+    function getP(y) {
+      return minPrice + (1 - (y - padTop) / pricePlotH) * priceRange;
+    }
+
+    // Grid Lines & Price Axis
+    ctx.strokeStyle = '#141c2c';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '10px var(--font-mono)';
+    ctx.textAlign = 'left';
+
+    for (let i = 0; i <= 4; i++) {
+      const y = padTop + (i / 4) * pricePlotH;
+      const p = getP(y);
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(W - padRight, y);
+      ctx.stroke();
+      ctx.fillText(p.toFixed(1), W - padRight + 6, y + 3);
+    }
+
+    // Overlay Drawer Helper
+    function drawLevel(val, color, label, dash) {
+      if (!val || val < minPrice || val > maxPrice) return;
+      const y = getY(val);
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash(dash || [4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(W - padRight, y);
+      ctx.stroke();
+
+      ctx.fillStyle = color;
+      ctx.fillRect(W - padRight + 2, y - 7, padRight - 4, 15);
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 9px var(--font-mono)';
+      ctx.fillText(label, W - padRight + 4, y + 4);
+      ctx.restore();
+    }
+
+    if (!isDaily) {
+      if (data.orb_high) drawLevel(data.orb_high, '#06b6d4', 'ORB-H');
+      if (data.orb_low) drawLevel(data.orb_low, '#f97316', 'ORB-L');
+    }
+
+    // Previous Day High (PDH) Line
+    if (data.pdh && data.pdh >= minPrice && data.pdh <= maxPrice) {
+      const yPdh = getY(data.pdh);
+      ctx.save();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([5, 3]);
+      ctx.beginPath();
+      ctx.moveTo(padLeft, yPdh);
+      ctx.lineTo(W - padRight, yPdh);
+      ctx.stroke();
+
+      const pdhTag = '📌 PDH ' + data.pdh.toFixed(1);
+      ctx.font = 'bold 9.5px var(--font-mono)';
+      const tw = ctx.measureText(pdhTag).width;
+      ctx.fillStyle = 'rgba(10, 13, 20, 0.9)';
+      ctx.fillRect(padLeft + 6, yPdh - 12, tw + 8, 14);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([]);
+      ctx.strokeRect(padLeft + 6, yPdh - 12, tw + 8, 14);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillText(pdhTag, padLeft + 10, yPdh - 2);
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(W - padRight + 2, yPdh - 7, padRight - 4, 15);
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 9px var(--font-mono)';
+      ctx.fillText('PDH', W - padRight + 4, yPdh + 4);
+      ctx.restore();
+    }
+
+    // Candlestick Drawing
+    const n = candles.length;
+    const barSpacing = plotW / Math.max(n, 1);
+    const barWidth = Math.max(Math.min(barSpacing * 0.72, 14), 2);
+
+    let hoveredCandle = null;
+
+    candles.forEach((c, i) => {
+      const cx = padLeft + i * barSpacing + barSpacing / 2;
+      const oY = getY(c.o);
+      const hY = getY(c.h);
+      const lY = getY(c.l);
+      const cY = getY(c.c);
+      const isBull = c.c >= c.o;
+      const col = isBull ? '#00c087' : '#f43f5e';
+
+      if (hoverX !== undefined && Math.abs(hoverX - cx) <= barSpacing / 2) {
+        hoveredCandle = Object.assign({}, c, { cx, oY, cY, hY, lY, isBull });
+      }
+
+      // Volume Bar
+      const vH = maxVol > 0 ? (c.v / maxVol) * volH : 0;
+      const vY = (H - padBottom) - vH;
+      ctx.fillStyle = isBull ? 'rgba(0, 192, 135, 0.25)' : 'rgba(244, 63, 94, 0.25)';
+      ctx.fillRect(cx - barWidth / 2, vY, barWidth, vH);
+
+      // Wick
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx, hY);
+      ctx.lineTo(cx, lY);
+      ctx.stroke();
+
+      // Body
+      ctx.fillStyle = col;
+      const bTop = Math.min(oY, cY);
+      const bH = Math.max(Math.abs(cY - oY), 1.5);
+      ctx.fillRect(cx - barWidth / 2, bTop, barWidth, bH);
+
+      // X-Axis Time Labels
+      const step = Math.max(Math.floor(n / 6), 1);
+      if (i === 0 || i === n - 1 || (i % step === 0)) {
+        ctx.fillStyle = '#64748b';
+        ctx.font = '9px var(--font-mono)';
+        ctx.textAlign = 'center';
+        ctx.fillText(c.t, cx, H - 8);
+      }
+    });
+
+    // Crosshair & Interactive HUD
+    if (hoveredCandle) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+      ctx.setLineDash([3, 3]);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(hoveredCandle.cx, padTop);
+      ctx.lineTo(hoveredCandle.cx, H - padBottom);
+      ctx.stroke();
+      ctx.restore();
+
+      const cColor = hoveredCandle.isBull ? 'var(--accent-green)' : 'var(--accent-red)';
+      popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | O: ₹${hoveredCandle.o.toFixed(2)} | H: ₹${hoveredCandle.h.toFixed(2)} | L: ₹${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${hoveredCandle.c.toFixed(2)}</span> | Vol: ${hoveredCandle.v.toLocaleString()}`;
+    } else {
+      const last = candles[candles.length - 1];
+      const cColor = last.c >= last.o ? 'var(--accent-green)' : 'var(--accent-red)';
+      popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | O: ₹${last.o.toFixed(2)} | H: ₹${last.h.toFixed(2)} | L: ₹${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${last.c.toFixed(2)}</span> | Vol: ${last.v.toLocaleString()}`;
+    }
+  }
+
+  function showChartPopup(e, sym, forceTap) {
+    if (popupTimer) {
+      clearTimeout(popupTimer);
+      popupTimer = null;
+    }
+    const popupWidth = Math.min(680, window.innerWidth - 20);
+    const popupHeight = 420;
+    let x = e.clientX || (window.innerWidth / 2 - popupWidth / 2);
+    let y = e.clientY || (window.innerHeight / 2 - popupHeight / 2);
+
+    let left = x + 15;
+    let top = y - 40;
+
+    if (left + popupWidth > window.innerWidth) left = x - popupWidth - 15;
+    if (left < 10) left = 10;
+    if (top + popupHeight > window.innerHeight) top = window.innerHeight - popupHeight - 15;
+    if (top < 10) top = 10;
+
+    popup.style.left = left + 'px';
+    popup.style.top = top + 'px';
+    popup.style.display = 'flex';
+
+    activeSym = sym;
+    const data = CHARTS_DATA[sym];
+    popupAppLink.href = 'https://in.tradingview.com/chart/?symbol=NSE:' + sym;
+
+    if (data) {
+      updatePopupHeader(data);
+      drawCanvasChart(canvas, data);
+    }
+  }
+
+  canvas.addEventListener('mousemove', function(e) {
+    if (!activeSym || !CHARTS_DATA[activeSym]) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    drawCanvasChart(canvas, CHARTS_DATA[activeSym], x);
+  });
+  canvas.addEventListener('mouseleave', function() {
+    if (!activeSym || !CHARTS_DATA[activeSym]) return;
+    drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+  });
+  canvas.addEventListener('touchmove', function(e) {
+    if (!activeSym || !CHARTS_DATA[activeSym]) return;
+    if (e.touches && e.touches[0]) {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.touches[0].clientX - rect.left;
+      drawCanvasChart(canvas, CHARTS_DATA[activeSym], x);
+    }
+  }, { passive: true });
+
+  function scheduleHidePopup() {
+    popupTimer = setTimeout(hideChartPopup, 350);
+  }
+  function cancelHidePopup() {
+    if (popupTimer) {
+      clearTimeout(popupTimer);
+      popupTimer = null;
+    }
+  }
+  function hideChartPopup() {
+    popup.style.display = 'none';
+    if (popupTimer) clearTimeout(popupTimer);
+  }
+
+  // Keyboard Shortcuts for Pro Traders
+  window.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      hideChartPopup();
+    } else if (e.key === '/') {
+      if (document.activeElement !== searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.select();
+      }
+    } else if (e.key.toLowerCase() === 'r' && document.activeElement !== searchInput) {
+      fetchData(true);
+    } else if (e.key === '?' && document.activeElement !== searchInput) {
+      alert('⚡ JARVIS PRO SHORTCUTS:\n\n[/] Focus search\n[R] Force refresh\n[Esc] Close chart\n[1-9] View chart for stock #1-9');
+    } else if (e.key >= '1' && e.key <= '9' && document.activeElement !== searchInput) {
+      const idx = parseInt(e.key) - 1;
+      if (RAW_STOCKS[idx]) {
+        showChartPopup({ clientX: window.innerWidth / 2 - 340, clientY: 100 }, RAW_STOCKS[idx].symbol, true);
+      }
+    }
+  });
+
+  // Boot
+  fetchData(true);
+  startCountdown();
+</script>
 </body>
 </html>
