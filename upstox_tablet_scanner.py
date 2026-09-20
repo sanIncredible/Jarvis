@@ -755,6 +755,15 @@ def print_terminal_view(results, now_str, port, next_time_str=""):
 
 def generate_html_dashboard(results, now_str, port):
     """Generates tablet touch-optimized HTML with direct 1-tap TradingView buttons, Timeframe switcher (3m/D), and real canvas charts."""
+    script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
+    for idx_p in ["index.html", os.path.join(script_dir, "index.html")]:
+        if os.path.isfile(idx_p):
+            try:
+                with open(idx_p, "r", encoding="utf-8") as f:
+                    return f.read()
+            except Exception:
+                pass
+
     rows_html = []
     charts_data = {}
 
@@ -1488,35 +1497,42 @@ class ScannerHttpHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             return
 
-        if self.path.startswith('/data.json'):
-            if os.path.isfile("data.json"):
-                try:
-                    with open("data.json", "rb") as f:
-                        data_bytes = f.read()
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'application/json; charset=utf-8')
-                    self.send_header('Access-Control-Allow-Origin', '*')
-                    self.send_header('Content-Length', str(len(data_bytes)))
-                    self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
-                    self.end_headers()
-                    self.wfile.write(data_bytes)
-                    return
-                except Exception:
-                    pass
+        # Resolve file paths relative to script dir or current working dir
+        script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
 
-        if self.path.startswith('/index.html') and os.path.isfile("index.html"):
-            try:
-                with open("index.html", "rb") as f:
-                    index_bytes = f.read()
-                self.send_response(200)
-                self.send_header('Content-Type', 'text/html; charset=utf-8')
-                self.send_header('Content-Length', str(len(index_bytes)))
-                self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
-                self.end_headers()
-                self.wfile.write(index_bytes)
-                return
-            except Exception:
-                pass
+        if self.path.startswith('/data.json'):
+            for df in ["data.json", os.path.join(script_dir, "data.json")]:
+                if os.path.isfile(df):
+                    try:
+                        with open(df, "rb") as f:
+                            data_bytes = f.read()
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/json; charset=utf-8')
+                        self.send_header('Access-Control-Allow-Origin', '*')
+                        self.send_header('Content-Length', str(len(data_bytes)))
+                        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                        self.end_headers()
+                        self.wfile.write(data_bytes)
+                        return
+                    except Exception:
+                        pass
+
+        # Always serve SOTA index.html on root / or /index.html
+        if self.path in ('/', '/index.html') or self.path.startswith('/index.html'):
+            for idx_f in ["index.html", os.path.join(script_dir, "index.html")]:
+                if os.path.isfile(idx_f):
+                    try:
+                        with open(idx_f, "rb") as f:
+                            index_bytes = f.read()
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'text/html; charset=utf-8')
+                        self.send_header('Content-Length', str(len(index_bytes)))
+                        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                        self.end_headers()
+                        self.wfile.write(index_bytes)
+                        return
+                    except Exception:
+                        pass
 
         with data_lock:
             res_copy = list(latest_results)
