@@ -431,8 +431,17 @@
             statusText.innerText = "Syncing...";
         }
         try {
-            // Timestamp cache-busting ensures proxy/browser never caches stale market prices
-            const url = 'data.json?t=' + Date.now();
+            // Bulletproof path resolution: works whether URL has trailing slash, no trailing slash, or filename
+            let path = window.location.pathname || '/';
+            if (path.endsWith('.html') || path.endsWith('.htm')) {
+                path = path.substring(0, path.lastIndexOf('/') + 1);
+            } else if (!path.endsWith('/')) {
+                path += '/';
+            }
+            const url = (window.location.origin && window.location.origin !== 'null') 
+                ? (window.location.origin + path + 'data.json?t=' + Date.now())
+                : ('data.json?t=' + Date.now());
+
             const res = await fetch(url, { cache: 'no-store' });
             if (!res.ok) {
                 throw new Error('HTTP ' + res.status + ' (' + res.statusText + ')');
