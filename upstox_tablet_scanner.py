@@ -121,6 +121,40 @@ def load_github_config():
     return None
 
 
+def sync_remote_files_from_github():
+    """Pulls latest upstoxtoken.txt and watchlist.txt from GitHub repository over HTTPS (443)."""
+    gh_cfg = load_github_config()
+    if not gh_cfg or not gh_cfg.get("token"):
+        return
+    try:
+        import base64
+        token = gh_cfg["token"].strip()
+        owner = gh_cfg.get("username", "sanIncredible").strip()
+        repo = gh_cfg.get("repo", "Jarvis").strip()
+        branch = gh_cfg.get("branch", "main").strip()
+
+        for filename in ["upstoxtoken.txt", "watchlist.txt"]:
+            url = f"https://api.github.com/repos/{owner}/{repo}/contents/{filename}?ref={branch}"
+            req = urllib.request.Request(url, headers={
+                "Authorization": f"Bearer {token}",
+                "User-Agent": "Jarvis-GitHub-Pull",
+                "Accept": "application/vnd.github+json"
+            })
+            try:
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    content_b64 = data.get("content", "")
+                    if content_b64:
+                        content_str = base64.b64decode(content_b64).decode("utf-8").strip()
+                        if content_str:
+                            with open(filename, "w", encoding="utf-8") as f:
+                                f.write(content_str)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
 def get_instrument_key(symbol):
     """Resolves instrument key for Upstox API queries."""
     isin = SYMBOL_TO_ISIN.get(symbol.upper())
@@ -649,6 +683,10 @@ def get_active_watchlist():
 
 def scan_watchlist():
     """Scans all symbols in watchlist and returns results sorted by strength descending."""
+    try:
+        sync_remote_files_from_github()
+    except Exception:
+        pass
     token = load_upstox_token()
     results = []
     active_syms = get_active_watchlist()
