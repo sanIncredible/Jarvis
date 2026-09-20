@@ -1676,8 +1676,9 @@ def export_static_html(results, now_str, port):
                 source_label = "Yahoo Finance fallback"
 
             c_3m = d.get("candles_3m") or d.get("candles", [])
-            if len(c_3m) > 75:
-                c_3m = c_3m[-75:]
+            # Preserve full trading day from 09:15 AM to 15:30 PM (125 3m bars)
+            if len(c_3m) > 135:
+                c_3m = c_3m[-135:]
             c_d = d.get("candles_d", [])
             if len(c_d) > 30:
                 c_d = c_d[-30:]
