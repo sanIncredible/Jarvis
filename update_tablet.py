@@ -1,6 +1,6 @@
 import urllib.request
 
-files = ['upstox_tablet_scanner.py', 'index.html', 'data.json', 'tablet_backup_runner.py']
+files = ['upstox_tablet_scanner.py', 'index.html', 'data.json', 'tablet_backup_runner.py', 'tablet_sync_to_cloud.py']
 print('🔄 Updating tablet files from GitHub...')
 for f in files:
     url = f'https://raw.githubusercontent.com/sanIncredible/Jarvis/main/{f}'
