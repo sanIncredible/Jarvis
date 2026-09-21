@@ -192,6 +192,139 @@ def sync_remote_files_from_github():
         pass
 
 
+# ---------------------------------------------------------
+# Telegram Instant Breakout Alert Engine
+# ---------------------------------------------------------
+sent_alerts = set()  # Tracks (symbol, alert_type, date_str) to prevent repetitive spam
+
+
+def load_telegram_config():
+    """Loads Telegram Bot token and Chat ID from environment or config file."""
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+    if token and chat_id:
+        return {"enabled": True, "bot_token": token, "chat_id": chat_id}
+
+    for cfg_f in [CONFIG_FILE, "credentials.json"]:
+        if os.path.isfile(cfg_f):
+            try:
+                with open(cfg_f, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                    tg = cfg.get("telegram")
+                    if tg and tg.get("bot_token") and tg.get("chat_id"):
+                        return tg
+            except Exception:
+                pass
+    return None
+
+
+def send_telegram_alert(message, parse_mode="HTML"):
+    """Sends a Telegram alert via HTTPS (Port 443). Returns (success, response_or_error)."""
+    tg_cfg = load_telegram_config()
+    if not tg_cfg or not tg_cfg.get("enabled", True):
+        return False, "Telegram alerts disabled or not configured"
+
+    bot_token = tg_cfg.get("bot_token", "").strip()
+    chat_id = str(tg_cfg.get("chat_id", "")).strip()
+    if not bot_token or not chat_id:
+        return False, "Missing bot_token or chat_id"
+
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": parse_mode,
+        "disable_web_page_preview": True
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={
+        "Content-Type": "application/json",
+        "User-Agent": "Jarvis-Telegram-Bot"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            res_data = json.loads(resp.read().decode("utf-8"))
+            return res_data.get("ok", False), res_data
+    except Exception as e:
+        return False, str(e)
+
+
+def send_telegram_alert_async(message, parse_mode="HTML"):
+    """Dispatches Telegram alert asynchronously without blocking scanner loop."""
+    def _worker():
+        send_telegram_alert(message, parse_mode=parse_mode)
+    threading.Thread(target=_worker, daemon=True).start()
+
+
+def evaluate_and_dispatch_alerts(results, current_time_str):
+    """Evaluates scan results and dispatches instant Telegram alerts for ORB and PDH breakouts."""
+    today = get_ist_now().strftime("%Y-%m-%d")
+    for row in results:
+        score, d, m = row
+        sym = d.get("symbol")
+        ltp = d.get("ltp")
+        orb_h = d.get("orb_high")
+        pdh = d.get("pdh")
+        chg = m.get("chg_pct", 0.0)
+        signal = m.get("signal", "")
+        orb_status = m.get("orb_status")
+        pdh_broken = m.get("pdh_broken")
+
+        if not ltp or not orb_h:
+            continue
+
+        # 1. Tier 1: Strong Start + ORB + PDH Breakout (Highest Conviction)
+        if "STRONG START + ORB + PDH" in signal:
+            alert_key = (sym, "ORB_PDH_STRONG", today)
+            if alert_key not in sent_alerts:
+                sent_alerts.add(alert_key)
+                msg = (
+                    f"🔥 <b>★ STRONG START + ORB + PDH BREAKOUT!</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n"
+                    f"📈 <b>Stock:</b> #{sym}\n"
+                    f"💰 <b>LTP:</b> ₹{ltp:,.2f} (<b>{chg:+.2f}%</b>)\n"
+                    f"🎯 <b>ORB High:</b> ₹{orb_h:,.2f} (Broken 🟢)\n"
+                    f"🏁 <b>PDH:</b> ₹{pdh:,.2f} (Broken 🟢)\n"
+                    f"⚡ <b>Signal:</b> {signal}\n"
+                    f"⏱ <b>Time:</b> {current_time_str}\n\n"
+                    f"📊 <a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'>Open TradingView Chart</a>"
+                )
+                send_telegram_alert_async(msg)
+
+        # 2. Bullish Breakout (ORB + PDH)
+        elif pdh_broken and orb_status == "H":
+            alert_key = (sym, "ORB_PDH", today)
+            if alert_key not in sent_alerts:
+                sent_alerts.add(alert_key)
+                msg = (
+                    f"🚀 <b>ORB + PDH BREAKOUT TRIGGERED!</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n"
+                    f"📈 <b>Stock:</b> #{sym}\n"
+                    f"💰 <b>LTP:</b> ₹{ltp:,.2f} (<b>{chg:+.2f}%</b>)\n"
+                    f"🎯 <b>ORB High:</b> ₹{orb_h:,.2f} (Broken 🟢)\n"
+                    f"🏁 <b>PDH:</b> ₹{pdh:,.2f} (Broken 🟢)\n"
+                    f"⏱ <b>Time:</b> {current_time_str}\n\n"
+                    f"📊 <a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'>Open TradingView Chart</a>"
+                )
+                send_telegram_alert_async(msg)
+
+        # 3. Pure ORB High Breakout
+        elif orb_status == "H":
+            alert_key = (sym, "ORB_HIGH", today)
+            if alert_key not in sent_alerts:
+                sent_alerts.add(alert_key)
+                msg = (
+                    f"🟢 <b>ORB HIGH BREAKOUT!</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n"
+                    f"📈 <b>Stock:</b> #{sym}\n"
+                    f"💰 <b>LTP:</b> ₹{ltp:,.2f} (<b>{chg:+.2f}%</b>)\n"
+                    f"🎯 <b>ORB High:</b> ₹{orb_h:,.2f}\n"
+                    f"⏱ <b>Time:</b> {current_time_str}\n\n"
+                    f"📊 <a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'>Open TradingView Chart</a>"
+                )
+                send_telegram_alert_async(msg)
+
+
 def get_instrument_key(symbol):
     """Resolves instrument key for Upstox API queries."""
     isin = SYMBOL_TO_ISIN.get(symbol.upper())
@@ -1944,6 +2077,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
     now_dt = get_ist_now()
     now_str = now_dt.strftime('%H:%M:%S IST')
     results = scan_watchlist()
+    evaluate_and_dispatch_alerts(results, now_str)
 
     evt, target_dt, wait_secs = get_next_market_event(now_dt)
     current_market_event = evt
@@ -1991,6 +2125,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
             # Target reached: perform scan / warmup
             new_res = scan_watchlist()
             cur_time = get_ist_now().strftime('%H:%M:%S IST')
+            evaluate_and_dispatch_alerts(new_res, cur_time)
 
             # Determine next target event
             nxt_now = get_ist_now()
@@ -2062,6 +2197,26 @@ def run_upstox_scanner(once=False, auto_open_web=False):
 
 
 if __name__ == "__main__":
+    if "--test-telegram" in sys.argv:
+        print("📱 Testing Telegram Alert Dispatch...")
+        tg_cfg = load_telegram_config()
+        if not tg_cfg:
+            print("❌ Telegram configuration not found in config_credentials.json or environment variables.")
+            print("   Add your bot_token and chat_id under the 'telegram' key in config_credentials.json.")
+            sys.exit(1)
+        test_msg = (
+            "🔔 <b>JARVIS TELEGRAM ALERTS CONNECTED!</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "✅ Your 4-Core Cloud Server is ready to dispatch instant ORB and PDH breakouts directly to your phone/tablet.\n"
+            f"⏱ <b>Test Time:</b> {get_ist_now().strftime('%H:%M:%S IST')}"
+        )
+        ok, res = send_telegram_alert(test_msg)
+        if ok:
+            print("✅ Telegram test alert delivered successfully to your chat!")
+        else:
+            print(f"❌ Telegram delivery failed: {res}")
+        sys.exit(0)
+
     if "--push" in sys.argv:
         print("📦 Pushing data.json to GitHub...")
         gh_cfg = load_github_config()
