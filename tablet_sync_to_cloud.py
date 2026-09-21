@@ -156,7 +156,7 @@ def main():
 
     print("\n" + "=" * 60)
     print("🎉 CLOUD SYNC COMPLETE!")
-    print("👉 OCI Cloud Scanner pulls updates automatically at 09:14 AM.")
+    print("👉 OCI Cloud Scanner pulls updates automatically on every scan cycle & at 09:14 AM.")
     print("👉 Live Dashboard: https://sanincredible.github.io/Jarvis/")
     print("=" * 60)
 
