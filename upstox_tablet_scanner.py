@@ -130,7 +130,7 @@ def load_github_config():
 
 
 def sync_remote_files_from_github():
-    """Pulls latest upstoxtoken.txt and watchlist.txt from GitHub repository over HTTPS (443)."""
+    """Pulls latest upstoxtoken.txt, watchlist.txt, and self-updates upstox_tablet_scanner.py from GitHub over HTTPS (443)."""
     gh_cfg = load_github_config()
     if not gh_cfg or not gh_cfg.get("token"):
         return
@@ -141,6 +141,7 @@ def sync_remote_files_from_github():
         repo = gh_cfg.get("repo", "Jarvis").strip()
         branch = gh_cfg.get("branch", "main").strip()
 
+        # 1. Sync token and watchlist data
         for filename in ["upstoxtoken.txt", "watchlist.txt"]:
             url = f"https://api.github.com/repos/{owner}/{repo}/contents/{filename}?ref={branch}"
             req = urllib.request.Request(url, headers={
@@ -159,6 +160,34 @@ def sync_remote_files_from_github():
                                 f.write(content_str)
             except Exception:
                 pass
+
+        # 2. Check for self-updates to upstox_tablet_scanner.py
+        try:
+            url_code = f"https://api.github.com/repos/{owner}/{repo}/contents/upstox_tablet_scanner.py?ref={branch}"
+            req_c = urllib.request.Request(url_code, headers={
+                "Authorization": f"Bearer {token}",
+                "User-Agent": "Jarvis-GitHub-Pull",
+                "Accept": "application/vnd.github+json"
+            })
+            with urllib.request.urlopen(req_c, timeout=5) as resp_c:
+                data_c = json.loads(resp_c.read().decode("utf-8"))
+                code_b64 = data_c.get("content", "")
+                if code_b64:
+                    new_code = base64.b64decode(code_b64).decode("utf-8")
+                    this_file = os.path.abspath(__file__)
+                    if os.path.isfile(this_file):
+                        with open(this_file, "r", encoding="utf-8") as cf:
+                            current_code = cf.read()
+                        if current_code and new_code.strip() != current_code.strip():
+                            # Validate Python syntax before applying
+                            compile(new_code, this_file, "exec")
+                            with open(this_file, "w", encoding="utf-8") as wf:
+                                wf.write(new_code)
+                            print("\n🔄 Updated scanner engine pulled from GitHub! Reloading process...")
+                            time.sleep(1)
+                            os.execv(sys.executable, [sys.executable] + sys.argv)
+        except Exception:
+            pass
     except Exception:
         pass
 
