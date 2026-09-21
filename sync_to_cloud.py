@@ -20,12 +20,14 @@ if sys.platform == "win32":
 
 BASE_DIR = Path(__file__).resolve().parent
 
-KEY_FILE = BASE_DIR / "ssh-key-2026-09-20 (1).key"
+KEY_FILE = BASE_DIR / "ssh-key-2026-09-21_new.key"
+if not KEY_FILE.is_file():
+    KEY_FILE = BASE_DIR / "ssh-key-2026-09-20 (1).key"
 WATCHLIST_FILE = BASE_DIR / "watchlist.txt"
 TOKEN_FILE = BASE_DIR / "upstoxtoken.txt"
 CONFIG_FILE = BASE_DIR / "config_credentials.json"
 
-SERVER_IP = "130.210.58.44"
+SERVER_IP = "80.225.210.222"
 SERVER_USER = "opc"
 REMOTE_DIR = f"/home/{SERVER_USER}/Jarvis"
 
@@ -74,7 +76,7 @@ def main():
         print(f"   ⚠️ GitHub sync notice: {e}")
 
     # 4. Direct OCI Push (Step 2: Fast 5-second attempt)
-    print("🌐 [Step 2/2] Attempting Direct SSH/SCP push to OCI VM (130.210.58.44)...")
+    print(f"🌐 [Step 2/2] Attempting Direct SSH/SCP push to OCI VM ({SERVER_IP})...")
     ssh_ok = False
     if KEY_FILE.is_file():
         ssh_opts = [
