@@ -93,6 +93,7 @@ def main():
         ] + ssh_opts + [
             str(WATCHLIST_FILE),
             str(TOKEN_FILE),
+            str(CONFIG_FILE),
             str(BASE_DIR / "upstox_tablet_scanner.py"),
             f"{SERVER_USER}@{SERVER_IP}:{REMOTE_DIR}/"
         ]
