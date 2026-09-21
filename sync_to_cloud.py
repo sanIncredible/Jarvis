@@ -62,8 +62,9 @@ def main():
         if gh_cfg:
             ok_w = sync_file_to_github_api(gh_cfg, "watchlist.txt", "Update watchlist.txt from laptop")
             ok_t = sync_file_to_github_api(gh_cfg, "upstoxtoken.txt", "Update upstoxtoken.txt from laptop")
+            ok_s = sync_file_to_github_api(gh_cfg, "upstox_tablet_scanner.py", "Update scanner engine from laptop")
             if ok_w and ok_t:
-                print("   ✅ GitHub Cloud Sync: SUCCESS! (watchlist & token live on GitHub)")
+                print("   ✅ GitHub Cloud Sync: SUCCESS! (watchlist, token & scanner code live on GitHub)")
                 github_ok = True
             else:
                 print("   ⚠️ GitHub Cloud Sync partial.")
@@ -90,6 +91,7 @@ def main():
         ] + ssh_opts + [
             str(WATCHLIST_FILE),
             str(TOKEN_FILE),
+            str(BASE_DIR / "upstox_tablet_scanner.py"),
             f"{SERVER_USER}@{SERVER_IP}:{REMOTE_DIR}/"
         ]
 
