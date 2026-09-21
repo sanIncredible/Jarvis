@@ -301,25 +301,24 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
             alert_key = (sym, alert_type, today)
             if alert_key not in sent_alerts:
                 sent_alerts.add(alert_key)
-                new_breakouts.append((sym, trigger_label, t_clean))
+                new_breakouts.append((sym, trigger_label))
 
     if not new_breakouts:
         return
 
-    # Build sleek, aligned tabular message with hyperlinked symbols
+    # Build sleek, aligned 2-column tabular message with hyperlinked symbols and time in header
     lines = [
-        "⚡ <b>JARVIS BREAKOUT ALERTS</b>",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        "<b>SYMBOL</b>           <b>TRIGGER</b>               <b>TIME</b>",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        f"⚡ <b>BREAKOUT ALERTS — {t_clean}</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "<b>SYMBOL</b>            <b>TRIGGER</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━"
     ]
-    for sym, trig, t_str in new_breakouts:
+    for sym, trig in new_breakouts:
         tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'><b>{sym}</b></a>"
-        pad_spaces = " " * max(1, 14 - len(sym))
-        trig_pad = " " * max(1, 22 - len(trig))
-        lines.append(f"• {tv_link}{pad_spaces}{trig}{trig_pad}{t_str}")
+        pad_spaces = " " * max(1, 15 - len(sym))
+        lines.append(f"• {tv_link}{pad_spaces}{trig}")
 
-    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("📊 <a href='https://sanincredible.github.io/Jarvis/'>Open 3m Terminal Dashboard</a>")
 
     full_msg = "\n".join(lines)
