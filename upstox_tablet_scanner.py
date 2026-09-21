@@ -22,6 +22,14 @@ import urllib.request
 import urllib.parse
 from datetime import datetime, timedelta, timezone
 
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def get_ist_now():
+    """Returns current datetime strictly in Indian Standard Time (IST), timezone-naive for arithmetic."""
+    return datetime.now(timezone.utc).astimezone(IST).replace(tzinfo=None)
+
+
 if hasattr(sys.stdout, 'reconfigure'):
     try:
         sys.stdout.reconfigure(encoding='utf-8')
@@ -260,8 +268,8 @@ def fetch_upstox_symbol_data(symbol, token):
                                 low_locked = True
 
         # 3. Daily Candles (PDH, 20-Day RVOL, 50MA, ATR14, Daily Swing Chart)
-        today_str = datetime.now().strftime("%Y-%m-%d")
-        from_str = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
+        today_str = get_ist_now().strftime("%Y-%m-%d")
+        from_str = (get_ist_now() - timedelta(days=90)).strftime("%Y-%m-%d")
         daily_url = f"https://api.upstox.com/v2/historical-candle/{encoded_key}/day/{today_str}/{from_str}"
         req_d = urllib.request.Request(daily_url, headers=headers)
         with urllib.request.urlopen(req_d, timeout=4) as resp:
@@ -1677,7 +1685,7 @@ def trigger_git_push_async():
         if gh_cfg and gh_cfg.get("token"):
             if os.path.isfile("index.html"):
                 sync_file_to_github_api(gh_cfg, "index.html", "Init static dashboard shell index.html")
-            now_t = datetime.now().strftime("%H:%M:%S IST")
+            now_t = get_ist_now().strftime("%H:%M:%S IST")
             pushed_api = sync_file_to_github_api(gh_cfg, "data.json", f"sync data.json {now_t}")
             if pushed_api:
                 return
@@ -1842,7 +1850,7 @@ def get_next_market_event(now):
         if now < t_918:
             return 'CANDLE_CLOSE_3M', t_918, max(1.0, (t_918 - now).total_seconds())
 
-        wait_secs, target_dt = get_next_candle_target(buffer_seconds=2)
+        wait_secs, target_dt = get_next_candle_target(now=now, buffer_seconds=2)
         if target_dt > t_1530:
             target_dt = t_1530.replace(second=2)
             wait_secs = max(1.0, (target_dt - now).total_seconds())
@@ -1878,9 +1886,10 @@ def live_terminal_timer():
         time.sleep(1)
 
 
-def get_next_candle_target(buffer_seconds=2):
+def get_next_candle_target(now=None, buffer_seconds=2):
     """Calculates exact timestamp for next 3m candle close (e.g. 09:18:02, 09:21:02, 09:24:02)."""
-    now = datetime.now()
+    if now is None:
+        now = get_ist_now()
     minutes_to_add = (3 - (now.minute % 3)) % 3
     if minutes_to_add == 0 and now.second < buffer_seconds:
         target = now.replace(second=buffer_seconds, microsecond=0)
@@ -1903,7 +1912,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
     server_ready_event.wait(timeout=1.5)
 
     # Initial baseline scan (so table is populated immediately)
-    now_dt = datetime.now()
+    now_dt = get_ist_now()
     now_str = now_dt.strftime('%H:%M:%S IST')
     results = scan_watchlist()
 
@@ -1937,7 +1946,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
     def periodic_scanner():
         global latest_results, last_scan_time, next_refresh_timestamp, current_market_event
         while not stop_scanner_event.is_set():
-            now = datetime.now()
+            now = get_ist_now()
             evt, target, wait = get_next_market_event(now)
             current_market_event = evt
             next_refresh_timestamp = time.time() + wait
@@ -1945,17 +1954,17 @@ def run_upstox_scanner(once=False, auto_open_web=False):
             # Sleep until target event
             while wait > 0 and not stop_scanner_event.is_set():
                 time.sleep(min(1.0, wait))
-                wait = (target - datetime.now()).total_seconds()
+                wait = (target - get_ist_now()).total_seconds()
 
             if stop_scanner_event.is_set():
                 break
 
             # Target reached: perform scan / warmup
             new_res = scan_watchlist()
-            cur_time = datetime.now().strftime('%H:%M:%S IST')
+            cur_time = get_ist_now().strftime('%H:%M:%S IST')
 
             # Determine next target event
-            nxt_now = datetime.now()
+            nxt_now = get_ist_now()
             nxt_evt, nxt_target, nxt_wait = get_next_market_event(nxt_now)
             current_market_event = nxt_evt
             next_refresh_timestamp = time.time() + nxt_wait
@@ -2000,7 +2009,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                 with data_lock:
                     res_copy = list(latest_results)
                     t_copy = str(last_scan_time)
-                next_str = (datetime.now() + timedelta(seconds=REFRESH_SECONDS)).strftime('%H:%M:%S IST')
+                next_str = (get_ist_now() + timedelta(seconds=REFRESH_SECONDS)).strftime('%H:%M:%S IST')
                 clear_screen()
                 print_terminal_view(res_copy, t_copy, active_web_port, next_str)
             elif cmd.isdigit():
@@ -2036,7 +2045,7 @@ if __name__ == "__main__":
             sync_file_to_github_api(gh_cfg, "watchlist.txt", "Update watchlist.txt")
         if os.path.isfile("upstox_tablet_scanner.py"):
             sync_file_to_github_api(gh_cfg, "upstox_tablet_scanner.py", "Update scanner code")
-        now_str = datetime.now().strftime("%H:%M:%S IST")
+        now_str = get_ist_now().strftime("%H:%M:%S IST")
         ok = sync_file_to_github_api(gh_cfg, "data.json", f"market feed {now_str}")
         if ok:
             print("✅ Successfully pushed data.json to GitHub!")
