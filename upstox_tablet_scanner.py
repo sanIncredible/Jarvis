@@ -700,7 +700,7 @@ def get_active_watchlist():
                 for line in lines:
                     syms.extend(line.split())
                 if syms:
-                    return syms
+                    return list(dict.fromkeys(syms))
         except Exception:
             pass
 
