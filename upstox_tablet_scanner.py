@@ -257,15 +257,21 @@ def send_telegram_alert_async(message, parse_mode="HTML"):
 
 
 def evaluate_and_dispatch_alerts(results, current_time_str):
-    """Evaluates scan results and dispatches instant Telegram alerts for ORB and PDH breakouts."""
+    """Evaluates scan results and dispatches a single clean tabular Telegram alert for newly triggered stocks."""
     today = get_ist_now().strftime("%Y-%m-%d")
+    t_clean = current_time_str.replace(" IST", "")
+    if len(t_clean.split(":")) >= 2:
+        t_clean = ":".join(t_clean.split(":")[:2]) + " IST"
+    else:
+        t_clean = current_time_str
+
+    new_breakouts = []
     for row in results:
         score, d, m = row
         sym = d.get("symbol")
         ltp = d.get("ltp")
         orb_h = d.get("orb_high")
         pdh = d.get("pdh")
-        chg = m.get("chg_pct", 0.0)
         signal = m.get("signal", "")
         orb_status = m.get("orb_status")
         pdh_broken = m.get("pdh_broken")
@@ -273,56 +279,51 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
         if not ltp or not orb_h:
             continue
 
+        trigger_label = None
+        alert_type = None
+
         # 1. Tier 1: Strong Start + ORB + PDH Breakout (Highest Conviction)
         if "STRONG START + ORB + PDH" in signal:
-            alert_key = (sym, "ORB_PDH_STRONG", today)
-            if alert_key not in sent_alerts:
-                sent_alerts.add(alert_key)
-                msg = (
-                    f"🔥 <b>★ STRONG START + ORB + PDH BREAKOUT!</b>\n"
-                    f"━━━━━━━━━━━━━━━━━━━━\n"
-                    f"📈 <b>Stock:</b> #{sym}\n"
-                    f"💰 <b>LTP:</b> ₹{ltp:,.2f} (<b>{chg:+.2f}%</b>)\n"
-                    f"🎯 <b>ORB High:</b> ₹{orb_h:,.2f} (Broken 🟢)\n"
-                    f"🏁 <b>PDH:</b> ₹{pdh:,.2f} (Broken 🟢)\n"
-                    f"⚡ <b>Signal:</b> {signal}\n"
-                    f"⏱ <b>Time:</b> {current_time_str}\n\n"
-                    f"📊 <a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'>Open TradingView Chart</a>"
-                )
-                send_telegram_alert_async(msg)
+            alert_type = "ORB_PDH_STRONG"
+            trigger_label = "★ SS + ORB + PDH"
 
-        # 2. Bullish Breakout (ORB + PDH)
+        # 2. Tier 2: Bullish Breakout (ORB + PDH)
         elif pdh_broken and orb_status == "H":
-            alert_key = (sym, "ORB_PDH", today)
-            if alert_key not in sent_alerts:
-                sent_alerts.add(alert_key)
-                msg = (
-                    f"🚀 <b>ORB + PDH BREAKOUT TRIGGERED!</b>\n"
-                    f"━━━━━━━━━━━━━━━━━━━━\n"
-                    f"📈 <b>Stock:</b> #{sym}\n"
-                    f"💰 <b>LTP:</b> ₹{ltp:,.2f} (<b>{chg:+.2f}%</b>)\n"
-                    f"🎯 <b>ORB High:</b> ₹{orb_h:,.2f} (Broken 🟢)\n"
-                    f"🏁 <b>PDH:</b> ₹{pdh:,.2f} (Broken 🟢)\n"
-                    f"⏱ <b>Time:</b> {current_time_str}\n\n"
-                    f"📊 <a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'>Open TradingView Chart</a>"
-                )
-                send_telegram_alert_async(msg)
+            alert_type = "ORB_PDH"
+            trigger_label = "ORB + PDH Break"
 
-        # 3. Pure ORB High Breakout
+        # 3. Tier 3: Pure ORB High Breakout
         elif orb_status == "H":
-            alert_key = (sym, "ORB_HIGH", today)
+            alert_type = "ORB_HIGH"
+            trigger_label = "ORB High Break"
+
+        if alert_type and trigger_label:
+            alert_key = (sym, alert_type, today)
             if alert_key not in sent_alerts:
                 sent_alerts.add(alert_key)
-                msg = (
-                    f"🟢 <b>ORB HIGH BREAKOUT!</b>\n"
-                    f"━━━━━━━━━━━━━━━━━━━━\n"
-                    f"📈 <b>Stock:</b> #{sym}\n"
-                    f"💰 <b>LTP:</b> ₹{ltp:,.2f} (<b>{chg:+.2f}%</b>)\n"
-                    f"🎯 <b>ORB High:</b> ₹{orb_h:,.2f}\n"
-                    f"⏱ <b>Time:</b> {current_time_str}\n\n"
-                    f"📊 <a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'>Open TradingView Chart</a>"
-                )
-                send_telegram_alert_async(msg)
+                new_breakouts.append((sym, trigger_label, t_clean))
+
+    if not new_breakouts:
+        return
+
+    # Build sleek, aligned tabular message with hyperlinked symbols
+    lines = [
+        "⚡ <b>JARVIS BREAKOUT ALERTS</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "<b>SYMBOL</b>           <b>TRIGGER</b>               <b>TIME</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    ]
+    for sym, trig, t_str in new_breakouts:
+        tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'><b>{sym}</b></a>"
+        pad_spaces = " " * max(1, 14 - len(sym))
+        trig_pad = " " * max(1, 22 - len(trig))
+        lines.append(f"• {tv_link}{pad_spaces}{trig}{trig_pad}{t_str}")
+
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("📊 <a href='https://sanincredible.github.io/Jarvis/'>Open 3m Terminal Dashboard</a>")
+
+    full_msg = "\n".join(lines)
+    send_telegram_alert_async(full_msg)
 
 
 def get_instrument_key(symbol):
