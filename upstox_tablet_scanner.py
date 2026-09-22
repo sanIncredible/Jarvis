@@ -555,10 +555,19 @@ def fetch_upstox_symbol_data(symbol, token):
         with urllib.request.urlopen(req_d, timeout=4) as resp:
             d_json = json.loads(resp.read().decode('utf-8'))
             daily_raw = d_json.get("data", {}).get("candles", [])
-            if daily_raw and len(daily_raw) >= 2:
-                pdh = float(daily_raw[1][2])  # high[1]
+            if daily_raw:
+                # Check whether daily_raw[0] is today's candle or yesterday's candle
+                first_candle_date = str(daily_raw[0][0])[:10]
+                today_iso = get_ist_now().strftime("%Y-%m-%d")
+
+                if first_candle_date == today_iso and len(daily_raw) >= 2:
+                    yesterday_candle = daily_raw[1]
+                else:
+                    yesterday_candle = daily_raw[0]
+
+                pdh = float(yesterday_candle[2])  # high[1] = high of yesterday
                 try:
-                    prev_close = float(daily_raw[1][4])
+                    prev_close = float(yesterday_candle[4])  # close[1] = close of yesterday
                     if day_open and day_low:
                         is_strong_start = (day_open > prev_close and day_low >= (prev_close * 0.995))
                 except Exception:
@@ -585,6 +594,35 @@ def fetch_upstox_symbol_data(symbol, token):
                         "l": round(float(c[3]), 2),
                         "c": round(float(c[4]), 2),
                         "v": int(c[5]) if len(c) > 5 else 0
+                    })
+
+                # If today's candle is not yet in historical daily candles, synthesize and append today's live daily bar!
+                if first_candle_date != today_iso and (parsed_candles or ltp is not None):
+                    t_lbl = get_ist_now().strftime("%d %b")
+                    t_open = parsed_candles[0]["o"] if parsed_candles else (day_open or ltp)
+                    p_highs = [c["h"] for c in parsed_candles]
+                    if ohlc.get("high"):
+                        p_highs.append(float(ohlc.get("high")))
+                    if ltp is not None:
+                        p_highs.append(float(ltp))
+                    t_high = max(p_highs) if p_highs else ltp
+
+                    p_lows = [c["l"] for c in parsed_candles]
+                    if ohlc.get("low"):
+                        p_lows.append(float(ohlc.get("low")))
+                    if ltp is not None:
+                        p_lows.append(float(ltp))
+                    t_low = min(p_lows) if p_lows else ltp
+
+                    t_close = ltp
+                    t_vol = sum(c.get("v", 0) for c in parsed_candles) or int(d_quote.get("volume", 0) or 0)
+                    parsed_daily_candles.append({
+                        "t": t_lbl,
+                        "o": round(float(t_open), 2),
+                        "h": round(float(t_high), 2),
+                        "l": round(float(t_low), 2),
+                        "c": round(float(t_close), 2),
+                        "v": int(t_vol)
                     })
 
                 # Pine Script: avgv = ta.sma(volume[1], 20), rvol = volume / avgv
