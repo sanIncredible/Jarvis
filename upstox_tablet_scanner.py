@@ -64,7 +64,82 @@ SYMBOL_TO_ISIN = {
     "WESTLIFE": "INE274F01020",
     "BELRISE": "INE00AA01018",
     "URBANCO": "INE01ZZ01010",
+    "PARAGMILK": "INE883N01014",
+    "ADANIPOWER": "INE814H01029",
+    "OAL": "INE959C01023",
+    "EIMCOELECO": "INE158B01016",
+    "SAREGAMA": "INE979A01025",
+    "GRAPHITE": "INE371A01025",
+    "PINELABS": "INE15B701018",
+    "CYIENT": "INE136B01020",
+    "NRAIL": "INE740D01017",
+    "AEQUS": "INE947N01017",
+    "HONASA": "INE0J5401028",
+    "ABDL": "INE552Z01027",
+    "JINDWORLD": "INE247D01039",
+    "LOTUSDEV": "INE0V9Q01010",
+    "TDPOWERSYS": "INE419M01035",
+    "ECLERX": "INE738I01010",
+    "AEGISLOG": "INE208C01025",
+    "SYRMA": "INE0DYJ01015",
+    "KIRLOSENG": "INE146L01010",
+    "CASTROL": "INE172A01027",
+    "CASTROLIND": "INE172A01027",
+    "AEROFLEX": "INE024001021",
+    "MMP": "INE511Y01018",
+    "WHEELS": "INE715A01015",
+    "SOLARA": "INE624Z01016",
+    "TBOTEK": "INE07VO01018",
+    "SOMANYCERA": "INE355A01028",
+    "PITTIENG": "INE374C01012",
+    "BLUEJET": "INE0BCJ01022",
+    "BLACKBUCK": "INE0OH201010",
+    "PARAS": "INE045601015",
+    "GOCLCORP": "INE079A01024",
+    "BBOX": "INE220B01022",
+    "ACMESOLAR": "INE620Z01019",
+    "KRN": "INE0C9501010",
+    "NOVARTIND": "INE234A01025",
 }
+
+INDEX_MAPPING = {
+    "NIFTY": "NSE_INDEX|Nifty 50",
+    "NIFTY 50": "NSE_INDEX|Nifty 50",
+    "NIFTY50": "NSE_INDEX|Nifty 50",
+    "CNXNIFTY": "NSE_INDEX|Nifty 50",
+    "BANKNIFTY": "NSE_INDEX|Nifty Bank",
+    "NIFTYBANK": "NSE_INDEX|Nifty Bank",
+    "FINNIFTY": "NSE_INDEX|Nifty Fin Service",
+    "MIDCPNIFTY": "NSE_INDEX|NIFTY MID SELECT",
+}
+
+
+def resolve_isin_dynamic(symbol):
+    """Dynamically resolves unknown symbol to ISIN from Upstox instruments cache."""
+    cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "upstox_nse_cache.json")
+    if os.path.isfile(cache_path):
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                c_map = json.load(f)
+                if symbol in c_map:
+                    return c_map[symbol]
+        except Exception:
+            pass
+    try:
+        import gzip
+        url = "https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(gzip.decompress(resp.read()).decode("utf-8"))
+        c_map = {}
+        for inst in data:
+            if inst.get("segment") == "NSE_EQ" and inst.get("trading_symbol") and inst.get("isin"):
+                c_map[inst["trading_symbol"]] = inst["isin"]
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump(c_map, f)
+        return c_map.get(symbol)
+    except Exception:
+        return None
 
 # ANSI Colors matching Pine Script Palette
 GREEN = "\033[92m"        # Lime / Green (#0b8043)
@@ -161,33 +236,34 @@ def sync_remote_files_from_github():
             except Exception:
                 pass
 
-        # 2. Check for self-updates to upstox_tablet_scanner.py
-        try:
-            url_code = f"https://api.github.com/repos/{owner}/{repo}/contents/upstox_tablet_scanner.py?ref={branch}"
-            req_c = urllib.request.Request(url_code, headers={
-                "Authorization": f"Bearer {token}",
-                "User-Agent": "Jarvis-GitHub-Pull",
-                "Accept": "application/vnd.github+json"
-            })
-            with urllib.request.urlopen(req_c, timeout=5) as resp_c:
-                data_c = json.loads(resp_c.read().decode("utf-8"))
-                code_b64 = data_c.get("content", "")
-                if code_b64:
-                    new_code = base64.b64decode(code_b64).decode("utf-8")
-                    this_file = os.path.abspath(__file__)
-                    if os.path.isfile(this_file):
-                        with open(this_file, "r", encoding="utf-8") as cf:
-                            current_code = cf.read()
-                        if current_code and new_code.strip() != current_code.strip():
-                            # Validate Python syntax before applying
-                            compile(new_code, this_file, "exec")
-                            with open(this_file, "w", encoding="utf-8") as wf:
-                                wf.write(new_code)
-                            print("\n🔄 Updated scanner engine pulled from GitHub! Reloading process...")
-                            time.sleep(1)
-                            os.execv(sys.executable, [sys.executable] + sys.argv)
-        except Exception:
-            pass
+        # 2. Check for self-updates to upstox_tablet_scanner.py (only on tablet / non-Windows devices)
+        if sys.platform != "win32":
+            try:
+                url_code = f"https://api.github.com/repos/{owner}/{repo}/contents/upstox_tablet_scanner.py?ref={branch}"
+                req_c = urllib.request.Request(url_code, headers={
+                    "Authorization": f"Bearer {token}",
+                    "User-Agent": "Jarvis-GitHub-Pull",
+                    "Accept": "application/vnd.github+json"
+                })
+                with urllib.request.urlopen(req_c, timeout=5) as resp_c:
+                    data_c = json.loads(resp_c.read().decode("utf-8"))
+                    code_b64 = data_c.get("content", "")
+                    if code_b64:
+                        new_code = base64.b64decode(code_b64).decode("utf-8")
+                        this_file = os.path.abspath(__file__)
+                        if os.path.isfile(this_file):
+                            with open(this_file, "r", encoding="utf-8") as cf:
+                                current_code = cf.read()
+                            if current_code and new_code.strip() != current_code.strip():
+                                # Validate Python syntax before applying
+                                compile(new_code, this_file, "exec")
+                                with open(this_file, "w", encoding="utf-8") as wf:
+                                    wf.write(new_code)
+                                print("\n🔄 Updated scanner engine pulled from GitHub! Reloading process...")
+                                time.sleep(1)
+                                os.execv(sys.executable, [sys.executable] + sys.argv)
+            except Exception:
+                pass
     except Exception:
         pass
 
@@ -326,17 +402,55 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
 
 
 def get_instrument_key(symbol):
-    """Resolves instrument key for Upstox API queries."""
-    isin = SYMBOL_TO_ISIN.get(symbol.upper())
+    """Resolves instrument key for Upstox API queries (stocks & indices)."""
+    sym_u = symbol.strip().upper()
+    if sym_u in INDEX_MAPPING:
+        return INDEX_MAPPING[sym_u]
+    isin = SYMBOL_TO_ISIN.get(sym_u)
+    if not isin:
+        isin = resolve_isin_dynamic(sym_u)
+        if isin:
+            SYMBOL_TO_ISIN[sym_u] = isin
     if isin:
         return f"NSE_EQ|{isin}"
-    return f"NSE_EQ|{symbol.upper()}"
+    return f"NSE_EQ|{sym_u}"
+
+
+def aggregate_1m_to_3m(candles_1m):
+    """Aggregates Upstox 1-minute index candles into 3-minute ORB candles."""
+    buckets = {}
+    for c in candles_1m:
+        ts = str(c[0])
+        try:
+            dt = datetime.fromisoformat(ts)
+            b_min = (dt.minute // 3) * 3
+            b_dt = dt.replace(minute=b_min, second=0, microsecond=0)
+            b_key = b_dt.isoformat()
+            if b_key not in buckets:
+                buckets[b_key] = [
+                    b_key,
+                    float(c[1]),  # open
+                    float(c[2]),  # high
+                    float(c[3]),  # low
+                    float(c[4]),  # close
+                    int(c[5]) if len(c) > 5 else 0  # volume
+                ]
+            else:
+                b = buckets[b_key]
+                b[2] = max(b[2], float(c[2]))  # high
+                b[3] = min(b[3], float(c[3]))  # low
+                b[4] = float(c[4])            # close (latest in interval)
+                b[5] += int(c[5]) if len(c) > 5 else 0
+        except Exception:
+            continue
+    return [buckets[k] for k in sorted(buckets.keys())]
 
 
 def fetch_upstox_symbol_data(symbol, token):
     """Fetches live market data and 3m candles from Upstox API v2."""
     inst_key = get_instrument_key(symbol)
     encoded_key = urllib.parse.quote(inst_key)
+    is_index = inst_key.startswith("NSE_INDEX|")
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json",
@@ -363,8 +477,9 @@ def fetch_upstox_symbol_data(symbol, token):
         req_q = urllib.request.Request(quote_url, headers=headers)
         with urllib.request.urlopen(req_q, timeout=4) as resp:
             q_json = json.loads(resp.read().decode('utf-8'))
+            q_data = q_json.get("data", {})
             key_in_data = inst_key.replace("|", ":")
-            d_quote = q_json.get("data", {}).get(key_in_data, {})
+            d_quote = q_data.get(key_in_data) or (list(q_data.values())[0] if q_data else {})
             if d_quote:
                 ltp = float(d_quote.get("last_price", 0))
                 ohlc = d_quote.get("ohlc", {})
@@ -377,14 +492,15 @@ def fetch_upstox_symbol_data(symbol, token):
                     is_strong_start = True
 
         # 2. Intraday 3-Minute Candles (Pine Script f_orb() logic)
-        candle_url = f"https://api.upstox.com/v2/historical-candle/intraday/{encoded_key}/3minute"
+        # Use 1minute candles and aggregate to 3minute (supported across all NSE stocks & indices)
+        candle_url = f"https://api.upstox.com/v2/historical-candle/intraday/{encoded_key}/1minute"
+
         req_c = urllib.request.Request(candle_url, headers=headers)
         with urllib.request.urlopen(req_c, timeout=4) as resp:
             c_json = json.loads(resp.read().decode('utf-8'))
             raw_candles = c_json.get("data", {}).get("candles", [])
             if raw_candles:
-                # Guarantee chronological order: 09:15 AM opening candle is ALWAYS Bar 1
-                candles_3m = sorted(raw_candles, key=lambda c: str(c[0]))
+                candles_3m = aggregate_1m_to_3m(raw_candles)
 
                 highs_3m = [float(c[2]) for c in candles_3m]
                 lows_3m = [float(c[3]) for c in candles_3m]
@@ -439,6 +555,8 @@ def fetch_upstox_symbol_data(symbol, token):
             daily_raw = d_json.get("data", {}).get("candles", [])
             if daily_raw and len(daily_raw) >= 2:
                 pdh = float(daily_raw[1][2])  # high[1]
+                if is_index and len(daily_raw) >= 2:
+                    prev_close = float(daily_raw[1][4])
 
                 vols = [float(c[5]) for c in daily_raw]
                 closes = [float(c[4]) for c in daily_raw]
@@ -512,7 +630,11 @@ def fetch_upstox_symbol_data(symbol, token):
 def fetch_fallback_data(symbol):
     """Fallback to Yahoo Finance if Upstox token is expired or offline."""
     clean_sym = symbol.strip().upper()
-    if not clean_sym.endswith(".NS") and not clean_sym.endswith(".BO"):
+    if clean_sym in ("NIFTY", "NIFTY 50", "NIFTY50", "CNXNIFTY"):
+        ticker = "^NSEI"
+    elif clean_sym in ("BANKNIFTY", "NIFTYBANK"):
+        ticker = "^NSEBANK"
+    elif not clean_sym.endswith(".NS") and not clean_sym.endswith(".BO"):
         ticker = clean_sym + ".NS"
     else:
         ticker = clean_sym
