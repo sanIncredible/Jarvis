@@ -254,11 +254,13 @@ def sync_remote_files_from_github():
                         if os.path.isfile(this_file):
                             with open(this_file, "r", encoding="utf-8") as cf:
                                 current_code = cf.read()
-                            if current_code and new_code.strip() != current_code.strip():
+                            norm_current = current_code.replace("\r\n", "\n").strip()
+                            norm_new = new_code.replace("\r\n", "\n").strip()
+                            if norm_current and norm_new != norm_current:
                                 # Validate Python syntax before applying
                                 compile(new_code, this_file, "exec")
-                                with open(this_file, "w", encoding="utf-8") as wf:
-                                    wf.write(new_code)
+                                with open(this_file, "w", encoding="utf-8", newline="\n") as wf:
+                                    wf.write(norm_new)
                                 print("\n🔄 Updated scanner engine pulled from GitHub! Reloading process...")
                                 time.sleep(1)
                                 os.execv(sys.executable, [sys.executable] + sys.argv)
