@@ -792,6 +792,7 @@
 
   const JSDELIVR_URL = 'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/data.json';
   const GITHUB_API_URL = 'https://api.github.com/repos/sanIncredible/Jarvis/contents/data.json';
+  const RAW_GITHUB_URL = 'https://raw.githubusercontent.com/sanIncredible/Jarvis/main/data.json';
 
   async function fetchWithTimeout(url, opts = {}, timeoutMs = 4000) {
     const controller = new AbortController();
@@ -807,10 +808,10 @@
   }
 
   function checkDataFreshness(updatedAtStr) {
-    if (!updatedAtStr) return { isStale: false, ageMinutes: 0 };
+    if (!updatedAtStr) return { isStale: true, ageMinutes: 999 };
     try {
       const parts = updatedAtStr.replace(' IST', '').trim().split(':');
-      if (parts.length < 2) return { isStale: false, ageMinutes: 0 };
+      if (parts.length < 2) return { isStale: true, ageMinutes: 999 };
       
       const now = new Date();
       const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -832,10 +833,11 @@
       const isMarketHours = (day >= 1 && day <= 5) && (nowSec >= (9 * 3600 + 15 * 60)) && (nowSec <= (15 * 3600 + 35 * 60));
       
       const ageMinutes = Math.floor(diffSec / 60);
-      const isStale = isMarketHours && diffSec > 210;
-      return { isStale, ageMinutes };
+      // Data is stale if market hours and older than 3.5 min, OR anytime older than 5 min
+      const isStale = isMarketHours ? (diffSec > 210) : (diffSec > 300);
+      return { isStale, ageMinutes, diffSec };
     } catch (e) {
-      return { isStale: false, ageMinutes: 0 };
+      return { isStale: false, ageMinutes: 0, diffSec: 0 };
     }
   }
 
@@ -848,7 +850,42 @@
     let bestData = null;
     let usedSource = 'Live Feed';
 
-    // Tier 1: Same-Origin / GitHub Pages (Fastest; 0 extra API rate limit usage)
+    // Manual refresh: Instantly query GitHub Direct API & raw.githubusercontent to completely bypass Fastly CDN!
+    if (isManual) {
+      try {
+        const resApi = await fetchWithTimeout(GITHUB_API_URL, {
+          cache: 'no-store',
+          headers: {
+            'Accept': 'application/vnd.github.raw+json',
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-cache'
+          }
+        }, 3500);
+        if (resApi.ok) {
+          const d = await resApi.json();
+          if (d && d.stocks && d.stocks.length) {
+            processIncomingData(d, 'GitHub Direct API (Instant)');
+            return;
+          }
+        }
+      } catch (e) {}
+
+      try {
+        const resRaw = await fetchWithTimeout(`${RAW_GITHUB_URL}?_t=${t}`, {
+          cache: 'no-store',
+          headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
+        }, 3000);
+        if (resRaw.ok) {
+          const d = await resRaw.json();
+          if (d && d.stocks && d.stocks.length) {
+            processIncomingData(d, 'GitHub Raw Stream');
+            return;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Tier 1: Same-Origin / GitHub Pages
     try {
       let path = window.location.pathname || '/';
       if (path.endsWith('.html') || path.endsWith('.htm')) {
@@ -866,8 +903,9 @@
           bestData = d;
           usedSource = 'GitHub Pages Edge';
           const fresh = checkDataFreshness(d.updated_at);
-          // If data is freshly updated (< 3.5 mins), use immediately!
-          if (!fresh.isStale) {
+          // If edge is fresh (< 3.5 mins) and not showing zero breadth when stocks exist, use it
+          const hasBreadth = d.stocks.some(s => s.chg_pct !== 0);
+          if (!fresh.isStale && hasBreadth) {
             processIncomingData(bestData, usedSource);
             return;
           }
@@ -875,7 +913,7 @@
       }
     } catch (e) {}
 
-    // Tier 2: Direct GitHub REST Contents API (raw) — instantly defeats Fastly CDN caching when edge is stale!
+    // Tier 2: Direct GitHub REST Contents API
     try {
       const resApi = await fetchWithTimeout(GITHUB_API_URL, {
         cache: 'no-store',
@@ -896,7 +934,24 @@
       }
     } catch (e) {}
 
-    // Tier 3: jsDelivr Global Purged CDN Fallback
+    // Tier 3: raw.githubusercontent.com Live Stream
+    try {
+      const resRaw = await fetchWithTimeout(`${RAW_GITHUB_URL}?_t=${t}`, {
+        cache: 'no-store',
+        headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
+      }, 3000);
+      if (resRaw.ok) {
+        const d = await resRaw.json();
+        if (d && d.stocks && d.stocks.length) {
+          bestData = d;
+          usedSource = 'GitHub Raw Stream';
+          processIncomingData(bestData, usedSource);
+          return;
+        }
+      }
+    } catch (e) {}
+
+    // Tier 4: jsDelivr Global Purged CDN Fallback
     if (!bestData) {
       try {
         const res = await fetchWithTimeout(`${JSDELIVR_URL}?t=${t}`, {
