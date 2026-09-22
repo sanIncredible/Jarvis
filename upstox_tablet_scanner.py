@@ -1835,6 +1835,17 @@ def sync_file_to_github_api(gh_cfg, path, commit_msg):
         return False
 
 
+def purge_jsdelivr_cache():
+    """Purges jsDelivr global edge CDN cache for data.json instantly (< 1s)."""
+    try:
+        url = "https://purge.jsdelivr.net/gh/sanIncredible/Jarvis@main/data.json"
+        req = urllib.request.Request(url, headers={"User-Agent": "Jarvis-CDN-Purge"})
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            pass
+    except Exception:
+        pass
+
+
 def trigger_git_push_async():
     """Spawns a background thread to commit and push data.json via GitHub API or Git CLI."""
     gh_cfg = load_github_config()
@@ -1850,6 +1861,7 @@ def trigger_git_push_async():
             now_t = get_ist_now().strftime("%H:%M:%S IST")
             pushed_api = sync_file_to_github_api(gh_cfg, "data.json", f"sync data.json {now_t}")
             if pushed_api:
+                purge_jsdelivr_cache()
                 return
 
         # 2. Fallback to CLI git if installed
@@ -1862,6 +1874,7 @@ def trigger_git_push_async():
                     repo = gh_cfg.get("repo", "Jarvis").strip()
                     os.system(f'git remote set-url origin https://x-access-token:{tok}@github.com/{owner}/{repo}.git')
                 os.system('git add data.json && git commit -m "sync data.json" && git push')
+                purge_jsdelivr_cache()
         except Exception:
             pass
 
@@ -2008,13 +2021,13 @@ def get_next_market_event(now):
     elif now < t_915:
         return 'MARKET_OPEN_915', t_915, max(1.0, (t_915 - now).total_seconds())
     elif now < t_1530:
-        t_918 = now.replace(hour=9, minute=18, second=2, microsecond=0)
+        t_918 = now.replace(hour=9, minute=18, second=10, microsecond=0)
         if now < t_918:
             return 'CANDLE_CLOSE_3M', t_918, max(1.0, (t_918 - now).total_seconds())
 
-        wait_secs, target_dt = get_next_candle_target(now=now, buffer_seconds=2)
+        wait_secs, target_dt = get_next_candle_target(now=now, buffer_seconds=10)
         if target_dt > t_1530:
-            target_dt = t_1530.replace(second=2)
+            target_dt = t_1530.replace(second=10)
             wait_secs = max(1.0, (target_dt - now).total_seconds())
         return 'CANDLE_CLOSE_3M', target_dt, wait_secs
     else:
@@ -2048,8 +2061,8 @@ def live_terminal_timer():
         time.sleep(1)
 
 
-def get_next_candle_target(now=None, buffer_seconds=2):
-    """Calculates exact timestamp for next 3m candle close (e.g. 09:18:02, 09:21:02, 09:24:02)."""
+def get_next_candle_target(now=None, buffer_seconds=10):
+    """Calculates exact timestamp for next 3m candle close (e.g. 09:18:10, 09:21:10, 09:24:10)."""
     if now is None:
         now = get_ist_now()
     minutes_to_add = (3 - (now.minute % 3)) % 3
