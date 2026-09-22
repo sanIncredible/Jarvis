@@ -557,8 +557,12 @@ def fetch_upstox_symbol_data(symbol, token):
             daily_raw = d_json.get("data", {}).get("candles", [])
             if daily_raw and len(daily_raw) >= 2:
                 pdh = float(daily_raw[1][2])  # high[1]
-                if is_index and len(daily_raw) >= 2:
+                try:
                     prev_close = float(daily_raw[1][4])
+                    if day_open and day_low:
+                        is_strong_start = (day_open > prev_close and day_low >= (prev_close * 0.995))
+                except Exception:
+                    pass
 
                 vols = [float(c[5]) for c in daily_raw]
                 closes = [float(c[4]) for c in daily_raw]
