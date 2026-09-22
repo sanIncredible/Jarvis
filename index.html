@@ -845,61 +845,76 @@
       pulseIndicator.style.backgroundColor = '#38bdf8';
     }
     const t = Date.now();
-    let data = null;
-    let usedSource = 'jsDelivr';
+    let bestData = null;
+    let usedSource = 'Live Feed';
 
-    // Tier 1: jsDelivr Instant-Purged Global CDN (Ultra-low latency, bypasses Fastly 10m cache)
+    // Tier 1: Same-Origin / GitHub Pages (Fastest; 0 extra API rate limit usage)
     try {
-      const res = await fetchWithTimeout(`${JSDELIVR_URL}?t=${t}`, {
-        cache: 'no-store',
-        headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
-      }, 3500);
-      if (res.ok) {
-        data = await res.json();
-        usedSource = 'jsDelivr Edge';
+      let path = window.location.pathname || '/';
+      if (path.endsWith('.html') || path.endsWith('.htm')) {
+        path = path.substring(0, path.lastIndexOf('/') + 1);
+      } else if (!path.endsWith('/')) {
+        path += '/';
+      }
+      const localUrl = (window.location.origin && window.location.origin !== 'null')
+        ? (window.location.origin + path + 'data.json?t=' + t)
+        : ('data.json?t=' + t);
+      const resLocal = await fetchWithTimeout(localUrl, { cache: 'no-store' }, 2500);
+      if (resLocal.ok) {
+        const d = await resLocal.json();
+        if (d && d.stocks && d.stocks.length) {
+          bestData = d;
+          usedSource = 'GitHub Pages Edge';
+          const fresh = checkDataFreshness(d.updated_at);
+          // If data is freshly updated (< 3.5 mins), use immediately!
+          if (!fresh.isStale) {
+            processIncomingData(bestData, usedSource);
+            return;
+          }
+        }
       }
     } catch (e) {}
 
-    // Tier 2: Direct GitHub REST Contents API (raw) — zero CDN cache fallback
-    if (!data || !data.stocks || !data.stocks.length) {
+    // Tier 2: Direct GitHub REST Contents API (raw) — instantly defeats Fastly CDN caching when edge is stale!
+    try {
+      const resApi = await fetchWithTimeout(GITHUB_API_URL, {
+        cache: 'no-store',
+        headers: {
+          'Accept': 'application/vnd.github.raw+json',
+          'Pragma': 'no-cache',
+          'Cache-Control': 'no-cache'
+        }
+      }, 3500);
+      if (resApi.ok) {
+        const d = await resApi.json();
+        if (d && d.stocks && d.stocks.length) {
+          bestData = d;
+          usedSource = 'GitHub Direct API';
+          processIncomingData(bestData, usedSource);
+          return;
+        }
+      }
+    } catch (e) {}
+
+    // Tier 3: jsDelivr Global Purged CDN Fallback
+    if (!bestData) {
       try {
-        const resApi = await fetchWithTimeout(GITHUB_API_URL, {
+        const res = await fetchWithTimeout(`${JSDELIVR_URL}?t=${t}`, {
           cache: 'no-store',
-          headers: {
-            'Accept': 'application/vnd.github.raw+json',
-            'Pragma': 'no-cache',
-            'Cache-Control': 'no-cache'
+          headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
+        }, 3000);
+        if (res.ok) {
+          const d = await res.json();
+          if (d && d.stocks && d.stocks.length) {
+            bestData = d;
+            usedSource = 'jsDelivr Global';
           }
-        }, 4000);
-        if (resApi.ok) {
-          data = await resApi.json();
-          usedSource = 'GitHub API';
         }
       } catch (e) {}
     }
 
-    // Tier 3: Same-Origin Fallback (for tablet local 127.0.0.1:5000 or offline file)
-    if (!data || !data.stocks || !data.stocks.length) {
-      try {
-        let path = window.location.pathname || '/';
-        if (path.endsWith('.html') || path.endsWith('.htm')) {
-          path = path.substring(0, path.lastIndexOf('/') + 1);
-        } else if (!path.endsWith('/')) {
-          path += '/';
-        }
-        const localUrl = (window.location.origin && window.location.origin !== 'null')
-          ? (window.location.origin + path + 'data.json?t=' + t)
-          : ('data.json?t=' + t);
-        const resLocal = await fetchWithTimeout(localUrl, { cache: 'no-store' }, 3500);
-        if (resLocal.ok) {
-          data = await resLocal.json();
-          usedSource = 'Origin';
-        }
-      } catch (e) {}
-    }
-
-    if (data && data.stocks) {
-      processIncomingData(data, usedSource);
+    if (bestData && bestData.stocks) {
+      processIncomingData(bestData, usedSource);
     } else {
       statusText.innerText = 'RETRYING';
       pulseIndicator.style.backgroundColor = '#f59e0b';
