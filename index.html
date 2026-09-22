@@ -560,8 +560,8 @@
 
       <div class="pill-selector">
         <button class="pill-btn" onclick="setPollInterval(15)">15s</button>
-        <button class="pill-btn" onclick="setPollInterval(30)">30s</button>
-        <button class="pill-btn active" onclick="setPollInterval(60)">60s</button>
+        <button class="pill-btn active" onclick="setPollInterval(30)">30s</button>
+        <button class="pill-btn" onclick="setPollInterval(60)">60s</button>
         <button class="pill-btn" onclick="setPollInterval(180)">3m</button>
       </div>
 
@@ -696,7 +696,7 @@
   let activeFilter = 'all';
   let sortField = 'strength_score';
   let sortAsc = false;
-  let pollIntervalSec = 60;
+  let pollIntervalSec = 30;
   let countdown = pollIntervalSec;
   let timerHandle = null;
   let popupTimer = null;
@@ -790,39 +790,140 @@
     });
   }
 
+  const JSDELIVR_URL = 'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/data.json';
+  const GITHUB_API_URL = 'https://api.github.com/repos/sanIncredible/Jarvis/contents/data.json';
+
+  async function fetchWithTimeout(url, opts = {}, timeoutMs = 4000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...opts, signal: controller.signal });
+      clearTimeout(timer);
+      return res;
+    } catch (err) {
+      clearTimeout(timer);
+      throw err;
+    }
+  }
+
+  function checkDataFreshness(updatedAtStr) {
+    if (!updatedAtStr) return { isStale: false, ageMinutes: 0 };
+    try {
+      const parts = updatedAtStr.replace(' IST', '').trim().split(':');
+      if (parts.length < 2) return { isStale: false, ageMinutes: 0 };
+      
+      const now = new Date();
+      const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const istNow = new Date(utcTime + (3600000 * 5.5));
+      
+      const currentH = istNow.getHours();
+      const currentM = istNow.getMinutes();
+      const currentS = istNow.getSeconds();
+      
+      const updateH = parseInt(parts[0], 10);
+      const updateM = parseInt(parts[1], 10);
+      const updateS = parts.length > 2 ? parseInt(parts[2], 10) : 0;
+      
+      const nowSec = currentH * 3600 + currentM * 60 + currentS;
+      const updateSec = updateH * 3600 + updateM * 60 + updateS;
+      const diffSec = nowSec - updateSec;
+      
+      const day = istNow.getDay();
+      const isMarketHours = (day >= 1 && day <= 5) && (nowSec >= (9 * 3600 + 15 * 60)) && (nowSec <= (15 * 3600 + 35 * 60));
+      
+      const ageMinutes = Math.floor(diffSec / 60);
+      const isStale = isMarketHours && diffSec > 210;
+      return { isStale, ageMinutes };
+    } catch (e) {
+      return { isStale: false, ageMinutes: 0 };
+    }
+  }
+
   async function fetchData(isManual) {
     if (isManual) {
       statusText.innerText = 'SYNCING';
       pulseIndicator.style.backgroundColor = '#38bdf8';
     }
-    try {
-      let path = window.location.pathname || '/';
-      if (path.endsWith('.html') || path.endsWith('.htm')) {
-        path = path.substring(0, path.lastIndexOf('/') + 1);
-      } else if (!path.endsWith('/')) {
-        path += '/';
-      }
-      const url = (window.location.origin && window.location.origin !== 'null')
-        ? (window.location.origin + path + 'data.json?t=' + Date.now())
-        : ('data.json?t=' + Date.now());
+    const t = Date.now();
+    let data = null;
+    let usedSource = 'jsDelivr';
 
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      processIncomingData(data);
-    } catch (err) {
-      statusText.innerText = 'STANDBY';
+    // Tier 1: jsDelivr Instant-Purged Global CDN (Ultra-low latency, bypasses Fastly 10m cache)
+    try {
+      const res = await fetchWithTimeout(`${JSDELIVR_URL}?t=${t}`, {
+        cache: 'no-store',
+        headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
+      }, 3500);
+      if (res.ok) {
+        data = await res.json();
+        usedSource = 'jsDelivr Edge';
+      }
+    } catch (e) {}
+
+    // Tier 2: Direct GitHub REST Contents API (raw) — zero CDN cache fallback
+    if (!data || !data.stocks || !data.stocks.length) {
+      try {
+        const resApi = await fetchWithTimeout(GITHUB_API_URL, {
+          cache: 'no-store',
+          headers: {
+            'Accept': 'application/vnd.github.raw+json',
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-cache'
+          }
+        }, 4000);
+        if (resApi.ok) {
+          data = await resApi.json();
+          usedSource = 'GitHub API';
+        }
+      } catch (e) {}
+    }
+
+    // Tier 3: Same-Origin Fallback (for tablet local 127.0.0.1:5000 or offline file)
+    if (!data || !data.stocks || !data.stocks.length) {
+      try {
+        let path = window.location.pathname || '/';
+        if (path.endsWith('.html') || path.endsWith('.htm')) {
+          path = path.substring(0, path.lastIndexOf('/') + 1);
+        } else if (!path.endsWith('/')) {
+          path += '/';
+        }
+        const localUrl = (window.location.origin && window.location.origin !== 'null')
+          ? (window.location.origin + path + 'data.json?t=' + t)
+          : ('data.json?t=' + t);
+        const resLocal = await fetchWithTimeout(localUrl, { cache: 'no-store' }, 3500);
+        if (resLocal.ok) {
+          data = await resLocal.json();
+          usedSource = 'Origin';
+        }
+      } catch (e) {}
+    }
+
+    if (data && data.stocks) {
+      processIncomingData(data, usedSource);
+    } else {
+      statusText.innerText = 'RETRYING';
       pulseIndicator.style.backgroundColor = '#f59e0b';
     }
   }
 
-  function processIncomingData(data) {
+  function processIncomingData(data, feedSource) {
     if (!data) return;
-    statusText.innerText = 'LIVE';
-    pulseIndicator.style.backgroundColor = '#00c087';
+    
+    const { isStale, ageMinutes } = checkDataFreshness(data.updated_at);
+    if (isStale) {
+      statusText.innerText = `DELAYED (${ageMinutes}m)`;
+      statusText.style.color = '#f59e0b';
+      pulseIndicator.style.backgroundColor = '#f59e0b';
+    } else {
+      statusText.innerText = 'LIVE';
+      statusText.style.color = '#fff';
+      pulseIndicator.style.backgroundColor = '#00c087';
+    }
 
     if (data.updated_at) updatedAtDisplay.innerText = data.updated_at;
-    if (data.source) sourceLabel.innerText = data.source;
+    if (data.source) {
+      sourceLabel.innerText = `${data.source} • ${feedSource || 'Fast Edge'}`;
+    }
 
     RAW_STOCKS = data.stocks || [];
     CHARTS_DATA = {};
@@ -1366,6 +1467,18 @@
         showChartPopup({ clientX: window.innerWidth / 2 - 340, clientY: 100 }, RAW_STOCKS[idx].symbol, true);
       }
     }
+  });
+
+  // Defeat Mobile/Desktop Background Tab Sleep & Wake Instantly
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+      countdown = pollIntervalSec;
+      updateTimerText();
+      fetchData(true);
+    }
+  });
+  window.addEventListener('focus', function() {
+    fetchData(false);
   });
 
   // Boot
