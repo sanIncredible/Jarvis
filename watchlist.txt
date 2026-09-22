@@ -1,24 +1,24 @@
-# Upstox 3m ORB Scanner Watchlist
-# Add or remove NSE stock tickers below (one per line, or space/comma separated)
-PARAGMILK
-ADANIPOWER
-OAL
-EIMCOELECO
-SAREGAMA
-GRAPHITE
-PINELABS
-CYIENT
-NRAIL
-AEQUS
-HONASA
-ABDL
-JINDWORLD
-LOTUSDEV
-NIFTY
-TDPOWERSYS
-ECLERX
-AEGISLOG
-SYRMA
-KIRLOSENG
-CASTROL
+# Upstox 3m ORB Scanner Watchlist
+# Add or remove NSE stock tickers below (one per line, or space/comma separated)
+PARAGMILK
+ADANIPOWER
+OAL
+EIMCOELECO
+SAREGAMA
+GRAPHITE
+PINELABS
+CYIENT
+NRAIL
+AEQUS
+HONASA
+ABDL
+JINDWORLD
+LOTUSDEV
+NIFTY
+TDPOWERSYS
+ECLERX
+AEGISLOG
+SYRMA
+KIRLOSENG
+CASTROL
 AEROFLEX
