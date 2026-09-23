@@ -462,6 +462,9 @@ def fetch_upstox_symbol_data(symbol, token):
     ltp = None
     prev_close = None
     pdh = None
+    pivot_point = None
+    pivot_r1 = None
+    pivot_r2 = None
     rvol = None
     is_strong_start = False
     anchor_high = None
@@ -573,6 +576,19 @@ def fetch_upstox_symbol_data(symbol, token):
                 except Exception:
                     pass
 
+                # Classic Floor Pivot Points: P = (H + L + C) / 3, R1 = 2*P - L, R2 = P + (H - L)
+                try:
+                    yh = float(yesterday_candle[2])
+                    yl = float(yesterday_candle[3])
+                    yc = float(yesterday_candle[4])
+                    pivot_point = round((yh + yl + yc) / 3.0, 2)
+                    pivot_r1 = round(2.0 * pivot_point - yl, 2)
+                    pivot_r2 = round(pivot_point + (yh - yl), 2)
+                except Exception:
+                    pivot_point = None
+                    pivot_r1 = None
+                    pivot_r2 = None
+
                 vols = [float(c[5]) for c in daily_raw]
                 closes = [float(c[4]) for c in daily_raw]
                 highs = [float(c[2]) for c in daily_raw]
@@ -656,6 +672,9 @@ def fetch_upstox_symbol_data(symbol, token):
         "ltp": ltp,
         "prev_close": prev_close,
         "pdh": pdh,
+        "pivot": pivot_point,
+        "r1": pivot_r1,
+        "r2": pivot_r2,
         "rvol": rvol,
         "is_strong_start": is_strong_start,
         "orb_high": anchor_high,
@@ -2082,6 +2101,9 @@ def export_static_html(results, now_str, port):
                 "chg_pct": round(m["chg_pct"], 2) if m.get("chg_pct") is not None else None,
                 "pdh": d.get("pdh"),
                 "pdh_broken": bool(m.get("pdh_broken", False)),
+                "pivot": d.get("pivot"),
+                "r1": d.get("r1"),
+                "r2": d.get("r2"),
                 "orb_high": d.get("orb_high"),
                 "orb_low": d.get("orb_low"),
                 "high_bar_num": d.get("high_bar_num"),
