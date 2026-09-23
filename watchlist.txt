@@ -1,1 +1,1 @@
-# Upstox 3m ORB Scanner Watchlist# Add or remove NSE stock tickers below (one per line, or space/comma separated)ADANIPOWEROALEIMCOELECOSAREGAMAGRAPHITEPINELABSCYIENTAEQUSABDLJINDWORLDNIFTYECLERXAEGISLOGFCLMOTHERSON
+# Upstox 3m ORB Scanner Watchlist# Add or remove NSE stock tickers below (one per line, or space/comma separated)ADANIPOWEROALEIMCOELECOSAREGAMAGRAPHITEPINELABSCYIENTAEQUSABDLPNGSREVANIFTYECLERXAEGISLOGFCLMOTHERSON
