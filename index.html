@@ -634,8 +634,8 @@
         <tr>
           <th onclick="handleSort('idx')" style="width:45px; text-align:center;"># <span id="sort-idx" class="sort-icon">▲</span></th>
           <th onclick="handleSort('symbol')">Ticker / TV App <span id="sort-symbol" class="sort-icon"></span></th>
-          <th onclick="handleSort('ltp')" style="text-align:right;">LTP (₹) <span id="sort-ltp" class="sort-icon"></span></th>
-          <th onclick="handleSort('chg_pct')" style="text-align:right;">Change % <span id="sort-chg_pct" class="sort-icon"></span></th>
+          <th onclick="handleSort('r1')" style="text-align:right;" title="Classic Floor Pivot Resistance 1">R1 (₹) <span id="sort-r1" class="sort-icon"></span></th>
+          <th onclick="handleSort('r2')" style="text-align:right;" title="Classic Floor Pivot Resistance 2">R2 (₹) <span id="sort-r2" class="sort-icon"></span></th>
           <th onclick="handleSort('is_ss')" style="text-align:center;">SS <span id="sort-is_ss" class="sort-icon"></span></th>
           <th onclick="handleSort('pdh')" style="text-align:center;">PDH <span id="sort-pdh" class="sort-icon"></span></th>
           <th onclick="handleSort('h_pct')" style="text-align:right;">H% <span id="sort-h_pct" class="sort-icon"></span></th>
@@ -1009,11 +1009,33 @@
       const c_3m = normalizeCandles(stk.candles_3m || stk.candles || []);
       const c_d = normalizeCandles(stk.candles_d || []);
 
+      // Classic Floor Pivot Points: P = (H + L + C) / 3, R1 = 2*P - L, R2 = P + (H - L)
+      let r1 = stk.r1;
+      let r2 = stk.r2;
+      let pivot = stk.pivot;
+      if ((r1 === undefined || r1 === null) && c_d && c_d.length >= 2) {
+        const yc = c_d[c_d.length - 2];
+        if (yc) {
+          const yh = Number(yc.h);
+          const yl = Number(yc.l);
+          const yclose = Number(yc.c);
+          pivot = (yh + yl + yclose) / 3.0;
+          r1 = 2.0 * pivot - yl;
+          r2 = pivot + (yh - yl);
+        }
+      }
+      stk.r1 = (r1 !== undefined && r1 !== null) ? Number(r1) : null;
+      stk.r2 = (r2 !== undefined && r2 !== null) ? Number(r2) : null;
+      stk.pivot = (pivot !== undefined && pivot !== null) ? Number(pivot) : null;
+
       CHARTS_DATA[sym] = {
         symbol: sym,
         ltp: stk.ltp,
         prev_close: stk.prev_close,
         chg_pct: stk.chg_pct,
+        pivot: stk.pivot,
+        r1: stk.r1,
+        r2: stk.r2,
         pdh: stk.pdh,
         pdh_broken: stk.pdh_broken,
         orb_high: stk.orb_high,
@@ -1140,9 +1162,17 @@
       const rank = stk.idx || (i + 1);
       const tv_url = 'https://in.tradingview.com/chart/?symbol=NSE:' + sym;
 
-      const chg_sign = stk.chg_pct >= 0 ? '+' : '';
-      const chg_col = stk.chg_pct >= 0 ? 'val-pos' : 'val-neg';
-      const ltp_str = stk.ltp ? ('₹' + Number(stk.ltp).toFixed(2)) : '--';
+      const ltp_val = (stk.ltp !== null && stk.ltp !== undefined) ? Number(stk.ltp) : null;
+      const r1_val = (stk.r1 !== null && stk.r1 !== undefined) ? Number(stk.r1) : null;
+      const r2_val = (stk.r2 !== null && stk.r2 !== undefined) ? Number(stk.r2) : null;
+
+      const r1_is_above = (ltp_val !== null && r1_val !== null && ltp_val >= r1_val);
+      const r1_col = (r1_val !== null && ltp_val !== null) ? (r1_is_above ? 'val-pos' : 'val-neg') : '';
+      const r1_str = r1_val !== null ? ('₹' + r1_val.toFixed(2)) : '--';
+
+      const r2_is_above = (ltp_val !== null && r2_val !== null && ltp_val >= r2_val);
+      const r2_col = (r2_val !== null && ltp_val !== null) ? (r2_is_above ? 'val-pos' : 'val-neg') : '';
+      const r2_str = r2_val !== null ? ('₹' + r2_val.toFixed(2)) : '--';
 
       const ss_html = stk.is_ss ? '<span class="star-badge">★</span>' : '<span style="color:var(--text-dim);">-</span>';
       const pdh_html = stk.pdh_broken
@@ -1166,14 +1196,14 @@
           <td style="color:var(--text-muted); text-align:center;">${rank}</td>
           <td>
             <div class="stock-cell">
-              <a href="${tv_url}" target="_blank" class="btn-tv-app" title="Open in TradingView App">
+              <a href="${tv_url}" target="_blank" class="btn-tv-app" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • Open in TradingView App">
                 ${sym} ↗
               </a>
               <button class="btn-preview-eye" onclick="showChartPopup(event, '${sym}', true)" title="Chart Preview">👁</button>
             </div>
           </td>
-          <td style="text-align:right; font-weight:700;">${ltp_str}</td>
-          <td class="${chg_col}" style="text-align:right;">${chg_sign}${Number(stk.chg_pct).toFixed(2)}%</td>
+          <td style="text-align:right; font-weight:700;" class="${r1_col}" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R1: ${r1_str} (${r1_is_above ? 'Price Above R1' : 'Price Below R1'})">${r1_str}</td>
+          <td style="text-align:right; font-weight:700;" class="${r2_col}" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R2: ${r2_str} (${r2_is_above ? 'Price Above R2' : 'Price Below R2'})">${r2_str}</td>
           <td style="text-align:center;">${ss_html}</td>
           <td style="text-align:center;">${pdh_html}</td>
           <td class="${stk.h_pct > 0 ? 'val-pos' : 'val-neg'}" style="text-align:right;">${h_str}</td>
