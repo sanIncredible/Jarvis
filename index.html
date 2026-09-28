@@ -6,24 +6,24 @@
 <title>JARVIS PRO — Institutional 3m ORB & Market Scanner</title>
 <style>
   :root {
-    --bg-main: #0a0d14;
-    --bg-card: #111622;
-    --bg-card-hover: #161c2b;
-    --bg-input: #151b29;
-    --border-subtle: #1e2638;
-    --border-bright: #2d384e;
-    --accent-blue: #2962ff;
-    --accent-blue-hover: #1e4bd8;
-    --accent-green: #00c087;
-    --accent-green-bg: rgba(0, 192, 135, 0.12);
-    --accent-red: #f43f5e;
-    --accent-red-bg: rgba(244, 63, 94, 0.12);
-    --accent-gold: #f59e0b;
-    --accent-gold-bg: rgba(245, 158, 11, 0.12);
-    --accent-cyan: #06b6d4;
-    --text-main: #e2e8f0;
-    --text-muted: #8492a6;
-    --text-dim: #4c566a;
+    --bg-main: #000000;
+    --bg-card: #0c0c0e;
+    --bg-card-hover: #161619;
+    --bg-input: #121215;
+    --border-subtle: #242428;
+    --border-bright: #3c3c43;
+    --accent-blue: #ffffff;
+    --accent-blue-hover: #e4e4e7;
+    --accent-green: #ffffff;
+    --accent-green-bg: rgba(255, 255, 255, 0.15);
+    --accent-red: #71717a;
+    --accent-red-bg: #18181b;
+    --accent-gold: #ffffff;
+    --accent-gold-bg: rgba(255, 255, 255, 0.1);
+    --accent-cyan: #e4e4e7;
+    --text-main: #f4f4f5;
+    --text-muted: #8e8e93;
+    --text-dim: #545458;
     --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
     --font-mono: 'SF Mono', 'Roboto Mono', 'Fira Code', ui-monospace, monospace;
   }
@@ -50,7 +50,7 @@
     margin-bottom: 12px;
     flex-wrap: wrap;
     gap: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.8);
   }
 
   .brand-group {
@@ -64,18 +64,19 @@
     justify-content: center;
     width: 34px;
     height: 34px;
-    background: linear-gradient(135deg, #1e40af, #2563eb);
+    background: #000000;
+    border: 1.5px solid #ffffff;
     border-radius: 8px;
     font-weight: 900;
     font-size: 16px;
-    color: #fff;
-    box-shadow: 0 0 12px rgba(37, 99, 235, 0.5);
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
   }
   .brand-title {
     font-size: 16px;
     font-weight: 800;
     letter-spacing: 0.5px;
-    color: #fff;
+    color: #ffffff;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -84,9 +85,9 @@
     font-size: 10px;
     padding: 2px 6px;
     border-radius: 4px;
-    background: rgba(41, 98, 255, 0.2);
-    color: #60a5fa;
-    border: 1px solid rgba(96, 165, 250, 0.3);
+    background: #18181b;
+    color: #ffffff;
+    border: 1px solid #3f3f46;
     font-weight: 700;
     letter-spacing: 0.5px;
   }
@@ -106,7 +107,7 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    background: #0d131f;
+    background: #111113;
     border: 1px solid var(--border-subtle);
     padding: 5px 12px;
     border-radius: 20px;
@@ -116,15 +117,15 @@
   .pulse-dot {
     width: 8px;
     height: 8px;
-    background-color: var(--accent-green);
+    background-color: #ffffff;
     border-radius: 50%;
-    box-shadow: 0 0 8px var(--accent-green);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
     animation: pulse 2s infinite;
   }
   @keyframes pulse {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 192, 135, 0.7); }
-    70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(0, 192, 135, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 192, 135, 0); }
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
   }
 
   .clock-pill {
@@ -155,12 +156,12 @@
   }
   .pill-btn:hover { color: #fff; }
   .pill-btn.active {
-    background: var(--accent-blue);
-    color: #fff;
+    background: #ffffff;
+    color: #000000;
   }
 
   .btn-action {
-    background: var(--border-subtle);
+    background: #111114;
     color: var(--text-main);
     border: 1px solid var(--border-bright);
     border-radius: 6px;
@@ -174,9 +175,9 @@
     transition: all 0.15s;
   }
   .btn-action:hover {
-    background: var(--accent-blue);
-    border-color: var(--accent-blue);
-    color: #fff;
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #000000;
   }
   .btn-action:active { transform: scale(0.97); }
 
@@ -209,7 +210,7 @@
     font-size: 18px;
     font-weight: 800;
     font-family: var(--font-mono);
-    color: #fff;
+    color: #ffffff;
     display: flex;
     align-items: baseline;
     gap: 6px;
@@ -219,18 +220,19 @@
     color: var(--text-muted);
   }
 
-  /* Breadth Bar */
+  /* Breadth Bar - White Bullish, Black/Dark Bearish */
   .ratio-bar {
     width: 100%;
-    height: 5px;
-    background: #232d42;
+    height: 6px;
+    background: #18181b;
     border-radius: 3px;
     overflow: hidden;
     display: flex;
     margin-top: 4px;
+    border: 1px solid #27272a;
   }
-  .ratio-bull { background: var(--accent-green); height: 100%; }
-  .ratio-bear { background: var(--accent-red); height: 100%; }
+  .ratio-bull { background: #ffffff; height: 100%; }
+  .ratio-bear { background: #27272a; height: 100%; }
 
   /* Filter & Search Bar */
   .toolbar {
@@ -252,7 +254,7 @@
     flex-wrap: wrap;
   }
   .chip {
-    background: #141a26;
+    background: #0e0e11;
     border: 1px solid var(--border-subtle);
     color: var(--text-muted);
     padding: 4px 10px;
@@ -265,9 +267,9 @@
   }
   .chip:hover { color: #fff; border-color: var(--border-bright); }
   .chip.active {
-    background: rgba(41, 98, 255, 0.2);
-    border-color: var(--accent-blue);
-    color: #93c5fd;
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #000000;
   }
 
   .search-wrap {
@@ -288,8 +290,8 @@
   }
   .search-input:focus {
     width: 220px;
-    border-color: var(--accent-blue);
-    box-shadow: 0 0 10px rgba(41, 98, 255, 0.3);
+    border-color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
   }
   .search-shortcut {
     position: absolute;
@@ -308,7 +310,7 @@
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
     overflow-x: auto;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.8);
   }
   table {
     width: 100%;
@@ -317,7 +319,7 @@
     font-size: 13px;
   }
   thead {
-    background: #0e121a;
+    background: #09090b;
     position: sticky;
     top: 0;
     z-index: 10;
@@ -335,11 +337,11 @@
     transition: color 0.15s;
   }
   th:hover { color: #fff; }
-  th.sort-active { color: #60a5fa; }
+  th.sort-active { color: #ffffff; text-decoration: underline; }
   th .sort-icon { font-size: 9px; margin-left: 4px; }
 
   tbody tr {
-    border-bottom: 1px solid #161c29;
+    border-bottom: 1px solid #161619;
     transition: background 0.1s;
   }
   tbody tr:hover {
@@ -365,9 +367,9 @@
     align-items: center;
     gap: 5px;
     padding: 4px 9px;
-    background: #172136;
-    color: #93c5fd;
-    border: 1px solid #2563eb;
+    background: #111114;
+    color: #ffffff;
+    border: 1px solid #27272a;
     border-radius: 5px;
     font-size: 12px;
     font-weight: 700;
@@ -375,12 +377,13 @@
     transition: all 0.15s;
   }
   .btn-tv-app:hover {
-    background: var(--accent-blue);
-    color: #fff;
-    box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
   }
   .btn-preview-eye {
-    background: #1a2233;
+    background: #111114;
     color: var(--text-muted);
     border: 1px solid var(--border-subtle);
     border-radius: 4px;
@@ -390,16 +393,16 @@
     transition: all 0.15s;
   }
   .btn-preview-eye:hover {
-    background: var(--accent-blue);
-    color: #fff;
-    border-color: var(--accent-blue);
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
   }
 
-  /* Badges & Accents */
+  /* Badges & Accents - Monochrome Black & White */
   .star-badge {
-    color: var(--accent-gold);
+    color: #ffffff;
     font-size: 15px;
-    text-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
   }
   .pill-badge {
     display: inline-flex;
@@ -410,41 +413,41 @@
     font-size: 11px;
     font-family: var(--font-mono);
   }
-  .badge-orb-h { background: var(--accent-green-bg); color: var(--accent-green); border: 1px solid var(--accent-green); }
-  .badge-orb-l { background: var(--accent-red-bg); color: var(--accent-red); border: 1px solid var(--accent-red); }
-  .badge-orb-m { background: var(--accent-gold-bg); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
-  .badge-orb-rev { background: rgba(192, 132, 252, 0.15); color: #c084fc; border: 1px solid #a855f7; box-shadow: 0 0 8px rgba(168, 85, 247, 0.35); font-weight: 800; }
+  /* Bullish = White, Bearish = Black */
+  .badge-orb-h { background: #ffffff; color: #000000; border: 1px solid #ffffff; font-weight: 800; }
+  .badge-orb-l { background: #000000; color: #71717a; border: 1px solid #3f3f46; font-weight: 800; }
+  .badge-orb-m { background: #18181b; color: #a1a1aa; border: 1px solid #27272a; }
+  .badge-orb-rev { background: #27272a; color: #ffffff; border: 1px solid #ffffff; box-shadow: 0 0 8px rgba(255, 255, 255, 0.35); font-weight: 800; }
 
   .badge-reversal {
-    background: rgba(168, 85, 247, 0.2);
-    color: #e9d5ff;
-    border: 1px solid #a855f7;
+    background: #18181b;
+    color: #ffffff;
+    border: 1px solid #ffffff;
     font-weight: 800;
-    box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
   }
 
   .badge-bull-break {
-    background: rgba(0, 192, 135, 0.2);
-    color: #34d399;
-    border: 1px solid #059669;
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #ffffff;
     font-weight: 800;
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
   }
   .badge-bear-break {
-    background: rgba(244, 63, 94, 0.2);
-    color: #fb7185;
-    border: 1px solid #e11d48;
-    font-weight: 800;
-    box-shadow: 0 0 10px rgba(244, 63, 94, 0.3);
+    background: #000000;
+    color: #71717a;
+    border: 1px solid #3f3f46;
+    font-weight: 700;
   }
   .badge-range {
-    background: #182030;
+    background: #111113;
     color: var(--text-muted);
-    border: 1px solid #232e44;
+    border: 1px solid #222226;
   }
 
-  .val-pos { color: var(--accent-green); font-weight: 700; }
-  .val-neg { color: var(--accent-red); font-weight: 700; }
+  .val-pos { color: #ffffff; font-weight: 800; }
+  .val-neg { color: #71717a; font-weight: 700; }
 
   /* Interactive Chart Modal / Popup */
   .chart-popup {
@@ -453,10 +456,10 @@
     z-index: 9999;
     width: 680px;
     max-width: 95vw;
-    background: #0d111a;
-    border: 1px solid #2563eb;
+    background: #000000;
+    border: 1px solid #3f3f46;
     border-radius: 10px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.95);
     overflow: hidden;
     flex-direction: column;
   }
@@ -464,7 +467,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #131926;
+    background: #09090b;
     padding: 10px 14px;
     border-bottom: 1px solid var(--border-subtle);
     gap: 8px;
@@ -478,18 +481,18 @@
   .popup-title {
     font-size: 14px;
     font-weight: 800;
-    color: #60a5fa;
+    color: #ffffff;
     display: flex;
     align-items: center;
     gap: 6px;
   }
   .popup-hud {
-    background: #0a0e17;
+    background: #000000;
     padding: 6px 14px;
     font-size: 11px;
     font-family: var(--font-mono);
     color: var(--text-muted);
-    border-bottom: 1px solid #192233;
+    border-bottom: 1px solid #18181b;
     white-space: nowrap;
     overflow-x: auto;
   }
@@ -497,7 +500,7 @@
     position: relative;
     width: 100%;
     height: 360px;
-    background: #0a0d14;
+    background: #000000;
   }
   #popup-canvas {
     display: block;
@@ -509,7 +512,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #131926;
+    background: #09090b;
     padding: 8px 14px;
     border-top: 1px solid var(--border-subtle);
     font-size: 11px;
@@ -589,10 +592,10 @@
     <div class="kpi-card">
       <div class="kpi-title">Market Breadth <span id="kpi-total-cnt">16 Stocks</span></div>
       <div class="kpi-value">
-        <span id="kpi-bull-cnt" style="color:var(--accent-green);">0</span>
+        <span id="kpi-bull-cnt" style="color:#ffffff;">0</span>
         <span style="font-size:13px; color:var(--text-muted); font-weight:400;">Adv</span>
         <span style="color:var(--text-dim);">/</span>
-        <span id="kpi-bear-cnt" style="color:var(--accent-red);">0</span>
+        <span id="kpi-bear-cnt" style="color:#71717a;">0</span>
         <span style="font-size:13px; color:var(--text-muted); font-weight:400;">Dec</span>
       </div>
       <div class="ratio-bar">
@@ -609,13 +612,13 @@
 
     <div class="kpi-card">
       <div class="kpi-title">PDH Breaches</div>
-      <div class="kpi-value" id="kpi-pdh-cnt" style="color:var(--accent-gold);">0</div>
+      <div class="kpi-value" id="kpi-pdh-cnt" style="color:#ffffff;">0</div>
       <div class="kpi-sub">Trading Above Yesterday's High</div>
     </div>
 
     <div class="kpi-card">
       <div class="kpi-title">ORB Action Triggers</div>
-      <div class="kpi-value" id="kpi-orb-cnt" style="color:#38bdf8;">0</div>
+      <div class="kpi-value" id="kpi-orb-cnt" style="color:#ffffff;">0</div>
       <div class="kpi-sub">Bull Breakouts & High Formations</div>
     </div>
   </div>
@@ -624,11 +627,11 @@
   <div class="toolbar">
     <div class="filter-chips">
       <span class="chip active" onclick="setFilter('all', this)">ALL (<span id="cnt-all">0</span>)</span>
-      <span class="chip" onclick="setFilter('rev', this)" style="border-color: rgba(168, 85, 247, 0.4); color: #c084fc;">🔄 Reversals (<span id="cnt-rev">0</span>)</span>
+      <span class="chip" onclick="setFilter('rev', this)">🔄 Reversals (<span id="cnt-rev">0</span>)</span>
       <span class="chip" onclick="setFilter('ss', this)">★ Strong Start (<span id="cnt-ss">0</span>)</span>
       <span class="chip" onclick="setFilter('pdh', this)">📌 PDH Broken (<span id="cnt-pdh">0</span>)</span>
-      <span class="chip" onclick="setFilter('bull', this)">🟢 Bullish (<span id="cnt-bull">0</span>)</span>
-      <span class="chip" onclick="setFilter('bear', this)">🔴 Bearish (<span id="cnt-bear">0</span>)</span>
+      <span class="chip" onclick="setFilter('bull', this)">⚪ Bullish (<span id="cnt-bull">0</span>)</span>
+      <span class="chip" onclick="setFilter('bear', this)">⚫ Bearish (<span id="cnt-bear">0</span>)</span>
     </div>
 
     <div class="search-wrap">
@@ -854,7 +857,7 @@
   async function fetchData(isManual) {
     if (isManual) {
       statusText.innerText = 'SYNCING';
-      pulseIndicator.style.backgroundColor = '#38bdf8';
+      pulseIndicator.style.backgroundColor = '#ffffff';
     }
     const t = Date.now();
     let bestData = null;
@@ -982,7 +985,7 @@
       processIncomingData(bestData, usedSource);
     } else {
       statusText.innerText = 'RETRYING';
-      pulseIndicator.style.backgroundColor = '#f59e0b';
+      pulseIndicator.style.backgroundColor = '#71717a';
     }
   }
 
@@ -992,12 +995,12 @@
     const { isStale, ageMinutes } = checkDataFreshness(data.updated_at);
     if (isStale) {
       statusText.innerText = `DELAYED (${ageMinutes}m)`;
-      statusText.style.color = '#f59e0b';
-      pulseIndicator.style.backgroundColor = '#f59e0b';
+      statusText.style.color = '#71717a';
+      pulseIndicator.style.backgroundColor = '#71717a';
     } else {
       statusText.innerText = 'LIVE';
-      statusText.style.color = '#fff';
-      pulseIndicator.style.backgroundColor = '#00c087';
+      statusText.style.color = '#ffffff';
+      pulseIndicator.style.backgroundColor = '#ffffff';
     }
 
     if (data.updated_at) updatedAtDisplay.innerText = data.updated_at;
@@ -1134,7 +1137,7 @@
 
     if (topMover) {
       const s = topMover.chg_pct >= 0 ? '+' : '';
-      const col = topMover.chg_pct >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+      const col = topMover.chg_pct >= 0 ? '#ffffff' : '#71717a';
       document.getElementById('kpi-top-mover').innerHTML = `${topMover.symbol} <span style="font-size:14px; color:${col};">(${s}${topMover.chg_pct}%)</span>`;
       document.getElementById('kpi-top-score').innerText = `Institutional Strength: ${topMover.strength_score}`;
     }
@@ -1233,7 +1236,7 @@
 
       const ss_html = stk.is_ss ? '<span class="star-badge">★</span>' : '<span style="color:var(--text-dim);">-</span>';
       const pdh_html = stk.pdh_broken
-        ? '<span style="color:var(--accent-green); font-size:14px; text-shadow:0 0 6px rgba(0,192,135,0.4);">●</span>'
+        ? '<span style="color:#ffffff; font-size:14px; text-shadow:0 0 6px rgba(255,255,255,0.8);">●</span>'
         : '<span style="color:var(--text-dim); font-size:14px;">○</span>';
 
       const h_str = (stk.h_pct !== null && stk.h_pct !== undefined) ? ((stk.h_pct >= 0 ? '+' : '') + Number(stk.h_pct).toFixed(1) + '%') : '-';
@@ -1273,7 +1276,7 @@
           <td style="text-align:center;">${orb_badge}</td>
           <td style="text-align:center; color:var(--text-muted);">${stk.tag || '-'}</td>
           <td>${sig_badge}</td>
-          <td style="text-align:right; font-weight:800; color:#93c5fd;">${Number(stk.strength_score).toFixed(1)}</td>
+          <td style="text-align:right; font-weight:800; color:#f4f4f5;">${Number(stk.strength_score).toFixed(1)}</td>
           <td style="text-align:right; font-weight:700;" class="${r1_col}" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R1: ${r1_str} (${r1_is_above ? 'Price Above R1' : 'Price Below R1'})">${r1_str}</td>
           <td style="text-align:right; font-weight:700;" class="${r2_col}" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R2: ${r2_str} (${r2_is_above ? 'Price Above R2' : 'Price Below R2'})">${r2_str}</td>
         </tr>
@@ -1306,15 +1309,15 @@
     const isDaily = (currentTimeframe === 'D');
     popupTitle.innerHTML = `📈 ${data.symbol} <span style="font-size:11px; color:var(--text-muted); font-weight:500;">(${isDaily ? 'Daily Swing' : '3m Dynamic ORB'})</span>`;
 
-    let bHtml = `<span class="pill-badge" style="background:#1c2438; color:#fff;">₹${Number(data.ltp).toFixed(2)}</span>`;
-    const col = data.chg_pct >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+    let bHtml = `<span class="pill-badge" style="background:#18181b; color:#fff; border:1px solid #3f3f46;">₹${Number(data.ltp).toFixed(2)}</span>`;
+    const col = data.chg_pct >= 0 ? '#ffffff' : '#71717a';
     const sign = data.chg_pct >= 0 ? '+' : '';
-    bHtml += `<span class="pill-badge" style="color:${col}; font-weight:800;">${sign}${Number(data.chg_pct).toFixed(2)}%</span>`;
+    bHtml += `<span class="pill-badge" style="background:${data.chg_pct >= 0 ? 'rgba(255,255,255,0.15)' : 'rgba(82,82,91,0.2)'}; color:${col}; font-weight:800; border:1px solid ${data.chg_pct >= 0 ? '#ffffff' : '#52525b'};">${sign}${Number(data.chg_pct).toFixed(2)}%</span>`;
 
     if (data.pdh) {
       const pdhStatus = data.pdh_broken ? 'BREACHED' : 'RESISTANCE';
-      const pdhCol = data.pdh_broken ? 'var(--accent-green)' : 'var(--accent-gold)';
-      bHtml += `<span class="pill-badge" style="border:1px solid #f59e0b; color:#f59e0b;">PDH: ₹${Number(data.pdh).toFixed(1)} (<span style="color:${pdhCol}">${pdhStatus}</span>)</span>`;
+      const pdhCol = data.pdh_broken ? '#ffffff' : '#71717a';
+      bHtml += `<span class="pill-badge" style="border:1px solid #52525b; color:#d4d4d8;">PDH: ₹${Number(data.pdh).toFixed(1)} (<span style="color:${pdhCol}; font-weight:800;">${pdhStatus}</span>)</span>`;
     }
 
     if (data.is_reversal || data.orb_status === 'L➔H') {
@@ -1343,8 +1346,8 @@
     const W = width;
     const H = height;
 
-    // Dark Background
-    ctx.fillStyle = '#0a0d14';
+    // Dark Background (True Pitch Black)
+    ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, W, H);
 
     const isDaily = (currentTimeframe === 'D');
@@ -1353,7 +1356,7 @@
     if (popupBarCount) popupBarCount.innerText = `${candles.length} Candles`;
 
     if (!candles || !candles.length) {
-      ctx.fillStyle = '#64748b';
+      ctx.fillStyle = '#71717a';
       ctx.font = '13px var(--font-sans)';
       ctx.textAlign = 'center';
       ctx.fillText(isDaily ? 'No Daily candle history available' : 'Awaiting 09:15 AM Market Opening Candle', W / 2, H / 2);
@@ -1405,10 +1408,10 @@
     }
 
     // Grid Lines & Price Axis
-    ctx.strokeStyle = '#141c2c';
+    ctx.strokeStyle = '#18181b';
     ctx.lineWidth = 1;
     ctx.setLineDash([]);
-    ctx.fillStyle = '#64748b';
+    ctx.fillStyle = '#71717a';
     ctx.font = '10px var(--font-mono)';
     ctx.textAlign = 'left';
 
@@ -1422,7 +1425,7 @@
       ctx.fillText(p.toFixed(1), W - padRight + 6, y + 3);
     }
 
-    // Overlay Drawer Helper
+    // Overlay Drawer Helper (Monochrome Levels)
     function drawLevel(val, color, label, dash) {
       if (!val || val < minPrice || val > maxPrice) return;
       const y = getY(val);
@@ -1437,22 +1440,22 @@
 
       ctx.fillStyle = color;
       ctx.fillRect(W - padRight + 2, y - 7, padRight - 4, 15);
-      ctx.fillStyle = '#000';
+      ctx.fillStyle = (color === '#52525b') ? '#ffffff' : '#000000';
       ctx.font = 'bold 9px var(--font-mono)';
       ctx.fillText(label, W - padRight + 4, y + 4);
       ctx.restore();
     }
 
     if (!isDaily) {
-      if (data.orb_high) drawLevel(data.orb_high, '#06b6d4', 'ORB-H');
-      if (data.orb_low) drawLevel(data.orb_low, '#f97316', 'ORB-L');
+      if (data.orb_high) drawLevel(data.orb_high, '#e4e4e7', 'ORB-H');
+      if (data.orb_low) drawLevel(data.orb_low, '#52525b', 'ORB-L');
     }
 
     // Previous Day High (PDH) Line
     if (data.pdh && data.pdh >= minPrice && data.pdh <= maxPrice) {
       const yPdh = getY(data.pdh);
       ctx.save();
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1.8;
       ctx.setLineDash([5, 3]);
       ctx.beginPath();
@@ -1463,24 +1466,24 @@
       const pdhTag = '📌 PDH ' + data.pdh.toFixed(1);
       ctx.font = 'bold 9.5px var(--font-mono)';
       const tw = ctx.measureText(pdhTag).width;
-      ctx.fillStyle = 'rgba(10, 13, 20, 0.9)';
+      ctx.fillStyle = '#000000';
       ctx.fillRect(padLeft + 6, yPdh - 12, tw + 8, 14);
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1;
       ctx.setLineDash([]);
       ctx.strokeRect(padLeft + 6, yPdh - 12, tw + 8, 14);
-      ctx.fillStyle = '#f59e0b';
+      ctx.fillStyle = '#ffffff';
       ctx.fillText(pdhTag, padLeft + 10, yPdh - 2);
 
-      ctx.fillStyle = '#f59e0b';
+      ctx.fillStyle = '#ffffff';
       ctx.fillRect(W - padRight + 2, yPdh - 7, padRight - 4, 15);
-      ctx.fillStyle = '#000';
+      ctx.fillStyle = '#000000';
       ctx.font = 'bold 9px var(--font-mono)';
       ctx.fillText('PDH', W - padRight + 4, yPdh + 4);
       ctx.restore();
     }
 
-    // Candlestick Drawing
+    // Classic Candlestick Drawing: White = Bullish, Black = Bearish
     const n = candles.length;
     const barSpacing = plotW / Math.max(n, 1);
     const barWidth = Math.max(Math.min(barSpacing * 0.72, 14), 2);
@@ -1494,36 +1497,48 @@
       const lY = getY(c.l);
       const cY = getY(c.c);
       const isBull = c.c >= c.o;
-      const col = isBull ? '#00c087' : '#f43f5e';
 
       if (hoverX !== undefined && Math.abs(hoverX - cx) <= barSpacing / 2) {
         hoveredCandle = Object.assign({}, c, { cx, oY, cY, hY, lY, isBull });
       }
 
-      // Volume Bar
+      // Volume Bar: White 40% for Bullish, Charcoal 40% for Bearish
       const vH = maxVol > 0 ? (c.v / maxVol) * volH : 0;
       const vY = (H - padBottom) - vH;
-      ctx.fillStyle = isBull ? 'rgba(0, 192, 135, 0.25)' : 'rgba(244, 63, 94, 0.25)';
+      ctx.fillStyle = isBull ? 'rgba(255, 255, 255, 0.4)' : 'rgba(82, 82, 91, 0.35)';
       ctx.fillRect(cx - barWidth / 2, vY, barWidth, vH);
+      if (!isBull) {
+        ctx.strokeStyle = '#52525b';
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(cx - barWidth / 2, vY, barWidth, vH);
+      }
 
-      // Wick
-      ctx.strokeStyle = col;
+      // Wick: White for Bullish, Silver/Gray for Bearish
+      ctx.strokeStyle = isBull ? '#ffffff' : '#a1a1aa';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(cx, hY);
       ctx.lineTo(cx, lY);
       ctx.stroke();
 
-      // Body
-      ctx.fillStyle = col;
+      // Body: White filled for Bullish, Black filled with outline for Bearish
       const bTop = Math.min(oY, cY);
       const bH = Math.max(Math.abs(cY - oY), 1.5);
-      ctx.fillRect(cx - barWidth / 2, bTop, barWidth, bH);
+      if (isBull) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(cx - barWidth / 2, bTop, barWidth, bH);
+      } else {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(cx - barWidth / 2, bTop, barWidth, bH);
+        ctx.strokeStyle = '#a1a1aa';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(cx - barWidth / 2, bTop, barWidth, bH);
+      }
 
       // X-Axis Time Labels
       const step = Math.max(Math.floor(n / 6), 1);
       if (i === 0 || i === n - 1 || (i % step === 0)) {
-        ctx.fillStyle = '#64748b';
+        ctx.fillStyle = '#71717a';
         ctx.font = '9px var(--font-mono)';
         ctx.textAlign = 'center';
         ctx.fillText(c.t, cx, H - 8);
@@ -1533,7 +1548,7 @@
     // Crosshair & Interactive HUD
     if (hoveredCandle) {
       ctx.save();
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
       ctx.setLineDash([3, 3]);
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -1542,11 +1557,11 @@
       ctx.stroke();
       ctx.restore();
 
-      const cColor = hoveredCandle.isBull ? 'var(--accent-green)' : 'var(--accent-red)';
+      const cColor = hoveredCandle.isBull ? '#ffffff' : '#71717a';
       popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | O: ₹${hoveredCandle.o.toFixed(2)} | H: ₹${hoveredCandle.h.toFixed(2)} | L: ₹${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${hoveredCandle.c.toFixed(2)}</span> | Vol: ${hoveredCandle.v.toLocaleString()}`;
     } else {
       const last = candles[candles.length - 1];
-      const cColor = last.c >= last.o ? 'var(--accent-green)' : 'var(--accent-red)';
+      const cColor = last.c >= last.o ? '#ffffff' : '#71717a';
       popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | O: ₹${last.o.toFixed(2)} | H: ₹${last.h.toFixed(2)} | L: ₹${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${last.c.toFixed(2)}</span> | Vol: ${last.v.toLocaleString()}`;
     }
   }
