@@ -413,6 +413,15 @@
   .badge-orb-h { background: var(--accent-green-bg); color: var(--accent-green); border: 1px solid var(--accent-green); }
   .badge-orb-l { background: var(--accent-red-bg); color: var(--accent-red); border: 1px solid var(--accent-red); }
   .badge-orb-m { background: var(--accent-gold-bg); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
+  .badge-orb-rev { background: rgba(192, 132, 252, 0.15); color: #c084fc; border: 1px solid #a855f7; box-shadow: 0 0 8px rgba(168, 85, 247, 0.35); font-weight: 800; }
+
+  .badge-reversal {
+    background: rgba(168, 85, 247, 0.2);
+    color: #e9d5ff;
+    border: 1px solid #a855f7;
+    font-weight: 800;
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+  }
 
   .badge-bull-break {
     background: rgba(0, 192, 135, 0.2);
@@ -615,6 +624,7 @@
   <div class="toolbar">
     <div class="filter-chips">
       <span class="chip active" onclick="setFilter('all', this)">ALL (<span id="cnt-all">0</span>)</span>
+      <span class="chip" onclick="setFilter('rev', this)" style="border-color: rgba(168, 85, 247, 0.4); color: #c084fc;">🔄 Reversals (<span id="cnt-rev">0</span>)</span>
       <span class="chip" onclick="setFilter('ss', this)">★ Strong Start (<span id="cnt-ss">0</span>)</span>
       <span class="chip" onclick="setFilter('pdh', this)">📌 PDH Broken (<span id="cnt-pdh">0</span>)</span>
       <span class="chip" onclick="setFilter('bull', this)">🟢 Bullish (<span id="cnt-bull">0</span>)</span>
@@ -1002,6 +1012,7 @@
     let bearCount = 0;
     let pdhCount = 0;
     let orbCount = 0;
+    let revCount = 0;
     let topMover = null;
 
     RAW_STOCKS.forEach(stk => {
@@ -1028,6 +1039,44 @@
       stk.r2 = (r2 !== undefined && r2 !== null) ? Number(r2) : null;
       stk.pivot = (pivot !== undefined && pivot !== null) ? Number(pivot) : null;
 
+      // Reversal Pattern Detection (Broke ORB low first, then broke ORB high)
+      if (stk.is_reversal || stk.orb_status === 'L➔H') {
+        stk.is_reversal = true;
+        stk.orb_status = 'L➔H';
+      } else if (stk.orb_low && stk.orb_high && c_3m && c_3m.length >= 2) {
+        let lowBreakIdx = -1;
+        let lowBreakTime = null;
+        for (let i = 1; i < c_3m.length; i++) {
+          if (c_3m[i].l < stk.orb_low) {
+            lowBreakIdx = i;
+            lowBreakTime = c_3m[i].t ? (c_3m[i].t.split('T')[1]?.substring(0, 5) || c_3m[i].t.substring(11, 16)) : null;
+            break;
+          }
+        }
+        if (lowBreakIdx !== -1) {
+          for (let j = lowBreakIdx + 1; j < c_3m.length; j++) {
+            if (c_3m[j].h > stk.orb_high) {
+              const highBreakTime = c_3m[j].t ? (c_3m[j].t.split('T')[1]?.substring(0, 5) || c_3m[j].t.substring(11, 16)) : null;
+              const ltp = stk.ltp || (c_3m[c_3m.length - 1] ? c_3m[c_3m.length - 1].c : 0);
+              if (ltp >= stk.orb_high) {
+                stk.is_reversal = true;
+                stk.orb_status = 'L➔H';
+                stk.orb_low_break_time = lowBreakTime;
+                stk.orb_high_break_time = highBreakTime;
+                stk.reversal_desc = `Broke ORB Low (${lowBreakTime || 'Early'}) → Broke ORB High (${highBreakTime || 'Late'})`;
+                if (!stk.signal || !stk.signal.includes('REVERSAL')) {
+                  if (stk.is_ss && stk.pdh_broken) stk.signal = '★ SS + REVERSAL BREAKOUT (ORB + PDH)';
+                  else if (stk.is_ss) stk.signal = '★ SS + REVERSAL (ORB LOW → HIGH)';
+                  else if (stk.pdh_broken) stk.signal = '🔄 REVERSAL BREAKOUT (ORB + PDH)';
+                  else stk.signal = '🔄 REVERSAL (ORB LOW → HIGH)';
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
+
       CHARTS_DATA[sym] = {
         symbol: sym,
         ltp: stk.ltp,
@@ -1043,6 +1092,10 @@
         high_bar_num: stk.high_bar_num,
         low_bar_num: stk.low_bar_num,
         orb_status: stk.orb_status,
+        is_reversal: stk.is_reversal,
+        reversal_desc: stk.reversal_desc,
+        orb_low_break_time: stk.orb_low_break_time,
+        orb_high_break_time: stk.orb_high_break_time,
         is_strong_start: stk.is_ss,
         rvol: stk.rvol,
         signal: stk.signal,
@@ -1060,7 +1113,8 @@
       else if (stk.chg_pct < 0) bearCount++;
 
       if (stk.pdh_broken) pdhCount++;
-      if (stk.signal && (stk.signal.includes('BREAKOUT') || stk.signal.includes('ABOVE'))) orbCount++;
+      if (stk.signal && (stk.signal.includes('BREAKOUT') || stk.signal.includes('ABOVE') || stk.signal.includes('REVERSAL'))) orbCount++;
+      if (stk.is_reversal || stk.orb_status === 'L➔H') revCount++;
 
       if (!topMover || (stk.strength_score > topMover.strength_score)) {
         topMover = stk;
@@ -1087,6 +1141,8 @@
 
     // Filter counts
     document.getElementById('cnt-all').innerText = RAW_STOCKS.length;
+    const revEl = document.getElementById('cnt-rev');
+    if (revEl) revEl.innerText = revCount;
     document.getElementById('cnt-ss').innerText = RAW_STOCKS.filter(s => s.is_ss).length;
     document.getElementById('cnt-pdh').innerText = pdhCount;
     document.getElementById('cnt-bull').innerText = bullCount;
@@ -1131,6 +1187,7 @@
     const q = (searchInput.value || '').trim().toUpperCase();
 
     let filtered = RAW_STOCKS.filter(stk => {
+      if (activeFilter === 'rev' && !stk.is_reversal && stk.orb_status !== 'L➔H') return false;
       if (activeFilter === 'ss' && !stk.is_ss) return false;
       if (activeFilter === 'pdh' && !stk.pdh_broken) return false;
       if (activeFilter === 'bull' && stk.chg_pct <= 0) return false;
@@ -1182,12 +1239,19 @@
       const h_str = (stk.h_pct !== null && stk.h_pct !== undefined) ? ((stk.h_pct >= 0 ? '+' : '') + Number(stk.h_pct).toFixed(1) + '%') : '-';
       const l_str = (stk.l_pct !== null && stk.l_pct !== undefined) ? ((stk.l_pct >= 0 ? '+' : '') + Number(stk.l_pct).toFixed(1) + '%') : '-';
 
-      const orb_status = stk.orb_status || 'M';
-      const orb_badge = `<span class="pill-badge badge-orb-${orb_status.toLowerCase()}">${orb_status}</span>`;
+      let orb_badge = '';
+      if (stk.is_reversal || stk.orb_status === 'L➔H') {
+        const revTooltip = stk.reversal_desc || 'Broke ORB Low first, then broke ORB High (Bullish Reversal)';
+        orb_badge = `<span class="pill-badge badge-orb-rev" title="${revTooltip}">L➔H</span>`;
+      } else {
+        const orb_status = stk.orb_status || 'M';
+        orb_badge = `<span class="pill-badge badge-orb-${orb_status.toLowerCase()}">${orb_status}</span>`;
+      }
 
       const sig = stk.signal || 'IN RANGE';
       let sig_cls = 'badge-range';
-      if (sig.includes('BREAKOUT') || sig.includes('ABOVE')) sig_cls = 'badge-bull-break';
+      if (sig.includes('REVERSAL')) sig_cls = 'badge-reversal';
+      else if (sig.includes('BREAKOUT') || sig.includes('ABOVE')) sig_cls = 'badge-bull-break';
       else if (sig.includes('BREAKDOWN') || sig.includes('BELOW')) sig_cls = 'badge-bear-break';
       const sig_badge = `<span class="pill-badge ${sig_cls}">${sig}</span>`;
 
@@ -1251,6 +1315,11 @@
       const pdhStatus = data.pdh_broken ? 'BREACHED' : 'RESISTANCE';
       const pdhCol = data.pdh_broken ? 'var(--accent-green)' : 'var(--accent-gold)';
       bHtml += `<span class="pill-badge" style="border:1px solid #f59e0b; color:#f59e0b;">PDH: ₹${Number(data.pdh).toFixed(1)} (<span style="color:${pdhCol}">${pdhStatus}</span>)</span>`;
+    }
+
+    if (data.is_reversal || data.orb_status === 'L➔H') {
+      const tip = data.reversal_desc || 'Broke ORB Low first, then broke ORB High';
+      bHtml += `<span class="pill-badge badge-orb-rev" title="${tip}">🔄 REVERSAL (L➔H)</span>`;
     }
     popupBadges.innerHTML = bHtml;
   }
