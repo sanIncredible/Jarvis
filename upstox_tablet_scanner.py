@@ -147,6 +147,7 @@ RED = "\033[91m"          # Red (#cc2222)
 ORANGE = "\033[38;5;214m" # Orange / Amber (#c77800)
 YELLOW = "\033[93m"
 CYAN = "\033[96m"
+MAGENTA = "\033[95m"
 WHITE = "\033[97m"
 GRAY = "\033[90m"
 BOLD = "\033[1m"
@@ -360,17 +361,25 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
         trigger_label = None
         alert_type = None
 
-        # 1. Tier 1: Strong Start + ORB + PDH Breakout (Highest Conviction)
-        if "STRONG START + ORB + PDH" in signal:
+        # 1. Tier 0: Bullish Reversal Breakout (Broke ORB Low first, now breaking ORB High)
+        if m.get("is_reversal"):
+            alert_type = "ORB_REVERSAL"
+            if pdh_broken:
+                trigger_label = "🔄 Reversal + PDH"
+            else:
+                trigger_label = "🔄 Reversal (L→H)"
+
+        # 2. Tier 1: Strong Start + ORB + PDH Breakout (Highest Conviction)
+        elif "STRONG START + ORB + PDH" in signal:
             alert_type = "ORB_PDH_STRONG"
             trigger_label = "★ SS + ORB + PDH"
 
-        # 2. Tier 2: Bullish Breakout (ORB + PDH)
+        # 3. Tier 2: Bullish Breakout (ORB + PDH)
         elif pdh_broken and orb_status == "H":
             alert_type = "ORB_PDH"
             trigger_label = "ORB + PDH Break"
 
-        # 3. Tier 3: Pure ORB High Breakout
+        # 4. Tier 3: Pure ORB High Breakout
         elif orb_status == "H":
             alert_type = "ORB_HIGH"
             trigger_label = "ORB High Break"
@@ -941,10 +950,55 @@ def compute_metrics(d):
     else:
         tag = "--"
 
+    # 6.5 Reversal Pattern Detection (Broke ORB Low first, now breaking ORB High)
+    candles_3m = d.get("candles_3m") or d.get("candles") or []
+    is_reversal = False
+    reversal_type = None
+    orb_low_break_time = None
+    orb_high_break_time = None
+    reversal_desc = None
+
+    if orb_h and orb_l and candles_3m and orb_status == "H":
+        # Check if any 3m bar had broken below ORB low earlier in the session
+        low_break_idx = None
+        for idx, c in enumerate(candles_3m):
+            c_l = c.get("l") if isinstance(c, dict) else (float(c[3]) if len(c) > 3 else None)
+            c_t = c.get("t") if isinstance(c, dict) else (str(c[0]) if len(c) > 0 else "")
+            if c_l is not None and c_l < orb_l:
+                low_break_idx = idx
+                orb_low_break_time = c_t
+                break
+
+        if low_break_idx is not None:
+            # Check when subsequent breakout above ORB high occurred
+            for c in candles_3m[low_break_idx:]:
+                c_h = c.get("h") if isinstance(c, dict) else (float(c[2]) if len(c) > 2 else None)
+                c_t = c.get("t") if isinstance(c, dict) else (str(c[0]) if len(c) > 0 else "")
+                if c_h is not None and c_h > orb_h:
+                    orb_high_break_time = c_t
+                    break
+
+            is_reversal = True
+            reversal_type = "L_TO_H"
+            reversal_desc = f"Broke ORB Low ({orb_low_break_time or 'Early'}) → Broke ORB High ({orb_high_break_time or 'Late'})"
+
     # 7. Action Signal
     signal = "IN RANGE"
     sig_color = RESET
-    if d["is_strong_start"] and orb_status == "H" and pdh_broken:
+    if is_reversal:
+        if d.get("is_strong_start") and pdh_broken:
+            signal = "★ SS + REVERSAL BREAKOUT (ORB + PDH)"
+            sig_color = f"{MAGENTA}{BOLD}"
+        elif d.get("is_strong_start"):
+            signal = "★ SS + REVERSAL (ORB LOW → HIGH)"
+            sig_color = f"{MAGENTA}{BOLD}"
+        elif pdh_broken:
+            signal = "🔄 REVERSAL BREAKOUT (ORB + PDH)"
+            sig_color = f"{MAGENTA}{BOLD}"
+        else:
+            signal = "🔄 REVERSAL (ORB LOW → HIGH)"
+            sig_color = f"{MAGENTA}{BOLD}"
+    elif d["is_strong_start"] and orb_status == "H" and pdh_broken:
         signal = "★ STRONG START + ORB + PDH BREAKOUT"
         sig_color = f"{GREEN}{BOLD}"
     elif d["is_strong_start"] and orb_status == "H":
@@ -970,6 +1024,11 @@ def compute_metrics(d):
         "tag": tag,
         "atr_mult": atr_mult,
         "is_breach": is_breach,
+        "is_reversal": is_reversal,
+        "reversal_type": reversal_type,
+        "orb_low_break_time": orb_low_break_time,
+        "orb_high_break_time": orb_high_break_time,
+        "reversal_desc": reversal_desc,
         "signal": signal,
         "sig_color": sig_color
     }
@@ -979,6 +1038,7 @@ def compute_strength_score(d, m):
     """
     Computes institutional Strength Score for sorting in descending order:
     Tier 1: ★ Strong Start + ORB Breakout + PDH Breakout (Score: 1500 + H%*10 + Chg%)
+    Tier 1.5: 🔄 REVERSAL BREAKOUT (Score: 1400 if PDH else 1150 + H%*10 + Chg%)
     Tier 2: BULLISH BREAKOUT (ORB + PDH) (Score: 1300 + H%*10 + Chg%)
     Tier 3: ★ Strong Start + ORB Breakout (Score: 1200 + H%*10 + Chg%)
     Tier 4: ABOVE ORB HIGH (Score: 1000 + H%*10 + Chg%)
@@ -988,15 +1048,20 @@ def compute_strength_score(d, m):
     orb_status = m.get("orb_status", "M")
     pdh_broken = m.get("pdh_broken", False)
     is_ss = d.get("is_strong_start", False)
+    is_rev = m.get("is_reversal", False)
     h_pct = m.get("h_pct") or 0.0
     chg_pct = m.get("chg_pct") or 0.0
 
     if is_ss and orb_status == "H" and pdh_broken:
         tier = 1500.0
+    elif is_rev and pdh_broken:
+        tier = 1400.0
     elif orb_status == "H" and pdh_broken:
         tier = 1300.0
     elif is_ss and orb_status == "H":
         tier = 1200.0
+    elif is_rev:
+        tier = 1150.0
     elif orb_status == "H":
         tier = 1000.0
     elif orb_status == "M":
@@ -1130,7 +1195,10 @@ def print_terminal_view(results, now_str, port, next_time_str=""):
             c_l = f"{'-':>7}"
 
         # ORB (4 chars, centered)
-        c_orb = f" {m['orb_color']}{BOLD}{m['orb_status']}{RESET}  "
+        if m.get("is_reversal"):
+            c_orb = f"{MAGENTA}{BOLD}L➔H{RESET} "
+        else:
+            c_orb = f" {m['orb_color']}{BOLD}{m['orb_status']}{RESET}  "
 
         # TAG (7 chars, centered)
         tag_s = m["tag"] if m["tag"] else "--"
@@ -1173,10 +1241,18 @@ def generate_html_dashboard(results, now_str, port):
         l_val = f"{m['l_pct']:+.1f}%" if m["l_pct"] is not None else "-"
         l_class = "pos" if (m["l_pct"] and m["l_pct"] > 0) else "neg"
 
-        orb_class = f"badge-{m['orb_status'].lower()}"
-        orb_display = f'<span class="badge {orb_class}">{m["orb_status"]}</span>'
+        if m.get("is_reversal"):
+            orb_display = f'<span class="badge badge-sig-rev" title="{m.get("reversal_desc") or ""}">L➔H</span>'
+        else:
+            orb_class = f"badge-{m['orb_status'].lower()}"
+            orb_display = f'<span class="badge {orb_class}">{m["orb_status"]}</span>'
 
-        sig_class = "badge-sig-bull" if "BREAKOUT" in m["signal"] or "ABOVE" in m["signal"] else "badge-sig"
+        if m.get("is_reversal"):
+            sig_class = "badge-sig-rev"
+        elif "BREAKOUT" in m["signal"] or "ABOVE" in m["signal"]:
+            sig_class = "badge-sig-bull"
+        else:
+            sig_class = "badge-sig"
         sig_display = f'<span class="badge {sig_class}">{m["signal"]}</span>'
 
         tv_url = f"https://in.tradingview.com/chart/?symbol=NSE:{sym}"
@@ -2108,7 +2184,11 @@ def export_static_html(results, now_str, port):
                 "orb_low": d.get("orb_low"),
                 "high_bar_num": d.get("high_bar_num"),
                 "low_bar_num": d.get("low_bar_num"),
-                "orb_status": m.get("orb_status"),
+                "orb_status": "L➔H" if m.get("is_reversal") else m.get("orb_status"),
+                "is_reversal": bool(m.get("is_reversal", False)),
+                "reversal_desc": m.get("reversal_desc"),
+                "orb_low_break_time": m.get("orb_low_break_time"),
+                "orb_high_break_time": m.get("orb_high_break_time"),
                 "is_ss": bool(d.get("is_strong_start", False)),
                 "rvol": round(d["rvol"], 2) if d.get("rvol") is not None else None,
                 "signal": m.get("signal"),
