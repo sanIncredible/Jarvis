@@ -644,8 +644,6 @@
         <tr>
           <th onclick="handleSort('idx')" style="width:45px; text-align:center;"># <span id="sort-idx" class="sort-icon">▲</span></th>
           <th onclick="handleSort('symbol')">Ticker / TV App <span id="sort-symbol" class="sort-icon"></span></th>
-          <th onclick="handleSort('r1')" style="text-align:right;" title="Classic Floor Pivot Resistance 1">R1 (₹) <span id="sort-r1" class="sort-icon"></span></th>
-          <th onclick="handleSort('r2')" style="text-align:right;" title="Classic Floor Pivot Resistance 2">R2 (₹) <span id="sort-r2" class="sort-icon"></span></th>
           <th onclick="handleSort('is_ss')" style="text-align:center;">SS <span id="sort-is_ss" class="sort-icon"></span></th>
           <th onclick="handleSort('pdh')" style="text-align:center;">PDH <span id="sort-pdh" class="sort-icon"></span></th>
           <th onclick="handleSort('h_pct')" style="text-align:right;">H% <span id="sort-h_pct" class="sort-icon"></span></th>
@@ -654,6 +652,8 @@
           <th onclick="handleSort('tag')" style="text-align:center;">Tag <span id="sort-tag" class="sort-icon"></span></th>
           <th onclick="handleSort('signal')">Algorithmic Signal <span id="sort-signal" class="sort-icon"></span></th>
           <th onclick="handleSort('strength_score')" style="text-align:right;">Score <span id="sort-strength_score" class="sort-icon"></span></th>
+          <th onclick="handleSort('r1')" style="text-align:right;" title="Classic Floor Pivot Resistance 1">R1 (₹) <span id="sort-r1" class="sort-icon"></span></th>
+          <th onclick="handleSort('r2')" style="text-align:right;" title="Classic Floor Pivot Resistance 2">R2 (₹) <span id="sort-r2" class="sort-icon"></span></th>
         </tr>
       </thead>
       <tbody id="table-body">
@@ -1266,8 +1266,6 @@
               <button class="btn-preview-eye" onclick="showChartPopup(event, '${sym}', true)" title="Chart Preview">👁</button>
             </div>
           </td>
-          <td style="text-align:right; font-weight:700;" class="${r1_col}" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R1: ${r1_str} (${r1_is_above ? 'Price Above R1' : 'Price Below R1'})">${r1_str}</td>
-          <td style="text-align:right; font-weight:700;" class="${r2_col}" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R2: ${r2_str} (${r2_is_above ? 'Price Above R2' : 'Price Below R2'})">${r2_str}</td>
           <td style="text-align:center;">${ss_html}</td>
           <td style="text-align:center;">${pdh_html}</td>
           <td class="${stk.h_pct > 0 ? 'val-pos' : 'val-neg'}" style="text-align:right;">${h_str}</td>
@@ -1276,6 +1274,8 @@
           <td style="text-align:center; color:var(--text-muted);">${stk.tag || '-'}</td>
           <td>${sig_badge}</td>
           <td style="text-align:right; font-weight:800; color:#93c5fd;">${Number(stk.strength_score).toFixed(1)}</td>
+          <td style="text-align:right; font-weight:700;" class="${r1_col}" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R1: ${r1_str} (${r1_is_above ? 'Price Above R1' : 'Price Below R1'})">${r1_str}</td>
+          <td style="text-align:right; font-weight:700;" class="${r2_col}" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R2: ${r2_str} (${r2_is_above ? 'Price Above R2' : 'Price Below R2'})">${r2_str}</td>
         </tr>
       `;
     });
