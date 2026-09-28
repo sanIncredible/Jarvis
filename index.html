@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>JARVIS PRO — Institutional 3m ORB & Market Scanner</title>
+<title id="page-title">Cluster Observability &amp; Ingress Telemetry</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'><rect width='24' height='24' rx='4' fill='%23000000'/><path d='M4 6h16M4 12h16M4 18h16' stroke='%23ffffff' stroke-width='2'/></svg>">
 <style>
   :root {
     --bg-main: #000000;
@@ -544,20 +545,20 @@
   <!-- Top Navigation Bar -->
   <div class="top-bar">
     <div class="brand-group">
-      <div class="brand-logo">J</div>
+      <div class="brand-logo" onclick="toggleStealthMode()" title="Toggle View Mode (Shortcut: Shift + S)" style="cursor:pointer; user-select:none;">CTL</div>
       <div>
         <div class="brand-title">
-          JARVIS PRO
-          <span class="brand-tag">SOTA 3M SCANNER</span>
+          <span id="txt-brand-title">CLUSTER TELEMETRY</span>
+          <span class="brand-tag" id="txt-brand-tag">NODE OBSERVER v3.4</span>
         </div>
-        <div class="brand-sub">Cloud-Native Engine • <span id="source-label">Upstox Pro API v2</span></div>
+        <div class="brand-sub"><span id="brand-sub-txt">Cloud Ingress • Cluster AP-South-1</span> • <span id="source-label">Telemetry Daemon</span></div>
       </div>
     </div>
 
     <div class="nav-controls">
       <div class="live-pill">
         <span id="pulse-indicator" class="pulse-dot"></span>
-        <span id="status-text" style="font-weight:700; color:#fff;">CONNECTING</span>
+        <span id="status-text" style="font-weight:700; color:#fff;">DAEMON: ACTIVE</span>
       </div>
 
       <div class="clock-pill">
@@ -565,7 +566,7 @@
         <span id="updated-at-display">--:--:--</span>
       </div>
 
-      <div class="clock-pill" style="color:#60a5fa;">
+      <div class="clock-pill" style="color:#ffffff;">
         <span>⏱</span>
         <span id="timer-display">01:00</span>
       </div>
@@ -577,12 +578,12 @@
         <button class="pill-btn" onclick="setPollInterval(180)">3m</button>
       </div>
 
-      <button class="btn-action" onclick="fetchData(true)" title="Force Refresh Data (Shortcut: R)">
-        🔄 Refresh
+      <button class="btn-action" onclick="fetchData(true)" title="Force Refresh Metrics (Shortcut: R)">
+        ⟳ Sync
       </button>
 
-      <button id="btn-audio" class="btn-audio" onclick="toggleAudio()" title="Sound alert on Breakout">
-        🔔
+      <button id="btn-mode" class="btn-action" onclick="toggleStealthMode()" title="Toggle View Mode (Shortcut: Shift + S)" style="font-size:11px; padding:5px 9px;">
+        🔒 <span id="mode-text">Stealth</span>
       </button>
     </div>
   </div>
@@ -590,13 +591,13 @@
   <!-- KPI Summary Ribbon -->
   <div class="kpi-row">
     <div class="kpi-card">
-      <div class="kpi-title">Market Breadth <span id="kpi-total-cnt">16 Stocks</span></div>
+      <div class="kpi-title"><span id="txt-kpi-1-title">Cluster Health</span> <span id="kpi-total-cnt">16 Nodes</span></div>
       <div class="kpi-value">
         <span id="kpi-bull-cnt" style="color:#ffffff;">0</span>
-        <span style="font-size:13px; color:var(--text-muted); font-weight:400;">Adv</span>
+        <span style="font-size:13px; color:var(--text-muted); font-weight:400;" id="txt-kpi-1-bull">Nominal</span>
         <span style="color:var(--text-dim);">/</span>
         <span id="kpi-bear-cnt" style="color:#71717a;">0</span>
-        <span style="font-size:13px; color:var(--text-muted); font-weight:400;">Dec</span>
+        <span style="font-size:13px; color:var(--text-muted); font-weight:400;" id="txt-kpi-1-bear">Degraded</span>
       </div>
       <div class="ratio-bar">
         <div id="ratio-bull-bar" class="ratio-bull" style="width:50%;"></div>
@@ -605,21 +606,21 @@
     </div>
 
     <div class="kpi-card">
-      <div class="kpi-title">Top Momentum</div>
+      <div class="kpi-title" id="txt-kpi-2-title">High Load Process</div>
       <div class="kpi-value" id="kpi-top-mover">--</div>
-      <div class="kpi-sub" id="kpi-top-score">Highest Institutional Strength</div>
+      <div class="kpi-sub" id="kpi-top-score">Highest Telemetry Load</div>
     </div>
 
     <div class="kpi-card">
-      <div class="kpi-title">PDH Breaches</div>
+      <div class="kpi-title" id="txt-kpi-3-title">Peak Limit Breaches</div>
       <div class="kpi-value" id="kpi-pdh-cnt" style="color:#ffffff;">0</div>
-      <div class="kpi-sub">Trading Above Yesterday's High</div>
+      <div class="kpi-sub" id="txt-kpi-3-sub">Exceeded 24h Baseline Envelope</div>
     </div>
 
     <div class="kpi-card">
-      <div class="kpi-title">ORB Action Triggers</div>
+      <div class="kpi-title" id="txt-kpi-4-title">Boundary Ingress Alerts</div>
       <div class="kpi-value" id="kpi-orb-cnt" style="color:#ffffff;">0</div>
-      <div class="kpi-sub">Bull Breakouts & High Formations</div>
+      <div class="kpi-sub" id="txt-kpi-4-sub">Envelope Spikes & State Shifts</div>
     </div>
   </div>
 
@@ -627,15 +628,15 @@
   <div class="toolbar">
     <div class="filter-chips">
       <span class="chip active" onclick="setFilter('all', this)">ALL (<span id="cnt-all">0</span>)</span>
-      <span class="chip" onclick="setFilter('rev', this)">🔄 Reversals (<span id="cnt-rev">0</span>)</span>
-      <span class="chip" onclick="setFilter('ss', this)">★ Strong Start (<span id="cnt-ss">0</span>)</span>
-      <span class="chip" onclick="setFilter('pdh', this)">📌 PDH Broken (<span id="cnt-pdh">0</span>)</span>
-      <span class="chip" onclick="setFilter('bull', this)">⚪ Bullish (<span id="cnt-bull">0</span>)</span>
-      <span class="chip" onclick="setFilter('bear', this)">⚫ Bearish (<span id="cnt-bear">0</span>)</span>
+      <span class="chip" onclick="setFilter('rev', this)"><span id="chip-lbl-rev">🔄 Failover</span> (<span id="cnt-rev">0</span>)</span>
+      <span class="chip" onclick="setFilter('ss', this)"><span id="chip-lbl-ss">★ Priority</span> (<span id="cnt-ss">0</span>)</span>
+      <span class="chip" onclick="setFilter('pdh', this)"><span id="chip-lbl-pdh">📌 Peak Alerts</span> (<span id="cnt-pdh">0</span>)</span>
+      <span class="chip" onclick="setFilter('bull', this)"><span id="chip-lbl-bull">⚪ Nominal</span> (<span id="cnt-bull">0</span>)</span>
+      <span class="chip" onclick="setFilter('bear', this)"><span id="chip-lbl-bear">⚫ Degraded</span> (<span id="cnt-bear">0</span>)</span>
     </div>
 
     <div class="search-wrap">
-      <input type="text" id="search-input" class="search-input" placeholder="Filter stocks (/) ..." oninput="renderFilteredTable()">
+      <input type="text" id="search-input" class="search-input" placeholder="Filter endpoints (/) ..." oninput="renderFilteredTable()">
       <span class="search-shortcut">/</span>
     </div>
   </div>
@@ -645,18 +646,18 @@
     <table>
       <thead>
         <tr>
-          <th onclick="handleSort('idx')" style="width:45px; text-align:center;"># <span id="sort-idx" class="sort-icon">▲</span></th>
-          <th onclick="handleSort('symbol')">Ticker / TV App <span id="sort-symbol" class="sort-icon"></span></th>
-          <th onclick="handleSort('is_ss')" style="text-align:center;">SS <span id="sort-is_ss" class="sort-icon"></span></th>
-          <th onclick="handleSort('pdh')" style="text-align:center;">PDH <span id="sort-pdh" class="sort-icon"></span></th>
-          <th onclick="handleSort('h_pct')" style="text-align:right;">H% <span id="sort-h_pct" class="sort-icon"></span></th>
-          <th onclick="handleSort('l_pct')" style="text-align:right;">L% <span id="sort-l_pct" class="sort-icon"></span></th>
-          <th onclick="handleSort('orb_status')" style="text-align:center;">ORB <span id="sort-orb_status" class="sort-icon"></span></th>
-          <th onclick="handleSort('tag')" style="text-align:center;">Tag <span id="sort-tag" class="sort-icon"></span></th>
-          <th onclick="handleSort('signal')">Algorithmic Signal <span id="sort-signal" class="sort-icon"></span></th>
-          <th onclick="handleSort('strength_score')" style="text-align:right;">Score <span id="sort-strength_score" class="sort-icon"></span></th>
-          <th onclick="handleSort('r1')" style="text-align:right;" title="Classic Floor Pivot Resistance 1">R1 (₹) <span id="sort-r1" class="sort-icon"></span></th>
-          <th onclick="handleSort('r2')" style="text-align:right;" title="Classic Floor Pivot Resistance 2">R2 (₹) <span id="sort-r2" class="sort-icon"></span></th>
+          <th onclick="handleSort('idx')" style="width:45px; text-align:center;">ID <span id="sort-idx" class="sort-icon">▲</span></th>
+          <th onclick="handleSort('symbol')" id="th-symbol">Endpoint / Node <span id="sort-symbol" class="sort-icon"></span></th>
+          <th onclick="handleSort('is_ss')" style="text-align:center;" id="th-ss">Pri <span id="sort-is_ss" class="sort-icon"></span></th>
+          <th onclick="handleSort('pdh')" style="text-align:center;" id="th-pdh">Peak <span id="sort-pdh" class="sort-icon"></span></th>
+          <th onclick="handleSort('h_pct')" style="text-align:right;" id="th-hpct">ΔH% <span id="sort-h_pct" class="sort-icon"></span></th>
+          <th onclick="handleSort('l_pct')" style="text-align:right;" id="th-lpct">ΔL% <span id="sort-l_pct" class="sort-icon"></span></th>
+          <th onclick="handleSort('orb_status')" style="text-align:center;" id="th-orb">Band <span id="sort-orb_status" class="sort-icon"></span></th>
+          <th onclick="handleSort('tag')" style="text-align:center;" id="th-tag">Route <span id="sort-tag" class="sort-icon"></span></th>
+          <th onclick="handleSort('signal')" id="th-signal">Runtime Status <span id="sort-signal" class="sort-icon"></span></th>
+          <th onclick="handleSort('strength_score')" style="text-align:right;" id="th-score">QoS <span id="sort-strength_score" class="sort-icon"></span></th>
+          <th onclick="handleSort('r1')" style="text-align:right;" id="th-r1">Cap-1 <span id="sort-r1" class="sort-icon"></span></th>
+          <th onclick="handleSort('r2')" style="text-align:right;" id="th-r2">Cap-2 <span id="sort-r2" class="sort-icon"></span></th>
         </tr>
       </thead>
       <tbody id="table-body">
@@ -669,8 +670,8 @@
     </table>
   </div>
 
-  <div class="footer">
-    JARVIS SOTA Dashboard • Pure Vanilla High-Performance Architecture • Zero External Dependencies • 60 FPS Native Canvas • Press [?] for Shortcuts
+  <div id="page-footer" class="footer">
+    Cluster Telemetry &amp; Node Observer Daemon • Distributed Ingress Telemetry Pipeline • High-Throughput Stream • Press [?] for Diagnostics
   </div>
 
   <!-- Interactive Candlestick Chart Modal -->
@@ -696,7 +697,7 @@
       <canvas id="popup-canvas"></canvas>
     </div>
     <div class="popup-footer">
-      <span>💡 Gold Line = Previous Day High (PDH) | Cyan/Orange = 3m Dynamic ORB</span>
+      <span id="popup-footer-note">💡 Upper Baseline Envelope | Dynamic 3m Boundary Thresholds</span>
       <span id="popup-bar-count">0 Candles</span>
     </div>
   </div>
@@ -714,6 +715,170 @@
   let timerHandle = null;
   let popupTimer = null;
   let audioEnabled = false;
+
+  // Stealth Telemetry Camouflage System (Default: ON for office stealth)
+  let isStealthMode = (localStorage.getItem('jarvis_stealth_mode') !== '0');
+
+  function formatNodeName(sym) {
+    return isStealthMode ? ('node-' + sym) : sym;
+  }
+
+  function disguiseSignal(sig) {
+    if (!sig) return isStealthMode ? 'NOMINAL' : 'IN RANGE';
+    if (!isStealthMode) return sig;
+    let s = sig;
+    s = s.replace(/REVERSAL BREAKOUT \(ORB \+ PDH\)/g, 'FAILOVER ENVELOPE BREACH (BAND + PEAK)');
+    s = s.replace(/REVERSAL \(ORB LOW → HIGH\)/g, 'FAILOVER TRACE (L ➔ H)');
+    s = s.replace(/REVERSAL/g, 'FAILOVER');
+    s = s.replace(/BULLISH BREAKOUT \(ORB \+ PDH\)/g, 'UPPER SPIKE (BAND + PEAK)');
+    s = s.replace(/BREAKOUT \(ORB HIGH\)/g, 'UPPER BAND BREACH');
+    s = s.replace(/BREAKOUT/g, 'UPPER BREACH');
+    s = s.replace(/BEARISH BREAKDOWN \(ORB LOW\)/g, 'LOWER BAND BREACH');
+    s = s.replace(/BREAKDOWN/g, 'LOWER BREACH');
+    s = s.replace(/ABOVE ORB HIGH/g, 'UPPER BAND ACTIVE');
+    s = s.replace(/BELOW ORB LOW/g, 'LOWER BAND ACTIVE');
+    s = s.replace(/IN RANGE/g, 'NOMINAL');
+    s = s.replace(/SS \+/g, 'PRI +');
+    s = s.replace(/ORB \+ PDH/g, 'BAND + PEAK');
+    s = s.replace(/ORB/g, 'BAND');
+    s = s.replace(/PDH/g, 'PEAK');
+    return s;
+  }
+
+  function applyStealthModeUI() {
+    const pageTitle = document.getElementById('page-title');
+    const txtBrandTitle = document.getElementById('txt-brand-title');
+    const txtBrandTag = document.getElementById('txt-brand-tag');
+    const brandSubTxt = document.getElementById('brand-sub-txt');
+    const btnMode = document.getElementById('btn-mode');
+
+    // KPI titles & labels
+    const txtKpi1Title = document.getElementById('txt-kpi-1-title');
+    const txtKpi1Bull = document.getElementById('txt-kpi-1-bull');
+    const txtKpi1Bear = document.getElementById('txt-kpi-1-bear');
+    const txtKpi2Title = document.getElementById('txt-kpi-2-title');
+    const txtKpi3Title = document.getElementById('txt-kpi-3-title');
+    const txtKpi3Sub = document.getElementById('txt-kpi-3-sub');
+    const txtKpi4Title = document.getElementById('txt-kpi-4-title');
+    const txtKpi4Sub = document.getElementById('txt-kpi-4-sub');
+
+    // Filter chips
+    const chipRev = document.getElementById('chip-lbl-rev');
+    const chipSs = document.getElementById('chip-lbl-ss');
+    const chipPdh = document.getElementById('chip-lbl-pdh');
+    const chipBull = document.getElementById('chip-lbl-bull');
+    const chipBear = document.getElementById('chip-lbl-bear');
+
+    // Search input
+    const searchInput = document.getElementById('search-input');
+
+    // Table Headers
+    const thSymbol = document.getElementById('th-symbol');
+    const thSs = document.getElementById('th-ss');
+    const thPdh = document.getElementById('th-pdh');
+    const thOrb = document.getElementById('th-orb');
+    const thTag = document.getElementById('th-tag');
+    const thSignal = document.getElementById('th-signal');
+    const thScore = document.getElementById('th-score');
+    const thR1 = document.getElementById('th-r1');
+    const thR2 = document.getElementById('th-r2');
+
+    // Footers
+    const pageFooter = document.getElementById('page-footer');
+    const popupFooterNote = document.getElementById('popup-footer-note');
+
+    if (isStealthMode) {
+      if (pageTitle) pageTitle.innerText = 'Cluster Observability & Ingress Telemetry';
+      if (txtBrandTitle) txtBrandTitle.innerText = 'CLUSTER TELEMETRY';
+      if (txtBrandTag) txtBrandTag.innerText = 'NODE OBSERVER v3.4';
+      if (brandSubTxt) brandSubTxt.innerText = 'Cloud Ingress • Cluster AP-South-1';
+      if (btnMode) {
+        btnMode.innerHTML = '🔒 <span id="mode-text">Stealth</span>';
+        btnMode.title = 'Current: Stealth Mode (Telemetry Camouflage) • Click to switch to Trader Pro (Shift + S)';
+      }
+
+      if (txtKpi1Title) txtKpi1Title.innerText = 'Cluster Health';
+      if (txtKpi1Bull) txtKpi1Bull.innerText = 'Nominal';
+      if (txtKpi1Bear) txtKpi1Bear.innerText = 'Degraded';
+      if (txtKpi2Title) txtKpi2Title.innerText = 'High Load Process';
+      if (txtKpi3Title) txtKpi3Title.innerText = 'Peak Limit Breaches';
+      if (txtKpi3Sub) txtKpi3Sub.innerText = 'Exceeded 24h Baseline Envelope';
+      if (txtKpi4Title) txtKpi4Title.innerText = 'Boundary Ingress Alerts';
+      if (txtKpi4Sub) txtKpi4Sub.innerText = 'Envelope Spikes & State Shifts';
+
+      if (chipRev) chipRev.innerText = '🔄 Failover';
+      if (chipSs) chipSs.innerText = '★ Priority';
+      if (chipPdh) chipPdh.innerText = '📌 Peak Alerts';
+      if (chipBull) chipBull.innerText = '⚪ Nominal';
+      if (chipBear) chipBear.innerText = '⚫ Degraded';
+
+      if (searchInput) searchInput.placeholder = 'Filter endpoints (/) ...';
+
+      if (thSymbol) thSymbol.innerHTML = `Endpoint / Node <span id="sort-symbol" class="sort-icon"></span>`;
+      if (thSs) thSs.innerHTML = `Pri <span id="sort-is_ss" class="sort-icon"></span>`;
+      if (thPdh) thPdh.innerHTML = `Peak <span id="sort-pdh" class="sort-icon"></span>`;
+      if (thOrb) thOrb.innerHTML = `Band <span id="sort-orb_status" class="sort-icon"></span>`;
+      if (thTag) thTag.innerHTML = `Route <span id="sort-tag" class="sort-icon"></span>`;
+      if (thSignal) thSignal.innerHTML = `Runtime Status <span id="sort-signal" class="sort-icon"></span>`;
+      if (thScore) thScore.innerHTML = `QoS <span id="sort-strength_score" class="sort-icon"></span>`;
+      if (thR1) thR1.innerHTML = `Cap-1 <span id="sort-r1" class="sort-icon"></span>`;
+      if (thR2) thR2.innerHTML = `Cap-2 <span id="sort-r2" class="sort-icon"></span>`;
+
+      if (pageFooter) pageFooter.innerText = 'Cluster Telemetry & Node Observer Daemon • Distributed Ingress Telemetry Pipeline • High-Throughput Stream • Press [?] for Diagnostics';
+      if (popupFooterNote) popupFooterNote.innerText = '💡 Upper Baseline Envelope | Dynamic 3m Boundary Thresholds';
+    } else {
+      if (pageTitle) pageTitle.innerText = 'JARVIS PROSOTA 3M SCANNER • Live Market Terminal';
+      if (txtBrandTitle) txtBrandTitle.innerText = 'JARVIS PROSOTA';
+      if (txtBrandTag) txtBrandTag.innerText = '3M SCANNER';
+      if (brandSubTxt) brandSubTxt.innerText = 'Cloud-Native Engine • Upstox API v2';
+      if (btnMode) {
+        btnMode.innerHTML = '📊 <span id="mode-text">Trader Pro</span>';
+        btnMode.title = 'Current: Trader Pro Mode • Click to switch to Stealth Mode (Shift + S)';
+      }
+
+      if (txtKpi1Title) txtKpi1Title.innerText = 'Market Breadth';
+      if (txtKpi1Bull) txtKpi1Bull.innerText = 'Adv';
+      if (txtKpi1Bear) txtKpi1Bear.innerText = 'Dec';
+      if (txtKpi2Title) txtKpi2Title.innerText = 'Top Momentum';
+      if (txtKpi3Title) txtKpi3Title.innerText = 'PDH Breaches';
+      if (txtKpi3Sub) txtKpi3Sub.innerText = "Trading Above Yesterday's High";
+      if (txtKpi4Title) txtKpi4Title.innerText = 'ORB Action Triggers';
+      if (txtKpi4Sub) txtKpi4Sub.innerText = 'Bull Breakouts & High Formations';
+
+      if (chipRev) chipRev.innerText = '🔄 Reversals';
+      if (chipSs) chipSs.innerText = '★ Strong Start';
+      if (chipPdh) chipPdh.innerText = '📌 PDH Breaks';
+      if (chipBull) chipBull.innerText = '⚪ Bullish';
+      if (chipBear) chipBear.innerText = '⚫ Bearish';
+
+      if (searchInput) searchInput.placeholder = 'Filter stocks (/) ...';
+
+      if (thSymbol) thSymbol.innerHTML = `Stock Symbol <span id="sort-symbol" class="sort-icon"></span>`;
+      if (thSs) thSs.innerHTML = `SS <span id="sort-is_ss" class="sort-icon"></span>`;
+      if (thPdh) thPdh.innerHTML = `PDH <span id="sort-pdh" class="sort-icon"></span>`;
+      if (thOrb) thOrb.innerHTML = `ORB <span id="sort-orb_status" class="sort-icon"></span>`;
+      if (thTag) thTag.innerHTML = `Tag <span id="sort-tag" class="sort-icon"></span>`;
+      if (thSignal) thSignal.innerHTML = `Signal <span id="sort-signal" class="sort-icon"></span>`;
+      if (thScore) thScore.innerHTML = `Strength <span id="sort-strength_score" class="sort-icon"></span>`;
+      if (thR1) thR1.innerHTML = `Pivot R1 <span id="sort-r1" class="sort-icon"></span>`;
+      if (thR2) thR2.innerHTML = `Pivot R2 <span id="sort-r2" class="sort-icon"></span>`;
+
+      if (pageFooter) pageFooter.innerText = 'JARVIS SOTA Dashboard • Pure Vanilla High-Performance Architecture • Zero External Dependencies • 60 FPS Native Canvas • Press [?] for Shortcuts';
+      if (popupFooterNote) popupFooterNote.innerText = '💡 Gold Line = Previous Day High (PDH) | Cyan/Orange = 3m Dynamic ORB';
+    }
+    updateSortIcons();
+  }
+
+  function toggleStealthMode() {
+    isStealthMode = !isStealthMode;
+    localStorage.setItem('jarvis_stealth_mode', isStealthMode ? '1' : '0');
+    applyStealthModeUI();
+    renderFilteredTable();
+    if (activeSym && CHARTS_DATA[activeSym] && popup && popup.style.display === 'flex') {
+      updatePopupHeader(CHARTS_DATA[activeSym]);
+      drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    }
+  }
 
   const tableBody = document.getElementById('table-body');
   const timerDisplay = document.getElementById('timer-display');
@@ -1125,7 +1290,7 @@
     });
 
     // Update KPIs
-    document.getElementById('kpi-total-cnt').innerText = RAW_STOCKS.length + ' Stocks';
+    document.getElementById('kpi-total-cnt').innerText = RAW_STOCKS.length + (isStealthMode ? ' Nodes' : ' Stocks');
     document.getElementById('kpi-bull-cnt').innerText = bullCount;
     document.getElementById('kpi-bear-cnt').innerText = bearCount;
     const totalAdvDec = Math.max(bullCount + bearCount, 1);
@@ -1138,8 +1303,9 @@
     if (topMover) {
       const s = topMover.chg_pct >= 0 ? '+' : '';
       const col = topMover.chg_pct >= 0 ? '#ffffff' : '#71717a';
-      document.getElementById('kpi-top-mover').innerHTML = `${topMover.symbol} <span style="font-size:14px; color:${col};">(${s}${topMover.chg_pct}%)</span>`;
-      document.getElementById('kpi-top-score').innerText = `Institutional Strength: ${topMover.strength_score}`;
+      const nodeLabel = formatNodeName(topMover.symbol);
+      document.getElementById('kpi-top-mover').innerHTML = `${nodeLabel} <span style="font-size:14px; color:${col};">(${s}${topMover.chg_pct}%)</span>`;
+      document.getElementById('kpi-top-score').innerText = isStealthMode ? `Throughput Index: ${topMover.strength_score}` : `Institutional Strength: ${topMover.strength_score}`;
     }
 
     // Filter counts
@@ -1221,6 +1387,7 @@
       const sym = stk.symbol;
       const rank = stk.idx || (i + 1);
       const tv_url = 'https://in.tradingview.com/chart/?symbol=NSE:' + sym;
+      const displaySym = formatNodeName(sym);
 
       const ltp_val = (stk.ltp !== null && stk.ltp !== undefined) ? Number(stk.ltp) : null;
       const r1_val = (stk.r1 !== null && stk.r1 !== undefined) ? Number(stk.r1) : null;
@@ -1228,11 +1395,11 @@
 
       const r1_is_above = (ltp_val !== null && r1_val !== null && ltp_val >= r1_val);
       const r1_col = (r1_val !== null && ltp_val !== null) ? (r1_is_above ? 'val-pos' : 'val-neg') : '';
-      const r1_str = r1_val !== null ? ('₹' + r1_val.toFixed(2)) : '--';
+      const r1_str = r1_val !== null ? (isStealthMode ? r1_val.toFixed(2) : ('₹' + r1_val.toFixed(2))) : '--';
 
       const r2_is_above = (ltp_val !== null && r2_val !== null && ltp_val >= r2_val);
       const r2_col = (r2_val !== null && ltp_val !== null) ? (r2_is_above ? 'val-pos' : 'val-neg') : '';
-      const r2_str = r2_val !== null ? ('₹' + r2_val.toFixed(2)) : '--';
+      const r2_str = r2_val !== null ? (isStealthMode ? r2_val.toFixed(2) : ('₹' + r2_val.toFixed(2))) : '--';
 
       const ss_html = stk.is_ss ? '<span class="star-badge">★</span>' : '<span style="color:var(--text-dim);">-</span>';
       const pdh_html = stk.pdh_broken
@@ -1244,29 +1411,44 @@
 
       let orb_badge = '';
       if (stk.is_reversal || stk.orb_status === 'L➔H') {
-        const revTooltip = stk.reversal_desc || 'Broke ORB Low first, then broke ORB High (Bullish Reversal)';
+        const revTooltip = isStealthMode
+          ? 'Broke lower boundary first, then broke upper boundary (Failover Recovery)'
+          : (stk.reversal_desc || 'Broke ORB Low first, then broke ORB High (Bullish Reversal)');
         orb_badge = `<span class="pill-badge badge-orb-rev" title="${revTooltip}">L➔H</span>`;
       } else {
         const orb_status = stk.orb_status || 'M';
         orb_badge = `<span class="pill-badge badge-orb-${orb_status.toLowerCase()}">${orb_status}</span>`;
       }
 
-      const sig = stk.signal || 'IN RANGE';
+      const rawSig = stk.signal || 'IN RANGE';
+      const sig = disguiseSignal(rawSig);
       let sig_cls = 'badge-range';
-      if (sig.includes('REVERSAL')) sig_cls = 'badge-reversal';
-      else if (sig.includes('BREAKOUT') || sig.includes('ABOVE')) sig_cls = 'badge-bull-break';
-      else if (sig.includes('BREAKDOWN') || sig.includes('BELOW')) sig_cls = 'badge-bear-break';
+      if (rawSig.includes('REVERSAL')) sig_cls = 'badge-reversal';
+      else if (rawSig.includes('BREAKOUT') || rawSig.includes('ABOVE')) sig_cls = 'badge-bull-break';
+      else if (rawSig.includes('BREAKDOWN') || rawSig.includes('BELOW')) sig_cls = 'badge-bear-break';
       const sig_badge = `<span class="pill-badge ${sig_cls}">${sig}</span>`;
+
+      const nodeTitle = isStealthMode
+        ? `Val: ${ltp_val ? ltp_val.toFixed(2) : '--'} • Inspect node metrics`
+        : `LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • Open in TradingView App`;
+
+      const r1_tooltip = isStealthMode
+        ? `Val: ${ltp_val ? ltp_val.toFixed(2) : '--'} • Cap-1: ${r1_str} (${r1_is_above ? 'Above Baseline' : 'Below Baseline'})`
+        : `LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R1: ${r1_str} (${r1_is_above ? 'Price Above R1' : 'Price Below R1'})`;
+
+      const r2_tooltip = isStealthMode
+        ? `Val: ${ltp_val ? ltp_val.toFixed(2) : '--'} • Cap-2: ${r2_str} (${r2_is_above ? 'Above Baseline' : 'Below Baseline'})`
+        : `LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R2: ${r2_str} (${r2_is_above ? 'Price Above R2' : 'Price Below R2'})`;
 
       html += `
         <tr onmouseenter="showChartPopup(event, '${sym}')" onmouseleave="scheduleHidePopup()">
           <td style="color:var(--text-muted); text-align:center;">${rank}</td>
           <td>
             <div class="stock-cell">
-              <a href="${tv_url}" target="_blank" class="btn-tv-app" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • Open in TradingView App">
-                ${sym} ↗
+              <a href="${tv_url}" target="_blank" class="btn-tv-app" title="${nodeTitle}">
+                ${displaySym} ↗
               </a>
-              <button class="btn-preview-eye" onclick="showChartPopup(event, '${sym}', true)" title="Chart Preview">👁</button>
+              <button class="btn-preview-eye" onclick="showChartPopup(event, '${sym}', true)" title="${isStealthMode ? 'Inspect Trace' : 'Chart Preview'}">👁</button>
             </div>
           </td>
           <td style="text-align:center;">${ss_html}</td>
@@ -1277,13 +1459,13 @@
           <td style="text-align:center; color:var(--text-muted);">${stk.tag || '-'}</td>
           <td>${sig_badge}</td>
           <td style="text-align:right; font-weight:800; color:#f4f4f5;">${Number(stk.strength_score).toFixed(1)}</td>
-          <td style="text-align:right; font-weight:700;" class="${r1_col}" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R1: ${r1_str} (${r1_is_above ? 'Price Above R1' : 'Price Below R1'})">${r1_str}</td>
-          <td style="text-align:right; font-weight:700;" class="${r2_col}" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R2: ${r2_str} (${r2_is_above ? 'Price Above R2' : 'Price Below R2'})">${r2_str}</td>
+          <td style="text-align:right; font-weight:700;" class="${r1_col}" title="${r1_tooltip}">${r1_str}</td>
+          <td style="text-align:right; font-weight:700;" class="${r2_col}" title="${r2_tooltip}">${r2_str}</td>
         </tr>
       `;
     });
 
-    tableBody.innerHTML = html || '<tr><td colspan="12" style="text-align:center; padding:30px; color:var(--text-muted);">No stocks match current filter.</td></tr>';
+    tableBody.innerHTML = html || `<tr><td colspan="12" style="text-align:center; padding:30px; color:var(--text-muted);">${isStealthMode ? 'No telemetry nodes match current filter.' : 'No stocks match current filter.'}</td></tr>`;
   }
 
   // Chart Timeframe Switcher
@@ -1307,24 +1489,34 @@
   function updatePopupHeader(data) {
     if (!data) return;
     const isDaily = (currentTimeframe === 'D');
-    popupTitle.innerHTML = `📈 ${data.symbol} <span style="font-size:11px; color:var(--text-muted); font-weight:500;">(${isDaily ? 'Daily Swing' : '3m Dynamic ORB'})</span>`;
+    const titleName = isStealthMode ? ('node-' + data.symbol) : data.symbol;
+    const subName = isStealthMode ? (isDaily ? 'Aggregated Volatility Trace' : '3m Ingress Envelope') : (isDaily ? 'Daily Swing' : '3m Dynamic ORB');
+    popupTitle.innerHTML = `📈 ${titleName} <span style="font-size:11px; color:var(--text-muted); font-weight:500;">(${subName})</span>`;
 
-    let bHtml = `<span class="pill-badge" style="background:#18181b; color:#fff; border:1px solid #3f3f46;">₹${Number(data.ltp).toFixed(2)}</span>`;
+    const valStr = isStealthMode ? Number(data.ltp).toFixed(2) : ('₹' + Number(data.ltp).toFixed(2));
+    let bHtml = `<span class="pill-badge" style="background:#18181b; color:#fff; border:1px solid #3f3f46;">${valStr}</span>`;
     const col = data.chg_pct >= 0 ? '#ffffff' : '#71717a';
     const sign = data.chg_pct >= 0 ? '+' : '';
     bHtml += `<span class="pill-badge" style="background:${data.chg_pct >= 0 ? 'rgba(255,255,255,0.15)' : 'rgba(82,82,91,0.2)'}; color:${col}; font-weight:800; border:1px solid ${data.chg_pct >= 0 ? '#ffffff' : '#52525b'};">${sign}${Number(data.chg_pct).toFixed(2)}%</span>`;
 
     if (data.pdh) {
-      const pdhStatus = data.pdh_broken ? 'BREACHED' : 'RESISTANCE';
+      const pdhStatus = isStealthMode ? (data.pdh_broken ? 'EXCEEDED' : 'NOMINAL') : (data.pdh_broken ? 'BREACHED' : 'RESISTANCE');
       const pdhCol = data.pdh_broken ? '#ffffff' : '#71717a';
-      bHtml += `<span class="pill-badge" style="border:1px solid #52525b; color:#d4d4d8;">PDH: ₹${Number(data.pdh).toFixed(1)} (<span style="color:${pdhCol}; font-weight:800;">${pdhStatus}</span>)</span>`;
+      const pdhLabel = isStealthMode ? 'Peak Envelope: ' : 'PDH: ₹';
+      bHtml += `<span class="pill-badge" style="border:1px solid #52525b; color:#d4d4d8;">${pdhLabel}${Number(data.pdh).toFixed(1)} (<span style="color:${pdhCol}; font-weight:800;">${pdhStatus}</span>)</span>`;
     }
 
     if (data.is_reversal || data.orb_status === 'L➔H') {
-      const tip = data.reversal_desc || 'Broke ORB Low first, then broke ORB High';
-      bHtml += `<span class="pill-badge badge-orb-rev" title="${tip}">🔄 REVERSAL (L➔H)</span>`;
+      const tip = isStealthMode ? 'Broke lower boundary first, then broke upper boundary' : (data.reversal_desc || 'Broke ORB Low first, then broke ORB High');
+      const revText = isStealthMode ? '🔄 FAILOVER (L➔H)' : '🔄 REVERSAL (L➔H)';
+      bHtml += `<span class="pill-badge badge-orb-rev" title="${tip}">${revText}</span>`;
     }
     popupBadges.innerHTML = bHtml;
+
+    if (popupAppLink) {
+      popupAppLink.innerText = isStealthMode ? '🌐 Node Trace ↗' : '🚀 TV App ↗';
+      popupAppLink.title = isStealthMode ? 'Open node telemetry trace' : 'Launch Native TradingView Desktop / Web';
+    }
   }
 
   // SOTA Canvas Rendering Engine (Retina High-DPI, Volume, Crosshair, Levels)
@@ -1447,8 +1639,8 @@
     }
 
     if (!isDaily) {
-      if (data.orb_high) drawLevel(data.orb_high, '#e4e4e7', 'ORB-H');
-      if (data.orb_low) drawLevel(data.orb_low, '#52525b', 'ORB-L');
+      if (data.orb_high) drawLevel(data.orb_high, '#e4e4e7', isStealthMode ? 'UPPER' : 'ORB-H');
+      if (data.orb_low) drawLevel(data.orb_low, '#52525b', isStealthMode ? 'LOWER' : 'ORB-L');
     }
 
     // Previous Day High (PDH) Line
@@ -1463,7 +1655,7 @@
       ctx.lineTo(W - padRight, yPdh);
       ctx.stroke();
 
-      const pdhTag = '📌 PDH ' + data.pdh.toFixed(1);
+      const pdhTag = isStealthMode ? ('📌 PEAK ' + data.pdh.toFixed(1)) : ('📌 PDH ' + data.pdh.toFixed(1));
       ctx.font = 'bold 9.5px var(--font-mono)';
       const tw = ctx.measureText(pdhTag).width;
       ctx.fillStyle = '#000000';
@@ -1479,7 +1671,7 @@
       ctx.fillRect(W - padRight + 2, yPdh - 7, padRight - 4, 15);
       ctx.fillStyle = '#000000';
       ctx.font = 'bold 9px var(--font-mono)';
-      ctx.fillText('PDH', W - padRight + 4, yPdh + 4);
+      ctx.fillText(isStealthMode ? 'PEAK' : 'PDH', W - padRight + 4, yPdh + 4);
       ctx.restore();
     }
 
@@ -1558,11 +1750,19 @@
       ctx.restore();
 
       const cColor = hoveredCandle.isBull ? '#ffffff' : '#71717a';
-      popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | O: ₹${hoveredCandle.o.toFixed(2)} | H: ₹${hoveredCandle.h.toFixed(2)} | L: ₹${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${hoveredCandle.c.toFixed(2)}</span> | Vol: ${hoveredCandle.v.toLocaleString()}`;
+      if (isStealthMode) {
+        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | Base: ${hoveredCandle.o.toFixed(2)} | High: ${hoveredCandle.h.toFixed(2)} | Low: ${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${hoveredCandle.c.toFixed(2)}</span> | Events: ${hoveredCandle.v.toLocaleString()}`;
+      } else {
+        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | O: ₹${hoveredCandle.o.toFixed(2)} | H: ₹${hoveredCandle.h.toFixed(2)} | L: ₹${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${hoveredCandle.c.toFixed(2)}</span> | Vol: ${hoveredCandle.v.toLocaleString()}`;
+      }
     } else {
       const last = candles[candles.length - 1];
       const cColor = last.c >= last.o ? '#ffffff' : '#71717a';
-      popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | O: ₹${last.o.toFixed(2)} | H: ₹${last.h.toFixed(2)} | L: ₹${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${last.c.toFixed(2)}</span> | Vol: ${last.v.toLocaleString()}`;
+      if (isStealthMode) {
+        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | Base: ${last.o.toFixed(2)} | High: ${last.h.toFixed(2)} | Low: ${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${last.c.toFixed(2)}</span> | Events: ${last.v.toLocaleString()}`;
+      } else {
+        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | O: ₹${last.o.toFixed(2)} | H: ₹${last.h.toFixed(2)} | L: ₹${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${last.c.toFixed(2)}</span> | Vol: ${last.v.toLocaleString()}`;
+      }
     }
   }
 
@@ -1631,8 +1831,13 @@
     if (popupTimer) clearTimeout(popupTimer);
   }
 
-  // Keyboard Shortcuts for Pro Traders
+  // Keyboard Shortcuts for Pro Traders & DevOps Telemetry
   window.addEventListener('keydown', function(e) {
+    if (e.shiftKey && (e.key === 'S' || e.key === 's')) {
+      e.preventDefault();
+      toggleStealthMode();
+      return;
+    }
     if (e.key === 'Escape') {
       hideChartPopup();
     } else if (e.key === '/') {
@@ -1644,7 +1849,11 @@
     } else if (e.key.toLowerCase() === 'r' && document.activeElement !== searchInput) {
       fetchData(true);
     } else if (e.key === '?' && document.activeElement !== searchInput) {
-      alert('⚡ JARVIS PRO SHORTCUTS:\n\n[/] Focus search\n[R] Force refresh\n[Esc] Close chart\n[1-9] View chart for stock #1-9');
+      if (isStealthMode) {
+        alert('⚡ CLUSTER TELEMETRY DAEMON DIAGNOSTICS:\n\n[Shift + S] Toggle Stealth / Telemetry Mode\n[/] Focus endpoint filter\n[R] Force sync metrics\n[Esc] Close trace modal\n[1-9] Inspect endpoint #1-9');
+      } else {
+        alert('⚡ JARVIS PRO TRADER SHORTCUTS:\n\n[Shift + S] Toggle Stealth / Trader Mode\n[/] Focus search\n[R] Force refresh\n[Esc] Close chart\n[1-9] View chart for stock #1-9');
+      }
     } else if (e.key >= '1' && e.key <= '9' && document.activeElement !== searchInput) {
       const idx = parseInt(e.key) - 1;
       if (RAW_STOCKS[idx]) {
@@ -1666,6 +1875,7 @@
   });
 
   // Boot
+  applyStealthModeUI();
   fetchData(true);
   startCountdown();
 </script>
