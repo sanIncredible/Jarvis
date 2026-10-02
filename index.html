@@ -727,13 +727,12 @@
           <th onclick="handleSort('tag')" style="text-align:center;" id="th-tag">Route <span id="sort-tag" class="sort-icon"></span></th>
           <th onclick="handleSort('signal')" id="th-signal">Runtime Status <span id="sort-signal" class="sort-icon"></span></th>
           <th onclick="handleSort('strength_score')" style="text-align:right;" id="th-score">QoS <span id="sort-strength_score" class="sort-icon"></span></th>
-          <th onclick="handleSort('r1')" style="text-align:right;" id="th-r1">Cap-1 <span id="sort-r1" class="sort-icon"></span></th>
-          <th onclick="handleSort('r2')" style="text-align:right;" id="th-r2">Cap-2 <span id="sort-r2" class="sort-icon"></span></th>
+          <th onclick="handleSort('lod_dist')" style="text-align:right;" id="th-lod" title="Low of Day Distance (% of Daily ATR14): (LTP - Day Low) / ATR14">Span% <span id="sort-lod_dist" class="sort-icon"></span></th>
         </tr>
       </thead>
       <tbody id="table-body">
         <tr>
-          <td colspan="12" style="text-align:center; padding: 50px 10px; color:var(--text-muted); font-size:14px;">
+          <td colspan="11" style="text-align:center; padding: 50px 10px; color:var(--text-muted); font-size:14px;">
             ⏳ Connecting to cloud feed payload (<code>data.json</code>)...
           </td>
         </tr>
@@ -857,8 +856,7 @@
     const thTag = document.getElementById('th-tag');
     const thSignal = document.getElementById('th-signal');
     const thScore = document.getElementById('th-score');
-    const thR1 = document.getElementById('th-r1');
-    const thR2 = document.getElementById('th-r2');
+    const thLod = document.getElementById('th-lod');
 
     // Footers
     const pageFooter = document.getElementById('page-footer');
@@ -899,8 +897,7 @@
       if (thTag) thTag.innerHTML = `Route <span id="sort-tag" class="sort-icon"></span>`;
       if (thSignal) thSignal.innerHTML = `Runtime Status <span id="sort-signal" class="sort-icon"></span>`;
       if (thScore) thScore.innerHTML = `QoS <span id="sort-strength_score" class="sort-icon"></span>`;
-      if (thR1) thR1.innerHTML = `Cap-1 <span id="sort-r1" class="sort-icon"></span>`;
-      if (thR2) thR2.innerHTML = `Cap-2 <span id="sort-r2" class="sort-icon"></span>`;
+      if (thLod) thLod.innerHTML = `Span% <span id="sort-lod_dist" class="sort-icon"></span>`;
 
       if (pageFooter) pageFooter.innerText = 'Cluster Telemetry & Node Observer Daemon • Distributed Ingress Telemetry Pipeline • High-Throughput Stream • Press [?] for Diagnostics';
       const btnStyleVol = document.getElementById('style-btn-vol');
@@ -947,8 +944,7 @@
       if (thTag) thTag.innerHTML = `Tag <span id="sort-tag" class="sort-icon"></span>`;
       if (thSignal) thSignal.innerHTML = `Signal <span id="sort-signal" class="sort-icon"></span>`;
       if (thScore) thScore.innerHTML = `Strength <span id="sort-strength_score" class="sort-icon"></span>`;
-      if (thR1) thR1.innerHTML = `Pivot R1 <span id="sort-r1" class="sort-icon"></span>`;
-      if (thR2) thR2.innerHTML = `Pivot R2 <span id="sort-r2" class="sort-icon"></span>`;
+      if (thLod) thLod.innerHTML = `LoD Dist <span id="sort-lod_dist" class="sort-icon"></span>`;
 
       if (pageFooter) pageFooter.innerText = 'JARVIS SOTA Dashboard • Pure Vanilla High-Performance Architecture • Zero External Dependencies • 60 FPS Native Canvas • Press [?] for Shortcuts';
       const btnStyleVol = document.getElementById('style-btn-vol');
@@ -1230,24 +1226,36 @@
       stk.is_prime = (stk.stretch_pct !== null && stk.stretch_pct >= 0 && stk.stretch_pct <= 0.45);
       if (stk.is_prime) primeCount++;
 
-      // Classic Floor Pivot Points: P = (H + L + C) / 3, R1 = 2*P - L, R2 = P + (H - L)
-      let r1 = stk.r1;
-      let r2 = stk.r2;
-      let pivot = stk.pivot;
-      if ((r1 === undefined || r1 === null) && c_d && c_d.length >= 2) {
-        const yc = c_d[c_d.length - 2];
-        if (yc) {
-          const yh = Number(yc.h);
-          const yl = Number(yc.l);
-          const yclose = Number(yc.c);
-          pivot = (yh + yl + yclose) / 3.0;
-          r1 = 2.0 * pivot - yl;
-          r2 = pivot + (yh - yl);
-        }
+      // LoD Dist = (LTP - Day Low) / ATR14 * 100%
+      let dayLow = (stk.day_low !== null && stk.day_low !== undefined) ? Number(stk.day_low) : null;
+      if (!dayLow && c_3m && c_3m.length) {
+        let minL = Infinity;
+        c_3m.forEach(c => { if (c.l < minL) minL = c.l; });
+        if (minL !== Infinity) dayLow = minL;
       }
-      stk.r1 = (r1 !== undefined && r1 !== null) ? Number(r1) : null;
-      stk.r2 = (r2 !== undefined && r2 !== null) ? Number(r2) : null;
-      stk.pivot = (pivot !== undefined && pivot !== null) ? Number(pivot) : null;
+      if (!dayLow && stk.orb_low) dayLow = Number(stk.orb_low);
+      stk.day_low = dayLow ? Number(dayLow.toFixed(2)) : null;
+
+      let atr14 = (stk.atr14 !== null && stk.atr14 !== undefined) ? Number(stk.atr14) : null;
+      if (!atr14 && c_d && c_d.length >= 15) {
+        let trSum = 0;
+        for (let idx = 0; idx < 14; idx++) {
+          const cur = c_d[c_d.length - 1 - idx];
+          const prev = c_d[c_d.length - 2 - idx];
+          if (cur && prev) {
+            const tr = Math.max(cur.h - cur.l, Math.abs(cur.h - prev.c), Math.abs(cur.l - prev.c));
+            trSum += tr;
+          }
+        }
+        atr14 = trSum / 14.0;
+      }
+      stk.atr14 = atr14 ? Number(atr14.toFixed(2)) : null;
+
+      let lodDist = (stk.lod_dist !== null && stk.lod_dist !== undefined) ? Number(stk.lod_dist) : null;
+      if (lodDist === null && ltpVal > 0 && dayLow > 0 && atr14 > 0) {
+        lodDist = Math.round(((ltpVal - dayLow) / atr14) * 100);
+      }
+      stk.lod_dist = lodDist !== null ? Number(lodDist) : null;
 
       // Reversal Pattern Detection (Broke ORB low first, then broke ORB high)
       if (stk.is_reversal || stk.orb_status === 'L➔H') {
@@ -1293,8 +1301,8 @@
         prev_close: stk.prev_close,
         chg_pct: stk.chg_pct,
         pivot: stk.pivot,
-        r1: stk.r1,
-        r2: stk.r2,
+        day_low: stk.day_low,
+        lod_dist: stk.lod_dist,
         ema10: stk.ema10,
         stretch_pct: stk.stretch_pct,
         pdh: stk.pdh,
@@ -1441,16 +1449,29 @@
       const displaySym = formatNodeName(sym);
 
       const ltp_val = (stk.ltp !== null && stk.ltp !== undefined) ? Number(stk.ltp) : null;
-      const r1_val = (stk.r1 !== null && stk.r1 !== undefined) ? Number(stk.r1) : null;
-      const r2_val = (stk.r2 !== null && stk.r2 !== undefined) ? Number(stk.r2) : null;
-
-      const r1_is_above = (ltp_val !== null && r1_val !== null && ltp_val >= r1_val);
-      const r1_col = (r1_val !== null && ltp_val !== null) ? (r1_is_above ? 'val-pos' : 'val-neg') : '';
-      const r1_str = r1_val !== null ? (isStealthMode ? r1_val.toFixed(2) : ('₹' + r1_val.toFixed(2))) : '--';
-
-      const r2_is_above = (ltp_val !== null && r2_val !== null && ltp_val >= r2_val);
-      const r2_col = (r2_val !== null && ltp_val !== null) ? (r2_is_above ? 'val-pos' : 'val-neg') : '';
-      const r2_str = r2_val !== null ? (isStealthMode ? r2_val.toFixed(2) : ('₹' + r2_val.toFixed(2))) : '--';
+      const lod_dist = (stk.lod_dist !== null && stk.lod_dist !== undefined) ? Number(stk.lod_dist) : null;
+      let lod_badge = '<span style="color:var(--text-dim);">-</span>';
+      if (lod_dist !== null) {
+        let lodCls = 'stretch-normal';
+        let lodTip = '';
+        if (lod_dist <= 70) {
+          lodCls = 'stretch-prime';
+          lodTip = isStealthMode
+            ? `Span: ${lod_dist}% of baseline envelope (Optimal headroom)`
+            : `LoD Dist: ${lod_dist}% of ATR14 (Early Stage / Ample Headroom remaining)`;
+        } else if (lod_dist <= 100) {
+          lodCls = 'stretch-normal';
+          lodTip = isStealthMode
+            ? `Span: ${lod_dist}% of baseline envelope (Nominal)`
+            : `LoD Dist: ${lod_dist}% of ATR14 (Mid-session range expansion)`;
+        } else {
+          lodCls = 'stretch-extended';
+          lodTip = isStealthMode
+            ? `Span: ${lod_dist}% of baseline envelope (Buffer saturated)`
+            : `LoD Dist: ${lod_dist}% of ATR14 (Daily Range Exhaustion! High risk of mean reversion)`;
+        }
+        lod_badge = `<span class="stretch-pill ${lodCls}" title="${lodTip}">${lod_dist}%</span>`;
+      }
 
       const ss_html = stk.is_ss ? '<span class="star-badge">★</span>' : '<span style="color:var(--text-dim);">-</span>';
       const pdh_html = stk.pdh_broken
@@ -1503,14 +1524,6 @@
         ? `Val: ${ltp_val ? ltp_val.toFixed(2) : '--'} • Inspect node metrics`
         : `LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • Open in TradingView App`;
 
-      const r1_tooltip = isStealthMode
-        ? `Val: ${ltp_val ? ltp_val.toFixed(2) : '--'} • Cap-1: ${r1_str} (${r1_is_above ? 'Above Baseline' : 'Below Baseline'})`
-        : `LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R1: ${r1_str} (${r1_is_above ? 'Price Above R1' : 'Price Below R1'})`;
-
-      const r2_tooltip = isStealthMode
-        ? `Val: ${ltp_val ? ltp_val.toFixed(2) : '--'} • Cap-2: ${r2_str} (${r2_is_above ? 'Above Baseline' : 'Below Baseline'})`
-        : `LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R2: ${r2_str} (${r2_is_above ? 'Price Above R2' : 'Price Below R2'})`;
-
       html += `
         <tr onmouseenter="showChartPopup(event, '${sym}')" onmouseleave="scheduleHidePopup()">
           <td style="color:var(--text-muted); text-align:center;">${rank}</td>
@@ -1535,13 +1548,12 @@
             </div>
           </td>
           <td style="text-align:right; font-weight:800; color:#f4f4f5;">${Number(stk.strength_score).toFixed(1)}</td>
-          <td style="text-align:right; font-weight:700;" class="${r1_col}" title="${r1_tooltip}">${r1_str}</td>
-          <td style="text-align:right; font-weight:700;" class="${r2_col}" title="${r2_tooltip}">${r2_str}</td>
+          <td style="text-align:right;">${lod_badge}</td>
         </tr>
       `;
     });
 
-    tableBody.innerHTML = html || `<tr><td colspan="12" style="text-align:center; padding:30px; color:var(--text-muted);">${isStealthMode ? 'No telemetry nodes match current filter.' : 'No stocks match current filter.'}</td></tr>`;
+    tableBody.innerHTML = html || `<tr><td colspan="11" style="text-align:center; padding:30px; color:var(--text-muted);">${isStealthMode ? 'No telemetry nodes match current filter.' : 'No stocks match current filter.'}</td></tr>`;
   }
 
   // Chart Timeframe Switcher
@@ -1648,6 +1660,14 @@
       bHtml += `<span class="stretch-pill ${badgeCls}" title="${isStealthMode ? 'Baseline Telemetry (10-MA)' : 'Intraday 10 EMA & % Stretch'}">${isStealthMode ? '10-MA: ' : '10 EMA: '}${eStr} (${sStr})</span>`;
     }
 
+    if (data.lod_dist !== null && data.lod_dist !== undefined) {
+      let lodCls = 'stretch-normal';
+      if (data.lod_dist <= 70) lodCls = 'stretch-prime';
+      else if (data.lod_dist > 100) lodCls = 'stretch-extended';
+      const lodLabel = isStealthMode ? 'SPAN: ' : 'LoD DIST: ';
+      bHtml += `<span class="stretch-pill ${lodCls}" title="${isStealthMode ? 'Envelope Span / ATR' : 'Low of Day Distance (% of Daily ATR14)'}">${lodLabel}${data.lod_dist}%</span>`;
+    }
+
     popupBadges.innerHTML = bHtml;
 
     if (popupAppLink) {
@@ -1723,6 +1743,26 @@
         : '🛑 <strong>DO NOT CHASE!</strong> Price is stretched ' + stretchStr + ' above 10 EMA. Wait for pullback to 10 EMA (<strong>' + pullbackTarget + '</strong>, SL: ' + tightSL + ') to avoid getting trapped.'}</span>`;
     }
 
+    let lodPill = '';
+    let lodNote = '';
+    if (data.lod_dist !== null && data.lod_dist !== undefined) {
+      const lodVal = Number(data.lod_dist);
+      let lodCls = 'stretch-normal';
+      if (lodVal <= 70) lodCls = 'stretch-prime';
+      else if (lodVal > 100) lodCls = 'stretch-extended';
+      lodPill = `<span class="stretch-pill ${lodCls}" title="Low of Day Distance (% of Daily ATR14)">${isStealthMode ? 'SPAN' : 'LoD'}: ${lodVal}%</span>`;
+
+      if (lodVal > 100) {
+        lodNote = isStealthMode
+          ? `<div style="margin-top:3px; font-size:10.5px; color:#e4e4e7;">⚠️ Envelope saturated (${lodVal}% of baseline span). Elevated variance.</div>`
+          : `<div style="margin-top:3px; font-size:10.5px; color:#fca5a5;">⚠️ <strong>Daily Range Exhausted (${lodVal}% ATR):</strong> Stock moved >100% of ATR from day low. High risk of exhaustion / pullback!</div>`;
+      } else if (lodVal <= 70) {
+        lodNote = isStealthMode
+          ? `<div style="margin-top:3px; font-size:10.5px; color:#86efac;">🟢 Optimal headroom (${lodVal}% of baseline span).</div>`
+          : `<div style="margin-top:3px; font-size:10.5px; color:#86efac;">🟢 <strong>Fresh Range Fuel (${lodVal}% ATR):</strong> Ample room remaining before daily ATR limit.</div>`;
+      }
+    }
+
     const emaLabel = isStealthMode ? '10-MA: ' : '10 EMA: ';
     const emaValStr = ema10 ? (isStealthMode ? ema10.toFixed(2) : ('₹' + ema10.toFixed(2))) : '--';
 
@@ -1730,9 +1770,11 @@
       <div class="guardrail-left">
         <span style="color:var(--text-muted); font-size:11px;">${emaLabel}<strong style="color:#ffffff;">${emaValStr}</strong></span>
         ${statusPill}
+        ${lodPill}
       </div>
       <div class="guardrail-right">
         ${adviceHtml}
+        ${lodNote}
       </div>
     `;
   }
