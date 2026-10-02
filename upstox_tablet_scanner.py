@@ -1035,29 +1035,24 @@ def compute_metrics(d):
         sig_color = GREEN
     elif orb_status == "H":
         signal = "ABOVE ORB HIGH"
-        sig_color = GREEN
-    # 8. Intraday VWAP & Overextension (% Stretch)
-    vwap = None
+    # 8. Intraday 10 EMA & Overextension (% Stretch)
+    ema10 = None
     if candles_3m:
-        sum_pv = 0.0
-        sum_v = 0.0
+        alpha = 2.0 / (10.0 + 1.0)
         for c in candles_3m:
-            if isinstance(c, dict):
-                typ = (float(c.get("h", 0)) + float(c.get("l", 0)) + float(c.get("c", 0))) / 3.0
-                v = float(c.get("v", 1) or 1)
+            close = c.get("c") if isinstance(c, dict) else float(c[4])
+            if ema10 is None:
+                ema10 = close
             else:
-                typ = (float(c[2]) + float(c[3]) + float(c[4])) / 3.0
-                v = float(c[5] or 1) if len(c) > 5 else 1.0
-            sum_pv += typ * v
-            sum_v += v
-        if sum_v > 0:
-            vwap = round(sum_pv / sum_v, 2)
-    if not vwap and d.get("pivot"):
-        vwap = round(float(d.get("pivot")), 2)
+                ema10 = (close * alpha) + (ema10 * (1.0 - alpha))
+        if ema10 is not None:
+            ema10 = round(ema10, 2)
+    if not ema10 and d.get("pivot"):
+        ema10 = round(float(d.get("pivot")), 2)
 
     stretch_pct = None
-    if vwap and ltp:
-        stretch_pct = round(((float(ltp) - vwap) / vwap) * 100.0, 2)
+    if ema10 and ltp:
+        stretch_pct = round(((float(ltp) - ema10) / ema10) * 100.0, 2)
 
     return {
         "chg_pct": chg_pct,
@@ -1076,7 +1071,7 @@ def compute_metrics(d):
         "reversal_desc": reversal_desc,
         "signal": signal,
         "sig_color": sig_color,
-        "vwap": vwap,
+        "ema10": ema10,
         "stretch_pct": stretch_pct
     }
 
@@ -2240,7 +2235,7 @@ def export_static_html(results, now_str, port):
                 "pivot": d.get("pivot"),
                 "r1": d.get("r1"),
                 "r2": d.get("r2"),
-                "vwap": m.get("vwap"),
+                "ema10": m.get("ema10"),
                 "stretch_pct": m.get("stretch_pct"),
                 "orb_high": d.get("orb_high"),
                 "orb_low": d.get("orb_low"),
