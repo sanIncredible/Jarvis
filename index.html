@@ -698,7 +698,7 @@
   <div class="toolbar">
     <div class="filter-chips">
       <span class="chip active" onclick="setFilter('all', this)">ALL (<span id="cnt-all">0</span>)</span>
-      <span class="chip" onclick="setFilter('prime', this)" title="Filter stocks coiling near VWAP (Tight base, minimal downside risk)"><span id="chip-lbl-prime">🟢 Prime Base</span> (<span id="cnt-prime">0</span>)</span>
+      <span class="chip" onclick="setFilter('prime', this)" title="Filter stocks coiling near 10 EMA (<0.45% stretch - Tight base, minimal downside risk)"><span id="chip-lbl-prime">🟢 Prime Base</span> (<span id="cnt-prime">0</span>)</span>
       <span class="chip" onclick="setFilter('rev', this)"><span id="chip-lbl-rev">🔄 Failover</span> (<span id="cnt-rev">0</span>)</span>
       <span class="chip" onclick="setFilter('ss', this)"><span id="chip-lbl-ss">★ Priority</span> (<span id="cnt-ss">0</span>)</span>
       <span class="chip" onclick="setFilter('pdh', this)"><span id="chip-lbl-pdh">📌 Peak Alerts</span> (<span id="cnt-pdh">0</span>)</span>
@@ -1213,23 +1213,21 @@
       const c_3m = normalizeCandles(stk.candles_3m || stk.candles || []);
       const c_d = normalizeCandles(stk.candles_d || []);
 
-      // Dynamic Intraday VWAP & Overextension (% Stretch)
-      let vwap = null;
-      if (c_3m && c_3m.length) {
-        let sumPV = 0, sumV = 0;
+      // Dynamic Intraday 10 EMA & Overextension (% Stretch from 10 EMA)
+      let ema10 = stk.ema10;
+      if (!ema10 && c_3m && c_3m.length) {
+        const alpha = 2.0 / 11.0;
         c_3m.forEach(c => {
-          const typ = (Number(c.h) + Number(c.l) + Number(c.c)) / 3.0;
-          const v = Number(c.v || 0) || 1;
-          sumPV += typ * v;
-          sumV += v;
+          const close = Number(c.c);
+          if (ema10 === null || ema10 === undefined) ema10 = close;
+          else ema10 = (close * alpha) + (ema10 * (1.0 - alpha));
         });
-        if (sumV > 0) vwap = sumPV / sumV;
       }
-      if (!vwap && stk.pivot) vwap = Number(stk.pivot);
-      stk.vwap = vwap;
+      if (!ema10 && stk.pivot) ema10 = Number(stk.pivot);
+      stk.ema10 = ema10 ? Number(ema10.toFixed(2)) : null;
       const ltpVal = Number(stk.ltp) || 0;
-      stk.stretch_pct = (vwap && ltpVal > 0) ? (((ltpVal - vwap) / vwap) * 100) : null;
-      stk.is_prime = (stk.stretch_pct !== null && stk.stretch_pct >= 0 && stk.stretch_pct <= 0.85);
+      stk.stretch_pct = (ema10 && ltpVal > 0) ? (((ltpVal - ema10) / ema10) * 100) : null;
+      stk.is_prime = (stk.stretch_pct !== null && stk.stretch_pct >= 0 && stk.stretch_pct <= 0.45);
       if (stk.is_prime) primeCount++;
 
       // Classic Floor Pivot Points: P = (H + L + C) / 3, R1 = 2*P - L, R2 = P + (H - L)
@@ -1297,7 +1295,7 @@
         pivot: stk.pivot,
         r1: stk.r1,
         r2: stk.r2,
-        vwap: stk.vwap,
+        ema10: stk.ema10,
         stretch_pct: stk.stretch_pct,
         pdh: stk.pdh,
         pdh_broken: stk.pdh_broken,
@@ -1481,22 +1479,22 @@
       else if (rawSig.includes('BREAKDOWN') || rawSig.includes('BELOW')) sig_cls = 'badge-bear-break';
       const sig_badge = `<span class="pill-badge ${sig_cls}">${sig}</span>`;
 
-      // Intraday Stretch / Overextension Badge
+      // Intraday Stretch / Overextension Badge (10 EMA)
       let stretch_badge = '';
       if (stk.stretch_pct !== null && stk.stretch_pct !== undefined) {
         const s = stk.stretch_pct;
         const sStr = (s >= 0 ? '+' : '') + s.toFixed(1) + '%';
         if (s < 0) {
-          const tText = isStealthMode ? 'Sub-baseline telemetry' : 'Trading below VWAP (Bearish institutional bias)';
-          stretch_badge = `<span class="stretch-pill stretch-sub" title="${tText}">${isStealthMode ? 'SUB' : '▼ VWAP'} ${sStr}</span>`;
-        } else if (s <= 0.85) {
-          const tText = isStealthMode ? 'Optimal allocation base' : 'Tight to VWAP (Prime Base - Low Risk)';
+          const tText = isStealthMode ? 'Sub-baseline telemetry' : 'Trading below 10 EMA (Active pullback / Bearish pressure)';
+          stretch_badge = `<span class="stretch-pill stretch-sub" title="${tText}">${isStealthMode ? 'SUB-MA' : '▼ SUB-10'} ${sStr}</span>`;
+        } else if (s <= 0.45) {
+          const tText = isStealthMode ? 'Optimal allocation base' : 'Tight to 10 EMA (Prime Coil - Low Risk Launchpad)';
           stretch_badge = `<span class="stretch-pill stretch-prime" title="${tText}">${isStealthMode ? 'PRIME' : '🟢 PRIME'} ${sStr}</span>`;
-        } else if (s <= 1.75) {
-          const tText = isStealthMode ? 'Nominal bandwidth' : 'Moderate extension from VWAP';
-          stretch_badge = `<span class="stretch-pill stretch-normal" title="${tText}">${isStealthMode ? 'NOMINAL' : '⚪'} ${sStr}</span>`;
+        } else if (s <= 1.0) {
+          const tText = isStealthMode ? 'Nominal bandwidth' : 'Moderate distance from 10 EMA';
+          stretch_badge = `<span class="stretch-pill stretch-normal" title="${tText}">${isStealthMode ? 'NOMINAL' : '⚪ NORMAL'} ${sStr}</span>`;
         } else {
-          const tText = isStealthMode ? 'Buffer saturated - Risk of latency spike' : 'Extended move! Do NOT chase high - Wait for pullback/retest';
+          const tText = isStealthMode ? 'Buffer saturated - Risk of latency spike' : 'Extended move (>1.0% from 10 EMA)! Do NOT chase high - Wait for 10 EMA test';
           stretch_badge = `<span class="stretch-pill stretch-extended" title="${tText}">${isStealthMode ? 'SATURATED' : '⚠️ EXT'} ${sStr}</span>`;
         }
       }
@@ -1624,32 +1622,30 @@
       bHtml += `<span class="pill-badge badge-orb-rev" title="${tip}">${revText}</span>`;
     }
 
-    // Dynamic Intraday VWAP & % Stretch Pill in Popup Header
-    let vwap = data.vwap;
-    if (!vwap && data.candles_3m && data.candles_3m.length) {
-      let cumPV = 0, cumV = 0;
+    // Dynamic Intraday 10 EMA & % Stretch Pill in Popup Header
+    let ema10 = data.ema10;
+    if (!ema10 && data.candles_3m && data.candles_3m.length) {
+      const alpha = 2.0 / (10.0 + 1.0);
       data.candles_3m.forEach(c => {
-        const typ = (Number(c.h) + Number(c.l) + Number(c.c)) / 3.0;
-        const v = Number(c.v || 0) || 1;
-        cumPV += typ * v;
-        cumV += v;
+        const close = Number(c.c);
+        if (ema10 === null || ema10 === undefined) ema10 = close;
+        else ema10 = (close * alpha) + (ema10 * (1.0 - alpha));
       });
-      if (cumV > 0) vwap = cumPV / cumV;
     }
-    if (!vwap && data.pivot) vwap = Number(data.pivot);
+    if (!ema10 && data.pivot) ema10 = Number(data.pivot);
 
     const ltpNum = Number(data.ltp) || 0;
-    const stretch = (vwap && ltpNum > 0) ? (((ltpNum - vwap) / vwap) * 100) : null;
-    if (vwap && !isDaily) {
-      const vStr = isStealthMode ? vwap.toFixed(1) : ('₹' + vwap.toFixed(1));
+    const stretch = (ema10 && ltpNum > 0) ? (((ltpNum - ema10) / ema10) * 100) : null;
+    if (ema10 && !isDaily) {
+      const eStr = isStealthMode ? ema10.toFixed(1) : ('₹' + ema10.toFixed(1));
       const sStr = stretch !== null ? ((stretch >= 0 ? '+' : '') + stretch.toFixed(1) + '%') : '';
       let badgeCls = 'stretch-normal';
       if (stretch !== null) {
         if (stretch < 0) badgeCls = 'stretch-sub';
-        else if (stretch <= 0.85) badgeCls = 'stretch-prime';
-        else if (stretch > 1.75) badgeCls = 'stretch-extended';
+        else if (stretch <= 0.45) badgeCls = 'stretch-prime';
+        else if (stretch > 1.0) badgeCls = 'stretch-extended';
       }
-      bHtml += `<span class="stretch-pill ${badgeCls}" title="${isStealthMode ? 'Baseline Telemetry' : 'Intraday VWAP & % Stretch'}">${isStealthMode ? 'MESH: ' : 'VWAP: '}${vStr} (${sStr})</span>`;
+      bHtml += `<span class="stretch-pill ${badgeCls}" title="${isStealthMode ? 'Baseline Telemetry (10-MA)' : 'Intraday 10 EMA & % Stretch'}">${isStealthMode ? '10-MA: ' : '10 EMA: '}${eStr} (${sStr})</span>`;
     }
 
     popupBadges.innerHTML = bHtml;
@@ -1678,20 +1674,18 @@
     const pdh = Number(data.pdh) || 0;
     const candles = data.candles_3m || [];
 
-    let vwap = data.vwap;
-    if (!vwap && candles.length) {
-      let cumPV = 0, cumV = 0;
+    let ema10 = data.ema10;
+    if (!ema10 && candles.length) {
+      const alpha = 2.0 / (10.0 + 1.0);
       candles.forEach(c => {
-        const typ = (Number(c.h) + Number(c.l) + Number(c.c)) / 3.0;
-        const v = Number(c.v || 0) || 1;
-        cumPV += typ * v;
-        cumV += v;
+        const close = Number(c.c);
+        if (ema10 === null || ema10 === undefined) ema10 = close;
+        else ema10 = (close * alpha) + (ema10 * (1.0 - alpha));
       });
-      if (cumV > 0) vwap = cumPV / cumV;
     }
-    if (!vwap && data.pivot) vwap = Number(data.pivot);
+    if (!ema10 && data.pivot) ema10 = Number(data.pivot);
 
-    const stretch = (vwap && ltp > 0) ? (((ltp - vwap) / vwap) * 100) : null;
+    const stretch = (ema10 && ltp > 0) ? (((ltp - ema10) / ema10) * 100) : null;
     const stretchStr = stretch !== null ? ((stretch >= 0 ? '+' : '') + stretch.toFixed(1) + '%') : '--';
 
     const boLevel = Math.max(orbH, pdh) || ltp;
@@ -1704,35 +1698,37 @@
       statusPill = `<span class="stretch-pill stretch-normal">BENCHMARK: --</span>`;
       adviceHtml = `<span>Awaiting 09:15 AM intraday session flow</span>`;
     } else if (stretch < 0) {
-      statusPill = `<span class="stretch-pill stretch-sub">${isStealthMode ? 'BUFFER: SUB-PAR' : '▼ BELOW VWAP'} (${stretchStr})</span>`;
-      adviceHtml = `<span>${isStealthMode ? 'Sub-baseline routing. Ingress filter active.' : 'Institutional bias is negative. Avoid long breakout entries until price claims VWAP.'}</span>`;
-    } else if (stretch <= 0.85) {
-      statusPill = `<span class="stretch-pill stretch-prime">${isStealthMode ? 'BUFFER: OPTIMAL' : '🟢 PRIME BASE'} (${stretchStr})</span>`;
+      statusPill = `<span class="stretch-pill stretch-sub">${isStealthMode ? 'BUFFER: SUB-PAR' : '▼ SUB-10 EMA'} (${stretchStr})</span>`;
+      adviceHtml = `<span>${isStealthMode ? 'Sub-baseline routing. Ingress filter active.' : 'Active pullback below 10 EMA. Avoid long breakout entries until price reclaims 10 EMA.'}</span>`;
+    } else if (stretch <= 0.45) {
+      statusPill = `<span class="stretch-pill stretch-prime">${isStealthMode ? 'BUFFER: OPTIMAL' : '🟢 PRIME COIL'} (${stretchStr})</span>`;
+      const tightSL = ema10 ? `₹${(ema10 * 0.996).toFixed(1)}` : `₹${(boLevel * 0.995).toFixed(1)}`;
       adviceHtml = isBreakout
-        ? `<span>${isStealthMode ? 'Direct ingress clearance confirmed. Risk profile tight.' : '✅ <strong>Tight Base Breakout:</strong> Safe to execute. Tight SL near VWAP (₹' + (vwap * 0.996).toFixed(1) + ').'}</span>`
-        : `<span>${isStealthMode ? 'Base structure consolidating near baseline.' : 'Stock coiling right at VWAP. Watch for ORB High breakout.'}</span>`;
-    } else if (stretch <= 1.75) {
-      statusPill = `<span class="stretch-pill stretch-normal">${isStealthMode ? 'BUFFER: NOMINAL' : '⚪ MODERATE'} (${stretchStr})</span>`;
-      const retestZone = `₹${(boLevel * 0.999).toFixed(1)}–₹${(boLevel * 1.002).toFixed(1)}`;
+        ? `<span>${isStealthMode ? 'Direct ingress clearance confirmed. Risk profile tight.' : '✅ <strong>Prime Coil Breakout:</strong> Tight to 10 EMA. Safe entry with micro SL below 10 EMA (' + tightSL + ').'}</span>`
+        : `<span>${isStealthMode ? 'Base structure consolidating near baseline.' : 'Stock coiling right at 10 EMA. Watch for ORB High / PDH breakout.'}</span>`;
+    } else if (stretch <= 1.0) {
+      statusPill = `<span class="stretch-pill stretch-normal">${isStealthMode ? 'BUFFER: NOMINAL' : '⚪ NORMAL'} (${stretchStr})</span>`;
+      const pullbackTarget = ema10 ? `₹${ema10.toFixed(1)}` : `₹${(boLevel * 0.998).toFixed(1)}`;
+      const tightSL = ema10 ? `₹${(ema10 * 0.995).toFixed(1)}` : `₹${(boLevel * 0.994).toFixed(1)}`;
       adviceHtml = isBreakout
-        ? `<span>${isStealthMode ? 'Convergence corridor: ' + retestZone : 'Healthy continuation. Ideal retest entry: <strong>' + retestZone + '</strong> (SL: ₹' + (boLevel * 0.994).toFixed(1) + ').'}</span>`
-        : `<span>Trading above VWAP. Moving towards upper range.</span>`;
+        ? `<span>${isStealthMode ? 'Nominal bandwidth. Trailing baseline.' : 'Moderate extension. Best risk/reward on small dip toward 10 EMA (<strong>' + pullbackTarget + '</strong>, SL: ' + tightSL + ').'}</span>`
+        : `<span>Trading above 10 EMA. Moving towards upper range.</span>`;
     } else {
-      // Overextended (> 1.75%)
+      // Overextended (> 1.0% from 10 EMA)
       statusPill = `<span class="stretch-pill stretch-extended">${isStealthMode ? '⚠️ BUFFER: SATURATED' : '⚠️ EXTENDED'} (${stretchStr})</span>`;
-      const retestZone = `₹${(boLevel * 0.998).toFixed(1)}–₹${(boLevel * 1.002).toFixed(1)}`;
-      const tightSL = `₹${(boLevel * 0.994).toFixed(1)}`;
+      const pullbackTarget = ema10 ? `₹${ema10.toFixed(1)}` : `₹${(boLevel * 0.998).toFixed(1)}`;
+      const tightSL = ema10 ? `₹${(ema10 * 0.995).toFixed(1)}` : `₹${(boLevel * 0.994).toFixed(1)}`;
       adviceHtml = `<span>${isStealthMode 
-        ? 'High latency risk! Defer allocation. Await re-entry convergence at ' + retestZone + '.' 
-        : '🛑 <strong>DO NOT CHASE!</strong> Price is stretched ' + stretchStr + ' above VWAP. Wait for pullback to <strong>' + retestZone + '</strong> (SL: ' + tightSL + ') to avoid getting trapped.'}</span>`;
+        ? 'High latency risk! Defer allocation. Await re-entry convergence near baseline (' + (ema10 ? ema10.toFixed(1) : '--') + ').' 
+        : '🛑 <strong>DO NOT CHASE!</strong> Price is stretched ' + stretchStr + ' above 10 EMA. Wait for pullback to 10 EMA (<strong>' + pullbackTarget + '</strong>, SL: ' + tightSL + ') to avoid getting trapped.'}</span>`;
     }
 
-    const vwapLabel = isStealthMode ? 'Baseline: ' : 'VWAP: ';
-    const vwapValStr = vwap ? (isStealthMode ? vwap.toFixed(2) : ('₹' + vwap.toFixed(2))) : '--';
+    const emaLabel = isStealthMode ? '10-MA: ' : '10 EMA: ';
+    const emaValStr = ema10 ? (isStealthMode ? ema10.toFixed(2) : ('₹' + ema10.toFixed(2))) : '--';
 
     el.innerHTML = `
       <div class="guardrail-left">
-        <span style="color:var(--text-muted); font-size:11px;">${vwapLabel}<strong style="color:#ffffff;">${vwapValStr}</strong></span>
+        <span style="color:var(--text-muted); font-size:11px;">${emaLabel}<strong style="color:#ffffff;">${emaValStr}</strong></span>
         ${statusPill}
       </div>
       <div class="guardrail-right">
@@ -1800,24 +1796,28 @@
     });
     const avgVol = sumVol / Math.max(candles.length, 1);
 
-    // Compute rolling Intraday VWAP series for 3m timeframe
-    let vwapSeries = [];
+    // Terminal-Style Bounded Bar Spacing
+    const n = candles.length;
+    const maxBarSpacing = isDaily ? 20 : 15;
+    const barSpacing = Math.min(plotW / Math.max(n, 1), maxBarSpacing);
+
+    // Compute rolling Intraday 10 EMA series for 3m timeframe
+    let emaSeries = [];
     if (!isDaily && candles.length) {
-      let cumPV = 0;
-      let cumV = 0;
+      const alpha = 2.0 / (10.0 + 1.0);
+      let currEma = null;
       candles.forEach(c => {
-        const typ = (c.h + c.l + c.c) / 3.0;
-        const v = Number(c.v || 0) || 1;
-        cumPV += typ * v;
-        cumV += v;
-        vwapSeries.push(cumPV / cumV);
+        const close = Number(c.c);
+        if (currEma === null) currEma = close;
+        else currEma = (close * alpha) + (currEma * (1.0 - alpha));
+        emaSeries.push(currEma);
       });
     }
 
-    if (!isDaily && vwapSeries.length) {
-      const lastV = vwapSeries[vwapSeries.length - 1];
-      minPrice = Math.min(minPrice, lastV);
-      maxPrice = Math.max(maxPrice, lastV * 1.02);
+    if (!isDaily && emaSeries.length) {
+      const lastE = emaSeries[emaSeries.length - 1];
+      minPrice = Math.min(minPrice, lastE);
+      maxPrice = Math.max(maxPrice, lastE * 1.015);
     }
 
     if (data.pdh) {
@@ -1921,50 +1921,45 @@
       ctx.restore();
     }
 
-    // Dynamic Rolling Intraday VWAP Curve & Overextension Band (+1.8%)
-    if (!isDaily && vwapSeries.length >= 2) {
+    // Dynamic Rolling Intraday 10 EMA Curve & Overextension Band (+1.1%)
+    if (!isDaily && emaSeries.length >= 2) {
       ctx.save();
       ctx.strokeStyle = '#e4e4e7';
       ctx.lineWidth = 1.6;
       ctx.setLineDash([3, 2]);
       ctx.beginPath();
-      vwapSeries.forEach((vVal, i) => {
+      emaSeries.forEach((eVal, i) => {
         const cx = padLeft + i * barSpacing + barSpacing / 2;
-        const cy = getY(vVal);
+        const cy = getY(eVal);
         if (i === 0) ctx.moveTo(cx, cy);
         else ctx.lineTo(cx, cy);
       });
       ctx.stroke();
 
-      // Right axis VWAP label
-      const lastVwap = vwapSeries[vwapSeries.length - 1];
-      if (lastVwap >= minPrice && lastVwap <= maxPrice) {
-        const yVwap = getY(lastVwap);
+      // Right axis 10 EMA label
+      const lastEma = emaSeries[emaSeries.length - 1];
+      if (lastEma >= minPrice && lastEma <= maxPrice) {
+        const yEma = getY(lastEma);
         ctx.fillStyle = '#18181b';
-        ctx.fillRect(W - padRight + 2, yVwap - 7, padRight - 4, 15);
+        ctx.fillRect(W - padRight + 2, yEma - 7, padRight - 4, 15);
         ctx.strokeStyle = '#e4e4e7';
         ctx.lineWidth = 1;
         ctx.setLineDash([]);
-        ctx.strokeRect(W - padRight + 2, yVwap - 7, padRight - 4, 15);
+        ctx.strokeRect(W - padRight + 2, yEma - 7, padRight - 4, 15);
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 8.5px var(--font-mono)';
-        ctx.fillText(isStealthMode ? 'MESH' : 'VWAP', W - padRight + 4, yVwap + 4);
+        ctx.fillText(isStealthMode ? '10-MA' : '10 EMA', W - padRight + 4, yEma + 4);
       }
 
-      // Upper Volatility Extension Threshold (+1.8% from VWAP)
-      const extVal = lastVwap * 1.018;
+      // Upper Volatility Extension Threshold (+1.1% from 10 EMA)
+      const extVal = lastEma * 1.011;
       if (extVal >= minPrice && extVal <= maxPrice) {
-        drawLevel(extVal, '#52525b', isStealthMode ? 'MAX BUFFER' : '+1.8% EXT', [2, 4]);
+        drawLevel(extVal, '#52525b', isStealthMode ? 'MAX BUFFER' : '+1.1% EXT', [2, 4]);
       }
       ctx.restore();
     }
 
     // Classic Candlestick Drawing: White = Bullish, Black = Bearish
-    const n = candles.length;
-
-    // Terminal-Style Bounded Bar Spacing:
-    const maxBarSpacing = isDaily ? 20 : 15;
-    const barSpacing = Math.min(plotW / Math.max(n, 1), maxBarSpacing);
     const stdBarWidth = Math.max(Math.min(barSpacing * 0.72, 10), 2);
 
     // Volume Sub-Pane Separator Line & Label
@@ -2062,7 +2057,7 @@
       }
     });
 
-    // Crosshair & Interactive HUD with VWAP and Stretch metrics
+    // Crosshair & Interactive HUD with 10 EMA and Stretch metrics
     if (hoveredCandle) {
       ctx.save();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
@@ -2078,19 +2073,19 @@
       const vVal = hoveredCandle.v || 0;
       const volRatioStr = avgVol > 0 ? (' (' + (vVal / avgVol).toFixed(1) + 'x avg)') : '';
 
-      let vwapHud = '';
-      if (!isDaily && vwapSeries[hoveredCandle.barIndex] !== undefined) {
-        const vAtBar = vwapSeries[hoveredCandle.barIndex];
-        const strAtBar = (((hoveredCandle.c - vAtBar) / vAtBar) * 100);
+      let emaHud = '';
+      if (!isDaily && emaSeries[hoveredCandle.barIndex] !== undefined) {
+        const eAtBar = emaSeries[hoveredCandle.barIndex];
+        const strAtBar = (((hoveredCandle.c - eAtBar) / eAtBar) * 100);
         const sSign = strAtBar >= 0 ? '+' : '';
-        let guardBadge = (strAtBar > 1.75) ? (isStealthMode ? ' [SATURATED]' : ' [⚠️ EXTENDED]') : (strAtBar >= 0 && strAtBar <= 0.85) ? (isStealthMode ? ' [OPTIMAL]' : ' [🟢 PRIME]') : '';
-        vwapHud = ` | ${isStealthMode ? 'Mesh' : 'VWAP'}: ${vAtBar.toFixed(2)} (${sSign}${strAtBar.toFixed(1)}%${guardBadge})`;
+        let guardBadge = (strAtBar > 1.0) ? (isStealthMode ? ' [SATURATED]' : ' [⚠️ EXTENDED]') : (strAtBar >= 0 && strAtBar <= 0.45) ? (isStealthMode ? ' [OPTIMAL]' : ' [🟢 PRIME]') : '';
+        emaHud = ` | ${isStealthMode ? '10-MA' : '10 EMA'}: ${eAtBar.toFixed(2)} (${sSign}${strAtBar.toFixed(1)}%${guardBadge})`;
       }
 
       if (isStealthMode) {
-        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | Base: ${hoveredCandle.o.toFixed(2)} | High: ${hoveredCandle.h.toFixed(2)} | Low: ${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${hoveredCandle.c.toFixed(2)}</span> | Events: ${vVal.toLocaleString()}${volRatioStr}${vwapHud}`;
+        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | Base: ${hoveredCandle.o.toFixed(2)} | High: ${hoveredCandle.h.toFixed(2)} | Low: ${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${hoveredCandle.c.toFixed(2)}</span> | Events: ${vVal.toLocaleString()}${volRatioStr}${emaHud}`;
       } else {
-        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | O: ₹${hoveredCandle.o.toFixed(2)} | H: ₹${hoveredCandle.h.toFixed(2)} | L: ₹${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${hoveredCandle.c.toFixed(2)}</span> | Vol: ${vVal.toLocaleString()}${volRatioStr}${vwapHud}`;
+        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | O: ₹${hoveredCandle.o.toFixed(2)} | H: ₹${hoveredCandle.h.toFixed(2)} | L: ₹${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${hoveredCandle.c.toFixed(2)}</span> | Vol: ${vVal.toLocaleString()}${volRatioStr}${emaHud}`;
       }
     } else {
       const last = candles[candles.length - 1];
@@ -2098,19 +2093,19 @@
       const lastV = last.v || 0;
       const lastVolRatioStr = avgVol > 0 ? (' (' + (lastV / avgVol).toFixed(1) + 'x avg)') : '';
 
-      let vwapHud = '';
-      if (!isDaily && vwapSeries.length) {
-        const lastVwap = vwapSeries[vwapSeries.length - 1];
-        const lastStretch = (((last.c - lastVwap) / lastVwap) * 100);
+      let emaHud = '';
+      if (!isDaily && emaSeries.length) {
+        const lastEma = emaSeries[emaSeries.length - 1];
+        const lastStretch = (((last.c - lastEma) / lastEma) * 100);
         const sSign = lastStretch >= 0 ? '+' : '';
-        let guardBadge = (lastStretch > 1.75) ? (isStealthMode ? ' [SATURATED]' : ' [⚠️ EXTENDED]') : (lastStretch >= 0 && lastStretch <= 0.85) ? (isStealthMode ? ' [OPTIMAL]' : ' [🟢 PRIME]') : '';
-        vwapHud = ` | ${isStealthMode ? 'Mesh' : 'VWAP'}: ${lastVwap.toFixed(2)} (${sSign}${lastStretch.toFixed(1)}%${guardBadge})`;
+        let guardBadge = (lastStretch > 1.0) ? (isStealthMode ? ' [SATURATED]' : ' [⚠️ EXTENDED]') : (lastStretch >= 0 && lastStretch <= 0.45) ? (isStealthMode ? ' [OPTIMAL]' : ' [🟢 PRIME]') : '';
+        emaHud = ` | ${isStealthMode ? '10-MA' : '10 EMA'}: ${lastEma.toFixed(2)} (${sSign}${lastStretch.toFixed(1)}%${guardBadge})`;
       }
 
       if (isStealthMode) {
-        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | Base: ${last.o.toFixed(2)} | High: ${last.h.toFixed(2)} | Low: ${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${last.c.toFixed(2)}</span> | Events: ${lastV.toLocaleString()}${lastVolRatioStr}${vwapHud}`;
+        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | Base: ${last.o.toFixed(2)} | High: ${last.h.toFixed(2)} | Low: ${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${last.c.toFixed(2)}</span> | Events: ${lastV.toLocaleString()}${lastVolRatioStr}${emaHud}`;
       } else {
-        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | O: ₹${last.o.toFixed(2)} | H: ₹${last.h.toFixed(2)} | L: ₹${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${last.c.toFixed(2)}</span> | Vol: ${lastV.toLocaleString()}${lastVolRatioStr}${vwapHud}`;
+        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | O: ₹${last.o.toFixed(2)} | H: ₹${last.h.toFixed(2)} | L: ₹${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${last.c.toFixed(2)}</span> | Vol: ${lastV.toLocaleString()}${lastVolRatioStr}${emaHud}`;
       }
     }
   }
