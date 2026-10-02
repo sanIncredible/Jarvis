@@ -1011,11 +1011,11 @@
       const isMarketHours = (day >= 1 && day <= 5) && (nowSec >= (9 * 3600 + 15 * 60)) && (nowSec <= (15 * 3600 + 35 * 60));
       
       const ageMinutes = Math.floor(diffSec / 60);
-      // Data is stale if market hours and older than 3.5 min, OR anytime older than 5 min
-      const isStale = isMarketHours ? (diffSec > 210) : (diffSec > 300);
-      return { isStale, ageMinutes, diffSec };
+      // Data is stale only if market hours and older than 3.5 min; outside market hours it is an EOD snapshot
+      const isStale = isMarketHours ? (diffSec > 210) : false;
+      return { isStale, isMarketHours, ageMinutes, diffSec };
     } catch (e) {
-      return { isStale: false, ageMinutes: 0, diffSec: 0 };
+      return { isStale: false, isMarketHours: false, ageMinutes: 0, diffSec: 0 };
     }
   }
 
@@ -1157,13 +1157,17 @@
   function processIncomingData(data, feedSource) {
     if (!data) return;
     
-    const { isStale, ageMinutes } = checkDataFreshness(data.updated_at);
-    if (isStale) {
-      statusText.innerText = `DELAYED (${ageMinutes}m)`;
+    const { isStale, isMarketHours, ageMinutes } = checkDataFreshness(data.updated_at);
+    if (!isMarketHours) {
+      statusText.innerText = isStealthMode ? 'SNAPSHOT' : 'MARKET CLOSED';
+      statusText.style.color = '#a1a1aa';
+      pulseIndicator.style.backgroundColor = '#71717a';
+    } else if (isStale) {
+      statusText.innerText = isStealthMode ? `DEGRADED (${ageMinutes}m)` : `DELAYED (${ageMinutes}m)`;
       statusText.style.color = '#71717a';
       pulseIndicator.style.backgroundColor = '#71717a';
     } else {
-      statusText.innerText = 'LIVE';
+      statusText.innerText = isStealthMode ? 'DAEMON: ACTIVE' : 'LIVE';
       statusText.style.color = '#ffffff';
       pulseIndicator.style.backgroundColor = '#ffffff';
     }
@@ -1677,10 +1681,15 @@
 
     // Classic Candlestick Drawing: White = Bullish, Black = Bearish
     const n = candles.length;
-    const barSpacing = plotW / Math.max(n, 1);
-    const barWidth = Math.max(Math.min(barSpacing * 0.72, 14), 2);
+    // Terminal-Style Bounded Bar Spacing:
+    // When fewer candles exist (e.g. morning open with 1-15 candles), keep candles clustered
+    // on the leftmost side (standard trading terminal UX) instead of stretching across the screen.
+    const maxBarSpacing = isDaily ? 20 : 15;
+    const barSpacing = Math.min(plotW / Math.max(n, 1), maxBarSpacing);
+    const barWidth = Math.max(Math.min(barSpacing * 0.72, 10), 2);
 
     let hoveredCandle = null;
+    let lastLabelX = -999;
 
     candles.forEach((c, i) => {
       const cx = padLeft + i * barSpacing + barSpacing / 2;
@@ -1727,13 +1736,24 @@
         ctx.strokeRect(cx - barWidth / 2, bTop, barWidth, bH);
       }
 
-      // X-Axis Time Labels
-      const step = Math.max(Math.floor(n / 6), 1);
-      if (i === 0 || i === n - 1 || (i % step === 0)) {
+      // X-Axis Time / Date Labels (Standard Trading Terminal Spacing)
+      let labelText = c.t || '';
+      if (labelText.includes('T')) {
+        labelText = isDaily ? labelText.split('T')[0] : (labelText.split('T')[1]?.substring(0, 5) || labelText);
+      } else if (labelText.length > 5 && !isDaily && labelText.includes(':')) {
+        labelText = labelText.substring(0, 5);
+      }
+
+      const isFirst = (i === 0);
+      const isLast = (i === n - 1);
+      const hasEnoughSpace = (cx - lastLabelX >= 48);
+
+      if ((isFirst || hasEnoughSpace) && (W - padRight - cx >= 15 || isLast)) {
         ctx.fillStyle = '#71717a';
         ctx.font = '9px var(--font-mono)';
         ctx.textAlign = 'center';
-        ctx.fillText(c.t, cx, H - 8);
+        ctx.fillText(labelText, cx, H - 8);
+        lastLabelX = cx;
       }
     });
 
