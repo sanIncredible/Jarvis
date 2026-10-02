@@ -1045,45 +1045,8 @@
       pulseIndicator.style.backgroundColor = '#ffffff';
     }
     const t = Date.now();
-    let bestData = null;
-    let usedSource = 'Live Feed';
 
-    // Manual refresh: Instantly query GitHub Direct API & raw.githubusercontent to completely bypass Fastly CDN!
-    if (isManual) {
-      try {
-        const resApi = await fetchWithTimeout(GITHUB_API_URL, {
-          cache: 'no-store',
-          headers: {
-            'Accept': 'application/vnd.github.raw+json',
-            'Pragma': 'no-cache',
-            'Cache-Control': 'no-cache'
-          }
-        }, 3500);
-        if (resApi.ok) {
-          const d = await resApi.json();
-          if (d && d.stocks && d.stocks.length) {
-            processIncomingData(d, 'GitHub Direct API (Instant)');
-            return;
-          }
-        }
-      } catch (e) {}
-
-      try {
-        const resRaw = await fetchWithTimeout(`${RAW_GITHUB_URL}?_t=${t}`, {
-          cache: 'no-store',
-          headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
-        }, 3000);
-        if (resRaw.ok) {
-          const d = await resRaw.json();
-          if (d && d.stocks && d.stocks.length) {
-            processIncomingData(d, 'GitHub Raw Stream');
-            return;
-          }
-        }
-      } catch (e) {}
-    }
-
-    // Tier 1: Same-Origin / GitHub Pages
+    // Tier 1: Same-Origin / Local (Fastest & most direct for GitHub Pages & Local Server)
     try {
       let path = window.location.pathname || '/';
       if (path.endsWith('.html') || path.endsWith('.htm')) {
@@ -1092,86 +1055,59 @@
         path += '/';
       }
       const localUrl = (window.location.origin && window.location.origin !== 'null')
-        ? (window.location.origin + path + 'data.json?t=' + t)
-        : ('data.json?t=' + t);
+        ? (window.location.origin + path + 'data.json?_t=' + t)
+        : ('data.json?_t=' + t);
       const resLocal = await fetchWithTimeout(localUrl, { cache: 'no-store' }, 2500);
       if (resLocal.ok) {
         const d = await resLocal.json();
         if (d && d.stocks && d.stocks.length) {
-          bestData = d;
-          usedSource = 'GitHub Pages Edge';
-          const fresh = checkDataFreshness(d.updated_at);
-          // If edge is fresh (< 3.5 mins) and not showing zero breadth when stocks exist, use it
-          const hasBreadth = d.stocks.some(s => s.chg_pct !== 0);
-          if (!fresh.isStale && hasBreadth) {
-            processIncomingData(bestData, usedSource);
-            return;
-          }
+          processIncomingData(d, 'GitHub Pages Edge');
+          return;
         }
       }
     } catch (e) {}
 
-    // Tier 2: Direct GitHub REST Contents API
+    // Tier 2: Direct raw.githubusercontent.com stream (CORS allowed, query param cache-busting, zero preflight)
     try {
-      const resApi = await fetchWithTimeout(GITHUB_API_URL, {
-        cache: 'no-store',
-        headers: {
-          'Accept': 'application/vnd.github.raw+json',
-          'Pragma': 'no-cache',
-          'Cache-Control': 'no-cache'
+      const resRaw = await fetchWithTimeout(`${RAW_GITHUB_URL}?_t=${t}`, { cache: 'no-store' }, 3000);
+      if (resRaw.ok) {
+        const d = await resRaw.json();
+        if (d && d.stocks && d.stocks.length) {
+          processIncomingData(d, 'GitHub Raw Stream');
+          return;
         }
+      }
+    } catch (e) {}
+
+    // Tier 3: GitHub Contents REST API (Accept header only, no forbidden preflight headers)
+    try {
+      const resApi = await fetchWithTimeout(GITHUB_API_URL + '?ref=main', {
+        cache: 'no-store',
+        headers: { 'Accept': 'application/vnd.github.raw+json' }
       }, 3500);
       if (resApi.ok) {
         const d = await resApi.json();
         if (d && d.stocks && d.stocks.length) {
-          bestData = d;
-          usedSource = 'GitHub Direct API';
-          processIncomingData(bestData, usedSource);
+          processIncomingData(d, 'GitHub Direct API');
           return;
         }
       }
     } catch (e) {}
 
-    // Tier 3: raw.githubusercontent.com Live Stream
+    // Tier 4: Global CDN Fallback (jsDelivr)
     try {
-      const resRaw = await fetchWithTimeout(`${RAW_GITHUB_URL}?_t=${t}`, {
-        cache: 'no-store',
-        headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
-      }, 3000);
-      if (resRaw.ok) {
-        const d = await resRaw.json();
+      const res = await fetchWithTimeout(`${JSDELIVR_URL}?_t=${t}`, { cache: 'no-store' }, 3000);
+      if (res.ok) {
+        const d = await res.json();
         if (d && d.stocks && d.stocks.length) {
-          bestData = d;
-          usedSource = 'GitHub Raw Stream';
-          processIncomingData(bestData, usedSource);
+          processIncomingData(d, 'jsDelivr Global');
           return;
         }
       }
     } catch (e) {}
 
-    // Tier 4: jsDelivr Global Purged CDN Fallback
-    if (!bestData) {
-      try {
-        const res = await fetchWithTimeout(`${JSDELIVR_URL}?t=${t}`, {
-          cache: 'no-store',
-          headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
-        }, 3000);
-        if (res.ok) {
-          const d = await res.json();
-          if (d && d.stocks && d.stocks.length) {
-            bestData = d;
-            usedSource = 'jsDelivr Global';
-          }
-        }
-      } catch (e) {}
-    }
-
-    if (bestData && bestData.stocks) {
-      processIncomingData(bestData, usedSource);
-    } else {
-      statusText.innerText = 'RETRYING';
-      pulseIndicator.style.backgroundColor = '#71717a';
-    }
+    statusText.innerText = 'RETRYING';
+    pulseIndicator.style.backgroundColor = '#71717a';
   }
 
   function processIncomingData(data, feedSource) {
