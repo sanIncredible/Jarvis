@@ -518,6 +518,8 @@ def fetch_upstox_symbol_data(symbol, token):
 
                 highs_3m = [float(c[2]) for c in candles_3m]
                 lows_3m = [float(c[3]) for c in candles_3m]
+                if (day_low is None or day_low == 0) and lows_3m:
+                    day_low = min(lows_3m)
 
                 parsed_candles = []
                 for c in candles_3m:
@@ -680,6 +682,7 @@ def fetch_upstox_symbol_data(symbol, token):
         "symbol": symbol,
         "ltp": ltp,
         "prev_close": prev_close,
+        "day_low": day_low,
         "pdh": pdh,
         "pivot": pivot_point,
         "r1": pivot_r1,
@@ -891,10 +894,13 @@ def fetch_fallback_data(symbol):
     except Exception:
         pass
 
+    day_low = min(l_3m) if (parsed_candles and l_3m) else (anchor_low if anchor_low else None)
+
     return {
         "symbol": symbol,
         "ltp": ltp,
         "prev_close": prev_close,
+        "day_low": day_low,
         "pdh": pdh,
         "rvol": rvol,
         "is_strong_start": is_strong_start,
@@ -1054,6 +1060,21 @@ def compute_metrics(d):
     if ema10 and ltp:
         stretch_pct = round(((float(ltp) - ema10) / ema10) * 100.0, 2)
 
+    # 9. LoD Dist (ATR-Normalized Low of Day Distance: (LTP - Day Low) / ATR14 * 100%)
+    day_low = d.get("day_low")
+    if day_low is None or day_low == 0:
+        c_3m = d.get("candles_3m") or []
+        if c_3m:
+            c_lows = [c.get("l") for c in c_3m if isinstance(c, dict) and c.get("l") is not None]
+            if c_lows:
+                day_low = min(c_lows)
+        elif orb_l:
+            day_low = orb_l
+
+    lod_dist = None
+    if atr14 and atr14 > 0 and day_low is not None and ltp is not None:
+        lod_dist = round(((float(ltp) - float(day_low)) / float(atr14)) * 100.0)
+
     return {
         "chg_pct": chg_pct,
         "pdh_broken": pdh_broken,
@@ -1072,7 +1093,9 @@ def compute_metrics(d):
         "signal": signal,
         "sig_color": sig_color,
         "ema10": ema10,
-        "stretch_pct": stretch_pct
+        "stretch_pct": stretch_pct,
+        "day_low": round(day_low, 2) if day_low else None,
+        "lod_dist": lod_dist
     }
 
 
@@ -2233,8 +2256,8 @@ def export_static_html(results, now_str, port):
                 "pdh": d.get("pdh"),
                 "pdh_broken": bool(m.get("pdh_broken", False)),
                 "pivot": d.get("pivot"),
-                "r1": d.get("r1"),
-                "r2": d.get("r2"),
+                "day_low": m.get("day_low") or d.get("day_low"),
+                "lod_dist": m.get("lod_dist"),
                 "ema10": m.get("ema10"),
                 "stretch_pct": m.get("stretch_pct"),
                 "orb_high": d.get("orb_high"),
