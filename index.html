@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title id="page-title">Cluster Observability &amp; Ingress Telemetry</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'><rect width='24' height='24' rx='4' fill='%23000000'/><path d='M4 6h16M4 12h16M4 18h16' stroke='%23ffffff' stroke-width='2'/></svg>">
 <style>
@@ -1046,45 +1049,43 @@
     }
     const t = Date.now();
 
-    // Tier 1: Same-Origin / Local (Fastest & most direct for GitHub Pages & Local Server)
-    try {
+    // Prepare candidate endpoints
+    const targets = [];
+    if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
       let path = window.location.pathname || '/';
       if (path.endsWith('.html') || path.endsWith('.htm')) {
         path = path.substring(0, path.lastIndexOf('/') + 1);
       } else if (!path.endsWith('/')) {
         path += '/';
       }
-      const localUrl = (window.location.origin && window.location.origin !== 'null')
-        ? (window.location.origin + path + 'data.json?_t=' + t)
-        : ('data.json?_t=' + t);
-      const resLocal = await fetchWithTimeout(localUrl, { cache: 'no-store' }, 2500);
-      if (resLocal.ok) {
-        const d = await resLocal.json();
-        if (d && d.stocks && d.stocks.length) {
-          processIncomingData(d, 'GitHub Pages Edge');
-          return;
-        }
-      }
-    } catch (e) {}
+      targets.push({ url: window.location.origin + path + 'data.json?_t=' + t, name: 'Local Edge' });
+    }
+    // High-speed edge CDN (Cloudflare/Fastly - bypasses ISP blocks & CORS issues)
+    targets.push({ url: `${JSDELIVR_URL}?_t=${t}`, name: 'Edge CDN' });
+    // Raw GitHub Stream
+    targets.push({ url: `${RAW_GITHUB_URL}?_t=${t}`, name: 'GitHub Raw' });
 
-    // Tier 2: Direct raw.githubusercontent.com stream (CORS allowed, query param cache-busting, zero preflight)
+    // Race the primary targets concurrently for instant delivery
     try {
-      const resRaw = await fetchWithTimeout(`${RAW_GITHUB_URL}?_t=${t}`, { cache: 'no-store' }, 3000);
-      if (resRaw.ok) {
-        const d = await resRaw.json();
-        if (d && d.stocks && d.stocks.length) {
-          processIncomingData(d, 'GitHub Raw Stream');
-          return;
-        }
-      }
-    } catch (e) {}
+      const result = await Promise.any(targets.map(async (target) => {
+        const res = await fetchWithTimeout(target.url, { cache: 'no-store' }, 3500);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data || !data.stocks || !data.stocks.length) throw new Error('Empty payload');
+        return { data, name: target.name };
+      }));
+      processIncomingData(result.data, result.name);
+      return;
+    } catch (raceErr) {
+      console.warn('Primary feed race failed, trying GitHub REST API fallback...', raceErr);
+    }
 
-    // Tier 3: GitHub Contents REST API (Accept header only, no forbidden preflight headers)
+    // Fallback: GitHub Contents REST API
     try {
       const resApi = await fetchWithTimeout(GITHUB_API_URL + '?ref=main', {
         cache: 'no-store',
         headers: { 'Accept': 'application/vnd.github.raw+json' }
-      }, 3500);
+      }, 4000);
       if (resApi.ok) {
         const d = await resApi.json();
         if (d && d.stocks && d.stocks.length) {
@@ -1092,19 +1093,9 @@
           return;
         }
       }
-    } catch (e) {}
-
-    // Tier 4: Global CDN Fallback (jsDelivr)
-    try {
-      const res = await fetchWithTimeout(`${JSDELIVR_URL}?_t=${t}`, { cache: 'no-store' }, 3000);
-      if (res.ok) {
-        const d = await res.json();
-        if (d && d.stocks && d.stocks.length) {
-          processIncomingData(d, 'jsDelivr Global');
-          return;
-        }
-      }
-    } catch (e) {}
+    } catch (e) {
+      console.error('All fetch tiers failed:', e);
+    }
 
     statusText.innerText = 'RETRYING';
     pulseIndicator.style.backgroundColor = '#71717a';
@@ -1112,6 +1103,7 @@
 
   function processIncomingData(data, feedSource) {
     if (!data) return;
+    try {
     
     const { isStale, isMarketHours, ageMinutes } = checkDataFreshness(data.updated_at);
     if (!isMarketHours) {
@@ -1283,6 +1275,10 @@
     if (activeSym && CHARTS_DATA[activeSym] && popup.style.display === 'flex') {
       updatePopupHeader(CHARTS_DATA[activeSym]);
       drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    }
+    } catch (err) {
+      console.error('Error processing incoming data:', err);
+      statusText.innerText = 'DATA ERROR';
     }
   }
 
