@@ -683,6 +683,10 @@
           <button id="tf-btn-3m" class="pill-btn active" onclick="switchTimeframe('3m')">3m</button>
           <button id="tf-btn-d" class="pill-btn" onclick="switchTimeframe('D')">Daily</button>
         </div>
+        <div class="pill-selector">
+          <button id="style-btn-vol" class="pill-btn active" onclick="switchChartStyle('vol')" title="Volume Candles (Candle body width expands with trading volume)">📊 Vol Candles</button>
+          <button id="style-btn-std" class="pill-btn" onclick="switchChartStyle('std')" title="Standard Fixed-Width Candlesticks">🕯 Standard</button>
+        </div>
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
         <span id="popup-badges" style="display:inline-flex; gap:6px;"></span>
@@ -825,7 +829,15 @@
       if (thR2) thR2.innerHTML = `Cap-2 <span id="sort-r2" class="sort-icon"></span>`;
 
       if (pageFooter) pageFooter.innerText = 'Cluster Telemetry & Node Observer Daemon • Distributed Ingress Telemetry Pipeline • High-Throughput Stream • Press [?] for Diagnostics';
-      if (popupFooterNote) popupFooterNote.innerText = '💡 Upper Baseline Envelope | Dynamic 3m Boundary Thresholds';
+      const btnStyleVol = document.getElementById('style-btn-vol');
+      const btnStyleStd = document.getElementById('style-btn-std');
+      if (btnStyleVol) btnStyleVol.innerText = '📊 Vol Trace';
+      if (btnStyleStd) btnStyleStd.innerText = '🕯 Baseline';
+      if (popupFooterNote) {
+        popupFooterNote.innerText = (chartStyle === 'vol')
+          ? '💡 Volatility Trace: Width weighted by event density'
+          : '💡 Upper Baseline Envelope | Dynamic 3m Boundary Thresholds';
+      }
     } else {
       if (pageTitle) pageTitle.innerText = 'JARVIS PROSOTA 3M SCANNER • Live Market Terminal';
       if (txtBrandTitle) txtBrandTitle.innerText = 'JARVIS PROSOTA';
@@ -864,7 +876,15 @@
       if (thR2) thR2.innerHTML = `Pivot R2 <span id="sort-r2" class="sort-icon"></span>`;
 
       if (pageFooter) pageFooter.innerText = 'JARVIS SOTA Dashboard • Pure Vanilla High-Performance Architecture • Zero External Dependencies • 60 FPS Native Canvas • Press [?] for Shortcuts';
-      if (popupFooterNote) popupFooterNote.innerText = '💡 Gold Line = Previous Day High (PDH) | Cyan/Orange = 3m Dynamic ORB';
+      const btnStyleVol = document.getElementById('style-btn-vol');
+      const btnStyleStd = document.getElementById('style-btn-std');
+      if (btnStyleVol) btnStyleVol.innerText = '📊 Vol Candles';
+      if (btnStyleStd) btnStyleStd.innerText = '🕯 Standard';
+      if (popupFooterNote) {
+        popupFooterNote.innerText = (chartStyle === 'vol')
+          ? '💡 Volume Candles: Candle thickness indicates volume | Gold = PDH | Cyan/Orange = ORB'
+          : '💡 Gold Line = Previous Day High (PDH) | Cyan/Orange = 3m Dynamic ORB';
+      }
     }
     updateSortIcons();
   }
@@ -1490,6 +1510,40 @@
     }
   }
 
+  // Chart Style Switcher: Volume Candles (TradingView style) vs Standard Fixed Width
+  let chartStyle = localStorage.getItem('jarvis_chart_style') || 'vol';
+
+  function switchChartStyle(st) {
+    chartStyle = st;
+    localStorage.setItem('jarvis_chart_style', st);
+    const btnVol = document.getElementById('style-btn-vol');
+    const btnStd = document.getElementById('style-btn-std');
+    if (btnVol && btnStd) {
+      if (st === 'vol') {
+        btnVol.classList.add('active');
+        btnStd.classList.remove('active');
+      } else {
+        btnVol.classList.remove('active');
+        btnStd.classList.add('active');
+      }
+    }
+    const popupFooterNote = document.getElementById('popup-footer-note');
+    if (popupFooterNote) {
+      if (isStealthMode) {
+        popupFooterNote.innerText = (chartStyle === 'vol')
+          ? '💡 Volatility Trace: Width weighted by event density'
+          : '💡 Upper Baseline Envelope | Dynamic 3m Boundary Thresholds';
+      } else {
+        popupFooterNote.innerText = (chartStyle === 'vol')
+          ? '💡 Volume Candles: Candle thickness indicates volume | Gold = PDH | Cyan/Orange = ORB'
+          : '💡 Gold Line = Previous Day High (PDH) | Cyan/Orange = 3m Dynamic ORB';
+      }
+    }
+    if (activeSym && CHARTS_DATA[activeSym]) {
+      drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    }
+  }
+
   function updatePopupHeader(data) {
     if (!data) return;
     const isDaily = (currentTimeframe === 'D');
@@ -1681,12 +1735,40 @@
 
     // Classic Candlestick Drawing: White = Bullish, Black = Bearish
     const n = candles.length;
+
+    // Volume Statistics for Dynamic Volume Candles (TradingView style)
+    let sumVol = 0;
+    let maxVol = 0;
+    candles.forEach(c => {
+      const v = Number(c.v || 0);
+      sumVol += v;
+      if (v > maxVol) maxVol = v;
+    });
+    const avgVol = sumVol / Math.max(n, 1);
+
     // Terminal-Style Bounded Bar Spacing:
     // When fewer candles exist (e.g. morning open with 1-15 candles), keep candles clustered
     // on the leftmost side (standard trading terminal UX) instead of stretching across the screen.
     const maxBarSpacing = isDaily ? 20 : 15;
     const barSpacing = Math.min(plotW / Math.max(n, 1), maxBarSpacing);
-    const barWidth = Math.max(Math.min(barSpacing * 0.72, 10), 2);
+    const stdBarWidth = Math.max(Math.min(barSpacing * 0.72, 10), 2);
+
+    // Volume Sub-Pane Separator Line & Label
+    const volSeparatorY = H - padBottom - volH;
+    ctx.save();
+    ctx.strokeStyle = '#18181b';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath();
+    ctx.moveTo(padLeft, volSeparatorY);
+    ctx.lineTo(W - padRight, volSeparatorY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#71717a';
+    ctx.font = 'bold 8.5px var(--font-mono)';
+    ctx.textAlign = 'left';
+    ctx.fillText(isStealthMode ? 'TRACE VOL' : 'VOL', padLeft + 4, volSeparatorY - 3);
+    ctx.restore();
 
     let hoveredCandle = null;
     let lastLabelX = -999;
@@ -1699,22 +1781,33 @@
       const cY = getY(c.c);
       const isBull = c.c >= c.o;
 
-      if (hoverX !== undefined && Math.abs(hoverX - cx) <= barSpacing / 2) {
-        hoveredCandle = Object.assign({}, c, { cx, oY, cY, hY, lY, isBull });
+      // Dynamic Candle Body Width for Volume Candles:
+      // High-volume bars expand in thickness (institutional momentum),
+      // Low-volume bars shrink in thickness (thin action), matching TradingView Volume Candles.
+      let bWidth = stdBarWidth;
+      if (chartStyle === 'vol' && avgVol > 0) {
+        const volRatio = (c.v || 0) / avgVol;
+        let factor = Math.sqrt(Math.max(volRatio, 0.05));
+        factor = Math.max(0.35, Math.min(factor, 1.45));
+        bWidth = Math.max(Math.min(barSpacing * 0.65 * factor, barSpacing - 1.2), 2.5);
       }
 
-      // Volume Bar: White 40% for Bullish, Charcoal 40% for Bearish
+      if (hoverX !== undefined && Math.abs(hoverX - cx) <= barSpacing / 2) {
+        hoveredCandle = Object.assign({}, c, { cx, oY, cY, hY, lY, isBull, bWidth });
+      }
+
+      // Volume Bar in bottom sub-pane
       const vH = maxVol > 0 ? (c.v / maxVol) * volH : 0;
       const vY = (H - padBottom) - vH;
       ctx.fillStyle = isBull ? 'rgba(255, 255, 255, 0.4)' : 'rgba(82, 82, 91, 0.35)';
-      ctx.fillRect(cx - barWidth / 2, vY, barWidth, vH);
+      ctx.fillRect(cx - bWidth / 2, vY, bWidth, vH);
       if (!isBull) {
         ctx.strokeStyle = '#52525b';
         ctx.lineWidth = 0.8;
-        ctx.strokeRect(cx - barWidth / 2, vY, barWidth, vH);
+        ctx.strokeRect(cx - bWidth / 2, vY, bWidth, vH);
       }
 
-      // Wick: White for Bullish, Silver/Gray for Bearish
+      // Wick: Centered at cx
       ctx.strokeStyle = isBull ? '#ffffff' : '#a1a1aa';
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -1722,18 +1815,18 @@
       ctx.lineTo(cx, lY);
       ctx.stroke();
 
-      // Body: White filled for Bullish, Black filled with outline for Bearish
+      // Body: Width based on Volume Candles setting
       const bTop = Math.min(oY, cY);
       const bH = Math.max(Math.abs(cY - oY), 1.5);
       if (isBull) {
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(cx - barWidth / 2, bTop, barWidth, bH);
+        ctx.fillRect(cx - bWidth / 2, bTop, bWidth, bH);
       } else {
         ctx.fillStyle = '#000000';
-        ctx.fillRect(cx - barWidth / 2, bTop, barWidth, bH);
+        ctx.fillRect(cx - bWidth / 2, bTop, bWidth, bH);
         ctx.strokeStyle = '#a1a1aa';
         ctx.lineWidth = 1;
-        ctx.strokeRect(cx - barWidth / 2, bTop, barWidth, bH);
+        ctx.strokeRect(cx - bWidth / 2, bTop, bWidth, bH);
       }
 
       // X-Axis Time / Date Labels (Standard Trading Terminal Spacing)
@@ -1770,18 +1863,22 @@
       ctx.restore();
 
       const cColor = hoveredCandle.isBull ? '#ffffff' : '#71717a';
+      const vVal = hoveredCandle.v || 0;
+      const volRatioStr = avgVol > 0 ? (' (' + (vVal / avgVol).toFixed(1) + 'x avg)') : '';
       if (isStealthMode) {
-        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | Base: ${hoveredCandle.o.toFixed(2)} | High: ${hoveredCandle.h.toFixed(2)} | Low: ${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${hoveredCandle.c.toFixed(2)}</span> | Events: ${hoveredCandle.v.toLocaleString()}`;
+        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | Base: ${hoveredCandle.o.toFixed(2)} | High: ${hoveredCandle.h.toFixed(2)} | Low: ${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${hoveredCandle.c.toFixed(2)}</span> | Events: ${vVal.toLocaleString()}${volRatioStr}`;
       } else {
-        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | O: ₹${hoveredCandle.o.toFixed(2)} | H: ₹${hoveredCandle.h.toFixed(2)} | L: ₹${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${hoveredCandle.c.toFixed(2)}</span> | Vol: ${hoveredCandle.v.toLocaleString()}`;
+        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | O: ₹${hoveredCandle.o.toFixed(2)} | H: ₹${hoveredCandle.h.toFixed(2)} | L: ₹${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${hoveredCandle.c.toFixed(2)}</span> | Vol: ${vVal.toLocaleString()}${volRatioStr}`;
       }
     } else {
       const last = candles[candles.length - 1];
       const cColor = last.c >= last.o ? '#ffffff' : '#71717a';
+      const lastV = last.v || 0;
+      const lastVolRatioStr = avgVol > 0 ? (' (' + (lastV / avgVol).toFixed(1) + 'x avg)') : '';
       if (isStealthMode) {
-        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | Base: ${last.o.toFixed(2)} | High: ${last.h.toFixed(2)} | Low: ${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${last.c.toFixed(2)}</span> | Events: ${last.v.toLocaleString()}`;
+        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | Base: ${last.o.toFixed(2)} | High: ${last.h.toFixed(2)} | Low: ${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${last.c.toFixed(2)}</span> | Events: ${lastV.toLocaleString()}${lastVolRatioStr}`;
       } else {
-        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | O: ₹${last.o.toFixed(2)} | H: ₹${last.h.toFixed(2)} | L: ₹${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${last.c.toFixed(2)}</span> | Vol: ${last.v.toLocaleString()}`;
+        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | O: ₹${last.o.toFixed(2)} | H: ₹${last.h.toFixed(2)} | L: ₹${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${last.c.toFixed(2)}</span> | Vol: ${lastV.toLocaleString()}${lastVolRatioStr}`;
       }
     }
   }
