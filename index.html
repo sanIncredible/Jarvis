@@ -523,6 +523,73 @@
     color: var(--text-muted);
   }
 
+  /* Execution Guardrail & Overextension Badges */
+  .popup-guardrail {
+    background: #09090b;
+    border-top: 1px solid var(--border-subtle);
+    padding: 9px 14px;
+    font-size: 11.5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: var(--font-mono);
+  }
+  .guardrail-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .guardrail-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-align: right;
+    font-size: 11px;
+    color: #e4e4e7;
+  }
+  .stretch-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 9.5px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    line-height: 1.3;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+  }
+  .stretch-prime {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border: 1px solid #ffffff;
+  }
+  .stretch-normal {
+    background: #18181b;
+    color: #a1a1aa;
+    border: 1px solid #3f3f46;
+  }
+  .stretch-extended {
+    background: #27272a;
+    color: #ffffff;
+    border: 1px dashed #ffffff;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.25);
+    animation: pulse-stretch 2s infinite ease-in-out;
+  }
+  @keyframes pulse-stretch {
+    0%, 100% { border-color: #ffffff; }
+    50% { border-color: #71717a; }
+  }
+  .stretch-sub {
+    background: #18181b;
+    color: #71717a;
+    border: 1px solid #27272a;
+  }
+
   .btn-audio {
     background: transparent;
     border: none;
@@ -631,6 +698,7 @@
   <div class="toolbar">
     <div class="filter-chips">
       <span class="chip active" onclick="setFilter('all', this)">ALL (<span id="cnt-all">0</span>)</span>
+      <span class="chip" onclick="setFilter('prime', this)" title="Filter stocks coiling near VWAP (Tight base, minimal downside risk)"><span id="chip-lbl-prime">🟢 Prime Base</span> (<span id="cnt-prime">0</span>)</span>
       <span class="chip" onclick="setFilter('rev', this)"><span id="chip-lbl-rev">🔄 Failover</span> (<span id="cnt-rev">0</span>)</span>
       <span class="chip" onclick="setFilter('ss', this)"><span id="chip-lbl-ss">★ Priority</span> (<span id="cnt-ss">0</span>)</span>
       <span class="chip" onclick="setFilter('pdh', this)"><span id="chip-lbl-pdh">📌 Peak Alerts</span> (<span id="cnt-pdh">0</span>)</span>
@@ -703,6 +771,7 @@
     <div class="popup-canvas-wrap">
       <canvas id="popup-canvas"></canvas>
     </div>
+    <div id="popup-guardrail" class="popup-guardrail"></div>
     <div class="popup-footer">
       <span id="popup-footer-note">💡 Upper Baseline Envelope | Dynamic 3m Boundary Thresholds</span>
       <span id="popup-bar-count">0 Candles</span>
@@ -770,6 +839,7 @@
     const txtKpi4Sub = document.getElementById('txt-kpi-4-sub');
 
     // Filter chips
+    const chipPrime = document.getElementById('chip-lbl-prime');
     const chipRev = document.getElementById('chip-lbl-rev');
     const chipSs = document.getElementById('chip-lbl-ss');
     const chipPdh = document.getElementById('chip-lbl-pdh');
@@ -813,6 +883,7 @@
       if (txtKpi4Title) txtKpi4Title.innerText = 'Boundary Ingress Alerts';
       if (txtKpi4Sub) txtKpi4Sub.innerText = 'Envelope Spikes & State Shifts';
 
+      if (chipPrime) chipPrime.innerText = '🟢 Buffer Base';
       if (chipRev) chipRev.innerText = '🔄 Failover';
       if (chipSs) chipSs.innerText = '★ Priority';
       if (chipPdh) chipPdh.innerText = '📌 Peak Alerts';
@@ -860,6 +931,7 @@
       if (txtKpi4Title) txtKpi4Title.innerText = 'ORB Action Triggers';
       if (txtKpi4Sub) txtKpi4Sub.innerText = 'Bull Breakouts & High Formations';
 
+      if (chipPrime) chipPrime.innerText = '🟢 Prime Base';
       if (chipRev) chipRev.innerText = '🔄 Reversals';
       if (chipSs) chipSs.innerText = '★ Strong Start';
       if (chipPdh) chipPdh.innerText = '📌 PDH Breaks';
@@ -1133,12 +1205,32 @@
     let pdhCount = 0;
     let orbCount = 0;
     let revCount = 0;
+    let primeCount = 0;
     let topMover = null;
 
     RAW_STOCKS.forEach(stk => {
       const sym = stk.symbol;
       const c_3m = normalizeCandles(stk.candles_3m || stk.candles || []);
       const c_d = normalizeCandles(stk.candles_d || []);
+
+      // Dynamic Intraday VWAP & Overextension (% Stretch)
+      let vwap = null;
+      if (c_3m && c_3m.length) {
+        let sumPV = 0, sumV = 0;
+        c_3m.forEach(c => {
+          const typ = (Number(c.h) + Number(c.l) + Number(c.c)) / 3.0;
+          const v = Number(c.v || 0) || 1;
+          sumPV += typ * v;
+          sumV += v;
+        });
+        if (sumV > 0) vwap = sumPV / sumV;
+      }
+      if (!vwap && stk.pivot) vwap = Number(stk.pivot);
+      stk.vwap = vwap;
+      const ltpVal = Number(stk.ltp) || 0;
+      stk.stretch_pct = (vwap && ltpVal > 0) ? (((ltpVal - vwap) / vwap) * 100) : null;
+      stk.is_prime = (stk.stretch_pct !== null && stk.stretch_pct >= 0 && stk.stretch_pct <= 0.85);
+      if (stk.is_prime) primeCount++;
 
       // Classic Floor Pivot Points: P = (H + L + C) / 3, R1 = 2*P - L, R2 = P + (H - L)
       let r1 = stk.r1;
@@ -1205,6 +1297,8 @@
         pivot: stk.pivot,
         r1: stk.r1,
         r2: stk.r2,
+        vwap: stk.vwap,
+        stretch_pct: stk.stretch_pct,
         pdh: stk.pdh,
         pdh_broken: stk.pdh_broken,
         orb_high: stk.orb_high,
@@ -1262,6 +1356,8 @@
 
     // Filter counts
     document.getElementById('cnt-all').innerText = RAW_STOCKS.length;
+    const primeEl = document.getElementById('cnt-prime');
+    if (primeEl) primeEl.innerText = primeCount;
     const revEl = document.getElementById('cnt-rev');
     if (revEl) revEl.innerText = revCount;
     document.getElementById('cnt-ss').innerText = RAW_STOCKS.filter(s => s.is_ss).length;
@@ -1312,6 +1408,7 @@
     const q = (searchInput.value || '').trim().toUpperCase();
 
     let filtered = RAW_STOCKS.filter(stk => {
+      if (activeFilter === 'prime' && !stk.is_prime) return false;
       if (activeFilter === 'rev' && !stk.is_reversal && stk.orb_status !== 'L➔H') return false;
       if (activeFilter === 'ss' && !stk.is_ss) return false;
       if (activeFilter === 'pdh' && !stk.pdh_broken) return false;
@@ -1384,6 +1481,26 @@
       else if (rawSig.includes('BREAKDOWN') || rawSig.includes('BELOW')) sig_cls = 'badge-bear-break';
       const sig_badge = `<span class="pill-badge ${sig_cls}">${sig}</span>`;
 
+      // Intraday Stretch / Overextension Badge
+      let stretch_badge = '';
+      if (stk.stretch_pct !== null && stk.stretch_pct !== undefined) {
+        const s = stk.stretch_pct;
+        const sStr = (s >= 0 ? '+' : '') + s.toFixed(1) + '%';
+        if (s < 0) {
+          const tText = isStealthMode ? 'Sub-baseline telemetry' : 'Trading below VWAP (Bearish institutional bias)';
+          stretch_badge = `<span class="stretch-pill stretch-sub" title="${tText}">${isStealthMode ? 'SUB' : '▼ VWAP'} ${sStr}</span>`;
+        } else if (s <= 0.85) {
+          const tText = isStealthMode ? 'Optimal allocation base' : 'Tight to VWAP (Prime Base - Low Risk)';
+          stretch_badge = `<span class="stretch-pill stretch-prime" title="${tText}">${isStealthMode ? 'PRIME' : '🟢 PRIME'} ${sStr}</span>`;
+        } else if (s <= 1.75) {
+          const tText = isStealthMode ? 'Nominal bandwidth' : 'Moderate extension from VWAP';
+          stretch_badge = `<span class="stretch-pill stretch-normal" title="${tText}">${isStealthMode ? 'NOMINAL' : '⚪'} ${sStr}</span>`;
+        } else {
+          const tText = isStealthMode ? 'Buffer saturated - Risk of latency spike' : 'Extended move! Do NOT chase high - Wait for pullback/retest';
+          stretch_badge = `<span class="stretch-pill stretch-extended" title="${tText}">${isStealthMode ? 'SATURATED' : '⚠️ EXT'} ${sStr}</span>`;
+        }
+      }
+
       const nodeTitle = isStealthMode
         ? `Val: ${ltp_val ? ltp_val.toFixed(2) : '--'} • Inspect node metrics`
         : `LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • Open in TradingView App`;
@@ -1413,7 +1530,12 @@
           <td class="${stk.l_pct > 0 ? 'val-pos' : 'val-neg'}" style="text-align:right;">${l_str}</td>
           <td style="text-align:center;">${orb_badge}</td>
           <td style="text-align:center; color:var(--text-muted);">${stk.tag || '-'}</td>
-          <td>${sig_badge}</td>
+          <td>
+            <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
+              ${sig_badge}
+              ${stretch_badge}
+            </div>
+          </td>
           <td style="text-align:right; font-weight:800; color:#f4f4f5;">${Number(stk.strength_score).toFixed(1)}</td>
           <td style="text-align:right; font-weight:700;" class="${r1_col}" title="${r1_tooltip}">${r1_str}</td>
           <td style="text-align:right; font-weight:700;" class="${r2_col}" title="${r2_tooltip}">${r2_str}</td>
@@ -1501,12 +1623,122 @@
       const revText = isStealthMode ? '🔄 FAILOVER (L➔H)' : '🔄 REVERSAL (L➔H)';
       bHtml += `<span class="pill-badge badge-orb-rev" title="${tip}">${revText}</span>`;
     }
+
+    // Dynamic Intraday VWAP & % Stretch Pill in Popup Header
+    let vwap = data.vwap;
+    if (!vwap && data.candles_3m && data.candles_3m.length) {
+      let cumPV = 0, cumV = 0;
+      data.candles_3m.forEach(c => {
+        const typ = (Number(c.h) + Number(c.l) + Number(c.c)) / 3.0;
+        const v = Number(c.v || 0) || 1;
+        cumPV += typ * v;
+        cumV += v;
+      });
+      if (cumV > 0) vwap = cumPV / cumV;
+    }
+    if (!vwap && data.pivot) vwap = Number(data.pivot);
+
+    const ltpNum = Number(data.ltp) || 0;
+    const stretch = (vwap && ltpNum > 0) ? (((ltpNum - vwap) / vwap) * 100) : null;
+    if (vwap && !isDaily) {
+      const vStr = isStealthMode ? vwap.toFixed(1) : ('₹' + vwap.toFixed(1));
+      const sStr = stretch !== null ? ((stretch >= 0 ? '+' : '') + stretch.toFixed(1) + '%') : '';
+      let badgeCls = 'stretch-normal';
+      if (stretch !== null) {
+        if (stretch < 0) badgeCls = 'stretch-sub';
+        else if (stretch <= 0.85) badgeCls = 'stretch-prime';
+        else if (stretch > 1.75) badgeCls = 'stretch-extended';
+      }
+      bHtml += `<span class="stretch-pill ${badgeCls}" title="${isStealthMode ? 'Baseline Telemetry' : 'Intraday VWAP & % Stretch'}">${isStealthMode ? 'MESH: ' : 'VWAP: '}${vStr} (${sStr})</span>`;
+    }
+
     popupBadges.innerHTML = bHtml;
 
     if (popupAppLink) {
       popupAppLink.innerText = isStealthMode ? '🌐 Node Trace ↗' : '🚀 TV App ↗';
       popupAppLink.title = isStealthMode ? 'Open node telemetry trace' : 'Launch Native TradingView Desktop / Web';
     }
+
+    updatePopupGuardrail(data);
+  }
+
+  function updatePopupGuardrail(data) {
+    const el = document.getElementById('popup-guardrail');
+    if (!el || !data) return;
+
+    const isDaily = (currentTimeframe === 'D');
+    if (isDaily) {
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = 'flex';
+
+    const ltp = Number(data.ltp) || 0;
+    const orbH = Number(data.orb_high) || 0;
+    const pdh = Number(data.pdh) || 0;
+    const candles = data.candles_3m || [];
+
+    let vwap = data.vwap;
+    if (!vwap && candles.length) {
+      let cumPV = 0, cumV = 0;
+      candles.forEach(c => {
+        const typ = (Number(c.h) + Number(c.l) + Number(c.c)) / 3.0;
+        const v = Number(c.v || 0) || 1;
+        cumPV += typ * v;
+        cumV += v;
+      });
+      if (cumV > 0) vwap = cumPV / cumV;
+    }
+    if (!vwap && data.pivot) vwap = Number(data.pivot);
+
+    const stretch = (vwap && ltp > 0) ? (((ltp - vwap) / vwap) * 100) : null;
+    const stretchStr = stretch !== null ? ((stretch >= 0 ? '+' : '') + stretch.toFixed(1) + '%') : '--';
+
+    const boLevel = Math.max(orbH, pdh) || ltp;
+    const isBreakout = (data.pdh_broken || (data.signal && (data.signal.includes('BREAKOUT') || data.signal.includes('ABOVE'))));
+
+    let statusPill = '';
+    let adviceHtml = '';
+
+    if (stretch === null) {
+      statusPill = `<span class="stretch-pill stretch-normal">BENCHMARK: --</span>`;
+      adviceHtml = `<span>Awaiting 09:15 AM intraday session flow</span>`;
+    } else if (stretch < 0) {
+      statusPill = `<span class="stretch-pill stretch-sub">${isStealthMode ? 'BUFFER: SUB-PAR' : '▼ BELOW VWAP'} (${stretchStr})</span>`;
+      adviceHtml = `<span>${isStealthMode ? 'Sub-baseline routing. Ingress filter active.' : 'Institutional bias is negative. Avoid long breakout entries until price claims VWAP.'}</span>`;
+    } else if (stretch <= 0.85) {
+      statusPill = `<span class="stretch-pill stretch-prime">${isStealthMode ? 'BUFFER: OPTIMAL' : '🟢 PRIME BASE'} (${stretchStr})</span>`;
+      adviceHtml = isBreakout
+        ? `<span>${isStealthMode ? 'Direct ingress clearance confirmed. Risk profile tight.' : '✅ <strong>Tight Base Breakout:</strong> Safe to execute. Tight SL near VWAP (₹' + (vwap * 0.996).toFixed(1) + ').'}</span>`
+        : `<span>${isStealthMode ? 'Base structure consolidating near baseline.' : 'Stock coiling right at VWAP. Watch for ORB High breakout.'}</span>`;
+    } else if (stretch <= 1.75) {
+      statusPill = `<span class="stretch-pill stretch-normal">${isStealthMode ? 'BUFFER: NOMINAL' : '⚪ MODERATE'} (${stretchStr})</span>`;
+      const retestZone = `₹${(boLevel * 0.999).toFixed(1)}–₹${(boLevel * 1.002).toFixed(1)}`;
+      adviceHtml = isBreakout
+        ? `<span>${isStealthMode ? 'Convergence corridor: ' + retestZone : 'Healthy continuation. Ideal retest entry: <strong>' + retestZone + '</strong> (SL: ₹' + (boLevel * 0.994).toFixed(1) + ').'}</span>`
+        : `<span>Trading above VWAP. Moving towards upper range.</span>`;
+    } else {
+      // Overextended (> 1.75%)
+      statusPill = `<span class="stretch-pill stretch-extended">${isStealthMode ? '⚠️ BUFFER: SATURATED' : '⚠️ EXTENDED'} (${stretchStr})</span>`;
+      const retestZone = `₹${(boLevel * 0.998).toFixed(1)}–₹${(boLevel * 1.002).toFixed(1)}`;
+      const tightSL = `₹${(boLevel * 0.994).toFixed(1)}`;
+      adviceHtml = `<span>${isStealthMode 
+        ? 'High latency risk! Defer allocation. Await re-entry convergence at ' + retestZone + '.' 
+        : '🛑 <strong>DO NOT CHASE!</strong> Price is stretched ' + stretchStr + ' above VWAP. Wait for pullback to <strong>' + retestZone + '</strong> (SL: ' + tightSL + ') to avoid getting trapped.'}</span>`;
+    }
+
+    const vwapLabel = isStealthMode ? 'Baseline: ' : 'VWAP: ';
+    const vwapValStr = vwap ? (isStealthMode ? vwap.toFixed(2) : ('₹' + vwap.toFixed(2))) : '--';
+
+    el.innerHTML = `
+      <div class="guardrail-left">
+        <span style="color:var(--text-muted); font-size:11px;">${vwapLabel}<strong style="color:#ffffff;">${vwapValStr}</strong></span>
+        ${statusPill}
+      </div>
+      <div class="guardrail-right">
+        ${adviceHtml}
+      </div>
+    `;
   }
 
   // SOTA Canvas Rendering Engine (Retina High-DPI, Volume, Crosshair, Levels)
@@ -1567,6 +1799,26 @@
       if (v > maxVol) maxVol = v;
     });
     const avgVol = sumVol / Math.max(candles.length, 1);
+
+    // Compute rolling Intraday VWAP series for 3m timeframe
+    let vwapSeries = [];
+    if (!isDaily && candles.length) {
+      let cumPV = 0;
+      let cumV = 0;
+      candles.forEach(c => {
+        const typ = (c.h + c.l + c.c) / 3.0;
+        const v = Number(c.v || 0) || 1;
+        cumPV += typ * v;
+        cumV += v;
+        vwapSeries.push(cumPV / cumV);
+      });
+    }
+
+    if (!isDaily && vwapSeries.length) {
+      const lastV = vwapSeries[vwapSeries.length - 1];
+      minPrice = Math.min(minPrice, lastV);
+      maxPrice = Math.max(maxPrice, lastV * 1.02);
+    }
 
     if (data.pdh) {
       maxPrice = Math.max(maxPrice, data.pdh);
@@ -1669,12 +1921,48 @@
       ctx.restore();
     }
 
+    // Dynamic Rolling Intraday VWAP Curve & Overextension Band (+1.8%)
+    if (!isDaily && vwapSeries.length >= 2) {
+      ctx.save();
+      ctx.strokeStyle = '#e4e4e7';
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([3, 2]);
+      ctx.beginPath();
+      vwapSeries.forEach((vVal, i) => {
+        const cx = padLeft + i * barSpacing + barSpacing / 2;
+        const cy = getY(vVal);
+        if (i === 0) ctx.moveTo(cx, cy);
+        else ctx.lineTo(cx, cy);
+      });
+      ctx.stroke();
+
+      // Right axis VWAP label
+      const lastVwap = vwapSeries[vwapSeries.length - 1];
+      if (lastVwap >= minPrice && lastVwap <= maxPrice) {
+        const yVwap = getY(lastVwap);
+        ctx.fillStyle = '#18181b';
+        ctx.fillRect(W - padRight + 2, yVwap - 7, padRight - 4, 15);
+        ctx.strokeStyle = '#e4e4e7';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+        ctx.strokeRect(W - padRight + 2, yVwap - 7, padRight - 4, 15);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 8.5px var(--font-mono)';
+        ctx.fillText(isStealthMode ? 'MESH' : 'VWAP', W - padRight + 4, yVwap + 4);
+      }
+
+      // Upper Volatility Extension Threshold (+1.8% from VWAP)
+      const extVal = lastVwap * 1.018;
+      if (extVal >= minPrice && extVal <= maxPrice) {
+        drawLevel(extVal, '#52525b', isStealthMode ? 'MAX BUFFER' : '+1.8% EXT', [2, 4]);
+      }
+      ctx.restore();
+    }
+
     // Classic Candlestick Drawing: White = Bullish, Black = Bearish
     const n = candles.length;
 
     // Terminal-Style Bounded Bar Spacing:
-    // When fewer candles exist (e.g. morning open with 1-15 candles), keep candles clustered
-    // on the leftmost side (standard trading terminal UX) instead of stretching across the screen.
     const maxBarSpacing = isDaily ? 20 : 15;
     const barSpacing = Math.min(plotW / Math.max(n, 1), maxBarSpacing);
     const stdBarWidth = Math.max(Math.min(barSpacing * 0.72, 10), 2);
@@ -1707,9 +1995,7 @@
       const cY = getY(c.c);
       const isBull = c.c >= c.o;
 
-      // Dynamic Candle Body Width for Volume Candles:
-      // High-volume bars expand in thickness (institutional momentum),
-      // Low-volume bars shrink in thickness (thin action), matching TradingView Volume Candles.
+      // Dynamic Candle Body Width for Volume Candles
       let bWidth = stdBarWidth;
       if (chartStyle === 'vol' && avgVol > 0) {
         const volRatio = (c.v || 0) / avgVol;
@@ -1719,7 +2005,7 @@
       }
 
       if (hoverX !== undefined && Math.abs(hoverX - cx) <= barSpacing / 2) {
-        hoveredCandle = Object.assign({}, c, { cx, oY, cY, hY, lY, isBull, bWidth });
+        hoveredCandle = Object.assign({}, c, { cx, oY, cY, hY, lY, isBull, bWidth, barIndex: i });
       }
 
       // Volume Bar in bottom sub-pane
@@ -1755,7 +2041,7 @@
         ctx.strokeRect(cx - bWidth / 2, bTop, bWidth, bH);
       }
 
-      // X-Axis Time / Date Labels (Standard Trading Terminal Spacing)
+      // X-Axis Time / Date Labels
       let labelText = c.t || '';
       if (labelText.includes('T')) {
         labelText = isDaily ? labelText.split('T')[0] : (labelText.split('T')[1]?.substring(0, 5) || labelText);
@@ -1776,7 +2062,7 @@
       }
     });
 
-    // Crosshair & Interactive HUD
+    // Crosshair & Interactive HUD with VWAP and Stretch metrics
     if (hoveredCandle) {
       ctx.save();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
@@ -1791,20 +2077,40 @@
       const cColor = hoveredCandle.isBull ? '#ffffff' : '#71717a';
       const vVal = hoveredCandle.v || 0;
       const volRatioStr = avgVol > 0 ? (' (' + (vVal / avgVol).toFixed(1) + 'x avg)') : '';
+
+      let vwapHud = '';
+      if (!isDaily && vwapSeries[hoveredCandle.barIndex] !== undefined) {
+        const vAtBar = vwapSeries[hoveredCandle.barIndex];
+        const strAtBar = (((hoveredCandle.c - vAtBar) / vAtBar) * 100);
+        const sSign = strAtBar >= 0 ? '+' : '';
+        let guardBadge = (strAtBar > 1.75) ? (isStealthMode ? ' [SATURATED]' : ' [⚠️ EXTENDED]') : (strAtBar >= 0 && strAtBar <= 0.85) ? (isStealthMode ? ' [OPTIMAL]' : ' [🟢 PRIME]') : '';
+        vwapHud = ` | ${isStealthMode ? 'Mesh' : 'VWAP'}: ${vAtBar.toFixed(2)} (${sSign}${strAtBar.toFixed(1)}%${guardBadge})`;
+      }
+
       if (isStealthMode) {
-        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | Base: ${hoveredCandle.o.toFixed(2)} | High: ${hoveredCandle.h.toFixed(2)} | Low: ${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${hoveredCandle.c.toFixed(2)}</span> | Events: ${vVal.toLocaleString()}${volRatioStr}`;
+        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | Base: ${hoveredCandle.o.toFixed(2)} | High: ${hoveredCandle.h.toFixed(2)} | Low: ${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${hoveredCandle.c.toFixed(2)}</span> | Events: ${vVal.toLocaleString()}${volRatioStr}${vwapHud}`;
       } else {
-        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | O: ₹${hoveredCandle.o.toFixed(2)} | H: ₹${hoveredCandle.h.toFixed(2)} | L: ₹${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${hoveredCandle.c.toFixed(2)}</span> | Vol: ${vVal.toLocaleString()}${volRatioStr}`;
+        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | O: ₹${hoveredCandle.o.toFixed(2)} | H: ₹${hoveredCandle.h.toFixed(2)} | L: ₹${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${hoveredCandle.c.toFixed(2)}</span> | Vol: ${vVal.toLocaleString()}${volRatioStr}${vwapHud}`;
       }
     } else {
       const last = candles[candles.length - 1];
       const cColor = last.c >= last.o ? '#ffffff' : '#71717a';
       const lastV = last.v || 0;
       const lastVolRatioStr = avgVol > 0 ? (' (' + (lastV / avgVol).toFixed(1) + 'x avg)') : '';
+
+      let vwapHud = '';
+      if (!isDaily && vwapSeries.length) {
+        const lastVwap = vwapSeries[vwapSeries.length - 1];
+        const lastStretch = (((last.c - lastVwap) / lastVwap) * 100);
+        const sSign = lastStretch >= 0 ? '+' : '';
+        let guardBadge = (lastStretch > 1.75) ? (isStealthMode ? ' [SATURATED]' : ' [⚠️ EXTENDED]') : (lastStretch >= 0 && lastStretch <= 0.85) ? (isStealthMode ? ' [OPTIMAL]' : ' [🟢 PRIME]') : '';
+        vwapHud = ` | ${isStealthMode ? 'Mesh' : 'VWAP'}: ${lastVwap.toFixed(2)} (${sSign}${lastStretch.toFixed(1)}%${guardBadge})`;
+      }
+
       if (isStealthMode) {
-        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | Base: ${last.o.toFixed(2)} | High: ${last.h.toFixed(2)} | Low: ${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${last.c.toFixed(2)}</span> | Events: ${lastV.toLocaleString()}${lastVolRatioStr}`;
+        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | Base: ${last.o.toFixed(2)} | High: ${last.h.toFixed(2)} | Low: ${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${last.c.toFixed(2)}</span> | Events: ${lastV.toLocaleString()}${lastVolRatioStr}${vwapHud}`;
       } else {
-        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | O: ₹${last.o.toFixed(2)} | H: ₹${last.h.toFixed(2)} | L: ₹${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${last.c.toFixed(2)}</span> | Vol: ${lastV.toLocaleString()}${lastVolRatioStr}`;
+        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | O: ₹${last.o.toFixed(2)} | H: ₹${last.h.toFixed(2)} | L: ₹${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${last.c.toFixed(2)}</span> | Vol: ${lastV.toLocaleString()}${lastVolRatioStr}${vwapHud}`;
       }
     }
   }
