@@ -1625,12 +1625,16 @@
     let minPrice = Infinity;
     let maxPrice = -Infinity;
     let maxVol = 0;
+    let sumVol = 0;
 
     candles.forEach(c => {
       if (c.l < minPrice) minPrice = c.l;
       if (c.h > maxPrice) maxPrice = c.h;
-      if (c.v > maxVol) maxVol = c.v;
+      const v = Number(c.v || 0);
+      sumVol += v;
+      if (v > maxVol) maxVol = v;
     });
+    const avgVol = sumVol / Math.max(candles.length, 1);
 
     if (data.pdh) {
       maxPrice = Math.max(maxPrice, data.pdh);
@@ -1735,16 +1739,6 @@
 
     // Classic Candlestick Drawing: White = Bullish, Black = Bearish
     const n = candles.length;
-
-    // Volume Statistics for Dynamic Volume Candles (TradingView style)
-    let sumVol = 0;
-    let maxVol = 0;
-    candles.forEach(c => {
-      const v = Number(c.v || 0);
-      sumVol += v;
-      if (v > maxVol) maxVol = v;
-    });
-    const avgVol = sumVol / Math.max(n, 1);
 
     // Terminal-Style Bounded Bar Spacing:
     // When fewer candles exist (e.g. morning open with 1-15 candles), keep candles clustered
