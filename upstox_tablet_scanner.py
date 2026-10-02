@@ -1795,10 +1795,12 @@ def generate_html_dashboard(results, now_str, port):
 
         // Candlesticks
         const n = candles.length;
-        const barSpacing = plotW / Math.max(n, 1);
-        const barWidth = Math.max(Math.min(barSpacing * 0.75, 12), 2);
+        const maxBarSpacing = isDaily ? 20 : 15;
+        const barSpacing = Math.min(plotW / Math.max(n, 1), maxBarSpacing);
+        const barWidth = Math.max(Math.min(barSpacing * 0.75, 11), 2);
 
         let hoveredCandle = null;
+        let lastLabelX = -999;
 
         for (let i = 0; i < n; i++) {{
             const c = candles[i];
@@ -1831,12 +1833,23 @@ def generate_html_dashboard(results, now_str, port):
             const bodyHeight = Math.max(Math.abs(cY - oY), 1.5);
             ctx.fillRect(cx - barWidth / 2, bodyTop, barWidth, bodyHeight);
 
-            const step = Math.max(Math.floor(n / 6), 1);
-            if (i === 0 || i === n - 1 || (i % step === 0)) {{
+            let labelText = c.t || '';
+            if (labelText.includes('T')) {{
+                labelText = isDaily ? labelText.split('T')[0] : (labelText.split('T')[1]?.substring(0, 5) || labelText);
+            }} else if (labelText.length > 5 && !isDaily && labelText.includes(':')) {{
+                labelText = labelText.substring(0, 5);
+            }}
+
+            const isFirst = (i === 0);
+            const isLast = (i === n - 1);
+            const hasEnoughSpace = (cx - lastLabelX >= 48);
+
+            if ((isFirst || hasEnoughSpace) && (W - paddingRight - cx >= 15 || isLast)) {{
                 ctx.fillStyle = "#787b86";
                 ctx.font = "9px monospace";
                 ctx.textAlign = "center";
-                ctx.fillText(c.t, cx, H - 7);
+                ctx.fillText(labelText, cx, H - 7);
+                lastLabelX = cx;
             }}
         }}
 
