@@ -766,6 +766,32 @@ def fetch_fallback_data(symbol):
                         "v": int(vd or 0)
                     })
 
+            # If today's bar is missing or has None values during live market hours, synthesize and append today's bar
+            today_lbl = get_ist_now().strftime("%d %b")
+            has_today = any(c.get("t") == today_lbl for c in parsed_daily_candles)
+            if not has_today and ltp is not None and parsed_candles:
+                t_open = parsed_candles[0]["o"] if parsed_candles else (opens[-1] if opens else ltp)
+                p_highs = [c["h"] for c in parsed_candles]
+                if ltp is not None:
+                    p_highs.append(float(ltp))
+                t_high = max(p_highs) if p_highs else ltp
+
+                p_lows = [c["l"] for c in parsed_candles]
+                if ltp is not None:
+                    p_lows.append(float(ltp))
+                t_low = min(p_lows) if p_lows else ltp
+
+                t_close = ltp
+                t_vol = sum(c.get("v", 0) for c in parsed_candles) or (vols[-1] if vols else 0)
+                parsed_daily_candles.append({
+                    "t": today_lbl,
+                    "o": round(float(t_open), 2),
+                    "h": round(float(t_high), 2),
+                    "l": round(float(t_low), 2),
+                    "c": round(float(t_close), 2),
+                    "v": int(t_vol)
+                })
+
             if len(highs) >= 2:
                 pdh = highs[-2]
 
@@ -1010,9 +1036,28 @@ def compute_metrics(d):
     elif orb_status == "H":
         signal = "ABOVE ORB HIGH"
         sig_color = GREEN
-    elif orb_status == "L":
-        signal = "BELOW ORB LOW"
-        sig_color = RED
+    # 8. Intraday VWAP & Overextension (% Stretch)
+    vwap = None
+    if candles_3m:
+        sum_pv = 0.0
+        sum_v = 0.0
+        for c in candles_3m:
+            if isinstance(c, dict):
+                typ = (float(c.get("h", 0)) + float(c.get("l", 0)) + float(c.get("c", 0))) / 3.0
+                v = float(c.get("v", 1) or 1)
+            else:
+                typ = (float(c[2]) + float(c[3]) + float(c[4])) / 3.0
+                v = float(c[5] or 1) if len(c) > 5 else 1.0
+            sum_pv += typ * v
+            sum_v += v
+        if sum_v > 0:
+            vwap = round(sum_pv / sum_v, 2)
+    if not vwap and d.get("pivot"):
+        vwap = round(float(d.get("pivot")), 2)
+
+    stretch_pct = None
+    if vwap and ltp:
+        stretch_pct = round(((float(ltp) - vwap) / vwap) * 100.0, 2)
 
     return {
         "chg_pct": chg_pct,
@@ -1030,7 +1075,9 @@ def compute_metrics(d):
         "orb_high_break_time": orb_high_break_time,
         "reversal_desc": reversal_desc,
         "signal": signal,
-        "sig_color": sig_color
+        "sig_color": sig_color,
+        "vwap": vwap,
+        "stretch_pct": stretch_pct
     }
 
 
@@ -2193,6 +2240,8 @@ def export_static_html(results, now_str, port):
                 "pivot": d.get("pivot"),
                 "r1": d.get("r1"),
                 "r2": d.get("r2"),
+                "vwap": m.get("vwap"),
+                "stretch_pct": m.get("stretch_pct"),
                 "orb_high": d.get("orb_high"),
                 "orb_low": d.get("orb_low"),
                 "high_bar_num": d.get("high_bar_num"),
