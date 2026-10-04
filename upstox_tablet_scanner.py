@@ -336,7 +336,7 @@ def send_telegram_alert_async(message, parse_mode="HTML"):
 
 
 def evaluate_and_dispatch_alerts(results, current_time_str):
-    """Evaluates scan results and dispatches a single clean tabular Telegram alert for newly triggered stocks."""
+    """Evaluates scan results and dispatches rich Action Card Telegram alerts for newly triggered stocks."""
     today = get_ist_now().strftime("%Y-%m-%d")
     t_clean = current_time_str.replace(" IST", "")
     if len(t_clean.split(":")) >= 2:
@@ -372,7 +372,7 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
         # 2. Tier 1: Strong Start + ORB + PDH Breakout (Highest Conviction)
         elif "STRONG START + ORB + PDH" in signal:
             alert_type = "ORB_PDH_STRONG"
-            trigger_label = "★ SS + ORB + PDH"
+            trigger_label = "★ SS + ORB + PDH Break"
 
         # 3. Tier 2: Bullish Breakout (ORB + PDH)
         elif pdh_broken and orb_status == "H":
@@ -388,24 +388,90 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
             alert_key = (sym, alert_type, today)
             if alert_key not in sent_alerts:
                 sent_alerts.add(alert_key)
-                new_breakouts.append((sym, trigger_label))
+
+                day_low = m.get("day_low") or d.get("day_low")
+                atr14 = d.get("atr14")
+                lod_dist = m.get("lod_dist")
+                if lod_dist is None and day_low and atr14 and float(atr14) > 0:
+                    lod_dist = round(((float(ltp) - float(day_low)) / float(atr14)) * 100.0)
+
+                stretch_pct = m.get("stretch_pct")
+
+                risk_pct = None
+                if day_low and ltp and float(ltp) > 0:
+                    risk_pct = round(((float(ltp) - float(day_low)) / float(ltp)) * 100.0, 1)
+
+                new_breakouts.append({
+                    "sym": sym,
+                    "ltp": float(ltp),
+                    "trigger": trigger_label,
+                    "day_low": float(day_low) if day_low else None,
+                    "risk_pct": risk_pct,
+                    "lod_dist": lod_dist,
+                    "stretch_pct": stretch_pct
+                })
 
     if not new_breakouts:
         return
 
-    # Build sleek, aligned 2-column tabular message with hyperlinked symbols and time in header
+    # Build Option B: Detailed Action Card (With Exact Risk & Guidance)
     lines = [
-        f"⚡ <b>BREAKOUT ALERTS — {t_clean}</b>",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        "<b>SYMBOL</b>            <b>TRIGGER</b>",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        f"⚡ <b>JARVIS BREAKOUT ALERT — {t_clean}</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     ]
-    for sym, trig in new_breakouts:
-        tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'><b>{sym}</b></a>"
-        pad_spaces = " " * max(1, 15 - len(sym))
-        lines.append(f"• {tv_link}{pad_spaces}{trig}")
 
-    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    for i, b in enumerate(new_breakouts):
+        if i > 0:
+            lines.append("")  # Blank separation between stock cards
+
+        sym = b["sym"]
+        ltp = b["ltp"]
+        day_low = b["day_low"]
+        risk_pct = b["risk_pct"]
+        lod_dist = b["lod_dist"]
+        stretch_pct = b["stretch_pct"]
+
+        # Header line with icon and TradingView hyperlink
+        icon = "⚠️" if (lod_dist is not None and lod_dist > 100) else "🚀"
+        tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'><b>{sym}</b></a>"
+        lines.append(f"{icon} {tv_link} (₹{ltp:,.2f})")
+        lines.append(f"• Trigger : {b['trigger']}")
+
+        # LoD Dist badge and guidance
+        if lod_dist is not None:
+            if lod_dist <= 70:
+                lines.append(f"• LoD Dist: 🟢 {lod_dist}% ATR (Ample Headroom)")
+            elif lod_dist <= 100:
+                lines.append(f"• LoD Dist: ⚪ {lod_dist}% ATR (Mid Expansion)")
+            else:
+                lines.append(f"• LoD Dist: ⚠️ {lod_dist}% ATR (Range Exhausted — DO NOT CHASE!)")
+        else:
+            lines.append("• LoD Dist: ⚪ N/A")
+
+        # Stop loss with risk percentage and warning if too wide
+        if day_low is not None:
+            if risk_pct is not None:
+                risk_note = " — Too Wide" if risk_pct > 1.5 else ""
+                lines.append(f"• Stop Loss: ₹{day_low:,.2f} (Day Low: {risk_pct:.1f}% risk{risk_note})")
+            else:
+                lines.append(f"• Stop Loss: ₹{day_low:,.2f} (Day Low)")
+        else:
+            lines.append("• Stop Loss: N/A")
+
+        # 10 EMA micro-coil status
+        if stretch_pct is not None:
+            sign = "+" if stretch_pct > 0 else ""
+            if stretch_pct <= 0.6:
+                lines.append(f"• 10 EMA : 🟢 Prime Coil ({sign}{stretch_pct:.1f}%)")
+            elif stretch_pct <= 1.5:
+                lines.append(f"• 10 EMA : ⚪ Normal ({sign}{stretch_pct:.1f}%)")
+            else:
+                lines.append(f"• 10 EMA : ⚠️ Extended ({sign}{stretch_pct:.1f}%) — Wait for Pullback")
+
+        # Direct chart link
+        lines.append(f"• Chart : <a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'>Open TradingView ↗</a>")
+
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("📊 <a href='https://sanincredible.github.io/Jarvis/'>Open 3m Terminal Dashboard</a>")
 
     full_msg = "\n".join(lines)
@@ -2565,11 +2631,24 @@ if __name__ == "__main__":
             print("❌ Telegram configuration not found in config_credentials.json or environment variables.")
             print("   Add your bot_token and chat_id under the 'telegram' key in config_credentials.json.")
             sys.exit(1)
+        t_now = get_ist_now().strftime("%H:%M IST")
         test_msg = (
-            "🔔 <b>JARVIS TELEGRAM ALERTS CONNECTED!</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "✅ Your 4-Core Cloud Server is ready to dispatch instant ORB and PDH breakouts directly to your phone/tablet.\n"
-            f"⏱ <b>Test Time:</b> {get_ist_now().strftime('%H:%M:%S IST')}"
+            f"⚡ <b>JARVIS BREAKOUT ALERT — {t_now}</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🚀 <a href='https://in.tradingview.com/chart/?symbol=NSE:RELIANCE'><b>RELIANCE</b></a> (₹1,320.50)\n"
+            "• Trigger : ★ SS + ORB + PDH Break\n"
+            "• LoD Dist: 🟢 42% ATR (Ample Headroom)\n"
+            "• Stop Loss: ₹1,310.00 (Day Low: 0.8% risk)\n"
+            "• 10 EMA : 🟢 Prime Coil (+0.3%)\n"
+            "• Chart : <a href='https://in.tradingview.com/chart/?symbol=NSE:RELIANCE'>Open TradingView ↗</a>\n\n"
+            "⚠️ <a href='https://in.tradingview.com/chart/?symbol=NSE:SHILPAMED'><b>SHILPAMED</b></a> (₹1,040.00)\n"
+            "• Trigger : ORB High Break\n"
+            "• LoD Dist: ⚠️ 104% ATR (Range Exhausted — DO NOT CHASE!)\n"
+            "• Stop Loss: ₹1,008.00 (Day Low: 3.1% risk — Too Wide)\n"
+            "• 10 EMA : ⚪ Normal (+1.1%)\n"
+            "• Chart : <a href='https://in.tradingview.com/chart/?symbol=NSE:SHILPAMED'>Open TradingView ↗</a>\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "📊 <a href='https://sanincredible.github.io/Jarvis/'>Open 3m Terminal Dashboard</a>"
         )
         ok, res = send_telegram_alert(test_msg)
         if ok:
