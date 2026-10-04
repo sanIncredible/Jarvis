@@ -162,20 +162,12 @@ active_web_port = 5000
 
 
 def load_upstox_token():
-    """Loads active Upstox access token from environment, upstoxtoken.txt, or config file."""
+    """Loads active Upstox access token from config_credentials.json, environment, or upstoxtoken.txt."""
     token = os.getenv("UPSTOX_ACCESS_TOKEN", "").strip()
     if token:
         return token
 
-    if os.path.isfile("upstoxtoken.txt"):
-        try:
-            with open("upstoxtoken.txt", "r", encoding="utf-8") as f:
-                tok = f.read().strip()
-                if tok:
-                    return tok
-        except Exception:
-            pass
-
+    # Primary source of truth: config_credentials.json
     for cfg_path in [CONFIG_FILE, "credentials.json"]:
         if os.path.exists(cfg_path):
             try:
@@ -186,6 +178,16 @@ def load_upstox_token():
                         return tok
             except Exception:
                 pass
+
+    # Fallback to local txt file if present
+    if os.path.isfile("upstoxtoken.txt"):
+        try:
+            with open("upstoxtoken.txt", "r", encoding="utf-8") as f:
+                tok = f.read().strip()
+                if tok:
+                    return tok
+        except Exception:
+            pass
 
     return None
 
@@ -206,7 +208,7 @@ def load_github_config():
 
 
 def sync_remote_files_from_github():
-    """Pulls latest upstoxtoken.txt, watchlist.txt, and self-updates upstox_tablet_scanner.py from GitHub over HTTPS (443)."""
+    """Pulls latest watchlist.txt and self-updates upstox_tablet_scanner.py from GitHub over HTTPS (443)."""
     gh_cfg = load_github_config()
     if not gh_cfg or not gh_cfg.get("token"):
         return
@@ -217,8 +219,8 @@ def sync_remote_files_from_github():
         repo = gh_cfg.get("repo", "Jarvis").strip()
         branch = gh_cfg.get("branch", "main").strip()
 
-        # 1. Sync token and watchlist data
-        for filename in ["upstoxtoken.txt", "watchlist.txt"]:
+        # 1. Sync watchlist data from GitHub
+        for filename in ["watchlist.txt"]:
             url = f"https://api.github.com/repos/{owner}/{repo}/contents/{filename}?ref={branch}"
             req = urllib.request.Request(url, headers={
                 "Authorization": f"Bearer {token}",
