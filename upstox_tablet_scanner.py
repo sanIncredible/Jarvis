@@ -1496,10 +1496,10 @@ def generate_html_dashboard(results, now_str, port):
         z-index: 99999;
         width: 580px;
         max-width: 95vw;
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
+        background: #181b24;
+        border: 1px solid #2962ff;
         border-radius: 8px;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
         overflow: hidden;
         flex-direction: column;
         pointer-events: auto;
@@ -1508,19 +1508,19 @@ def generate_html_dashboard(results, now_str, port):
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: #f8fafc;
+        background: #1e222d;
         padding: 8px 12px;
         font-weight: bold;
         font-size: 13px;
-        color: #0f172a;
-        border-bottom: 1px solid #e2e8f0;
+        color: #d1d4dc;
+        border-bottom: 1px solid #2a2e39;
         flex-wrap: wrap;
         gap: 6px;
     }}
     .tf-selector {{
         display: inline-flex;
-        background: #e2e8f0;
-        border: 1px solid #cbd5e1;
+        background: #181b24;
+        border: 1px solid #363a45;
         border-radius: 4px;
         overflow: hidden;
         margin-left: 6px;
@@ -1528,7 +1528,7 @@ def generate_html_dashboard(results, now_str, port):
     .tf-btn {{
         background: transparent;
         border: none;
-        color: #64748b;
+        color: #787b86;
         padding: 2px 9px;
         font-size: 11px;
         font-weight: bold;
@@ -1536,7 +1536,7 @@ def generate_html_dashboard(results, now_str, port):
         transition: all 0.15s;
     }}
     .tf-btn:hover {{
-        color: #0f172a;
+        color: #fff;
     }}
     .tf-btn.active {{
         background: #2962ff;
@@ -1545,13 +1545,13 @@ def generate_html_dashboard(results, now_str, port):
     .popup-close {{
         background: transparent;
         border: none;
-        color: #64748b;
+        color: #787b86;
         font-size: 16px;
         cursor: pointer;
         padding: 2px 6px;
         line-height: 1;
     }}
-    .popup-close:hover {{ color: #0f172a; }}
+    .popup-close:hover {{ color: #fff; }}
     .popup-btn-app {{
         display: inline-flex;
         align-items: center;
@@ -1564,23 +1564,23 @@ def generate_html_dashboard(results, now_str, port):
         padding: 4px 10px;
         border-radius: 4px;
         border: 1px solid #2962ff;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }}
     .popup-btn-app:hover {{ background: #1e4bd8; }}
     .popup-legend {{
         padding: 6px 12px;
-        background: #f1f5f9;
+        background: #141721;
         font-size: 11px;
         font-family: monospace;
-        color: #334155;
-        border-bottom: 1px solid #e2e8f0;
+        color: #8b949e;
+        border-bottom: 1px solid #232733;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }}
     .popup-canvas-wrap {{
         position: relative;
-        background: #ffffff;
+        background: #131722;
         width: 100%;
         height: 330px;
     }}
@@ -1589,7 +1589,6 @@ def generate_html_dashboard(results, now_str, port):
         width: 100%;
         height: 100%;
         cursor: crosshair;
-        background: #ffffff;
     }}
 </style>
 </head>
@@ -1748,20 +1747,20 @@ def generate_html_dashboard(results, now_str, port):
         const W = width;
         const H = height;
 
-        ctx.fillStyle = "#ffffff";
+        ctx.fillStyle = "#131722";
         ctx.fillRect(0, 0, W, H);
 
         const isDaily = (currentTimeframe === 'D');
         const candles = isDaily ? ((data && data.candles_d) ? data.candles_d : []) : ((data && (data.candles_3m || data.candles)) ? (data.candles_3m || data.candles) : []);
 
         if (!candles || candles.length === 0) {{
-            ctx.fillStyle = "#64748b";
+            ctx.fillStyle = "#787b86";
             ctx.font = "13px sans-serif";
             ctx.textAlign = "center";
             const emptyMsg = isDaily ? "No Daily candle data available" : "No 3m intraday candle data yet (Session starts 09:15 AM)";
             ctx.fillText(emptyMsg, W / 2, H / 2 - 10);
             if (data && data.ltp) {{
-                ctx.fillStyle = "#2563eb";
+                ctx.fillStyle = "#089981";
                 ctx.font = "bold 14px monospace";
                 ctx.fillText("LTP: ₹" + Number(data.ltp).toFixed(2), W / 2, H / 2 + 15);
             }}
@@ -1821,10 +1820,10 @@ def generate_html_dashboard(results, now_str, port):
         }}
 
         // Grid lines
-        ctx.strokeStyle = "#f1f5f9";
+        ctx.strokeStyle = "#1e222d";
         ctx.lineWidth = 1;
         ctx.setLineDash([]);
-        ctx.fillStyle = "#64748b";
+        ctx.fillStyle = "#787b86";
         ctx.font = "10px monospace";
         ctx.textAlign = "left";
 
@@ -1850,7 +1849,7 @@ def generate_html_dashboard(results, now_str, port):
             ctx.lineTo(W - paddingRight, y);
             ctx.stroke();
 
-            ctx.fillStyle = "#ffffff";
+            ctx.fillStyle = "rgba(19, 23, 34, 0.85)";
             const tagStr = label + " " + val.toFixed(1);
             ctx.font = "bold 9px monospace";
             const tw = ctx.measureText(tagStr).width;
@@ -1867,20 +1866,20 @@ def generate_html_dashboard(results, now_str, port):
 
         // 3m Mode Overlays: Dynamic ORB High & Low
         if (!isDaily) {{
-            if (data.orb_high) drawLevel(data.orb_high, "#0284c7", "ORB-H", [4, 3]);
-            if (data.orb_low) drawLevel(data.orb_low, "#ea580c", "ORB-L", [4, 3]);
+            if (data.orb_high) drawLevel(data.orb_high, "#00bcd4", "ORB-H", [4, 3]);
+            if (data.orb_low) drawLevel(data.orb_low, "#ff9800", "ORB-L", [4, 3]);
         }}
 
         // Daily Mode Overlay: 50-Day SMA
         if (isDaily && data.sma50) {{
-            drawLevel(data.sma50, "#8b5cf6", "50 SMA", [5, 4]);
+            drawLevel(data.sma50, "#ab47bc", "50 SMA", [5, 4]);
         }}
 
-        // PDH Line (AMBER GOLD - CLEARLY MARKED)
+        // PDH Line (VIBRANT GOLD - CLEARLY MARKED)
         if (data.pdh && data.pdh >= minPrice && data.pdh <= maxPrice) {{
             const yPdh = getY(data.pdh);
             ctx.save();
-            ctx.strokeStyle = "#d97706";
+            ctx.strokeStyle = "#ffd700";
             ctx.lineWidth = 1.8;
             ctx.setLineDash([5, 3]);
             ctx.beginPath();
@@ -1892,20 +1891,20 @@ def generate_html_dashboard(results, now_str, port):
             const pdhTag = "📌 PDH: ₹" + Number(data.pdh).toFixed(1) + (data.pdh_broken ? " (BREACHED)" : "");
             ctx.font = "bold 10px monospace";
             const tw = ctx.measureText(pdhTag).width;
-            ctx.fillStyle = "#ffffff";
+            ctx.fillStyle = "rgba(19, 23, 34, 0.9)";
             ctx.fillRect(paddingLeft + 4, yPdh - 13, tw + 8, 14);
-            ctx.strokeStyle = "#d97706";
+            ctx.strokeStyle = "#ffd700";
             ctx.lineWidth = 1;
             ctx.setLineDash([]);
             ctx.strokeRect(paddingLeft + 4, yPdh - 13, tw + 8, 14);
 
-            ctx.fillStyle = "#d97706";
+            ctx.fillStyle = "#ffd700";
             ctx.fillText(pdhTag, paddingLeft + 8, yPdh - 3);
 
             // Right Axis Tag
-            ctx.fillStyle = "#d97706";
+            ctx.fillStyle = "#ffd700";
             ctx.fillRect(W - paddingRight + 2, yPdh - 7, paddingRight - 4, 15);
-            ctx.fillStyle = "#ffffff";
+            ctx.fillStyle = "#000000";
             ctx.font = "bold 9px monospace";
             ctx.fillText("PDH " + Number(data.pdh).toFixed(0), W - paddingRight + 4, yPdh + 4);
             ctx.restore();
@@ -1931,7 +1930,7 @@ def generate_html_dashboard(results, now_str, port):
             ctx.restore();
         }}
 
-        // Candlesticks (White Hollow Up, Solid Black Down)
+        // Candlesticks (Default Green / Red)
         const n = candles.length;
         const maxBarSpacing = isDaily ? 20 : 15;
         const barSpacing = Math.min(plotW / Math.max(n, 1), maxBarSpacing);
@@ -1948,6 +1947,7 @@ def generate_html_dashboard(results, now_str, port):
             const lY = getY(c.l);
             const cY = getY(c.c);
             const isBull = c.c >= c.o;
+            const col = isBull ? "#089981" : "#f23645";
 
             if (hoverX !== undefined && Math.abs(hoverX - cx) <= barSpacing / 2) {{
                 hoveredCandle = Object.assign({{}}, c, {{ cx: cx, oY: oY, cY: cY, hY: hY, lY: lY, isBull: isBull }});
@@ -1955,41 +1955,22 @@ def generate_html_dashboard(results, now_str, port):
 
             const vH = maxVol > 0 ? (c.v / maxVol) * volH : 0;
             const vY = (H - paddingBottom) - vH;
-            if (isBull) {{
-                ctx.fillStyle = "#ffffff";
-                ctx.fillRect(cx - barWidth / 2, vY, barWidth, vH);
-                ctx.strokeStyle = "#cbd5e1";
-                ctx.lineWidth = 0.8;
-                ctx.strokeRect(cx - barWidth / 2, vY, barWidth, vH);
-            }} else {{
-                ctx.fillStyle = "#475569";
-                ctx.fillRect(cx - barWidth / 2, vY, barWidth, vH);
-            }}
+            ctx.fillStyle = isBull ? "rgba(8, 153, 129, 0.25)" : "rgba(242, 54, 69, 0.25)";
+            ctx.fillRect(cx - barWidth / 2, vY, barWidth, vH);
 
-            // Wick (Dark line)
-            ctx.strokeStyle = "#18181b";
+            // Wick
+            ctx.strokeStyle = col;
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(cx, hY);
             ctx.lineTo(cx, lY);
             ctx.stroke();
 
-            // Body: Hollow White for Bullish, Solid Black for Bearish
+            // Body (Colored Fill)
+            ctx.fillStyle = col;
             const bodyTop = Math.min(oY, cY);
             const bodyHeight = Math.max(Math.abs(cY - oY), 1.5);
-            if (isBull) {{
-                ctx.fillStyle = "#ffffff";
-                ctx.fillRect(cx - barWidth / 2, bodyTop, barWidth, bodyHeight);
-                ctx.strokeStyle = "#18181b";
-                ctx.lineWidth = 1.2;
-                ctx.strokeRect(cx - barWidth / 2, bodyTop, barWidth, bodyHeight);
-            }} else {{
-                ctx.fillStyle = "#18181b";
-                ctx.fillRect(cx - barWidth / 2, bodyTop, barWidth, bodyHeight);
-                ctx.strokeStyle = "#18181b";
-                ctx.lineWidth = 1.2;
-                ctx.strokeRect(cx - barWidth / 2, bodyTop, barWidth, bodyHeight);
-            }}
+            ctx.fillRect(cx - barWidth / 2, bodyTop, barWidth, bodyHeight);
 
             let labelText = c.t || '';
             if (labelText.includes('T')) {{
@@ -2003,7 +1984,7 @@ def generate_html_dashboard(results, now_str, port):
             const hasEnoughSpace = (cx - lastLabelX >= 48);
 
             if ((isFirst || hasEnoughSpace) && (W - paddingRight - cx >= 15 || isLast)) {{
-                ctx.fillStyle = "#64748b";
+                ctx.fillStyle = "#787b86";
                 ctx.font = "9px monospace";
                 ctx.textAlign = "center";
                 ctx.fillText(labelText, cx, H - 7);
@@ -2011,13 +1992,13 @@ def generate_html_dashboard(results, now_str, port):
             }}
         }}
 
-        // Tooltip / Crosshair (Vertical dashed line)
+        // Tooltip / Crosshair
         const legendEl = document.getElementById('popup-legend');
         const tfLabel = isDaily ? "Date" : "Time";
         if (hoveredCandle) {{
             ctx.save();
-            ctx.strokeStyle = "#64748b";
-            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = "rgba(209, 212, 220, 0.4)";
+            ctx.setLineDash([3, 3]);
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(hoveredCandle.cx, paddingTop);
@@ -2026,12 +2007,12 @@ def generate_html_dashboard(results, now_str, port):
             ctx.restore();
 
             if (legendEl) {{
-                const cColor = hoveredCandle.isBull ? '#0f172a' : '#475569';
+                const cColor = hoveredCandle.isBull ? '#089981' : '#f23645';
                 legendEl.innerHTML = `<b>${{tfLabel}}: ${{hoveredCandle.t}}</b> | O: ₹${{hoveredCandle.o.toFixed(2)}} | H: ₹${{hoveredCandle.h.toFixed(2)}} | L: ₹${{hoveredCandle.l.toFixed(2)}} | <span style="color:${{cColor}};font-weight:bold;">C: ₹${{hoveredCandle.c.toFixed(2)}}</span> | Vol: ${{hoveredCandle.v.toLocaleString()}}`;
             }}
         }} else if (legendEl && candles.length) {{
             const last = candles[candles.length - 1];
-            const cColor = last.c >= last.o ? '#0f172a' : '#475569';
+            const cColor = last.c >= last.o ? '#089981' : '#f23645';
             legendEl.innerHTML = `Latest [${{tfLabel}}: <b>${{last.t}}</b>] | O: ₹${{last.o.toFixed(2)}} | H: ₹${{last.h.toFixed(2)}} | L: ₹${{last.l.toFixed(2)}} | <span style="color:${{cColor}};font-weight:bold;">C: ₹${{last.c.toFixed(2)}}</span> | Vol: ${{last.v.toLocaleString()}}`;
         }}
     }}
