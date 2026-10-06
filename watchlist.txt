@@ -1,1 +1,1 @@
-# Upstox 3m ORB Scanner Watchlist# Add or remove NSE stock tickers below (one per line, or space/comma separated)EBGNGPOWERMECHOALEIMCOELECOBLACKBUCKCASTROLINDTHELEELAACENAZARAkopranCYIENTABDLFERMENTATARSONSWHEELSNIFTYAEGISLOG
+# Upstox 3m ORB Scanner Watchlist# Add or remove NSE stock tickers below (one per line, or space/comma separated)RPTECHKISSHTTDPOWERSYSCASTROLINDTHELEELAACENAZARAFERMENTATARSONSWHEELSNIFTYAEGISLOG
