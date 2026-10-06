@@ -453,17 +453,17 @@
   .val-pos { color: #ffffff; font-weight: 800; }
   .val-neg { color: #71717a; font-weight: 700; }
 
-  /* Interactive Chart Modal / Popup */
+  /* Interactive Chart Modal / Popup — White Paper Theme (as shown in image) */
   .chart-popup {
     display: none;
     position: fixed;
     z-index: 9999;
     width: 680px;
     max-width: 95vw;
-    background: #000000;
-    border: 1px solid #3f3f46;
-    border-radius: 10px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.95);
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     overflow: hidden;
     flex-direction: column;
   }
@@ -471,9 +471,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #09090b;
+    background: #f8fafc;
     padding: 10px 14px;
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid #e2e8f0;
     gap: 8px;
     flex-wrap: wrap;
   }
@@ -485,18 +485,18 @@
   .popup-title {
     font-size: 14px;
     font-weight: 800;
-    color: #ffffff;
+    color: #0f172a;
     display: flex;
     align-items: center;
     gap: 6px;
   }
   .popup-hud {
-    background: #000000;
+    background: #f1f5f9;
     padding: 6px 14px;
     font-size: 11px;
     font-family: var(--font-mono);
-    color: var(--text-muted);
-    border-bottom: 1px solid #18181b;
+    color: #334155;
+    border-bottom: 1px solid #e2e8f0;
     white-space: nowrap;
     overflow-x: auto;
   }
@@ -504,29 +504,30 @@
     position: relative;
     width: 100%;
     height: 360px;
-    background: #000000;
+    background: #ffffff;
   }
   #popup-canvas {
     display: block;
     width: 100%;
     height: 100%;
     cursor: crosshair;
+    background: #ffffff;
   }
   .popup-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #09090b;
+    background: #f8fafc;
     padding: 8px 14px;
-    border-top: 1px solid var(--border-subtle);
+    border-top: 1px solid #e2e8f0;
     font-size: 11px;
-    color: var(--text-muted);
+    color: #64748b;
   }
 
   /* Execution Guardrail & Overextension Badges */
   .popup-guardrail {
-    background: #09090b;
-    border-top: 1px solid var(--border-subtle);
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
     padding: 9px 14px;
     font-size: 11.5px;
     display: flex;
@@ -534,6 +535,7 @@
     justify-content: space-between;
     gap: 12px;
     font-family: var(--font-mono);
+    color: #334155;
   }
   .guardrail-left {
     display: flex;
@@ -1798,8 +1800,8 @@
     const W = width;
     const H = height;
 
-    // Dark Background (True Pitch Black)
-    ctx.fillStyle = '#000000';
+    // White Paper Background (as shown in image)
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, W, H);
 
     const isDaily = (currentTimeframe === 'D');
@@ -1808,7 +1810,7 @@
     if (popupBarCount) popupBarCount.innerText = `${candles.length} Candles`;
 
     if (!candles || !candles.length) {
-      ctx.fillStyle = '#71717a';
+      ctx.fillStyle = '#64748b';
       ctx.font = '13px var(--font-sans)';
       ctx.textAlign = 'center';
       ctx.fillText(isDaily ? 'No Daily candle history available' : 'Awaiting 09:15 AM Market Opening Candle', W / 2, H / 2);
@@ -1888,10 +1890,10 @@
     }
 
     // Grid Lines & Price Axis
-    ctx.strokeStyle = '#18181b';
+    ctx.strokeStyle = '#f1f5f9';
     ctx.lineWidth = 1;
     ctx.setLineDash([]);
-    ctx.fillStyle = '#71717a';
+    ctx.fillStyle = '#64748b';
     ctx.font = '10px var(--font-mono)';
     ctx.textAlign = 'left';
 
@@ -1905,7 +1907,7 @@
       ctx.fillText(p.toFixed(1), W - padRight + 6, y + 3);
     }
 
-    // Overlay Drawer Helper (Monochrome Levels)
+    // Overlay Drawer Helper
     function drawLevel(val, color, label, dash) {
       if (!val || val < minPrice || val > maxPrice) return;
       const y = getY(val);
@@ -1920,22 +1922,22 @@
 
       ctx.fillStyle = color;
       ctx.fillRect(W - padRight + 2, y - 7, padRight - 4, 15);
-      ctx.fillStyle = (color === '#52525b') ? '#ffffff' : '#000000';
+      ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 9px var(--font-mono)';
       ctx.fillText(label, W - padRight + 4, y + 4);
       ctx.restore();
     }
 
     if (!isDaily) {
-      if (data.orb_high) drawLevel(data.orb_high, '#e4e4e7', isStealthMode ? 'UPPER' : 'ORB-H');
-      if (data.orb_low) drawLevel(data.orb_low, '#52525b', isStealthMode ? 'LOWER' : 'ORB-L');
+      if (data.orb_high) drawLevel(data.orb_high, '#0284c7', isStealthMode ? 'UPPER' : 'ORB-H');
+      if (data.orb_low) drawLevel(data.orb_low, '#ea580c', isStealthMode ? 'LOWER' : 'ORB-L');
     }
 
     // Previous Day High (PDH) Line
     if (data.pdh && data.pdh >= minPrice && data.pdh <= maxPrice) {
       const yPdh = getY(data.pdh);
       ctx.save();
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = '#d97706';
       ctx.lineWidth = 1.8;
       ctx.setLineDash([5, 3]);
       ctx.beginPath();
@@ -1946,18 +1948,18 @@
       const pdhTag = isStealthMode ? ('📌 PEAK ' + data.pdh.toFixed(1)) : ('📌 PDH ' + data.pdh.toFixed(1));
       ctx.font = 'bold 9.5px var(--font-mono)';
       const tw = ctx.measureText(pdhTag).width;
-      ctx.fillStyle = '#000000';
+      ctx.fillStyle = '#ffffff';
       ctx.fillRect(padLeft + 6, yPdh - 12, tw + 8, 14);
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = '#d97706';
       ctx.lineWidth = 1;
       ctx.setLineDash([]);
       ctx.strokeRect(padLeft + 6, yPdh - 12, tw + 8, 14);
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#d97706';
       ctx.fillText(pdhTag, padLeft + 10, yPdh - 2);
 
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#d97706';
       ctx.fillRect(W - padRight + 2, yPdh - 7, padRight - 4, 15);
-      ctx.fillStyle = '#000000';
+      ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 9px var(--font-mono)';
       ctx.fillText(isStealthMode ? 'PEAK' : 'PDH', W - padRight + 4, yPdh + 4);
       ctx.restore();
@@ -1966,7 +1968,7 @@
     // Dynamic Rolling Intraday 10 EMA Curve & Overextension Band (+1.1%)
     if (!isDaily && emaSeries.length >= 2) {
       ctx.save();
-      ctx.strokeStyle = '#e4e4e7';
+      ctx.strokeStyle = '#2563eb';
       ctx.lineWidth = 1.6;
       ctx.setLineDash([3, 2]);
       ctx.beginPath();
@@ -1982,12 +1984,8 @@
       const lastEma = emaSeries[emaSeries.length - 1];
       if (lastEma >= minPrice && lastEma <= maxPrice) {
         const yEma = getY(lastEma);
-        ctx.fillStyle = '#18181b';
+        ctx.fillStyle = '#2563eb';
         ctx.fillRect(W - padRight + 2, yEma - 7, padRight - 4, 15);
-        ctx.strokeStyle = '#e4e4e7';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([]);
-        ctx.strokeRect(W - padRight + 2, yEma - 7, padRight - 4, 15);
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 8.5px var(--font-mono)';
         ctx.fillText(isStealthMode ? '10-MA' : '10 EMA', W - padRight + 4, yEma + 4);
@@ -1996,18 +1994,18 @@
       // Upper Volatility Extension Threshold (+1.1% from 10 EMA)
       const extVal = lastEma * 1.011;
       if (extVal >= minPrice && extVal <= maxPrice) {
-        drawLevel(extVal, '#52525b', isStealthMode ? 'MAX BUFFER' : '+1.1% EXT', [2, 4]);
+        drawLevel(extVal, '#dc2626', isStealthMode ? 'MAX BUFFER' : '+1.1% EXT', [2, 4]);
       }
       ctx.restore();
     }
 
-    // Classic Candlestick Drawing: White = Bullish, Black = Bearish
+    // Classic Candlestick Drawing: White Hollow = Bullish, Black Solid = Bearish (as in image)
     const stdBarWidth = Math.max(Math.min(barSpacing * 0.72, 10), 2);
 
     // Volume Sub-Pane Separator Line & Label
     const volSeparatorY = H - padBottom - volH;
     ctx.save();
-    ctx.strokeStyle = '#18181b';
+    ctx.strokeStyle = '#e2e8f0';
     ctx.lineWidth = 1;
     ctx.setLineDash([2, 3]);
     ctx.beginPath();
@@ -2015,7 +2013,7 @@
     ctx.lineTo(W - padRight, volSeparatorY);
     ctx.stroke();
 
-    ctx.fillStyle = '#71717a';
+    ctx.fillStyle = '#94a3b8';
     ctx.font = 'bold 8.5px var(--font-mono)';
     ctx.textAlign = 'left';
     ctx.fillText(isStealthMode ? 'TRACE VOL' : 'VOL', padLeft + 4, volSeparatorY - 3);
@@ -2048,33 +2046,41 @@
       // Volume Bar in bottom sub-pane
       const vH = maxVol > 0 ? (c.v / maxVol) * volH : 0;
       const vY = (H - padBottom) - vH;
-      ctx.fillStyle = isBull ? 'rgba(255, 255, 255, 0.4)' : 'rgba(82, 82, 91, 0.35)';
-      ctx.fillRect(cx - bWidth / 2, vY, bWidth, vH);
-      if (!isBull) {
-        ctx.strokeStyle = '#52525b';
+      if (isBull) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(cx - bWidth / 2, vY, bWidth, vH);
+        ctx.strokeStyle = '#cbd5e1';
         ctx.lineWidth = 0.8;
         ctx.strokeRect(cx - bWidth / 2, vY, bWidth, vH);
+      } else {
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(cx - bWidth / 2, vY, bWidth, vH);
       }
 
-      // Wick: Centered at cx
-      ctx.strokeStyle = isBull ? '#ffffff' : '#a1a1aa';
+      // Wick: Centered at cx (Dark black line as in image)
+      ctx.strokeStyle = '#18181b';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(cx, hY);
       ctx.lineTo(cx, lY);
       ctx.stroke();
 
-      // Body: Width based on Volume Candles setting
+      // Body: Hollow White for Bullish, Solid Black for Bearish (as in image)
       const bTop = Math.min(oY, cY);
       const bH = Math.max(Math.abs(cY - oY), 1.5);
       if (isBull) {
+        // BULLISH: Hollow white body with dark border
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(cx - bWidth / 2, bTop, bWidth, bH);
+        ctx.strokeStyle = '#18181b';
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(cx - bWidth / 2, bTop, bWidth, bH);
       } else {
-        ctx.fillStyle = '#000000';
+        // BEARISH: Solid dark black filled body
+        ctx.fillStyle = '#18181b';
         ctx.fillRect(cx - bWidth / 2, bTop, bWidth, bH);
-        ctx.strokeStyle = '#a1a1aa';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#18181b';
+        ctx.lineWidth = 1.2;
         ctx.strokeRect(cx - bWidth / 2, bTop, bWidth, bH);
       }
 
@@ -2091,7 +2097,7 @@
       const hasEnoughSpace = (cx - lastLabelX >= 48);
 
       if ((isFirst || hasEnoughSpace) && (W - padRight - cx >= 15 || isLast)) {
-        ctx.fillStyle = '#71717a';
+        ctx.fillStyle = '#64748b';
         ctx.font = '9px var(--font-mono)';
         ctx.textAlign = 'center';
         ctx.fillText(labelText, cx, H - 8);
@@ -2099,11 +2105,11 @@
       }
     });
 
-    // Crosshair & Interactive HUD with 10 EMA and Stretch metrics
+    // Crosshair (Vertical dashed line as in image)
     if (hoveredCandle) {
       ctx.save();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = '#64748b';
+      ctx.setLineDash([4, 4]);
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(hoveredCandle.cx, padTop);
@@ -2111,7 +2117,7 @@
       ctx.stroke();
       ctx.restore();
 
-      const cColor = hoveredCandle.isBull ? '#ffffff' : '#71717a';
+      const cColor = hoveredCandle.isBull ? '#0f172a' : '#475569';
       const vVal = hoveredCandle.v || 0;
       const volRatioStr = avgVol > 0 ? (' (' + (vVal / avgVol).toFixed(1) + 'x avg)') : '';
 
