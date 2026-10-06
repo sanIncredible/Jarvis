@@ -844,8 +844,8 @@
       const isMarketHours = (day >= 1 && day <= 5) && (nowSec >= (9 * 3600 + 15 * 60)) && (nowSec <= (15 * 3600 + 35 * 60));
       
       const ageMinutes = Math.floor(diffSec / 60);
-      // Data is stale if market hours and older than 3.5 min, OR anytime older than 5 min
-      const isStale = isMarketHours ? (diffSec > 210) : (diffSec > 300);
+      // Data is stale only if market hours and older than 3.5 min; outside market hours it is an EOD snapshot
+      const isStale = isMarketHours ? (diffSec > 210) : false;
       return { isStale, ageMinutes, diffSec };
     } catch (e) {
       return { isStale: false, ageMinutes: 0, diffSec: 0 };
