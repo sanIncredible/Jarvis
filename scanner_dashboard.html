@@ -3,7 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>JARVIS PRO — Institutional 3m ORB & Market Scanner</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title id="page-title">Cluster Observability &amp; Ingress Telemetry</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'><rect width='24' height='24' rx='4' fill='%23000000'/><path d='M4 6h16M4 12h16M4 18h16' stroke='%23ffffff' stroke-width='2'/></svg>">
 <style>
   :root {
     --bg-main: #0a0d14;
@@ -50,7 +54,7 @@
     margin-bottom: 12px;
     flex-wrap: wrap;
     gap: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.8);
   }
 
   .brand-group {
@@ -64,18 +68,19 @@
     justify-content: center;
     width: 34px;
     height: 34px;
-    background: linear-gradient(135deg, #1e40af, #2563eb);
+    background: #000000;
+    border: 1.5px solid #ffffff;
     border-radius: 8px;
     font-weight: 900;
     font-size: 16px;
-    color: #fff;
-    box-shadow: 0 0 12px rgba(37, 99, 235, 0.5);
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
   }
   .brand-title {
     font-size: 16px;
     font-weight: 800;
     letter-spacing: 0.5px;
-    color: #fff;
+    color: #ffffff;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -84,9 +89,9 @@
     font-size: 10px;
     padding: 2px 6px;
     border-radius: 4px;
-    background: rgba(41, 98, 255, 0.2);
-    color: #60a5fa;
-    border: 1px solid rgba(96, 165, 250, 0.3);
+    background: #18181b;
+    color: #ffffff;
+    border: 1px solid #3f3f46;
     font-weight: 700;
     letter-spacing: 0.5px;
   }
@@ -106,7 +111,7 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    background: #0d131f;
+    background: #111113;
     border: 1px solid var(--border-subtle);
     padding: 5px 12px;
     border-radius: 20px;
@@ -116,15 +121,15 @@
   .pulse-dot {
     width: 8px;
     height: 8px;
-    background-color: var(--accent-green);
+    background-color: #ffffff;
     border-radius: 50%;
-    box-shadow: 0 0 8px var(--accent-green);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
     animation: pulse 2s infinite;
   }
   @keyframes pulse {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 192, 135, 0.7); }
-    70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(0, 192, 135, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 192, 135, 0); }
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
   }
 
   .clock-pill {
@@ -155,12 +160,12 @@
   }
   .pill-btn:hover { color: #fff; }
   .pill-btn.active {
-    background: var(--accent-blue);
-    color: #fff;
+    background: #ffffff;
+    color: #000000;
   }
 
   .btn-action {
-    background: var(--border-subtle);
+    background: #111114;
     color: var(--text-main);
     border: 1px solid var(--border-bright);
     border-radius: 6px;
@@ -174,9 +179,9 @@
     transition: all 0.15s;
   }
   .btn-action:hover {
-    background: var(--accent-blue);
-    border-color: var(--accent-blue);
-    color: #fff;
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #000000;
   }
   .btn-action:active { transform: scale(0.97); }
 
@@ -209,7 +214,7 @@
     font-size: 18px;
     font-weight: 800;
     font-family: var(--font-mono);
-    color: #fff;
+    color: #ffffff;
     display: flex;
     align-items: baseline;
     gap: 6px;
@@ -219,18 +224,19 @@
     color: var(--text-muted);
   }
 
-  /* Breadth Bar */
+  /* Breadth Bar - White Bullish, Black/Dark Bearish */
   .ratio-bar {
     width: 100%;
-    height: 5px;
-    background: #232d42;
+    height: 6px;
+    background: #18181b;
     border-radius: 3px;
     overflow: hidden;
     display: flex;
     margin-top: 4px;
+    border: 1px solid #27272a;
   }
-  .ratio-bull { background: var(--accent-green); height: 100%; }
-  .ratio-bear { background: var(--accent-red); height: 100%; }
+  .ratio-bull { background: #ffffff; height: 100%; }
+  .ratio-bear { background: #27272a; height: 100%; }
 
   /* Filter & Search Bar */
   .toolbar {
@@ -252,7 +258,7 @@
     flex-wrap: wrap;
   }
   .chip {
-    background: #141a26;
+    background: #0e0e11;
     border: 1px solid var(--border-subtle);
     color: var(--text-muted);
     padding: 4px 10px;
@@ -265,9 +271,9 @@
   }
   .chip:hover { color: #fff; border-color: var(--border-bright); }
   .chip.active {
-    background: rgba(41, 98, 255, 0.2);
-    border-color: var(--accent-blue);
-    color: #93c5fd;
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #000000;
   }
 
   .search-wrap {
@@ -288,8 +294,8 @@
   }
   .search-input:focus {
     width: 220px;
-    border-color: var(--accent-blue);
-    box-shadow: 0 0 10px rgba(41, 98, 255, 0.3);
+    border-color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
   }
   .search-shortcut {
     position: absolute;
@@ -308,7 +314,7 @@
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
     overflow-x: auto;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.8);
   }
   table {
     width: 100%;
@@ -317,7 +323,7 @@
     font-size: 13px;
   }
   thead {
-    background: #0e121a;
+    background: #09090b;
     position: sticky;
     top: 0;
     z-index: 10;
@@ -335,11 +341,11 @@
     transition: color 0.15s;
   }
   th:hover { color: #fff; }
-  th.sort-active { color: #60a5fa; }
+  th.sort-active { color: #ffffff; text-decoration: underline; }
   th .sort-icon { font-size: 9px; margin-left: 4px; }
 
   tbody tr {
-    border-bottom: 1px solid #161c29;
+    border-bottom: 1px solid #161619;
     transition: background 0.1s;
   }
   tbody tr:hover {
@@ -365,9 +371,9 @@
     align-items: center;
     gap: 5px;
     padding: 4px 9px;
-    background: #172136;
-    color: #93c5fd;
-    border: 1px solid #2563eb;
+    background: #111114;
+    color: #ffffff;
+    border: 1px solid #27272a;
     border-radius: 5px;
     font-size: 12px;
     font-weight: 700;
@@ -375,12 +381,13 @@
     transition: all 0.15s;
   }
   .btn-tv-app:hover {
-    background: var(--accent-blue);
-    color: #fff;
-    box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
   }
   .btn-preview-eye {
-    background: #1a2233;
+    background: #111114;
     color: var(--text-muted);
     border: 1px solid var(--border-subtle);
     border-radius: 4px;
@@ -390,16 +397,16 @@
     transition: all 0.15s;
   }
   .btn-preview-eye:hover {
-    background: var(--accent-blue);
-    color: #fff;
-    border-color: var(--accent-blue);
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
   }
 
-  /* Badges & Accents */
+  /* Badges & Accents - Monochrome Black & White */
   .star-badge {
-    color: var(--accent-gold);
+    color: #ffffff;
     font-size: 15px;
-    text-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
   }
   .pill-badge {
     display: inline-flex;
@@ -410,43 +417,43 @@
     font-size: 11px;
     font-family: var(--font-mono);
   }
-  .badge-orb-h { background: var(--accent-green-bg); color: var(--accent-green); border: 1px solid var(--accent-green); }
-  .badge-orb-l { background: var(--accent-red-bg); color: var(--accent-red); border: 1px solid var(--accent-red); }
-  .badge-orb-m { background: var(--accent-gold-bg); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
-  .badge-orb-rev { background: rgba(192, 132, 252, 0.15); color: #c084fc; border: 1px solid #a855f7; box-shadow: 0 0 8px rgba(168, 85, 247, 0.35); font-weight: 800; }
+  /* Bullish = White, Bearish = Black */
+  .badge-orb-h { background: #ffffff; color: #000000; border: 1px solid #ffffff; font-weight: 800; }
+  .badge-orb-l { background: #000000; color: #71717a; border: 1px solid #3f3f46; font-weight: 800; }
+  .badge-orb-m { background: #18181b; color: #a1a1aa; border: 1px solid #27272a; }
+  .badge-orb-rev { background: #27272a; color: #ffffff; border: 1px solid #ffffff; box-shadow: 0 0 8px rgba(255, 255, 255, 0.35); font-weight: 800; }
 
   .badge-reversal {
-    background: rgba(168, 85, 247, 0.2);
-    color: #e9d5ff;
-    border: 1px solid #a855f7;
+    background: #18181b;
+    color: #ffffff;
+    border: 1px solid #ffffff;
     font-weight: 800;
-    box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
   }
 
   .badge-bull-break {
-    background: rgba(0, 192, 135, 0.2);
-    color: #34d399;
-    border: 1px solid #059669;
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #ffffff;
     font-weight: 800;
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
   }
   .badge-bear-break {
-    background: rgba(244, 63, 94, 0.2);
-    color: #fb7185;
-    border: 1px solid #e11d48;
-    font-weight: 800;
-    box-shadow: 0 0 10px rgba(244, 63, 94, 0.3);
+    background: #000000;
+    color: #71717a;
+    border: 1px solid #3f3f46;
+    font-weight: 700;
   }
   .badge-range {
-    background: #182030;
+    background: #111113;
     color: var(--text-muted);
-    border: 1px solid #232e44;
+    border: 1px solid #222226;
   }
 
-  .val-pos { color: var(--accent-green); font-weight: 700; }
-  .val-neg { color: var(--accent-red); font-weight: 700; }
+  .val-pos { color: #ffffff; font-weight: 800; }
+  .val-neg { color: #71717a; font-weight: 700; }
 
-  /* Interactive Chart Modal / Popup */
+  /* Interactive Chart Modal / Popup — White Paper Theme (as shown in image) */
   .chart-popup {
     display: none;
     position: fixed;
@@ -455,8 +462,8 @@
     max-width: 95vw;
     background: #0d111a;
     border: 1px solid #2563eb;
-    border-radius: 10px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.85);
     overflow: hidden;
     flex-direction: column;
   }
@@ -510,11 +517,79 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #131926;
+    background: #111622;
     padding: 8px 14px;
     border-top: 1px solid var(--border-subtle);
     font-size: 11px;
     color: var(--text-muted);
+  }
+
+  /* Execution Guardrail & Overextension Badges */
+  .popup-guardrail {
+    background: #0d111a;
+    border-top: 1px solid var(--border-subtle);
+    padding: 9px 14px;
+    font-size: 11.5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: var(--font-mono);
+    color: #cbd5e1;
+  }
+  .guardrail-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .guardrail-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-align: right;
+    font-size: 11px;
+    color: #e4e4e7;
+  }
+  .stretch-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 9.5px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    line-height: 1.3;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+  }
+  .stretch-prime {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border: 1px solid #ffffff;
+  }
+  .stretch-normal {
+    background: #18181b;
+    color: #a1a1aa;
+    border: 1px solid #3f3f46;
+  }
+  .stretch-extended {
+    background: #27272a;
+    color: #ffffff;
+    border: 1px dashed #ffffff;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.25);
+    animation: pulse-stretch 2s infinite ease-in-out;
+  }
+  @keyframes pulse-stretch {
+    0%, 100% { border-color: #ffffff; }
+    50% { border-color: #71717a; }
+  }
+  .stretch-sub {
+    background: #18181b;
+    color: #71717a;
+    border: 1px solid #27272a;
   }
 
   .btn-audio {
@@ -542,20 +617,20 @@
   <!-- Top Navigation Bar -->
   <div class="top-bar">
     <div class="brand-group">
-      <div class="brand-logo">J</div>
+      <div class="brand-logo" onclick="toggleStealthMode()" title="Toggle View Mode (Shortcut: Shift + S)" style="cursor:pointer; user-select:none;">CTL</div>
       <div>
         <div class="brand-title">
-          JARVIS PRO
-          <span class="brand-tag">SOTA 3M SCANNER</span>
+          <span id="txt-brand-title">CLUSTER TELEMETRY</span>
+          <span class="brand-tag" id="txt-brand-tag">NODE OBSERVER v3.4</span>
         </div>
-        <div class="brand-sub">Cloud-Native Engine • <span id="source-label">Upstox Pro API v2</span></div>
+        <div class="brand-sub"><span id="brand-sub-txt">Cloud Ingress • Cluster AP-South-1</span> • <span id="source-label">Telemetry Daemon</span></div>
       </div>
     </div>
 
     <div class="nav-controls">
       <div class="live-pill">
         <span id="pulse-indicator" class="pulse-dot"></span>
-        <span id="status-text" style="font-weight:700; color:#fff;">CONNECTING</span>
+        <span id="status-text" style="font-weight:700; color:#fff;">DAEMON: ACTIVE</span>
       </div>
 
       <div class="clock-pill">
@@ -563,7 +638,7 @@
         <span id="updated-at-display">--:--:--</span>
       </div>
 
-      <div class="clock-pill" style="color:#60a5fa;">
+      <div class="clock-pill" style="color:#ffffff;">
         <span>⏱</span>
         <span id="timer-display">01:00</span>
       </div>
@@ -575,12 +650,12 @@
         <button class="pill-btn" onclick="setPollInterval(180)">3m</button>
       </div>
 
-      <button class="btn-action" onclick="fetchData(true)" title="Force Refresh Data (Shortcut: R)">
-        🔄 Refresh
+      <button class="btn-action" onclick="fetchData(true)" title="Force Refresh Metrics (Shortcut: R)">
+        ⟳ Sync
       </button>
 
-      <button id="btn-audio" class="btn-audio" onclick="toggleAudio()" title="Sound alert on Breakout">
-        🔔
+      <button id="btn-mode" class="btn-action" onclick="toggleStealthMode()" title="Toggle View Mode (Shortcut: Shift + S)" style="font-size:11px; padding:5px 9px;">
+        🔒 <span id="mode-text">Stealth</span>
       </button>
     </div>
   </div>
@@ -588,13 +663,13 @@
   <!-- KPI Summary Ribbon -->
   <div class="kpi-row">
     <div class="kpi-card">
-      <div class="kpi-title">Market Breadth <span id="kpi-total-cnt">16 Stocks</span></div>
+      <div class="kpi-title"><span id="txt-kpi-1-title">Cluster Health</span> <span id="kpi-total-cnt">16 Nodes</span></div>
       <div class="kpi-value">
-        <span id="kpi-bull-cnt" style="color:var(--accent-green);">0</span>
-        <span style="font-size:13px; color:var(--text-muted); font-weight:400;">Adv</span>
+        <span id="kpi-bull-cnt" style="color:#ffffff;">0</span>
+        <span style="font-size:13px; color:var(--text-muted); font-weight:400;" id="txt-kpi-1-bull">Nominal</span>
         <span style="color:var(--text-dim);">/</span>
-        <span id="kpi-bear-cnt" style="color:var(--accent-red);">0</span>
-        <span style="font-size:13px; color:var(--text-muted); font-weight:400;">Dec</span>
+        <span id="kpi-bear-cnt" style="color:#71717a;">0</span>
+        <span style="font-size:13px; color:var(--text-muted); font-weight:400;" id="txt-kpi-1-bear">Degraded</span>
       </div>
       <div class="ratio-bar">
         <div id="ratio-bull-bar" class="ratio-bull" style="width:50%;"></div>
@@ -603,21 +678,21 @@
     </div>
 
     <div class="kpi-card">
-      <div class="kpi-title">Top Momentum</div>
+      <div class="kpi-title" id="txt-kpi-2-title">High Load Process</div>
       <div class="kpi-value" id="kpi-top-mover">--</div>
-      <div class="kpi-sub" id="kpi-top-score">Highest Institutional Strength</div>
+      <div class="kpi-sub" id="kpi-top-score">Highest Telemetry Load</div>
     </div>
 
     <div class="kpi-card">
-      <div class="kpi-title">PDH Breaches</div>
-      <div class="kpi-value" id="kpi-pdh-cnt" style="color:var(--accent-gold);">0</div>
-      <div class="kpi-sub">Trading Above Yesterday's High</div>
+      <div class="kpi-title" id="txt-kpi-3-title">Peak Limit Breaches</div>
+      <div class="kpi-value" id="kpi-pdh-cnt" style="color:#ffffff;">0</div>
+      <div class="kpi-sub" id="txt-kpi-3-sub">Exceeded 24h Baseline Envelope</div>
     </div>
 
     <div class="kpi-card">
-      <div class="kpi-title">ORB Action Triggers</div>
-      <div class="kpi-value" id="kpi-orb-cnt" style="color:#38bdf8;">0</div>
-      <div class="kpi-sub">Bull Breakouts & High Formations</div>
+      <div class="kpi-title" id="txt-kpi-4-title">Boundary Ingress Alerts</div>
+      <div class="kpi-value" id="kpi-orb-cnt" style="color:#ffffff;">0</div>
+      <div class="kpi-sub" id="txt-kpi-4-sub">Envelope Spikes & State Shifts</div>
     </div>
   </div>
 
@@ -625,15 +700,16 @@
   <div class="toolbar">
     <div class="filter-chips">
       <span class="chip active" onclick="setFilter('all', this)">ALL (<span id="cnt-all">0</span>)</span>
-      <span class="chip" onclick="setFilter('rev', this)" style="border-color: rgba(168, 85, 247, 0.4); color: #c084fc;">🔄 Reversals (<span id="cnt-rev">0</span>)</span>
-      <span class="chip" onclick="setFilter('ss', this)">★ Strong Start (<span id="cnt-ss">0</span>)</span>
-      <span class="chip" onclick="setFilter('pdh', this)">📌 PDH Broken (<span id="cnt-pdh">0</span>)</span>
-      <span class="chip" onclick="setFilter('bull', this)">🟢 Bullish (<span id="cnt-bull">0</span>)</span>
-      <span class="chip" onclick="setFilter('bear', this)">🔴 Bearish (<span id="cnt-bear">0</span>)</span>
+      <span class="chip" onclick="setFilter('prime', this)" title="Filter stocks coiling near 10 EMA (<0.45% stretch - Tight base, minimal downside risk)"><span id="chip-lbl-prime">🟢 Prime Base</span> (<span id="cnt-prime">0</span>)</span>
+      <span class="chip" onclick="setFilter('rev', this)"><span id="chip-lbl-rev">🔄 Failover</span> (<span id="cnt-rev">0</span>)</span>
+      <span class="chip" onclick="setFilter('ss', this)"><span id="chip-lbl-ss">★ Priority</span> (<span id="cnt-ss">0</span>)</span>
+      <span class="chip" onclick="setFilter('pdh', this)"><span id="chip-lbl-pdh">📌 Peak Alerts</span> (<span id="cnt-pdh">0</span>)</span>
+      <span class="chip" onclick="setFilter('bull', this)"><span id="chip-lbl-bull">⚪ Nominal</span> (<span id="cnt-bull">0</span>)</span>
+      <span class="chip" onclick="setFilter('bear', this)"><span id="chip-lbl-bear">⚫ Degraded</span> (<span id="cnt-bear">0</span>)</span>
     </div>
 
     <div class="search-wrap">
-      <input type="text" id="search-input" class="search-input" placeholder="Filter stocks (/) ..." oninput="renderFilteredTable()">
+      <input type="text" id="search-input" class="search-input" placeholder="Filter endpoints (/) ..." oninput="renderFilteredTable()">
       <span class="search-shortcut">/</span>
     </div>
   </div>
@@ -643,23 +719,22 @@
     <table>
       <thead>
         <tr>
-          <th onclick="handleSort('idx')" style="width:45px; text-align:center;"># <span id="sort-idx" class="sort-icon">▲</span></th>
-          <th onclick="handleSort('symbol')">Ticker / TV App <span id="sort-symbol" class="sort-icon"></span></th>
-          <th onclick="handleSort('r1')" style="text-align:right;" title="Classic Floor Pivot Resistance 1">R1 (₹) <span id="sort-r1" class="sort-icon"></span></th>
-          <th onclick="handleSort('r2')" style="text-align:right;" title="Classic Floor Pivot Resistance 2">R2 (₹) <span id="sort-r2" class="sort-icon"></span></th>
-          <th onclick="handleSort('is_ss')" style="text-align:center;">SS <span id="sort-is_ss" class="sort-icon"></span></th>
-          <th onclick="handleSort('pdh')" style="text-align:center;">PDH <span id="sort-pdh" class="sort-icon"></span></th>
-          <th onclick="handleSort('h_pct')" style="text-align:right;">H% <span id="sort-h_pct" class="sort-icon"></span></th>
-          <th onclick="handleSort('l_pct')" style="text-align:right;">L% <span id="sort-l_pct" class="sort-icon"></span></th>
-          <th onclick="handleSort('orb_status')" style="text-align:center;">ORB <span id="sort-orb_status" class="sort-icon"></span></th>
-          <th onclick="handleSort('tag')" style="text-align:center;">Tag <span id="sort-tag" class="sort-icon"></span></th>
-          <th onclick="handleSort('signal')">Algorithmic Signal <span id="sort-signal" class="sort-icon"></span></th>
-          <th onclick="handleSort('strength_score')" style="text-align:right;">Score <span id="sort-strength_score" class="sort-icon"></span></th>
+          <th onclick="handleSort('idx')" style="width:45px; text-align:center;">ID <span id="sort-idx" class="sort-icon">▲</span></th>
+          <th onclick="handleSort('symbol')" id="th-symbol">Endpoint / Node <span id="sort-symbol" class="sort-icon"></span></th>
+          <th onclick="handleSort('is_ss')" style="text-align:center;" id="th-ss">Pri <span id="sort-is_ss" class="sort-icon"></span></th>
+          <th onclick="handleSort('pdh')" style="text-align:center;" id="th-pdh">Peak <span id="sort-pdh" class="sort-icon"></span></th>
+          <th onclick="handleSort('h_pct')" style="text-align:right;" id="th-hpct">ΔH% <span id="sort-h_pct" class="sort-icon"></span></th>
+          <th onclick="handleSort('l_pct')" style="text-align:right;" id="th-lpct">ΔL% <span id="sort-l_pct" class="sort-icon"></span></th>
+          <th onclick="handleSort('orb_status')" style="text-align:center;" id="th-orb">Band <span id="sort-orb_status" class="sort-icon"></span></th>
+          <th onclick="handleSort('tag')" style="text-align:center;" id="th-tag">Route <span id="sort-tag" class="sort-icon"></span></th>
+          <th onclick="handleSort('signal')" id="th-signal">Runtime Status <span id="sort-signal" class="sort-icon"></span></th>
+          <th onclick="handleSort('strength_score')" style="text-align:right;" id="th-score">QoS <span id="sort-strength_score" class="sort-icon"></span></th>
+          <th onclick="handleSort('lod_dist')" style="text-align:right;" id="th-lod" title="Low of Day Distance (% of Daily ATR14): (LTP - Day Low) / ATR14">Span% <span id="sort-lod_dist" class="sort-icon"></span></th>
         </tr>
       </thead>
       <tbody id="table-body">
         <tr>
-          <td colspan="12" style="text-align:center; padding: 50px 10px; color:var(--text-muted); font-size:14px;">
+          <td colspan="11" style="text-align:center; padding: 50px 10px; color:var(--text-muted); font-size:14px;">
             ⏳ Connecting to cloud feed payload (<code>data.json</code>)...
           </td>
         </tr>
@@ -667,8 +742,8 @@
     </table>
   </div>
 
-  <div class="footer">
-    JARVIS SOTA Dashboard • Pure Vanilla High-Performance Architecture • Zero External Dependencies • 60 FPS Native Canvas • Press [?] for Shortcuts
+  <div id="page-footer" class="footer">
+    Cluster Telemetry &amp; Node Observer Daemon • Distributed Ingress Telemetry Pipeline • High-Throughput Stream • Press [?] for Diagnostics
   </div>
 
   <!-- Interactive Candlestick Chart Modal -->
@@ -679,6 +754,10 @@
         <div class="pill-selector">
           <button id="tf-btn-3m" class="pill-btn active" onclick="switchTimeframe('3m')">3m</button>
           <button id="tf-btn-d" class="pill-btn" onclick="switchTimeframe('D')">Daily</button>
+        </div>
+        <div class="pill-selector">
+          <button id="style-btn-vol" class="pill-btn active" onclick="switchChartStyle('vol')" title="Volume Candles (Candle body width expands with trading volume)">📊 Vol Candles</button>
+          <button id="style-btn-std" class="pill-btn" onclick="switchChartStyle('std')" title="Standard Fixed-Width Candlesticks">🕯 Standard</button>
         </div>
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
@@ -693,8 +772,9 @@
     <div class="popup-canvas-wrap">
       <canvas id="popup-canvas"></canvas>
     </div>
+    <div id="popup-guardrail" class="popup-guardrail"></div>
     <div class="popup-footer">
-      <span>💡 Gold Line = Previous Day High (PDH) | Cyan/Orange = 3m Dynamic ORB</span>
+      <span id="popup-footer-note">💡 Upper Baseline Envelope | Dynamic 3m Boundary Thresholds</span>
       <span id="popup-bar-count">0 Candles</span>
     </div>
   </div>
@@ -712,6 +792,186 @@
   let timerHandle = null;
   let popupTimer = null;
   let audioEnabled = false;
+
+  // Stealth Telemetry Camouflage System (Default: OFF for rich stock colors)
+  let isStealthMode = (localStorage.getItem('jarvis_stealth_mode') === '1');
+
+  function formatNodeName(sym) {
+    return isStealthMode ? ('node-' + sym) : sym;
+  }
+
+  function disguiseSignal(sig) {
+    if (!sig) return isStealthMode ? 'NOMINAL' : 'IN RANGE';
+    if (!isStealthMode) return sig;
+    let s = sig;
+    s = s.replace(/REVERSAL BREAKOUT \(ORB \+ PDH\)/g, 'FAILOVER ENVELOPE BREACH (BAND + PEAK)');
+    s = s.replace(/REVERSAL \(ORB LOW → HIGH\)/g, 'FAILOVER TRACE (L ➔ H)');
+    s = s.replace(/REVERSAL/g, 'FAILOVER');
+    s = s.replace(/BULLISH BREAKOUT \(ORB \+ PDH\)/g, 'UPPER SPIKE (BAND + PEAK)');
+    s = s.replace(/BREAKOUT \(ORB HIGH\)/g, 'UPPER BAND BREACH');
+    s = s.replace(/BREAKOUT/g, 'UPPER BREACH');
+    s = s.replace(/BEARISH BREAKDOWN \(ORB LOW\)/g, 'LOWER BAND BREACH');
+    s = s.replace(/BREAKDOWN/g, 'LOWER BREACH');
+    s = s.replace(/ABOVE ORB HIGH/g, 'UPPER BAND ACTIVE');
+    s = s.replace(/BELOW ORB LOW/g, 'LOWER BAND ACTIVE');
+    s = s.replace(/IN RANGE/g, 'NOMINAL');
+    s = s.replace(/SS \+/g, 'PRI +');
+    s = s.replace(/ORB \+ PDH/g, 'BAND + PEAK');
+    s = s.replace(/ORB/g, 'BAND');
+    s = s.replace(/PDH/g, 'PEAK');
+    return s;
+  }
+
+  function applyStealthModeUI() {
+    const pageTitle = document.getElementById('page-title');
+    const txtBrandTitle = document.getElementById('txt-brand-title');
+    const txtBrandTag = document.getElementById('txt-brand-tag');
+    const brandSubTxt = document.getElementById('brand-sub-txt');
+    const btnMode = document.getElementById('btn-mode');
+
+    // KPI titles & labels
+    const txtKpi1Title = document.getElementById('txt-kpi-1-title');
+    const txtKpi1Bull = document.getElementById('txt-kpi-1-bull');
+    const txtKpi1Bear = document.getElementById('txt-kpi-1-bear');
+    const txtKpi2Title = document.getElementById('txt-kpi-2-title');
+    const txtKpi3Title = document.getElementById('txt-kpi-3-title');
+    const txtKpi3Sub = document.getElementById('txt-kpi-3-sub');
+    const txtKpi4Title = document.getElementById('txt-kpi-4-title');
+    const txtKpi4Sub = document.getElementById('txt-kpi-4-sub');
+
+    // Filter chips
+    const chipPrime = document.getElementById('chip-lbl-prime');
+    const chipRev = document.getElementById('chip-lbl-rev');
+    const chipSs = document.getElementById('chip-lbl-ss');
+    const chipPdh = document.getElementById('chip-lbl-pdh');
+    const chipBull = document.getElementById('chip-lbl-bull');
+    const chipBear = document.getElementById('chip-lbl-bear');
+
+    // Search input
+    const searchInput = document.getElementById('search-input');
+
+    // Table Headers
+    const thSymbol = document.getElementById('th-symbol');
+    const thSs = document.getElementById('th-ss');
+    const thPdh = document.getElementById('th-pdh');
+    const thOrb = document.getElementById('th-orb');
+    const thTag = document.getElementById('th-tag');
+    const thSignal = document.getElementById('th-signal');
+    const thScore = document.getElementById('th-score');
+    const thLod = document.getElementById('th-lod');
+
+    // Footers
+    const pageFooter = document.getElementById('page-footer');
+    const popupFooterNote = document.getElementById('popup-footer-note');
+
+    if (isStealthMode) {
+      if (pageTitle) pageTitle.innerText = 'Cluster Observability & Ingress Telemetry';
+      if (txtBrandTitle) txtBrandTitle.innerText = 'CLUSTER TELEMETRY';
+      if (txtBrandTag) txtBrandTag.innerText = 'NODE OBSERVER v3.4';
+      if (brandSubTxt) brandSubTxt.innerText = 'Cloud Ingress • Cluster AP-South-1';
+      if (btnMode) {
+        btnMode.innerHTML = '🔒 <span id="mode-text">Stealth</span>';
+        btnMode.title = 'Current: Stealth Mode (Telemetry Camouflage) • Click to switch to Trader Pro (Shift + S)';
+      }
+
+      if (txtKpi1Title) txtKpi1Title.innerText = 'Cluster Health';
+      if (txtKpi1Bull) txtKpi1Bull.innerText = 'Nominal';
+      if (txtKpi1Bear) txtKpi1Bear.innerText = 'Degraded';
+      if (txtKpi2Title) txtKpi2Title.innerText = 'High Load Process';
+      if (txtKpi3Title) txtKpi3Title.innerText = 'Peak Limit Breaches';
+      if (txtKpi3Sub) txtKpi3Sub.innerText = 'Exceeded 24h Baseline Envelope';
+      if (txtKpi4Title) txtKpi4Title.innerText = 'Boundary Ingress Alerts';
+      if (txtKpi4Sub) txtKpi4Sub.innerText = 'Envelope Spikes & State Shifts';
+
+      if (chipPrime) chipPrime.innerText = '🟢 Buffer Base';
+      if (chipRev) chipRev.innerText = '🔄 Failover';
+      if (chipSs) chipSs.innerText = '★ Priority';
+      if (chipPdh) chipPdh.innerText = '📌 Peak Alerts';
+      if (chipBull) chipBull.innerText = '⚪ Nominal';
+      if (chipBear) chipBear.innerText = '⚫ Degraded';
+
+      if (searchInput) searchInput.placeholder = 'Filter endpoints (/) ...';
+
+      if (thSymbol) thSymbol.innerHTML = `Endpoint / Node <span id="sort-symbol" class="sort-icon"></span>`;
+      if (thSs) thSs.innerHTML = `Pri <span id="sort-is_ss" class="sort-icon"></span>`;
+      if (thPdh) thPdh.innerHTML = `Peak <span id="sort-pdh" class="sort-icon"></span>`;
+      if (thOrb) thOrb.innerHTML = `Band <span id="sort-orb_status" class="sort-icon"></span>`;
+      if (thTag) thTag.innerHTML = `Route <span id="sort-tag" class="sort-icon"></span>`;
+      if (thSignal) thSignal.innerHTML = `Runtime Status <span id="sort-signal" class="sort-icon"></span>`;
+      if (thScore) thScore.innerHTML = `QoS <span id="sort-strength_score" class="sort-icon"></span>`;
+      if (thLod) thLod.innerHTML = `Span% <span id="sort-lod_dist" class="sort-icon"></span>`;
+
+      if (pageFooter) pageFooter.innerText = 'Cluster Telemetry & Node Observer Daemon • Distributed Ingress Telemetry Pipeline • High-Throughput Stream • Press [?] for Diagnostics';
+      const btnStyleVol = document.getElementById('style-btn-vol');
+      const btnStyleStd = document.getElementById('style-btn-std');
+      if (btnStyleVol) btnStyleVol.innerText = '📊 Vol Trace';
+      if (btnStyleStd) btnStyleStd.innerText = '🕯 Baseline';
+      if (popupFooterNote) {
+        popupFooterNote.innerText = (chartStyle === 'vol')
+          ? '💡 Volatility Trace: Width weighted by event density'
+          : '💡 Upper Baseline Envelope | Dynamic 3m Boundary Thresholds';
+      }
+    } else {
+      if (pageTitle) pageTitle.innerText = 'JARVIS PROSOTA 3M SCANNER • Live Market Terminal';
+      if (txtBrandTitle) txtBrandTitle.innerText = 'JARVIS PROSOTA';
+      if (txtBrandTag) txtBrandTag.innerText = '3M SCANNER';
+      if (brandSubTxt) brandSubTxt.innerText = 'Cloud-Native Engine • Upstox API v2';
+      if (btnMode) {
+        btnMode.innerHTML = '📊 <span id="mode-text">Trader Pro</span>';
+        btnMode.title = 'Current: Trader Pro Mode • Click to switch to Stealth Mode (Shift + S)';
+      }
+
+      if (txtKpi1Title) txtKpi1Title.innerText = 'Market Breadth';
+      if (txtKpi1Bull) txtKpi1Bull.innerText = 'Adv';
+      if (txtKpi1Bear) txtKpi1Bear.innerText = 'Dec';
+      if (txtKpi2Title) txtKpi2Title.innerText = 'Top Momentum';
+      if (txtKpi3Title) txtKpi3Title.innerText = 'PDH Breaches';
+      if (txtKpi3Sub) txtKpi3Sub.innerText = "Trading Above Yesterday's High";
+      if (txtKpi4Title) txtKpi4Title.innerText = 'ORB Action Triggers';
+      if (txtKpi4Sub) txtKpi4Sub.innerText = 'Bull Breakouts & High Formations';
+
+      if (chipPrime) chipPrime.innerText = '🟢 Prime Base';
+      if (chipRev) chipRev.innerText = '🔄 Reversals';
+      if (chipSs) chipSs.innerText = '★ Strong Start';
+      if (chipPdh) chipPdh.innerText = '📌 PDH Breaks';
+      if (chipBull) chipBull.innerText = '⚪ Bullish';
+      if (chipBear) chipBear.innerText = '⚫ Bearish';
+
+      if (searchInput) searchInput.placeholder = 'Filter stocks (/) ...';
+
+      if (thSymbol) thSymbol.innerHTML = `Stock Symbol <span id="sort-symbol" class="sort-icon"></span>`;
+      if (thSs) thSs.innerHTML = `SS <span id="sort-is_ss" class="sort-icon"></span>`;
+      if (thPdh) thPdh.innerHTML = `PDH <span id="sort-pdh" class="sort-icon"></span>`;
+      if (thOrb) thOrb.innerHTML = `ORB <span id="sort-orb_status" class="sort-icon"></span>`;
+      if (thTag) thTag.innerHTML = `Tag <span id="sort-tag" class="sort-icon"></span>`;
+      if (thSignal) thSignal.innerHTML = `Signal <span id="sort-signal" class="sort-icon"></span>`;
+      if (thScore) thScore.innerHTML = `Strength <span id="sort-strength_score" class="sort-icon"></span>`;
+      if (thLod) thLod.innerHTML = `LoD Dist <span id="sort-lod_dist" class="sort-icon"></span>`;
+
+      if (pageFooter) pageFooter.innerText = 'JARVIS SOTA Dashboard • Pure Vanilla High-Performance Architecture • Zero External Dependencies • 60 FPS Native Canvas • Press [?] for Shortcuts';
+      const btnStyleVol = document.getElementById('style-btn-vol');
+      const btnStyleStd = document.getElementById('style-btn-std');
+      if (btnStyleVol) btnStyleVol.innerText = '📊 Vol Candles';
+      if (btnStyleStd) btnStyleStd.innerText = '🕯 Standard';
+      if (popupFooterNote) {
+        popupFooterNote.innerText = (chartStyle === 'vol')
+          ? '💡 Volume Candles: Candle thickness indicates volume | Gold = PDH | Cyan/Orange = ORB'
+          : '💡 Gold Line = Previous Day High (PDH) | Cyan/Orange = 3m Dynamic ORB';
+      }
+    }
+    updateSortIcons();
+  }
+
+  function toggleStealthMode() {
+    isStealthMode = !isStealthMode;
+    localStorage.setItem('jarvis_stealth_mode', isStealthMode ? '1' : '0');
+    applyStealthModeUI();
+    renderFilteredTable();
+    if (activeSym && CHARTS_DATA[activeSym] && popup && popup.style.display === 'flex') {
+      updatePopupHeader(CHARTS_DATA[activeSym]);
+      drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    }
+  }
 
   const tableBody = document.getElementById('table-body');
   const timerDisplay = document.getElementById('timer-display');
@@ -846,159 +1106,88 @@
       const ageMinutes = Math.floor(diffSec / 60);
       // Data is stale only if market hours and older than 3.5 min; outside market hours it is an EOD snapshot
       const isStale = isMarketHours ? (diffSec > 210) : false;
-      return { isStale, ageMinutes, diffSec };
+      return { isStale, isMarketHours, ageMinutes, diffSec };
     } catch (e) {
-      return { isStale: false, ageMinutes: 0, diffSec: 0 };
+      return { isStale: false, isMarketHours: false, ageMinutes: 0, diffSec: 0 };
     }
   }
 
   async function fetchData(isManual) {
     if (isManual) {
       statusText.innerText = 'SYNCING';
-      pulseIndicator.style.backgroundColor = '#38bdf8';
+      pulseIndicator.style.backgroundColor = '#ffffff';
     }
     const t = Date.now();
-    let bestData = null;
-    let usedSource = 'Live Feed';
 
-    // Manual refresh: Instantly query GitHub Direct API & raw.githubusercontent to completely bypass Fastly CDN!
-    if (isManual) {
-      try {
-        const resApi = await fetchWithTimeout(GITHUB_API_URL, {
-          cache: 'no-store',
-          headers: {
-            'Accept': 'application/vnd.github.raw+json',
-            'Pragma': 'no-cache',
-            'Cache-Control': 'no-cache'
-          }
-        }, 3500);
-        if (resApi.ok) {
-          const d = await resApi.json();
-          if (d && d.stocks && d.stocks.length) {
-            processIncomingData(d, 'GitHub Direct API (Instant)');
-            return;
-          }
-        }
-      } catch (e) {}
-
-      try {
-        const resRaw = await fetchWithTimeout(`${RAW_GITHUB_URL}?_t=${t}`, {
-          cache: 'no-store',
-          headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
-        }, 3000);
-        if (resRaw.ok) {
-          const d = await resRaw.json();
-          if (d && d.stocks && d.stocks.length) {
-            processIncomingData(d, 'GitHub Raw Stream');
-            return;
-          }
-        }
-      } catch (e) {}
-    }
-
-    // Tier 1: Same-Origin / GitHub Pages
-    try {
+    // Prepare candidate endpoints
+    const targets = [];
+    if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
       let path = window.location.pathname || '/';
       if (path.endsWith('.html') || path.endsWith('.htm')) {
         path = path.substring(0, path.lastIndexOf('/') + 1);
       } else if (!path.endsWith('/')) {
         path += '/';
       }
-      const localUrl = (window.location.origin && window.location.origin !== 'null')
-        ? (window.location.origin + path + 'data.json?t=' + t)
-        : ('data.json?t=' + t);
-      const resLocal = await fetchWithTimeout(localUrl, { cache: 'no-store' }, 2500);
-      if (resLocal.ok) {
-        const d = await resLocal.json();
-        if (d && d.stocks && d.stocks.length) {
-          bestData = d;
-          usedSource = 'GitHub Pages Edge';
-          const fresh = checkDataFreshness(d.updated_at);
-          // If edge is fresh (< 3.5 mins) and not showing zero breadth when stocks exist, use it
-          const hasBreadth = d.stocks.some(s => s.chg_pct !== 0);
-          if (!fresh.isStale && hasBreadth) {
-            processIncomingData(bestData, usedSource);
-            return;
-          }
-        }
-      }
-    } catch (e) {}
+      targets.push({ url: window.location.origin + path + 'data.json?_t=' + t, name: 'Local Edge' });
+    }
+    // High-speed edge CDN (Cloudflare/Fastly - bypasses ISP blocks & CORS issues)
+    targets.push({ url: `${JSDELIVR_URL}?_t=${t}`, name: 'Edge CDN' });
+    // Raw GitHub Stream
+    targets.push({ url: `${RAW_GITHUB_URL}?_t=${t}`, name: 'GitHub Raw' });
 
-    // Tier 2: Direct GitHub REST Contents API
+    // Race the primary targets concurrently for instant delivery
     try {
-      const resApi = await fetchWithTimeout(GITHUB_API_URL, {
+      const result = await Promise.any(targets.map(async (target) => {
+        const res = await fetchWithTimeout(target.url, { cache: 'no-store' }, 3500);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data || !data.stocks || !data.stocks.length) throw new Error('Empty payload');
+        return { data, name: target.name };
+      }));
+      processIncomingData(result.data, result.name);
+      return;
+    } catch (raceErr) {
+      console.warn('Primary feed race failed, trying GitHub REST API fallback...', raceErr);
+    }
+
+    // Fallback: GitHub Contents REST API
+    try {
+      const resApi = await fetchWithTimeout(GITHUB_API_URL + '?ref=main', {
         cache: 'no-store',
-        headers: {
-          'Accept': 'application/vnd.github.raw+json',
-          'Pragma': 'no-cache',
-          'Cache-Control': 'no-cache'
-        }
-      }, 3500);
+        headers: { 'Accept': 'application/vnd.github.raw+json' }
+      }, 4000);
       if (resApi.ok) {
         const d = await resApi.json();
         if (d && d.stocks && d.stocks.length) {
-          bestData = d;
-          usedSource = 'GitHub Direct API';
-          processIncomingData(bestData, usedSource);
+          processIncomingData(d, 'GitHub Direct API');
           return;
         }
       }
-    } catch (e) {}
-
-    // Tier 3: raw.githubusercontent.com Live Stream
-    try {
-      const resRaw = await fetchWithTimeout(`${RAW_GITHUB_URL}?_t=${t}`, {
-        cache: 'no-store',
-        headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
-      }, 3000);
-      if (resRaw.ok) {
-        const d = await resRaw.json();
-        if (d && d.stocks && d.stocks.length) {
-          bestData = d;
-          usedSource = 'GitHub Raw Stream';
-          processIncomingData(bestData, usedSource);
-          return;
-        }
-      }
-    } catch (e) {}
-
-    // Tier 4: jsDelivr Global Purged CDN Fallback
-    if (!bestData) {
-      try {
-        const res = await fetchWithTimeout(`${JSDELIVR_URL}?t=${t}`, {
-          cache: 'no-store',
-          headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
-        }, 3000);
-        if (res.ok) {
-          const d = await res.json();
-          if (d && d.stocks && d.stocks.length) {
-            bestData = d;
-            usedSource = 'jsDelivr Global';
-          }
-        }
-      } catch (e) {}
+    } catch (e) {
+      console.error('All fetch tiers failed:', e);
     }
 
-    if (bestData && bestData.stocks) {
-      processIncomingData(bestData, usedSource);
-    } else {
-      statusText.innerText = 'RETRYING';
-      pulseIndicator.style.backgroundColor = '#f59e0b';
-    }
+    statusText.innerText = 'RETRYING';
+    pulseIndicator.style.backgroundColor = '#71717a';
   }
 
   function processIncomingData(data, feedSource) {
     if (!data) return;
+    try {
     
-    const { isStale, ageMinutes } = checkDataFreshness(data.updated_at);
-    if (isStale) {
-      statusText.innerText = `DELAYED (${ageMinutes}m)`;
-      statusText.style.color = '#f59e0b';
-      pulseIndicator.style.backgroundColor = '#f59e0b';
+    const { isStale, isMarketHours, ageMinutes } = checkDataFreshness(data.updated_at);
+    if (!isMarketHours) {
+      statusText.innerText = isStealthMode ? 'SNAPSHOT' : 'MARKET CLOSED';
+      statusText.style.color = '#a1a1aa';
+      pulseIndicator.style.backgroundColor = '#71717a';
+    } else if (isStale) {
+      statusText.innerText = isStealthMode ? `DEGRADED (${ageMinutes}m)` : `DELAYED (${ageMinutes}m)`;
+      statusText.style.color = '#71717a';
+      pulseIndicator.style.backgroundColor = '#71717a';
     } else {
-      statusText.innerText = 'LIVE';
-      statusText.style.color = '#fff';
-      pulseIndicator.style.backgroundColor = '#00c087';
+      statusText.innerText = isStealthMode ? 'DAEMON: ACTIVE' : 'LIVE';
+      statusText.style.color = '#ffffff';
+      pulseIndicator.style.backgroundColor = '#ffffff';
     }
 
     if (data.updated_at) updatedAtDisplay.innerText = data.updated_at;
@@ -1014,6 +1203,7 @@
     let pdhCount = 0;
     let orbCount = 0;
     let revCount = 0;
+    let primeCount = 0;
     let topMover = null;
 
     RAW_STOCKS.forEach(stk => {
@@ -1021,24 +1211,53 @@
       const c_3m = normalizeCandles(stk.candles_3m || stk.candles || []);
       const c_d = normalizeCandles(stk.candles_d || []);
 
-      // Classic Floor Pivot Points: P = (H + L + C) / 3, R1 = 2*P - L, R2 = P + (H - L)
-      let r1 = stk.r1;
-      let r2 = stk.r2;
-      let pivot = stk.pivot;
-      if ((r1 === undefined || r1 === null) && c_d && c_d.length >= 2) {
-        const yc = c_d[c_d.length - 2];
-        if (yc) {
-          const yh = Number(yc.h);
-          const yl = Number(yc.l);
-          const yclose = Number(yc.c);
-          pivot = (yh + yl + yclose) / 3.0;
-          r1 = 2.0 * pivot - yl;
-          r2 = pivot + (yh - yl);
-        }
+      // Dynamic Intraday 10 EMA & Overextension (% Stretch from 10 EMA)
+      let ema10 = stk.ema10;
+      if (!ema10 && c_3m && c_3m.length) {
+        const alpha = 2.0 / 11.0;
+        c_3m.forEach(c => {
+          const close = Number(c.c);
+          if (ema10 === null || ema10 === undefined) ema10 = close;
+          else ema10 = (close * alpha) + (ema10 * (1.0 - alpha));
+        });
       }
-      stk.r1 = (r1 !== undefined && r1 !== null) ? Number(r1) : null;
-      stk.r2 = (r2 !== undefined && r2 !== null) ? Number(r2) : null;
-      stk.pivot = (pivot !== undefined && pivot !== null) ? Number(pivot) : null;
+      if (!ema10 && stk.pivot) ema10 = Number(stk.pivot);
+      stk.ema10 = ema10 ? Number(ema10.toFixed(2)) : null;
+      const ltpVal = Number(stk.ltp) || 0;
+      stk.stretch_pct = (ema10 && ltpVal > 0) ? (((ltpVal - ema10) / ema10) * 100) : null;
+      stk.is_prime = (stk.stretch_pct !== null && stk.stretch_pct >= 0 && stk.stretch_pct <= 0.45);
+      if (stk.is_prime) primeCount++;
+
+      // LoD Dist = (LTP - Day Low) / ATR14 * 100%
+      let dayLow = (stk.day_low !== null && stk.day_low !== undefined) ? Number(stk.day_low) : null;
+      if (!dayLow && c_3m && c_3m.length) {
+        let minL = Infinity;
+        c_3m.forEach(c => { if (c.l < minL) minL = c.l; });
+        if (minL !== Infinity) dayLow = minL;
+      }
+      if (!dayLow && stk.orb_low) dayLow = Number(stk.orb_low);
+      stk.day_low = dayLow ? Number(dayLow.toFixed(2)) : null;
+
+      let atr14 = (stk.atr14 !== null && stk.atr14 !== undefined) ? Number(stk.atr14) : null;
+      if (!atr14 && c_d && c_d.length >= 15) {
+        let trSum = 0;
+        for (let idx = 0; idx < 14; idx++) {
+          const cur = c_d[c_d.length - 1 - idx];
+          const prev = c_d[c_d.length - 2 - idx];
+          if (cur && prev) {
+            const tr = Math.max(cur.h - cur.l, Math.abs(cur.h - prev.c), Math.abs(cur.l - prev.c));
+            trSum += tr;
+          }
+        }
+        atr14 = trSum / 14.0;
+      }
+      stk.atr14 = atr14 ? Number(atr14.toFixed(2)) : null;
+
+      let lodDist = (stk.lod_dist !== null && stk.lod_dist !== undefined) ? Number(stk.lod_dist) : null;
+      if (lodDist === null && ltpVal > 0 && dayLow > 0 && atr14 > 0) {
+        lodDist = Math.round(((ltpVal - dayLow) / atr14) * 100);
+      }
+      stk.lod_dist = lodDist !== null ? Number(lodDist) : null;
 
       // Reversal Pattern Detection (Broke ORB low first, then broke ORB high)
       if (stk.is_reversal || stk.orb_status === 'L➔H') {
@@ -1084,8 +1303,10 @@
         prev_close: stk.prev_close,
         chg_pct: stk.chg_pct,
         pivot: stk.pivot,
-        r1: stk.r1,
-        r2: stk.r2,
+        day_low: stk.day_low,
+        lod_dist: stk.lod_dist,
+        ema10: stk.ema10,
+        stretch_pct: stk.stretch_pct,
         pdh: stk.pdh,
         pdh_broken: stk.pdh_broken,
         orb_high: stk.orb_high,
@@ -1123,7 +1344,7 @@
     });
 
     // Update KPIs
-    document.getElementById('kpi-total-cnt').innerText = RAW_STOCKS.length + ' Stocks';
+    document.getElementById('kpi-total-cnt').innerText = RAW_STOCKS.length + (isStealthMode ? ' Nodes' : ' Stocks');
     document.getElementById('kpi-bull-cnt').innerText = bullCount;
     document.getElementById('kpi-bear-cnt').innerText = bearCount;
     const totalAdvDec = Math.max(bullCount + bearCount, 1);
@@ -1135,13 +1356,16 @@
 
     if (topMover) {
       const s = topMover.chg_pct >= 0 ? '+' : '';
-      const col = topMover.chg_pct >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
-      document.getElementById('kpi-top-mover').innerHTML = `${topMover.symbol} <span style="font-size:14px; color:${col};">(${s}${topMover.chg_pct}%)</span>`;
-      document.getElementById('kpi-top-score').innerText = `Institutional Strength: ${topMover.strength_score}`;
+      const col = topMover.chg_pct >= 0 ? '#ffffff' : '#71717a';
+      const nodeLabel = formatNodeName(topMover.symbol);
+      document.getElementById('kpi-top-mover').innerHTML = `${nodeLabel} <span style="font-size:14px; color:${col};">(${s}${topMover.chg_pct}%)</span>`;
+      document.getElementById('kpi-top-score').innerText = isStealthMode ? `Throughput Index: ${topMover.strength_score}` : `Institutional Strength: ${topMover.strength_score}`;
     }
 
     // Filter counts
     document.getElementById('cnt-all').innerText = RAW_STOCKS.length;
+    const primeEl = document.getElementById('cnt-prime');
+    if (primeEl) primeEl.innerText = primeCount;
     const revEl = document.getElementById('cnt-rev');
     if (revEl) revEl.innerText = revCount;
     document.getElementById('cnt-ss').innerText = RAW_STOCKS.filter(s => s.is_ss).length;
@@ -1155,6 +1379,10 @@
     if (activeSym && CHARTS_DATA[activeSym] && popup.style.display === 'flex') {
       updatePopupHeader(CHARTS_DATA[activeSym]);
       drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    }
+    } catch (err) {
+      console.error('Error processing incoming data:', err);
+      statusText.innerText = 'DATA ERROR';
     }
   }
 
@@ -1188,6 +1416,7 @@
     const q = (searchInput.value || '').trim().toUpperCase();
 
     let filtered = RAW_STOCKS.filter(stk => {
+      if (activeFilter === 'prime' && !stk.is_prime) return false;
       if (activeFilter === 'rev' && !stk.is_reversal && stk.orb_status !== 'L➔H') return false;
       if (activeFilter === 'ss' && !stk.is_ss) return false;
       if (activeFilter === 'pdh' && !stk.pdh_broken) return false;
@@ -1219,22 +1448,36 @@
       const sym = stk.symbol;
       const rank = stk.idx || (i + 1);
       const tv_url = 'https://in.tradingview.com/chart/?symbol=NSE:' + sym;
+      const displaySym = formatNodeName(sym);
 
       const ltp_val = (stk.ltp !== null && stk.ltp !== undefined) ? Number(stk.ltp) : null;
-      const r1_val = (stk.r1 !== null && stk.r1 !== undefined) ? Number(stk.r1) : null;
-      const r2_val = (stk.r2 !== null && stk.r2 !== undefined) ? Number(stk.r2) : null;
-
-      const r1_is_above = (ltp_val !== null && r1_val !== null && ltp_val >= r1_val);
-      const r1_col = (r1_val !== null && ltp_val !== null) ? (r1_is_above ? 'val-pos' : 'val-neg') : '';
-      const r1_str = r1_val !== null ? ('₹' + r1_val.toFixed(2)) : '--';
-
-      const r2_is_above = (ltp_val !== null && r2_val !== null && ltp_val >= r2_val);
-      const r2_col = (r2_val !== null && ltp_val !== null) ? (r2_is_above ? 'val-pos' : 'val-neg') : '';
-      const r2_str = r2_val !== null ? ('₹' + r2_val.toFixed(2)) : '--';
+      const lod_dist = (stk.lod_dist !== null && stk.lod_dist !== undefined) ? Number(stk.lod_dist) : null;
+      let lod_badge = '<span style="color:var(--text-dim);">-</span>';
+      if (lod_dist !== null) {
+        let lodCls = 'stretch-normal';
+        let lodTip = '';
+        if (lod_dist <= 70) {
+          lodCls = 'stretch-prime';
+          lodTip = isStealthMode
+            ? `Span: ${lod_dist}% of baseline envelope (Optimal headroom)`
+            : `LoD Dist: ${lod_dist}% of ATR14 (Early Stage / Ample Headroom remaining)`;
+        } else if (lod_dist <= 100) {
+          lodCls = 'stretch-normal';
+          lodTip = isStealthMode
+            ? `Span: ${lod_dist}% of baseline envelope (Nominal)`
+            : `LoD Dist: ${lod_dist}% of ATR14 (Mid-session range expansion)`;
+        } else {
+          lodCls = 'stretch-extended';
+          lodTip = isStealthMode
+            ? `Span: ${lod_dist}% of baseline envelope (Buffer saturated)`
+            : `LoD Dist: ${lod_dist}% of ATR14 (Daily Range Exhaustion! High risk of mean reversion)`;
+        }
+        lod_badge = `<span class="stretch-pill ${lodCls}" title="${lodTip}">${lod_dist}%</span>`;
+      }
 
       const ss_html = stk.is_ss ? '<span class="star-badge">★</span>' : '<span style="color:var(--text-dim);">-</span>';
       const pdh_html = stk.pdh_broken
-        ? '<span style="color:var(--accent-green); font-size:14px; text-shadow:0 0 6px rgba(0,192,135,0.4);">●</span>'
+        ? '<span style="color:#ffffff; font-size:14px; text-shadow:0 0 6px rgba(255,255,255,0.8);">●</span>'
         : '<span style="color:var(--text-dim); font-size:14px;">○</span>';
 
       const h_str = (stk.h_pct !== null && stk.h_pct !== undefined) ? ((stk.h_pct >= 0 ? '+' : '') + Number(stk.h_pct).toFixed(1) + '%') : '-';
@@ -1242,46 +1485,77 @@
 
       let orb_badge = '';
       if (stk.is_reversal || stk.orb_status === 'L➔H') {
-        const revTooltip = stk.reversal_desc || 'Broke ORB Low first, then broke ORB High (Bullish Reversal)';
+        const revTooltip = isStealthMode
+          ? 'Broke lower boundary first, then broke upper boundary (Failover Recovery)'
+          : (stk.reversal_desc || 'Broke ORB Low first, then broke ORB High (Bullish Reversal)');
         orb_badge = `<span class="pill-badge badge-orb-rev" title="${revTooltip}">L➔H</span>`;
       } else {
         const orb_status = stk.orb_status || 'M';
         orb_badge = `<span class="pill-badge badge-orb-${orb_status.toLowerCase()}">${orb_status}</span>`;
       }
 
-      const sig = stk.signal || 'IN RANGE';
+      const rawSig = stk.signal || 'IN RANGE';
+      const sig = disguiseSignal(rawSig);
       let sig_cls = 'badge-range';
-      if (sig.includes('REVERSAL')) sig_cls = 'badge-reversal';
-      else if (sig.includes('BREAKOUT') || sig.includes('ABOVE')) sig_cls = 'badge-bull-break';
-      else if (sig.includes('BREAKDOWN') || sig.includes('BELOW')) sig_cls = 'badge-bear-break';
+      if (rawSig.includes('REVERSAL')) sig_cls = 'badge-reversal';
+      else if (rawSig.includes('BREAKOUT') || rawSig.includes('ABOVE')) sig_cls = 'badge-bull-break';
+      else if (rawSig.includes('BREAKDOWN') || rawSig.includes('BELOW')) sig_cls = 'badge-bear-break';
       const sig_badge = `<span class="pill-badge ${sig_cls}">${sig}</span>`;
+
+      // Intraday Stretch / Overextension Badge (10 EMA)
+      let stretch_badge = '';
+      if (stk.stretch_pct !== null && stk.stretch_pct !== undefined) {
+        const s = stk.stretch_pct;
+        const sStr = (s >= 0 ? '+' : '') + s.toFixed(1) + '%';
+        if (s < 0) {
+          const tText = isStealthMode ? 'Sub-baseline telemetry' : 'Trading below 10 EMA (Active pullback / Bearish pressure)';
+          stretch_badge = `<span class="stretch-pill stretch-sub" title="${tText}">${isStealthMode ? 'SUB-MA' : '▼ SUB-10'} ${sStr}</span>`;
+        } else if (s <= 0.45) {
+          const tText = isStealthMode ? 'Optimal allocation base' : 'Tight to 10 EMA (Prime Coil - Low Risk Launchpad)';
+          stretch_badge = `<span class="stretch-pill stretch-prime" title="${tText}">${isStealthMode ? 'PRIME' : '🟢 PRIME'} ${sStr}</span>`;
+        } else if (s <= 1.0) {
+          const tText = isStealthMode ? 'Nominal bandwidth' : 'Moderate distance from 10 EMA';
+          stretch_badge = `<span class="stretch-pill stretch-normal" title="${tText}">${isStealthMode ? 'NOMINAL' : '⚪ NORMAL'} ${sStr}</span>`;
+        } else {
+          const tText = isStealthMode ? 'Buffer saturated - Risk of latency spike' : 'Extended move (>1.0% from 10 EMA)! Do NOT chase high - Wait for 10 EMA test';
+          stretch_badge = `<span class="stretch-pill stretch-extended" title="${tText}">${isStealthMode ? 'SATURATED' : '⚠️ EXT'} ${sStr}</span>`;
+        }
+      }
+
+      const nodeTitle = isStealthMode
+        ? `Val: ${ltp_val ? ltp_val.toFixed(2) : '--'} • Inspect node metrics`
+        : `LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • Open in TradingView App`;
 
       html += `
         <tr onmouseenter="showChartPopup(event, '${sym}')" onmouseleave="scheduleHidePopup()">
           <td style="color:var(--text-muted); text-align:center;">${rank}</td>
           <td>
             <div class="stock-cell">
-              <a href="${tv_url}" target="_blank" class="btn-tv-app" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • Open in TradingView App">
-                ${sym} ↗
+              <a href="${tv_url}" target="_blank" class="btn-tv-app" title="${nodeTitle}">
+                ${displaySym} ↗
               </a>
-              <button class="btn-preview-eye" onclick="showChartPopup(event, '${sym}', true)" title="Chart Preview">👁</button>
+              <button class="btn-preview-eye" onclick="showChartPopup(event, '${sym}', true)" title="${isStealthMode ? 'Inspect Trace' : 'Chart Preview'}">👁</button>
             </div>
           </td>
-          <td style="text-align:right; font-weight:700;" class="${r1_col}" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R1: ${r1_str} (${r1_is_above ? 'Price Above R1' : 'Price Below R1'})">${r1_str}</td>
-          <td style="text-align:right; font-weight:700;" class="${r2_col}" title="LTP: ₹${ltp_val ? ltp_val.toFixed(2) : '--'} • R2: ${r2_str} (${r2_is_above ? 'Price Above R2' : 'Price Below R2'})">${r2_str}</td>
           <td style="text-align:center;">${ss_html}</td>
           <td style="text-align:center;">${pdh_html}</td>
           <td class="${stk.h_pct > 0 ? 'val-pos' : 'val-neg'}" style="text-align:right;">${h_str}</td>
           <td class="${stk.l_pct > 0 ? 'val-pos' : 'val-neg'}" style="text-align:right;">${l_str}</td>
           <td style="text-align:center;">${orb_badge}</td>
           <td style="text-align:center; color:var(--text-muted);">${stk.tag || '-'}</td>
-          <td>${sig_badge}</td>
-          <td style="text-align:right; font-weight:800; color:#93c5fd;">${Number(stk.strength_score).toFixed(1)}</td>
+          <td>
+            <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
+              ${sig_badge}
+              ${stretch_badge}
+            </div>
+          </td>
+          <td style="text-align:right; font-weight:800; color:#f4f4f5;">${Number(stk.strength_score).toFixed(1)}</td>
+          <td style="text-align:right;">${lod_badge}</td>
         </tr>
       `;
     });
 
-    tableBody.innerHTML = html || '<tr><td colspan="12" style="text-align:center; padding:30px; color:var(--text-muted);">No stocks match current filter.</td></tr>';
+    tableBody.innerHTML = html || `<tr><td colspan="11" style="text-align:center; padding:30px; color:var(--text-muted);">${isStealthMode ? 'No telemetry nodes match current filter.' : 'No stocks match current filter.'}</td></tr>`;
   }
 
   // Chart Timeframe Switcher
@@ -1302,27 +1576,210 @@
     }
   }
 
+  // Chart Style Switcher: Volume Candles (TradingView style) vs Standard Fixed Width
+  let chartStyle = localStorage.getItem('jarvis_chart_style') || 'vol';
+
+  function switchChartStyle(st) {
+    chartStyle = st;
+    localStorage.setItem('jarvis_chart_style', st);
+    const btnVol = document.getElementById('style-btn-vol');
+    const btnStd = document.getElementById('style-btn-std');
+    if (btnVol && btnStd) {
+      if (st === 'vol') {
+        btnVol.classList.add('active');
+        btnStd.classList.remove('active');
+      } else {
+        btnVol.classList.remove('active');
+        btnStd.classList.add('active');
+      }
+    }
+    const popupFooterNote = document.getElementById('popup-footer-note');
+    if (popupFooterNote) {
+      if (isStealthMode) {
+        popupFooterNote.innerText = (chartStyle === 'vol')
+          ? '💡 Volatility Trace: Width weighted by event density'
+          : '💡 Upper Baseline Envelope | Dynamic 3m Boundary Thresholds';
+      } else {
+        popupFooterNote.innerText = (chartStyle === 'vol')
+          ? '💡 Volume Candles: Candle thickness indicates volume | Gold = PDH | Cyan/Orange = ORB'
+          : '💡 Gold Line = Previous Day High (PDH) | Cyan/Orange = 3m Dynamic ORB';
+      }
+    }
+    if (activeSym && CHARTS_DATA[activeSym]) {
+      drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    }
+  }
+
   function updatePopupHeader(data) {
     if (!data) return;
     const isDaily = (currentTimeframe === 'D');
-    popupTitle.innerHTML = `📈 ${data.symbol} <span style="font-size:11px; color:var(--text-muted); font-weight:500;">(${isDaily ? 'Daily Swing' : '3m Dynamic ORB'})</span>`;
+    const titleName = isStealthMode ? ('node-' + data.symbol) : data.symbol;
+    const subName = isStealthMode ? (isDaily ? 'Aggregated Volatility Trace' : '3m Ingress Envelope') : (isDaily ? 'Daily Swing' : '3m Dynamic ORB');
+    popupTitle.innerHTML = `📈 ${titleName} <span style="font-size:11px; color:var(--text-muted); font-weight:500;">(${subName})</span>`;
 
-    let bHtml = `<span class="pill-badge" style="background:#1c2438; color:#fff;">₹${Number(data.ltp).toFixed(2)}</span>`;
+    const valStr = isStealthMode ? Number(data.ltp).toFixed(2) : ('₹' + Number(data.ltp).toFixed(2));
+    let bHtml = `<span class="pill-badge" style="background:var(--bg-input); color:#fff; border:1px solid var(--border-bright);">${valStr}</span>`;
     const col = data.chg_pct >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+    const bgCol = data.chg_pct >= 0 ? 'var(--accent-green-bg)' : 'var(--accent-red-bg)';
     const sign = data.chg_pct >= 0 ? '+' : '';
-    bHtml += `<span class="pill-badge" style="color:${col}; font-weight:800;">${sign}${Number(data.chg_pct).toFixed(2)}%</span>`;
+    bHtml += `<span class="pill-badge" style="background:${bgCol}; color:${col}; font-weight:800; border:1px solid ${col};">${sign}${Number(data.chg_pct).toFixed(2)}%</span>`;
 
     if (data.pdh) {
-      const pdhStatus = data.pdh_broken ? 'BREACHED' : 'RESISTANCE';
+      const pdhStatus = isStealthMode ? (data.pdh_broken ? 'EXCEEDED' : 'NOMINAL') : (data.pdh_broken ? 'BREACHED' : 'RESISTANCE');
       const pdhCol = data.pdh_broken ? 'var(--accent-green)' : 'var(--accent-gold)';
-      bHtml += `<span class="pill-badge" style="border:1px solid #f59e0b; color:#f59e0b;">PDH: ₹${Number(data.pdh).toFixed(1)} (<span style="color:${pdhCol}">${pdhStatus}</span>)</span>`;
+      const pdhLabel = isStealthMode ? 'Peak Envelope: ' : 'PDH: ₹';
+      bHtml += `<span class="pill-badge" style="border:1px solid var(--border-bright); color:#d4d4d8;">${pdhLabel}${Number(data.pdh).toFixed(1)} (<span style="color:${pdhCol}; font-weight:800;">${pdhStatus}</span>)</span>`;
     }
 
     if (data.is_reversal || data.orb_status === 'L➔H') {
-      const tip = data.reversal_desc || 'Broke ORB Low first, then broke ORB High';
-      bHtml += `<span class="pill-badge badge-orb-rev" title="${tip}">🔄 REVERSAL (L➔H)</span>`;
+      const tip = isStealthMode ? 'Broke lower boundary first, then broke upper boundary' : (data.reversal_desc || 'Broke ORB Low first, then broke ORB High');
+      const revText = isStealthMode ? '🔄 FAILOVER (L➔H)' : '🔄 REVERSAL (L➔H)';
+      bHtml += `<span class="pill-badge badge-orb-rev" title="${tip}">${revText}</span>`;
     }
+
+    // Dynamic Intraday 10 EMA & % Stretch Pill in Popup Header
+    let ema10 = data.ema10;
+    if (!ema10 && data.candles_3m && data.candles_3m.length) {
+      const alpha = 2.0 / (10.0 + 1.0);
+      data.candles_3m.forEach(c => {
+        const close = Number(c.c);
+        if (ema10 === null || ema10 === undefined) ema10 = close;
+        else ema10 = (close * alpha) + (ema10 * (1.0 - alpha));
+      });
+    }
+    if (!ema10 && data.pivot) ema10 = Number(data.pivot);
+
+    const ltpNum = Number(data.ltp) || 0;
+    const stretch = (ema10 && ltpNum > 0) ? (((ltpNum - ema10) / ema10) * 100) : null;
+    if (ema10 && !isDaily) {
+      const eStr = isStealthMode ? ema10.toFixed(1) : ('₹' + ema10.toFixed(1));
+      const sStr = stretch !== null ? ((stretch >= 0 ? '+' : '') + stretch.toFixed(1) + '%') : '';
+      let badgeCls = 'stretch-normal';
+      if (stretch !== null) {
+        if (stretch < 0) badgeCls = 'stretch-sub';
+        else if (stretch <= 0.45) badgeCls = 'stretch-prime';
+        else if (stretch > 1.0) badgeCls = 'stretch-extended';
+      }
+      bHtml += `<span class="stretch-pill ${badgeCls}" title="${isStealthMode ? 'Baseline Telemetry (10-MA)' : 'Intraday 10 EMA & % Stretch'}">${isStealthMode ? '10-MA: ' : '10 EMA: '}${eStr} (${sStr})</span>`;
+    }
+
+    if (data.lod_dist !== null && data.lod_dist !== undefined) {
+      let lodCls = 'stretch-normal';
+      if (data.lod_dist <= 70) lodCls = 'stretch-prime';
+      else if (data.lod_dist > 100) lodCls = 'stretch-extended';
+      const lodLabel = isStealthMode ? 'SPAN: ' : 'LoD DIST: ';
+      bHtml += `<span class="stretch-pill ${lodCls}" title="${isStealthMode ? 'Envelope Span / ATR' : 'Low of Day Distance (% of Daily ATR14)'}">${lodLabel}${data.lod_dist}%</span>`;
+    }
+
     popupBadges.innerHTML = bHtml;
+
+    if (popupAppLink) {
+      popupAppLink.innerText = isStealthMode ? '🌐 Node Trace ↗' : '🚀 TV App ↗';
+      popupAppLink.title = isStealthMode ? 'Open node telemetry trace' : 'Launch Native TradingView Desktop / Web';
+    }
+
+    updatePopupGuardrail(data);
+  }
+
+  function updatePopupGuardrail(data) {
+    const el = document.getElementById('popup-guardrail');
+    if (!el || !data) return;
+
+    const isDaily = (currentTimeframe === 'D');
+    if (isDaily) {
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = 'flex';
+
+    const ltp = Number(data.ltp) || 0;
+    const orbH = Number(data.orb_high) || 0;
+    const pdh = Number(data.pdh) || 0;
+    const candles = data.candles_3m || [];
+
+    let ema10 = data.ema10;
+    if (!ema10 && candles.length) {
+      const alpha = 2.0 / (10.0 + 1.0);
+      candles.forEach(c => {
+        const close = Number(c.c);
+        if (ema10 === null || ema10 === undefined) ema10 = close;
+        else ema10 = (close * alpha) + (ema10 * (1.0 - alpha));
+      });
+    }
+    if (!ema10 && data.pivot) ema10 = Number(data.pivot);
+
+    const stretch = (ema10 && ltp > 0) ? (((ltp - ema10) / ema10) * 100) : null;
+    const stretchStr = stretch !== null ? ((stretch >= 0 ? '+' : '') + stretch.toFixed(1) + '%') : '--';
+
+    const boLevel = Math.max(orbH, pdh) || ltp;
+    const isBreakout = (data.pdh_broken || (data.signal && (data.signal.includes('BREAKOUT') || data.signal.includes('ABOVE'))));
+
+    let statusPill = '';
+    let adviceHtml = '';
+
+    if (stretch === null) {
+      statusPill = `<span class="stretch-pill stretch-normal">BENCHMARK: --</span>`;
+      adviceHtml = `<span>Awaiting 09:15 AM intraday session flow</span>`;
+    } else if (stretch < 0) {
+      statusPill = `<span class="stretch-pill stretch-sub">${isStealthMode ? 'BUFFER: SUB-PAR' : '▼ SUB-10 EMA'} (${stretchStr})</span>`;
+      adviceHtml = `<span>${isStealthMode ? 'Sub-baseline routing. Ingress filter active.' : 'Active pullback below 10 EMA. Avoid long breakout entries until price reclaims 10 EMA.'}</span>`;
+    } else if (stretch <= 0.45) {
+      statusPill = `<span class="stretch-pill stretch-prime">${isStealthMode ? 'BUFFER: OPTIMAL' : '🟢 PRIME COIL'} (${stretchStr})</span>`;
+      const tightSL = ema10 ? `₹${(ema10 * 0.996).toFixed(1)}` : `₹${(boLevel * 0.995).toFixed(1)}`;
+      adviceHtml = isBreakout
+        ? `<span>${isStealthMode ? 'Direct ingress clearance confirmed. Risk profile tight.' : '✅ <strong>Prime Coil Breakout:</strong> Tight to 10 EMA. Safe entry with micro SL below 10 EMA (' + tightSL + ').'}</span>`
+        : `<span>${isStealthMode ? 'Base structure consolidating near baseline.' : 'Stock coiling right at 10 EMA. Watch for ORB High / PDH breakout.'}</span>`;
+    } else if (stretch <= 1.0) {
+      statusPill = `<span class="stretch-pill stretch-normal">${isStealthMode ? 'BUFFER: NOMINAL' : '⚪ NORMAL'} (${stretchStr})</span>`;
+      const pullbackTarget = ema10 ? `₹${ema10.toFixed(1)}` : `₹${(boLevel * 0.998).toFixed(1)}`;
+      const tightSL = ema10 ? `₹${(ema10 * 0.995).toFixed(1)}` : `₹${(boLevel * 0.994).toFixed(1)}`;
+      adviceHtml = isBreakout
+        ? `<span>${isStealthMode ? 'Nominal bandwidth. Trailing baseline.' : 'Moderate extension. Best risk/reward on small dip toward 10 EMA (<strong>' + pullbackTarget + '</strong>, SL: ' + tightSL + ').'}</span>`
+        : `<span>Trading above 10 EMA. Moving towards upper range.</span>`;
+    } else {
+      // Overextended (> 1.0% from 10 EMA)
+      statusPill = `<span class="stretch-pill stretch-extended">${isStealthMode ? '⚠️ BUFFER: SATURATED' : '⚠️ EXTENDED'} (${stretchStr})</span>`;
+      const pullbackTarget = ema10 ? `₹${ema10.toFixed(1)}` : `₹${(boLevel * 0.998).toFixed(1)}`;
+      const tightSL = ema10 ? `₹${(ema10 * 0.995).toFixed(1)}` : `₹${(boLevel * 0.994).toFixed(1)}`;
+      adviceHtml = `<span>${isStealthMode 
+        ? 'High latency risk! Defer allocation. Await re-entry convergence near baseline (' + (ema10 ? ema10.toFixed(1) : '--') + ').' 
+        : '🛑 <strong>DO NOT CHASE!</strong> Price is stretched ' + stretchStr + ' above 10 EMA. Wait for pullback to 10 EMA (<strong>' + pullbackTarget + '</strong>, SL: ' + tightSL + ') to avoid getting trapped.'}</span>`;
+    }
+
+    let lodPill = '';
+    let lodNote = '';
+    if (data.lod_dist !== null && data.lod_dist !== undefined) {
+      const lodVal = Number(data.lod_dist);
+      let lodCls = 'stretch-normal';
+      if (lodVal <= 70) lodCls = 'stretch-prime';
+      else if (lodVal > 100) lodCls = 'stretch-extended';
+      lodPill = `<span class="stretch-pill ${lodCls}" title="Low of Day Distance (% of Daily ATR14)">${isStealthMode ? 'SPAN' : 'LoD'}: ${lodVal}%</span>`;
+
+      if (lodVal > 100) {
+        lodNote = isStealthMode
+          ? `<div style="margin-top:3px; font-size:10.5px; color:#e4e4e7;">⚠️ Envelope saturated (${lodVal}% of baseline span). Elevated variance.</div>`
+          : `<div style="margin-top:3px; font-size:10.5px; color:#fca5a5;">⚠️ <strong>Daily Range Exhausted (${lodVal}% ATR):</strong> Stock moved >100% of ATR from day low. High risk of exhaustion / pullback!</div>`;
+      } else if (lodVal <= 70) {
+        lodNote = isStealthMode
+          ? `<div style="margin-top:3px; font-size:10.5px; color:#86efac;">🟢 Optimal headroom (${lodVal}% of baseline span).</div>`
+          : `<div style="margin-top:3px; font-size:10.5px; color:#86efac;">🟢 <strong>Fresh Range Fuel (${lodVal}% ATR):</strong> Ample room remaining before daily ATR limit.</div>`;
+      }
+    }
+
+    const emaLabel = isStealthMode ? '10-MA: ' : '10 EMA: ';
+    const emaValStr = ema10 ? (isStealthMode ? ema10.toFixed(2) : ('₹' + ema10.toFixed(2))) : '--';
+
+    el.innerHTML = `
+      <div class="guardrail-left">
+        <span style="color:var(--text-muted); font-size:11px;">${emaLabel}<strong style="color:#ffffff;">${emaValStr}</strong></span>
+        ${statusPill}
+        ${lodPill}
+      </div>
+      <div class="guardrail-right">
+        ${adviceHtml}
+        ${lodNote}
+      </div>
+    `;
   }
 
   // SOTA Canvas Rendering Engine (Retina High-DPI, Volume, Crosshair, Levels)
@@ -1344,7 +1801,7 @@
     const W = width;
     const H = height;
 
-    // Dark Background
+    // Dark Background (TradingView Pitch Dark)
     ctx.fillStyle = '#0a0d14';
     ctx.fillRect(0, 0, W, H);
 
@@ -1373,12 +1830,40 @@
     let minPrice = Infinity;
     let maxPrice = -Infinity;
     let maxVol = 0;
+    let sumVol = 0;
 
     candles.forEach(c => {
       if (c.l < minPrice) minPrice = c.l;
       if (c.h > maxPrice) maxPrice = c.h;
-      if (c.v > maxVol) maxVol = c.v;
+      const v = Number(c.v || 0);
+      sumVol += v;
+      if (v > maxVol) maxVol = v;
     });
+    const avgVol = sumVol / Math.max(candles.length, 1);
+
+    // Terminal-Style Bounded Bar Spacing
+    const n = candles.length;
+    const maxBarSpacing = isDaily ? 20 : 15;
+    const barSpacing = Math.min(plotW / Math.max(n, 1), maxBarSpacing);
+
+    // Compute rolling Intraday 10 EMA series for 3m timeframe
+    let emaSeries = [];
+    if (!isDaily && candles.length) {
+      const alpha = 2.0 / (10.0 + 1.0);
+      let currEma = null;
+      candles.forEach(c => {
+        const close = Number(c.c);
+        if (currEma === null) currEma = close;
+        else currEma = (close * alpha) + (currEma * (1.0 - alpha));
+        emaSeries.push(currEma);
+      });
+    }
+
+    if (!isDaily && emaSeries.length) {
+      const lastE = emaSeries[emaSeries.length - 1];
+      minPrice = Math.min(minPrice, lastE);
+      maxPrice = Math.max(maxPrice, lastE * 1.015);
+    }
 
     if (data.pdh) {
       maxPrice = Math.max(maxPrice, data.pdh);
@@ -1445,8 +1930,8 @@
     }
 
     if (!isDaily) {
-      if (data.orb_high) drawLevel(data.orb_high, '#06b6d4', 'ORB-H');
-      if (data.orb_low) drawLevel(data.orb_low, '#f97316', 'ORB-L');
+      if (data.orb_high) drawLevel(data.orb_high, '#06b6d4', isStealthMode ? 'UPPER' : 'ORB-H');
+      if (data.orb_low) drawLevel(data.orb_low, '#f97316', isStealthMode ? 'LOWER' : 'ORB-L');
     }
 
     // Previous Day High (PDH) Line (Vibrant Gold)
@@ -1461,7 +1946,7 @@
       ctx.lineTo(W - padRight, yPdh);
       ctx.stroke();
 
-      const pdhTag = '📌 PDH ' + data.pdh.toFixed(1);
+      const pdhTag = isStealthMode ? ('📌 PEAK ' + data.pdh.toFixed(1)) : ('📌 PDH ' + data.pdh.toFixed(1));
       ctx.font = 'bold 9.5px var(--font-mono)';
       const tw = ctx.measureText(pdhTag).width;
       ctx.fillStyle = 'rgba(10, 13, 20, 0.9)';
@@ -1477,16 +1962,66 @@
       ctx.fillRect(W - padRight + 2, yPdh - 7, padRight - 4, 15);
       ctx.fillStyle = '#000000';
       ctx.font = 'bold 9px var(--font-mono)';
-      ctx.fillText('PDH', W - padRight + 4, yPdh + 4);
+      ctx.fillText(isStealthMode ? 'PEAK' : 'PDH', W - padRight + 4, yPdh + 4);
       ctx.restore();
     }
 
-    // Candlestick Drawing (Default Red / Green)
-    const n = candles.length;
-    const barSpacing = plotW / Math.max(n, 1);
-    const barWidth = Math.max(Math.min(barSpacing * 0.72, 14), 2);
+    // Dynamic Rolling Intraday 10 EMA Curve & Overextension Band (+1.1%)
+    if (!isDaily && emaSeries.length >= 2) {
+      ctx.save();
+      ctx.strokeStyle = '#2962ff';
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([3, 2]);
+      ctx.beginPath();
+      emaSeries.forEach((eVal, i) => {
+        const cx = padLeft + i * barSpacing + barSpacing / 2;
+        const cy = getY(eVal);
+        if (i === 0) ctx.moveTo(cx, cy);
+        else ctx.lineTo(cx, cy);
+      });
+      ctx.stroke();
+
+      // Right axis 10 EMA label
+      const lastEma = emaSeries[emaSeries.length - 1];
+      if (lastEma >= minPrice && lastEma <= maxPrice) {
+        const yEma = getY(lastEma);
+        ctx.fillStyle = '#2962ff';
+        ctx.fillRect(W - padRight + 2, yEma - 7, padRight - 4, 15);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 8.5px var(--font-mono)';
+        ctx.fillText(isStealthMode ? '10-MA' : '10 EMA', W - padRight + 4, yEma + 4);
+      }
+
+      // Upper Volatility Extension Threshold (+1.1% from 10 EMA)
+      const extVal = lastEma * 1.011;
+      if (extVal >= minPrice && extVal <= maxPrice) {
+        drawLevel(extVal, '#dc2626', isStealthMode ? 'MAX BUFFER' : '+1.1% EXT', [2, 4]);
+      }
+      ctx.restore();
+    }
+
+    // Classic Candlestick Drawing: Green = Bullish, Red = Bearish
+    const stdBarWidth = Math.max(Math.min(barSpacing * 0.72, 10), 2);
+
+    // Volume Sub-Pane Separator Line & Label
+    const volSeparatorY = H - padBottom - volH;
+    ctx.save();
+    ctx.strokeStyle = '#141c2c';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath();
+    ctx.moveTo(padLeft, volSeparatorY);
+    ctx.lineTo(W - padRight, volSeparatorY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = 'bold 8.5px var(--font-mono)';
+    ctx.textAlign = 'left';
+    ctx.fillText(isStealthMode ? 'TRACE VOL' : 'VOL', padLeft + 4, volSeparatorY - 3);
+    ctx.restore();
 
     let hoveredCandle = null;
+    let lastLabelX = -999;
 
     candles.forEach((c, i) => {
       const cx = padLeft + i * barSpacing + barSpacing / 2;
@@ -1497,17 +2032,26 @@
       const isBull = c.c >= c.o;
       const col = isBull ? '#00c087' : '#f43f5e';
 
-      if (hoverX !== undefined && Math.abs(hoverX - cx) <= barSpacing / 2) {
-        hoveredCandle = Object.assign({}, c, { cx, oY, cY, hY, lY, isBull });
+      // Dynamic Candle Body Width for Volume Candles
+      let bWidth = stdBarWidth;
+      if (chartStyle === 'vol' && avgVol > 0) {
+        const volRatio = (c.v || 0) / avgVol;
+        let factor = Math.sqrt(Math.max(volRatio, 0.05));
+        factor = Math.max(0.35, Math.min(factor, 1.45));
+        bWidth = Math.max(Math.min(barSpacing * 0.65 * factor, barSpacing - 1.2), 2.5);
       }
 
-      // Volume Bar
+      if (hoverX !== undefined && Math.abs(hoverX - cx) <= barSpacing / 2) {
+        hoveredCandle = Object.assign({}, c, { cx, oY, cY, hY, lY, isBull, bWidth, barIndex: i });
+      }
+
+      // Volume Bar in bottom sub-pane
       const vH = maxVol > 0 ? (c.v / maxVol) * volH : 0;
       const vY = (H - padBottom) - vH;
       ctx.fillStyle = isBull ? 'rgba(0, 192, 135, 0.25)' : 'rgba(244, 63, 94, 0.25)';
-      ctx.fillRect(cx - barWidth / 2, vY, barWidth, vH);
+      ctx.fillRect(cx - bWidth / 2, vY, bWidth, vH);
 
-      // Wick (Colored)
+      // Wick: Centered at cx (Colored)
       ctx.strokeStyle = col;
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -1515,23 +2059,34 @@
       ctx.lineTo(cx, lY);
       ctx.stroke();
 
-      // Body (Colored Fill)
-      ctx.fillStyle = col;
+      // Body: Colored Fill (Green for Bullish, Red for Bearish)
       const bTop = Math.min(oY, cY);
       const bH = Math.max(Math.abs(cY - oY), 1.5);
-      ctx.fillRect(cx - barWidth / 2, bTop, barWidth, bH);
+      ctx.fillStyle = col;
+      ctx.fillRect(cx - bWidth / 2, bTop, bWidth, bH);
 
-      // X-Axis Time Labels
-      const step = Math.max(Math.floor(n / 6), 1);
-      if (i === 0 || i === n - 1 || (i % step === 0)) {
+      // X-Axis Time / Date Labels
+      let labelText = c.t || '';
+      if (labelText.includes('T')) {
+        labelText = isDaily ? labelText.split('T')[0] : (labelText.split('T')[1]?.substring(0, 5) || labelText);
+      } else if (labelText.length > 5 && !isDaily && labelText.includes(':')) {
+        labelText = labelText.substring(0, 5);
+      }
+
+      const isFirst = (i === 0);
+      const isLast = (i === n - 1);
+      const hasEnoughSpace = (cx - lastLabelX >= 48);
+
+      if ((isFirst || hasEnoughSpace) && (W - padRight - cx >= 15 || isLast)) {
         ctx.fillStyle = '#64748b';
         ctx.font = '9px var(--font-mono)';
         ctx.textAlign = 'center';
-        ctx.fillText(c.t, cx, H - 8);
+        ctx.fillText(labelText, cx, H - 8);
+        lastLabelX = cx;
       }
     });
 
-    // Crosshair & Interactive HUD
+    // Crosshair & Interactive HUD with 10 EMA and Stretch metrics
     if (hoveredCandle) {
       ctx.save();
       ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
@@ -1544,11 +2099,43 @@
       ctx.restore();
 
       const cColor = hoveredCandle.isBull ? '#00c087' : '#f43f5e';
-      popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | O: ₹${hoveredCandle.o.toFixed(2)} | H: ₹${hoveredCandle.h.toFixed(2)} | L: ₹${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${hoveredCandle.c.toFixed(2)}</span> | Vol: ${hoveredCandle.v.toLocaleString()}`;
+      const vVal = hoveredCandle.v || 0;
+      const volRatioStr = avgVol > 0 ? (' (' + (vVal / avgVol).toFixed(1) + 'x avg)') : '';
+
+      let emaHud = '';
+      if (!isDaily && emaSeries[hoveredCandle.barIndex] !== undefined) {
+        const eAtBar = emaSeries[hoveredCandle.barIndex];
+        const strAtBar = (((hoveredCandle.c - eAtBar) / eAtBar) * 100);
+        const sSign = strAtBar >= 0 ? '+' : '';
+        let guardBadge = (strAtBar > 1.0) ? (isStealthMode ? ' [SATURATED]' : ' [⚠️ EXTENDED]') : (strAtBar >= 0 && strAtBar <= 0.45) ? (isStealthMode ? ' [OPTIMAL]' : ' [🟢 PRIME]') : '';
+        emaHud = ` | ${isStealthMode ? '10-MA' : '10 EMA'}: ${eAtBar.toFixed(2)} (${sSign}${strAtBar.toFixed(1)}%${guardBadge})`;
+      }
+
+      if (isStealthMode) {
+        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | Base: ${hoveredCandle.o.toFixed(2)} | High: ${hoveredCandle.h.toFixed(2)} | Low: ${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${hoveredCandle.c.toFixed(2)}</span> | Events: ${vVal.toLocaleString()}${volRatioStr}${emaHud}`;
+      } else {
+        popupHud.innerHTML = `<b>${isDaily ? 'Date' : 'Time'}: ${hoveredCandle.t}</b> | O: ₹${hoveredCandle.o.toFixed(2)} | H: ₹${hoveredCandle.h.toFixed(2)} | L: ₹${hoveredCandle.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${hoveredCandle.c.toFixed(2)}</span> | Vol: ${vVal.toLocaleString()}${volRatioStr}${emaHud}`;
+      }
     } else {
       const last = candles[candles.length - 1];
       const cColor = last.c >= last.o ? '#00c087' : '#f43f5e';
-      popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | O: ₹${last.o.toFixed(2)} | H: ₹${last.h.toFixed(2)} | L: ₹${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${last.c.toFixed(2)}</span> | Vol: ${last.v.toLocaleString()}`;
+      const lastV = last.v || 0;
+      const lastVolRatioStr = avgVol > 0 ? (' (' + (lastV / avgVol).toFixed(1) + 'x avg)') : '';
+
+      let emaHud = '';
+      if (!isDaily && emaSeries.length) {
+        const lastEma = emaSeries[emaSeries.length - 1];
+        const lastStretch = (((last.c - lastEma) / lastEma) * 100);
+        const sSign = lastStretch >= 0 ? '+' : '';
+        let guardBadge = (lastStretch > 1.0) ? (isStealthMode ? ' [SATURATED]' : ' [⚠️ EXTENDED]') : (lastStretch >= 0 && lastStretch <= 0.45) ? (isStealthMode ? ' [OPTIMAL]' : ' [🟢 PRIME]') : '';
+        emaHud = ` | ${isStealthMode ? '10-MA' : '10 EMA'}: ${lastEma.toFixed(2)} (${sSign}${lastStretch.toFixed(1)}%${guardBadge})`;
+      }
+
+      if (isStealthMode) {
+        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | Base: ${last.o.toFixed(2)} | High: ${last.h.toFixed(2)} | Low: ${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">Val: ${last.c.toFixed(2)}</span> | Events: ${lastV.toLocaleString()}${lastVolRatioStr}${emaHud}`;
+      } else {
+        popupHud.innerHTML = `Latest [${isDaily ? 'Date' : 'Time'}: <b>${last.t}</b>] | O: ₹${last.o.toFixed(2)} | H: ₹${last.h.toFixed(2)} | L: ₹${last.l.toFixed(2)} | <span style="color:${cColor}; font-weight:800;">C: ₹${last.c.toFixed(2)}</span> | Vol: ${lastV.toLocaleString()}${lastVolRatioStr}${emaHud}`;
+      }
     }
   }
 
@@ -1617,8 +2204,13 @@
     if (popupTimer) clearTimeout(popupTimer);
   }
 
-  // Keyboard Shortcuts for Pro Traders
+  // Keyboard Shortcuts for Pro Traders & DevOps Telemetry
   window.addEventListener('keydown', function(e) {
+    if (e.shiftKey && (e.key === 'S' || e.key === 's')) {
+      e.preventDefault();
+      toggleStealthMode();
+      return;
+    }
     if (e.key === 'Escape') {
       hideChartPopup();
     } else if (e.key === '/') {
@@ -1630,7 +2222,11 @@
     } else if (e.key.toLowerCase() === 'r' && document.activeElement !== searchInput) {
       fetchData(true);
     } else if (e.key === '?' && document.activeElement !== searchInput) {
-      alert('⚡ JARVIS PRO SHORTCUTS:\n\n[/] Focus search\n[R] Force refresh\n[Esc] Close chart\n[1-9] View chart for stock #1-9');
+      if (isStealthMode) {
+        alert('⚡ CLUSTER TELEMETRY DAEMON DIAGNOSTICS:\n\n[Shift + S] Toggle Stealth / Telemetry Mode\n[/] Focus endpoint filter\n[R] Force sync metrics\n[Esc] Close trace modal\n[1-9] Inspect endpoint #1-9');
+      } else {
+        alert('⚡ JARVIS PRO TRADER SHORTCUTS:\n\n[Shift + S] Toggle Stealth / Trader Mode\n[/] Focus search\n[R] Force refresh\n[Esc] Close chart\n[1-9] View chart for stock #1-9');
+      }
     } else if (e.key >= '1' && e.key <= '9' && document.activeElement !== searchInput) {
       const idx = parseInt(e.key) - 1;
       if (RAW_STOCKS[idx]) {
@@ -1652,6 +2248,7 @@
   });
 
   // Boot
+  applyStealthModeUI();
   fetchData(true);
   startCountdown();
 </script>
