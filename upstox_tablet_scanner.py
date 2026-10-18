@@ -114,6 +114,14 @@ INDEX_MAPPING = {
 }
 
 
+SYMBOL_ALIASES = {
+    "JAYNECOND": "JAYNECOIND",
+    "DALTACORP": "DELTACORP",
+    "SAMBHAV": "SAMBHV",
+    "HBLPOWER": "HBLENGINE",
+}
+
+
 def resolve_isin_dynamic(symbol):
     """Dynamically resolves unknown symbol to ISIN from Upstox instruments cache."""
     cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "upstox_nse_cache.json")
@@ -234,8 +242,9 @@ def sync_remote_files_from_github():
                     if content_b64:
                         content_str = base64.b64decode(content_b64).decode("utf-8").strip()
                         if content_str:
+                            norm_content = content_str.replace("\r\n", "\n").replace("\r", "\n").strip()
                             with open(filename, "w", encoding="utf-8") as f:
-                                f.write(content_str)
+                                f.write(norm_content + "\n")
             except Exception:
                 pass
 
@@ -483,6 +492,7 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
 def get_instrument_key(symbol):
     """Resolves instrument key for Upstox API queries (stocks & indices)."""
     sym_u = symbol.strip().upper()
+    sym_u = SYMBOL_ALIASES.get(sym_u, sym_u)
     if sym_u in INDEX_MAPPING:
         return INDEX_MAPPING[sym_u]
     isin = SYMBOL_TO_ISIN.get(sym_u)
@@ -527,6 +537,7 @@ def aggregate_1m_to_3m(candles_1m):
 
 def fetch_upstox_symbol_data(symbol, token):
     """Fetches live market data and 3m candles from Upstox API v2."""
+    symbol = SYMBOL_ALIASES.get(symbol.strip().upper(), symbol.strip().upper())
     inst_key = get_instrument_key(symbol)
     encoded_key = urllib.parse.quote(inst_key)
     is_index = inst_key.startswith("NSE_INDEX|")
@@ -1208,26 +1219,32 @@ def compute_strength_score(d, m):
 
 def get_active_watchlist():
     """Loads active watchlist dynamically from watchlist.txt, config_credentials.json, or default WATCHLIST."""
-    if os.path.isfile("watchlist.txt"):
-        try:
-            with open("watchlist.txt", "r", encoding="utf-8") as f:
-                lines = [l.strip().upper().replace(",", " ") for l in f if l.strip() and not l.startswith("#")]
-                syms = []
-                for line in lines:
-                    syms.extend(line.split())
-                if syms:
-                    return list(dict.fromkeys(syms))
-        except Exception:
-            pass
+    script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
+    candidates = ["watchlist.txt", os.path.join(script_dir, "watchlist.txt")]
+    for w_path in candidates:
+        if os.path.isfile(w_path):
+            try:
+                with open(w_path, "r", encoding="utf-8", errors="replace") as f:
+                    content = f.read().replace("\r\n", "\n").replace("\r", "\n")
+                    lines = [l.strip().upper().replace(",", " ") for l in content.split("\n") if l.strip() and not l.startswith("#")]
+                    syms = []
+                    for line in lines:
+                        for s in line.split():
+                            canonical = SYMBOL_ALIASES.get(s, s)
+                            syms.append(canonical)
+                    if syms:
+                        return list(dict.fromkeys(syms))
+            except Exception:
+                pass
 
-    for cfg_f in [CONFIG_FILE, "credentials.json"]:
+    for cfg_f in [CONFIG_FILE, "credentials.json", os.path.join(script_dir, "config_credentials.json")]:
         if os.path.isfile(cfg_f):
             try:
                 with open(cfg_f, "r", encoding="utf-8") as f:
                     cfg = json.load(f)
                     syms = cfg.get("watchlist")
                     if syms and isinstance(syms, list):
-                        return [s.strip().upper() for s in syms if s.strip()]
+                        return [SYMBOL_ALIASES.get(s.strip().upper(), s.strip().upper()) for s in syms if s.strip()]
             except Exception:
                 pass
 
