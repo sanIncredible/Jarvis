@@ -1135,32 +1135,19 @@
     // Raw GitHub Stream
     targets.push({ url: `${RAW_GITHUB_URL}?_t=${t}`, name: 'GitHub Raw' });
 
-    // Concurrently fetch candidate endpoints and select the freshest & most complete payload
+    // Race the primary targets concurrently for instant delivery
     try {
-      const settled = await Promise.allSettled(targets.map(async (target) => {
+      const result = await Promise.any(targets.map(async (target) => {
         const res = await fetchWithTimeout(target.url, { cache: 'no-store' }, 3500);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (!data || !data.stocks || !data.stocks.length) throw new Error('Empty payload');
         return { data, name: target.name };
       }));
-
-      const successful = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
-      if (successful.length > 0) {
-        // Sort: prefer highest stock count first, then freshest updated_at
-        successful.sort((a, b) => {
-          const lenDiff = (b.data.stocks?.length || 0) - (a.data.stocks?.length || 0);
-          if (lenDiff !== 0) return lenDiff;
-          const tA = a.data.updated_at || '';
-          const tB = b.data.updated_at || '';
-          return tB.localeCompare(tA);
-        });
-        const best = successful[0];
-        processIncomingData(best.data, best.name);
-        return;
-      }
+      processIncomingData(result.data, result.name);
+      return;
     } catch (raceErr) {
-      console.warn('Primary feed concurrent check failed, trying GitHub REST API fallback...', raceErr);
+      console.warn('Primary feed race failed, trying GitHub REST API fallback...', raceErr);
     }
 
     // Fallback: GitHub Contents REST API
