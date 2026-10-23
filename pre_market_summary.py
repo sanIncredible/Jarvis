@@ -240,6 +240,57 @@ def classify_bonde_multi_day_state(history: List[Dict[str, Any]]) -> Dict[str, A
         allocation_pct = 0
         tactical_rule = "Cash preservation mode. Avoid buying breakouts. Trailing stops tightened."
 
+    # Explicit 3-Way Detector Statuses
+    if curr['dn_4_cnt'] >= 500:
+        washout_status = f"🔴 PEAK CLIMAX ({curr['dn_4_cnt']} stocks down 4%)"
+    elif had_climax and climax_day:
+        washout_status = f"🔴 ACTIVE (Peak {climax_day['dn_4_cnt']} on {climax_day['date']}; now {curr['dn_4_cnt']})"
+    elif curr['dn_4_cnt'] >= 300:
+        washout_status = f"🟡 ELEVATED ({curr['dn_4_cnt']} stocks down 4%)"
+    else:
+        washout_status = "⚪ QUIET (Normal selling levels)"
+
+    if state_code == "IGNITION":
+        ignition_status = "🟢 TRIGGERED TODAY (Reversal spark active!)"
+    elif had_climax or curr['ratio_5d'] < 1.0:
+        ignition_status = "⚪ ARMED (Watching for &gt;150 Up / &lt;80 Down)"
+    else:
+        ignition_status = "⚪ STANDBY"
+
+    if state_code == "OVERHEATED":
+        froth_status = "⚠️ FROTH / DIVERGENCE (Cool-off imminent!)"
+    elif curr['ratio_5d'] >= 2.5:
+        froth_status = f"🟡 WARMING (5D Ratio {curr['ratio_5d']:.2f})"
+    else:
+        froth_status = f"⚪ QUIET (5D Ratio {curr['ratio_5d']:.2f} — No froth)"
+
+    # Action Mandates for All 3 Timeframes (What To Do Today)
+    if state_code in ("CLIMAX", "WASHOUT_CONT", "DEFENSIVE"):
+        mandate_headline = "🛑 SIT ON HANDS / HOLD CASH"
+        action_intra = "🟡 <i>Permitted with Caution</i> (Quick 3m ORB scalps only on RS leaders; strictly square off before 03:15 PM; zero overnight hold)."
+        action_swing = "⛔ <b>DO NOT START NEW SWING TRADES</b> (Regime is Defensive / Washout. Wait for Day-1 Ignition confirmation spark)."
+        action_positional = "⏸️ <b>PAUSED / PROTECT CAPITAL</b> (Market structure broken; wait for breadth to base)."
+    elif state_code == "IGNITION":
+        mandate_headline = "🟢 PROCEED WITH PILOT TRADES (25% Risk)"
+        action_intra = "🟢 <i>Active &amp; Favored</i> (Trade 3m ORB opening breakouts on high volume with conviction)."
+        action_swing = "🟢 <b>START PILOT SWING TRADES (25% Capital)</b> (Deploy on 1-2 top Relative Strength leaders or Episodic Pivots)."
+        action_positional = "👀 <b>WATCHLIST BUILDING</b> (Identify multi-month base breakout candidates for accumulation)."
+    elif state_code == "EXPANSION":
+        mandate_headline = "🚀 FULL STEAM AHEAD (100% Risk Allocation)"
+        action_intra = "🟢 <i>Highly Favorable</i> (Run full 3m ORB scanner; trade opening breakouts aggressively)."
+        action_swing = "🟢 <b>FULL SWING ACTIVE (100% Capital)</b> (Deploy across up to 5 positions; press winners and trail to 10 DEMA)."
+        action_positional = "🟢 <b>ACCUMULATE / ADD</b> (Add to core institutional compounders in leading sectors)."
+    elif state_code == "OVERHEATED":
+        mandate_headline = "⚠️ HARVEST PROFITS / DO NOT CHASE HIGHS"
+        action_intra = "⚠️ <i>Fade Gap-Ups / Scalp Only</i> (High fakeout risk on morning breakouts; take quick profits)."
+        action_swing = "⛔ <b>DO NOT START NEW SWING POSITIONS</b> (Trail stops to daily low / 10 DEMA; sell 1/3 into strength)."
+        action_positional = "⏸️ <b>HOLD &amp; TRAIL</b> (Do not deploy fresh cash at range extremes)."
+    else:  # SELECTIVE
+        mandate_headline = "🟡 CHERRY-PICK A+ SETUPS ONLY (50% Risk)"
+        action_intra = "🟡 <i>Selective Trading</i> (Require 2x volume confirmation on 3m ORB; quick profit taking)."
+        action_swing = "🟡 <b>HALF-SIZE SWING (50% Risk)</b> (Take only top-tier A+ setups with strong sector backing)."
+        action_positional = "⏸️ <b>SELECTIVE HOLD</b> (Hold only high-conviction names with tight stops)."
+
     return {
         "state_code": state_code,
         "state_label": state_label,
@@ -247,7 +298,14 @@ def classify_bonde_multi_day_state(history: List[Dict[str, Any]]) -> Dict[str, A
         "allocation_pct": allocation_pct,
         "trajectory_context": trajectory_context,
         "ignition_trigger": ignition_trigger,
-        "tactical_rule": tactical_rule
+        "tactical_rule": tactical_rule,
+        "washout_status": washout_status,
+        "ignition_status": ignition_status,
+        "froth_status": froth_status,
+        "mandate_headline": mandate_headline,
+        "action_intra": action_intra,
+        "action_swing": action_swing,
+        "action_positional": action_positional
     }
 
 
@@ -590,6 +648,11 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
         lines.append(f"💼 <b>Swing Capital Allocation:</b> <b>{bonde.get('allocation_pct', 0)}% Risk</b>")
         lines.append(f"🎯 <b>Action:</b> {bonde.get('state_action', '')}")
         lines.append(f"📈 <b>Trajectory:</b> {bonde.get('trajectory_context', '')}")
+        lines.append("")
+        lines.append("🛡️ <b>BONDE DETECTOR SIGNALS:</b>")
+        lines.append(f"• <b>Washout Climax:</b> {bonde.get('washout_status', '⚪ QUIET')}")
+        lines.append(f"• <b>Ignition Spark:</b> {bonde.get('ignition_status', '⚪ STANDBY')}")
+        lines.append(f"• <b>Froth Exhaustion:</b> {bonde.get('froth_status', '⚪ QUIET')}")
         lines.append(f"🔔 <b>Turning Trigger:</b> <code>{bonde.get('ignition_trigger', '')}</code>")
         lines.append("")
         lines.append(f"📋 <b>LAST SESSION ROW METRICS ({bonde['date']} | Row #{bonde['row_idx']}):</b>")
@@ -624,9 +687,15 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
 
     lines.append("")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    lines.append("💡 <b>TACTICAL PLAYBOOK (09:15 AM BELL):</b>")
+    if bonde and bonde.get("mandate_headline"):
+        lines.append("🎯 <b>EXECUTIVE ACTION ORDER (WHAT TO DO TODAY):</b>")
+        lines.append(f"• <b>Mandate:</b> <b>{bonde['mandate_headline']}</b>")
+        lines.append(f"• <b>Intraday (09:15-15:15):</b> {bonde['action_intra']}")
+        lines.append(f"• <b>Swing (1-10 Days):</b> {bonde['action_swing']}")
+        lines.append(f"• <b>Positional (Weeks):</b> {bonde['action_positional']}")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
-    # Integrate Bonde Regime with Tactical Playbook
+    lines.append("💡 <b>TACTICAL PLAYBOOK (09:15 AM BELL):</b>")
     if bonde and bonde.get("tactical_rule"):
         lines.append(f"• <b>Bonde Playbook:</b> {bonde['tactical_rule']}")
 
@@ -711,9 +780,11 @@ def main():
     bonde = summary.get("bonde_breadth")
     if bonde:
         print(f"\n🚦 Stockbee State  : {bonde.get('state_label', '')}")
+        print(f"🎯 Action Mandate  : {bonde.get('mandate_headline', '')}")
         print(f"💼 Allocation      : {bonde.get('allocation_pct', 0)}% Risk")
-        print(f"🎯 Action          : {bonde.get('state_action', '')}")
+        print(f"🎯 State Guidance  : {bonde.get('state_action', '')}")
         print(f"📈 Trajectory      : {bonde.get('trajectory_context', '')}")
+        print(f"🛡️ Detectors       : Washout={bonde.get('washout_status')} | Ignition={bonde.get('ignition_status')} | Froth={bonde.get('froth_status')}")
         print(f"📋 Last Breadth Row: {bonde['date']} (Row #{bonde['row_idx']})")
         print(f"   • 4% Thrust     : {bonde['up_4_cnt']} Up ({bonde['up_4_pct']:.1f}%) | {bonde['dn_4_cnt']} Down ({bonde['dn_4_pct']:.1f}%)")
         print(f"   • Net 4% Breadth: {bonde['net_breadth']:+.2f}%")
