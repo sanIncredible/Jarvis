@@ -425,11 +425,33 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
     if not new_breakouts:
         return
 
-    # Build Option B: Detailed Action Card (With Exact Risk & Guidance)
-    lines = [
-        f"⚡ <b>JARVIS BREAKOUT ALERT — {t_clean}</b>",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    ]
+    # Check regime state to protect against discipline leak / FOMO in RED markets
+    is_defensive = False
+    regime_label = ""
+    for r_f in ["market_regime.json", os.path.join(os.path.dirname(os.path.abspath(__file__)), "market_regime.json")]:
+        if os.path.isfile(r_f):
+            try:
+                with open(r_f, "r", encoding="utf-8") as rf:
+                    rdata = json.load(rf)
+                    is_defensive = (rdata.get("swing_allocation_pct", 100) == 0)
+                    regime_label = rdata.get("state_label", "")
+                break
+            except Exception:
+                pass
+
+    # Build Detailed Action Card
+    if is_defensive:
+        lines = [
+            f"⚡ <b>JARVIS BREAKOUT ALERT — {t_clean}</b>",
+            f"⛔ <b>DEFENSIVE REGIME ({regime_label})</b>",
+            "⚠️ <i>80%+ breakouts fail. SCALPS ONLY. 0% Swing Risk!</i>",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        ]
+    else:
+        lines = [
+            f"⚡ <b>JARVIS BREAKOUT ALERT — {t_clean}</b>",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        ]
 
     for i, b in enumerate(new_breakouts):
         if i > 0:
@@ -2374,9 +2396,22 @@ def export_static_html(results, now_str, port):
             }
             stocks_payload.append(stk_data)
 
+        # Load market regime if available
+        script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
+        regime_data = {}
+        for r_path in ["market_regime.json", os.path.join(script_dir, "market_regime.json")]:
+            if os.path.isfile(r_path):
+                try:
+                    with open(r_path, "r", encoding="utf-8") as rf:
+                        regime_data = json.load(rf)
+                    break
+                except Exception:
+                    pass
+
         payload = {
             "updated_at": now_str,
             "source": source_label,
+            "market_regime": regime_data,
             "stocks": stocks_payload
         }
 
