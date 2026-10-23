@@ -136,10 +136,125 @@ def sync_market_breadth_from_onedrive(dest_file: Path, max_age_hours: int = 4) -
         return dest_file.is_file()
 
 
+def classify_bonde_multi_day_state(history: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Quantified Pradeep Bonde State Machine.
+    Evaluates multi-day sequence, climax washouts, ignition sparks, and divergences.
+    Returns: Dict containing state_code, state_label, state_action, allocation_pct, etc.
+    """
+    if not history:
+        return {
+            "state_code": "NEUTRAL",
+            "state_label": "⚪ NEUTRAL / INSUFFICIENT DATA",
+            "state_action": "Awaiting fresh breadth data.",
+            "allocation_pct": 0,
+            "trajectory_context": "No history available.",
+            "ignition_trigger": "Watch for Day-1 Ignition trigger.",
+            "tactical_rule": "Maintain neutral risk."
+        }
+
+    idx = len(history) - 1
+    curr = history[idx]
+    prev = history[idx - 1] if idx > 0 else curr
+    prev2 = history[idx - 2] if idx > 1 else prev
+
+    # Trailing consecutive streaks
+    consec_green = 0
+    consec_red = 0
+    for d in reversed(history):
+        if d['net_breadth'] > 0:
+            if consec_red > 0: break
+            consec_green += 1
+        elif d['net_breadth'] < 0:
+            if consec_green > 0: break
+            consec_red += 1
+
+    # Check for recent climax washout in last 3 sessions
+    recent_3 = history[max(0, idx - 2):idx + 1]
+    climax_day = next((d for d in reversed(recent_3) if d['dn_4_cnt'] >= 400), None)
+    had_climax = climax_day is not None
+
+    if had_climax and climax_day:
+        trajectory_context = f"Selling Climax occurred on {climax_day['date']} ({climax_day['dn_4_cnt']} stocks crashed 4%). Yesterday selling contracted to {curr['dn_4_cnt']}."
+    elif consec_red >= 2:
+        trajectory_context = f"Downtrend pressure active ({consec_red} consecutive red sessions). 4% Down: {curr['dn_4_cnt']} vs 4% Up: {curr['up_4_cnt']}."
+    elif consec_green >= 2:
+        trajectory_context = f"Bullish momentum wave ({consec_green} consecutive green sessions). 4% Up: {curr['up_4_cnt']} vs 4% Down: {curr['dn_4_cnt']}."
+    else:
+        trajectory_context = f"Transitional rotational market. 4% Thrust: {curr['up_4_cnt']} Up vs {curr['dn_4_cnt']} Down."
+
+    ignition_trigger = "Watch for Day-1 Ignition trigger: 4% Gainers &gt; 150 &amp; 4% Losers &lt; 80."
+
+    # 1. SELLING CLIMAX / WASHOUT (Extreme Panic)
+    if curr['dn_4_cnt'] >= 400 or (had_climax and curr['ratio_5d'] < 0.60 and curr['net_breadth'] < -5.0):
+        if curr['dn_4_cnt'] >= 500:
+            state_code = "CLIMAX"
+            state_label = "🔴 SELLING CLIMAX (Washout Peak)"
+            state_action = "Panic liquidation peak (&gt;400 down). Do not short. Prepare buy watchlist for Day-1 Ignition."
+            allocation_pct = 0
+            tactical_rule = "Cash is King (0% allocation). Selling climax cleans out weak hands. Sit tight."
+        else:
+            state_code = "WASHOUT_CONT"
+            state_label = "🔴 WASHOUT CONTINUATION"
+            state_action = "Sellers exhausting after climax. Sit in cash (0% allocation). Watch for Day-1 Ignition spark."
+            allocation_pct = 0
+            tactical_rule = "Zero fresh breakouts. Wait for the Day-1 Ignition spark before deploying any capital."
+
+    # 2. DAY-1 IGNITION REVERSAL (First spark off bottom)
+    elif (prev['net_breadth'] < 0 or prev2['net_breadth'] < 0) and curr['up_4_cnt'] >= 150 and curr['dn_4_cnt'] <= 90 and curr['net_breadth'] >= 2.0:
+        state_code = "IGNITION"
+        state_label = "🟢 DAY-1 IGNITION REVERSAL"
+        state_action = "First high-momentum thrust off bottom! Deploy 25-30% pilot size on Relative Strength leaders."
+        allocation_pct = 25
+        tactical_rule = "Take 2-3 Pilot trades (25% risk) in top Relative Strength leaders or Episodic Pivots (EP)."
+
+    # 3. OVERHEATED / FROTH / DIVERGENCE (Cool-Off Imminent)
+    elif (consec_green >= 4 and curr['ratio_5d'] >= 3.5) or (curr['nifty_chg'] > 0.4 and curr['bo_failure'] >= 65 and curr['up_4_cnt'] < 100):
+        state_code = "OVERHEATED"
+        state_label = "⚠️ OVERHEATED / DIVERGENCE (Cool-Off Imminent)"
+        state_action = "Market stretched or stealth distribution. Do NOT chase breakouts. Trail stops tightly to 10 DEMA."
+        allocation_pct = 25
+        tactical_rule = "Do NOT buy late-stage breakouts. Trail stops to Daily Low / 10 DEMA. Sell 1/3 into strength."
+
+    # 4. TREND EXPANSION (Sweet Spot)
+    elif curr['ratio_5d'] >= 1.5 and curr['net_breadth'] > 0 and curr['bo_failure'] <= 50:
+        state_code = "EXPANSION"
+        state_label = "🟢 TREND EXPANSION (The Sweet Spot)"
+        state_action = "Institutional tide strongly favorable. Deploy full 100% position size on A+ momentum breakouts."
+        allocation_pct = 100
+        tactical_rule = "Full 100% position sizing permitted. Aggressively buy high-volume ORB &amp; breakout setups."
+
+    # 5. SELECTIVE ROTATION / CHOP
+    elif 0.85 <= curr['ratio_5d'] <= 1.5:
+        state_code = "SELECTIVE"
+        state_label = "🟡 SELECTIVE ROTATION (Half Size)"
+        state_action = "Mixed market tide. Deploy 50% position size. Demand 2x volume confirmation on breakouts."
+        allocation_pct = 50
+        tactical_rule = "Half position size (50% risk). Only take A+ setups with 2x volume and strong sector backing."
+
+    # 6. DEFENSIVE DOWNTREND
+    else:
+        state_code = "DEFENSIVE"
+        state_label = "🔴 DEFENSIVE / CASH IS KING"
+        state_action = "Downtrend active (5D ratio &lt; 1.0). Zero fresh breakouts. Protect capital."
+        allocation_pct = 0
+        tactical_rule = "Cash preservation mode. Avoid buying breakouts. Trailing stops tightened."
+
+    return {
+        "state_code": state_code,
+        "state_label": state_label,
+        "state_action": state_action,
+        "allocation_pct": allocation_pct,
+        "trajectory_context": trajectory_context,
+        "ignition_trigger": ignition_trigger,
+        "tactical_rule": tactical_rule
+    }
+
+
 def extract_bonde_breadth_metrics(file_path: Path) -> Optional[Dict[str, Any]]:
     """
     Parses Chhirag Kedia's Market Breadth V2.0.xlsm (Stockbee / Pradeep Bonde SA Engine).
-    Extracts the exact metrics for the last day row.
+    Builds multi-day sequence history and classifies the quantified market state.
     """
     if not file_path.is_file():
         print(f"⚠️ Breadth file {file_path.name} not found.")
@@ -150,119 +265,108 @@ def extract_bonde_breadth_metrics(file_path: Path) -> Optional[Dict[str, Any]]:
         ws_b = wb['Breadth']
         ws_m = wb['Market Map']
 
-        last_b_row = None
-        last_b_idx = None
-        # Scan recent rows (rows 5500 to 7000)
-        for idx, r in enumerate(ws_b.iter_rows(min_row=5500, max_row=7000, values_only=True), start=5500):
+        history = []
+        # Scan recent rows (rows 5600 to 7000) to collect sequence history
+        for idx, r in enumerate(ws_b.iter_rows(min_row=5600, max_row=7000, values_only=True), start=5600):
             if r[0] is not None and str(r[0]).strip() not in ('', 'None'):
-                last_b_row = r
-                last_b_idx = idx
+                date_raw = r[0]
+                if hasattr(date_raw, 'strftime'):
+                    date_str = date_raw.strftime("%d-%b-%Y")
+                else:
+                    date_str = str(date_raw)[:10]
 
-        if not last_b_row:
+                nifty_chg = float(r[1] or 0.0) * 100.0
+                universe = int(r[3] or 2505)
+                up_4_pct = float(r[4] or 0.0) * 100.0
+                dn_4_pct = float(r[5] or 0.0) * 100.0
+                up_4_cnt = int(round(up_4_pct * universe / 100.0))
+                dn_4_cnt = int(round(dn_4_pct * universe / 100.0))
+                net_breadth = float(r[6] or 0.0)
+                ratio_5d = float(r[7] or 0.0)
+                ratio_10d = float(r[8] or 0.0)
+                above_vol_pct = float(r[9] or 0.0) * 100.0
+                below_vol_pct = float(r[10] or 0.0) * 100.0
+                vol_ratio = float(r[11] or 0.0)
+                range_lt3_pct = float(r[12] or 0.0) * 100.0
+                volatility = float(r[13] or 0.0)
+                range_gt5_pct = float(r[14] or 0.0) * 100.0
+                close_uh_pct = float(r[15] or 0.0) * 100.0
+                close_lh_pct = float(r[16] or 0.0) * 100.0
+                uh_lh_ratio = float(r[17] or 0.0)
+                bo_sustained = float(r[21] or 0.0) * 100.0
+                bo_failure = float(r[22] or 0.0) * 100.0
+                bo_sf_ratio = float(r[23] or 0.0)
+                bd_sustained = float(r[26] or 0.0) * 100.0
+                bd_failure = float(r[27] or 0.0) * 100.0
+                bd_sf_ratio = float(r[28] or 0.0)
+
+                history.append({
+                    "row_idx": idx,
+                    "date": date_str,
+                    "universe": universe,
+                    "nifty_chg": nifty_chg,
+                    "up_4_cnt": up_4_cnt,
+                    "up_4_pct": up_4_pct,
+                    "dn_4_cnt": dn_4_cnt,
+                    "dn_4_pct": dn_4_pct,
+                    "net_breadth": net_breadth,
+                    "ratio_5d": ratio_5d,
+                    "ratio_10d": ratio_10d,
+                    "above_vol_pct": above_vol_pct,
+                    "below_vol_pct": below_vol_pct,
+                    "vol_ratio": vol_ratio,
+                    "range_lt3_pct": range_lt3_pct,
+                    "range_gt5_pct": range_gt5_pct,
+                    "volatility": volatility,
+                    "close_uh_pct": close_uh_pct,
+                    "close_lh_pct": close_lh_pct,
+                    "uh_lh_ratio": uh_lh_ratio,
+                    "bo_sustained": bo_sustained,
+                    "bo_failure": bo_failure,
+                    "bo_sf_ratio": bo_sf_ratio,
+                    "bd_sustained": bd_sustained,
+                    "bd_failure": bd_failure,
+                    "bd_sf_ratio": bd_sf_ratio
+                })
+
+        if not history:
             wb.close()
             return None
 
+        last_item = history[-1]
+        last_idx = last_item["row_idx"]
+
         # Fetch matching row in Market Map
         map_row = None
-        for r in ws_m.iter_rows(min_row=last_b_idx, max_row=last_b_idx, values_only=True):
+        for r in ws_m.iter_rows(min_row=last_idx, max_row=last_idx, values_only=True):
             map_row = r
             break
 
         wb.close()
 
-        # Parse metrics safely
-        date_raw = last_b_row[0]
-        if hasattr(date_raw, 'strftime'):
-            date_str = date_raw.strftime("%d-%b-%Y")
-        else:
-            date_str = str(date_raw)[:10]
-
-        nifty_chg = float(last_b_row[1] or 0.0) * 100.0
-        universe = int(last_b_row[3] or 2505)
-        up_4_pct = float(last_b_row[4] or 0.0) * 100.0
-        dn_4_pct = float(last_b_row[5] or 0.0) * 100.0
-        up_4_cnt = int(round(up_4_pct * universe / 100.0))
-        dn_4_cnt = int(round(dn_4_pct * universe / 100.0))
-        net_breadth = float(last_b_row[6] or 0.0)
-        ratio_5d = float(last_b_row[7] or 0.0)
-        ratio_10d = float(last_b_row[8] or 0.0)
-        above_vol_pct = float(last_b_row[9] or 0.0) * 100.0
-        below_vol_pct = float(last_b_row[10] or 0.0) * 100.0
-        vol_ratio = float(last_b_row[11] or 0.0)
-        range_lt3_pct = float(last_b_row[12] or 0.0) * 100.0
-        volatility = float(last_b_row[13] or 0.0)
-        range_gt5_pct = float(last_b_row[14] or 0.0) * 100.0
-        close_uh_pct = float(last_b_row[15] or 0.0) * 100.0
-        close_lh_pct = float(last_b_row[16] or 0.0) * 100.0
-        uh_lh_ratio = float(last_b_row[17] or 0.0)
-        bo_sustained = float(last_b_row[21] or 0.0) * 100.0
-        bo_failure = float(last_b_row[22] or 0.0) * 100.0
-        bo_sf_ratio = float(last_b_row[23] or 0.0)
-        bd_sustained = float(last_b_row[26] or 0.0) * 100.0
-        bd_failure = float(last_b_row[27] or 0.0) * 100.0
-        bd_sf_ratio = float(last_b_row[28] or 0.0)
-
-        # Market Map metrics
         nh_pct = float(map_row[6] or 0.0) * 100.0 if map_row else 0.0
         nl_pct = float(map_row[7] or 0.0) * 100.0 if map_row else 0.0
-        nh_cnt = int(round(nh_pct * universe / 100.0))
-        nl_cnt = int(round(nl_pct * universe / 100.0))
+        nh_cnt = int(round(nh_pct * last_item["universe"] / 100.0))
+        nl_cnt = int(round(nl_pct * last_item["universe"] / 100.0))
         net_nh_nl = float(map_row[8] or 0.0) if map_row else 0.0
         net_15_hl = float(map_row[9] or 0.0) if map_row else 0.0
         net_30_hl = float(map_row[10] or 0.0) if map_row else 0.0
 
-        # Determine Regime Traffic Light (Stockbee Standard)
-        if ratio_5d >= 2.0 and net_breadth > 0:
-            regime_code = "GREEN"
-            regime_label = "🟢 GREEN LIGHT (Aggressive Momentum)"
-            regime_action = "High breakout follow-through. Deploy full swing capital (100% position size)."
-        elif ratio_5d >= 1.0 or (ratio_5d >= 0.8 and net_breadth >= 0):
-            regime_code = "YELLOW"
-            regime_label = "🟡 YELLOW LIGHT (Selective / Half Size)"
-            regime_action = "Mixed momentum. Allocate 50% risk. Require 2x volume confirmation and tight stops."
-        else:
-            regime_code = "RED"
-            regime_label = "🔴 RED LIGHT (Defensive / Cash is King)"
-            regime_action = "Heavy institutional distribution. Zero fresh breakout buying. Protect capital."
-
-        return {
-            "row_idx": last_b_idx,
-            "date": date_str,
-            "universe": universe,
-            "nifty_chg": nifty_chg,
-            "up_4_cnt": up_4_cnt,
-            "up_4_pct": up_4_pct,
-            "dn_4_cnt": dn_4_cnt,
-            "dn_4_pct": dn_4_pct,
-            "net_breadth": net_breadth,
-            "ratio_5d": ratio_5d,
-            "ratio_10d": ratio_10d,
-            "above_vol_pct": above_vol_pct,
-            "below_vol_pct": below_vol_pct,
-            "vol_ratio": vol_ratio,
-            "range_lt3_pct": range_lt3_pct,
-            "range_gt5_pct": range_gt5_pct,
-            "volatility": volatility,
-            "close_uh_pct": close_uh_pct,
-            "close_lh_pct": close_lh_pct,
-            "uh_lh_ratio": uh_lh_ratio,
-            "bo_sustained": bo_sustained,
-            "bo_failure": bo_failure,
-            "bo_sf_ratio": bo_sf_ratio,
-            "bd_sustained": bd_sustained,
-            "bd_failure": bd_failure,
-            "bd_sf_ratio": bd_sf_ratio,
+        last_item.update({
             "nh_cnt": nh_cnt,
             "nh_pct": nh_pct,
             "nl_cnt": nl_cnt,
             "nl_pct": nl_pct,
             "net_nh_nl": net_nh_nl,
             "net_15_hl": net_15_hl,
-            "net_30_hl": net_30_hl,
-            "regime_code": regime_code,
-            "regime_label": regime_label,
-            "regime_action": regime_action
-        }
+            "net_30_hl": net_30_hl
+        })
+
+        # Run Multi-Day State Machine
+        st_data = classify_bonde_multi_day_state(history)
+        last_item.update(st_data)
+
+        return last_item
     except Exception as e:
         print(f"⚠️ Error reading breadth sheet: {e}")
         return None
@@ -482,10 +586,13 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
         lines.append("")
         lines.append("📊 <b>CHHIRAG KEDIA'S MARKET BREADTH MONITOR</b>")
         lines.append("<i>(Stockbee / Pradeep Bonde Situational Awareness)</i>")
-        lines.append(f"🚦 <b>Market Regime:</b> <b>{bonde['regime_label']}</b>")
-        lines.append(f"📅 <b>Last Session:</b> <code>{bonde['date']}</code> (Row #{bonde['row_idx']} | Univ: {bonde['universe']})")
+        lines.append(f"🚦 <b>Bonde Market State:</b> <b>{bonde.get('state_label', bonde.get('regime_label', ''))}</b>")
+        lines.append(f"💼 <b>Swing Capital Allocation:</b> <b>{bonde.get('allocation_pct', 0)}% Risk</b>")
+        lines.append(f"🎯 <b>Action:</b> {bonde.get('state_action', '')}")
+        lines.append(f"📈 <b>Trajectory:</b> {bonde.get('trajectory_context', '')}")
+        lines.append(f"🔔 <b>Turning Trigger:</b> <code>{bonde.get('ignition_trigger', '')}</code>")
         lines.append("")
-        lines.append("📋 <b>LAST DAY BREADTH ROW METRICS:</b>")
+        lines.append(f"📋 <b>LAST SESSION ROW METRICS ({bonde['date']} | Row #{bonde['row_idx']}):</b>")
         lines.append(f"• <b>4% Thrust:</b> 🟢 {bonde['up_4_cnt']} Up ({bonde['up_4_pct']:.1f}%) | 🔴 {bonde['dn_4_cnt']} Down ({bonde['dn_4_pct']:.1f}%)")
         lines.append(f"• <b>Net 4% Breadth:</b> <code>{bonde['net_breadth']:+.2f}%</code> {'🟢 Positive' if bonde['net_breadth'] > 0 else '🔴 Negative'}")
         lines.append(f"• <b>Ratios:</b> 5-Day: <b>{bonde['ratio_5d']:.2f}</b> | 10-Day: <b>{bonde['ratio_10d']:.2f}</b>")
@@ -520,12 +627,8 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
     lines.append("💡 <b>TACTICAL PLAYBOOK (09:15 AM BELL):</b>")
 
     # Integrate Bonde Regime with Tactical Playbook
-    if bonde and bonde.get("regime_code") == "RED":
-        lines.append("• <b>Bonde Regime:</b> 🔴 <b>DEFENSIVE / CASH IS KING.</b> 5D Ratio &lt; 1.0 &amp; Net Breadth negative. Strictly avoid chasing morning gap-up breakouts.")
-    elif bonde and bonde.get("regime_code") == "YELLOW":
-        lines.append("• <b>Bonde Regime:</b> 🟡 <b>SELECTIVE / HALF-SIZE.</b> Allocate 50% normal risk. Require 2x volume confirmation on breakout entries.")
-    elif bonde and bonde.get("regime_code") == "GREEN":
-        lines.append("• <b>Bonde Regime:</b> 🟢 <b>AGGRESSIVE MOMENTUM.</b> Market tide favorable. Deploy full 100% position sizing on A+ setups.")
+    if bonde and bonde.get("tactical_rule"):
+        lines.append(f"• <b>Bonde Playbook:</b> {bonde['tactical_rule']}")
 
     if top_sector and worst_sector:
         lines.append(f"• <b>Rotation:</b> Focus intraday long candidates in <b>{top_sector['name']}</b> ({top_sector['change_pct']:+.2f}%). Avoid laggards in <b>{worst_sector['name']}</b>.")
@@ -607,7 +710,10 @@ def main():
 
     bonde = summary.get("bonde_breadth")
     if bonde:
-        print(f"\n🚦 Stockbee Regime : {bonde['regime_label']}")
+        print(f"\n🚦 Stockbee State  : {bonde.get('state_label', '')}")
+        print(f"💼 Allocation      : {bonde.get('allocation_pct', 0)}% Risk")
+        print(f"🎯 Action          : {bonde.get('state_action', '')}")
+        print(f"📈 Trajectory      : {bonde.get('trajectory_context', '')}")
         print(f"📋 Last Breadth Row: {bonde['date']} (Row #{bonde['row_idx']})")
         print(f"   • 4% Thrust     : {bonde['up_4_cnt']} Up ({bonde['up_4_pct']:.1f}%) | {bonde['dn_4_cnt']} Down ({bonde['dn_4_pct']:.1f}%)")
         print(f"   • Net 4% Breadth: {bonde['net_breadth']:+.2f}%")
