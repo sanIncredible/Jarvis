@@ -1,0 +1,88 @@
+{
+  "timestamp": "2026-10-24 00:17:32 IST",
+  "time_str": "00:17:32 IST",
+  "source": "Upstox API v2",
+  "total_sampled": 500,
+  "advancers": 43,
+  "decliners": 457,
+  "unchanged": 0,
+  "ad_ratio": 0.09,
+  "up_4_count": 3,
+  "dn_4_count": 87,
+  "up_2_count": 6,
+  "dn_2_count": 280,
+  "thrust_ratio": 0.03,
+  "net_thrust": -84,
+  "avg_change_pct": -2.34,
+  "median_change_pct": -2.31,
+  "signal_state": "WASHOUT",
+  "signal_badge": "\ud83d\udd34 SELLING CLIMAX / WASHOUT",
+  "guidance": "Heavy institutional liquidation active. 0% swing risk. SIT ON HANDS.",
+  "risk_alert_type": "WASHOUT_LOCKED",
+  "top_gainers": [
+    {
+      "symbol": "IGIL",
+      "chg": 7.91,
+      "ltp": 381.15
+    },
+    {
+      "symbol": "CYIENT",
+      "chg": 7.81,
+      "ltp": 1233.0
+    },
+    {
+      "symbol": "ETERNAL",
+      "chg": 4.25,
+      "ltp": 317.4
+    },
+    {
+      "symbol": "STLTECH",
+      "chg": 3.22,
+      "ltp": 826.65
+    },
+    {
+      "symbol": "IPCALAB",
+      "chg": 2.62,
+      "ltp": 1953.3
+    }
+  ],
+  "top_losers": [
+    {
+      "symbol": "SWIGGY",
+      "chg": -16.75,
+      "ltp": 176.0
+    },
+    {
+      "symbol": "J&KBANK",
+      "chg": -16.28,
+      "ltp": 113.09
+    },
+    {
+      "symbol": "BBOX",
+      "chg": -9.03,
+      "ltp": 805.1
+    },
+    {
+      "symbol": "AFCONS",
+      "chg": -7.71,
+      "ltp": 217.84
+    },
+    {
+      "symbol": "ATUL",
+      "chg": -7.06,
+      "ltp": 5576.0
+    }
+  ],
+  "risk_matrix": {
+    "account_capital": 500000,
+    "swing_allowed": false,
+    "swing_multiplier": 0.0,
+    "swing_risk_per_trade": 0,
+    "base_swing_risk": 10000,
+    "intraday_allowed": true,
+    "intraday_risk_per_trade": 1000,
+    "intraday_max_daily_loss": 2000,
+    "intraday_max_open_trades": 2,
+    "intraday_mandatory_flat": "15:15 IST"
+  }
+}
