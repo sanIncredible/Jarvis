@@ -1,0 +1,20 @@
+{
+  "updated_at": "2026-10-24 00:17:32 IST",
+  "state_code": "WASHOUT",
+  "state_label": "\ud83d\udd34 SELLING CLIMAX / WASHOUT",
+  "guidance": "Heavy institutional liquidation active. 0% swing risk. SIT ON HANDS.",
+  "swing_allocation_pct": 0,
+  "swing_risk_per_trade": 0,
+  "intraday_risk_per_trade": 1000,
+  "intraday_max_daily_loss": 2000,
+  "intraday_max_open_trades": 2,
+  "fakeout_warning": "HIGH FAKEOUT RISK: 80%+ of long breakouts fail in this regime.",
+  "breadth_snapshot": {
+    "advancers": 43,
+    "decliners": 457,
+    "ad_ratio": 0.09,
+    "up_4_count": 3,
+    "dn_4_count": 87,
+    "net_thrust": -84
+  }
+}
