@@ -805,9 +805,43 @@ def main():
     for s in summary["sectorals"]:
         print(f"  • {s['name']:18}: {s['change_pct']:>+6.2f}% [{s['source']}]")
 
+    # Save market regime state for scanner & tablet dashboard
+    try:
+        regime_file = BASE_DIR / "market_regime.json"
+        risk_cfg = cfg.get("risk_parameters", {})
+        alloc_pct = bonde.get("allocation_pct", 0) if bonde else 0
+        swing_multiplier = alloc_pct / 100.0
+        base_swing_risk = risk_cfg.get("swing", {}).get("base_risk_per_trade", 10000)
+        swing_risk = int(base_swing_risk * swing_multiplier)
+
+        regime_payload = {
+            "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
+            "state_code": bonde.get("state_code", "WASHOUT") if bonde else "WASHOUT",
+            "state_label": bonde.get("state_label", "") if bonde else "",
+            "guidance": bonde.get("state_action", "") if bonde else "",
+            "swing_allocation_pct": alloc_pct,
+            "swing_risk_per_trade": swing_risk,
+            "intraday_risk_per_trade": risk_cfg.get("intraday", {}).get("max_risk_per_trade", 1000),
+            "intraday_max_daily_loss": risk_cfg.get("intraday", {}).get("max_daily_loss", 2000),
+            "intraday_max_open_trades": risk_cfg.get("intraday", {}).get("max_open_trades", 2),
+            "fakeout_warning": "HIGH FAKEOUT RISK: 80%+ of long breakouts fail in this regime." if alloc_pct == 0 else "NORMAL EXECUTION",
+            "breadth_snapshot": {
+                "date": bonde.get("date") if bonde else "",
+                "up_4_count": bonde.get("up_4_cnt") if bonde else 0,
+                "dn_4_count": bonde.get("dn_4_cnt") if bonde else 0,
+                "net_breadth": bonde.get("net_breadth") if bonde else 0,
+                "ratio_5d": bonde.get("ratio_5d") if bonde else 0,
+                "ratio_10d": bonde.get("ratio_10d") if bonde else 0
+            }
+        }
+        with open(regime_file, "w", encoding="utf-8") as f:
+            json.dump(regime_payload, f, indent=2)
+        print(f"💾 Synchronized {regime_file.name} (Allocation: {alloc_pct}%)")
+    except Exception as e:
+        print(f"⚠️ Error updating market_regime.json: {e}")
+
     print("-" * 65)
     print("📱 Dispatching Pre-Open Alert to Telegram...")
-    cfg = load_config()
     ok, err = send_telegram_alert(msg_html, cfg)
     if ok:
         print("✅ Telegram Pre-Open Situational Awareness Card delivered successfully!")
