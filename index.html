@@ -660,6 +660,42 @@
     </div>
   </div>
 
+  <!-- Discipline Shield & Bonde Market Regime Banner -->
+  <div id="regime-banner" style="display:none; margin-bottom:12px; border-radius:10px; padding:12px 18px; border:1px solid #f43f5e; background:rgba(244,63,94,0.12); align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; box-shadow:0 4px 18px rgba(0,0,0,0.6);">
+    <div style="display:flex; align-items:center; gap:12px; min-width:280px;">
+      <span id="regime-icon" style="font-size:24px;">⛔</span>
+      <div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <strong id="regime-title" style="color:#f43f5e; font-size:14px; font-weight:800; letter-spacing:0.3px;">DEFENSIVE REGIME (0% SWING ALLOCATION)</strong>
+          <span id="regime-tag" style="background:#f43f5e; color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:4px; letter-spacing:0.5px;">CASH MODE</span>
+        </div>
+        <div id="regime-guidance" style="font-size:12px; color:#cbd5e1; margin-top:3px; line-height:1.4;">
+          Heavy selling climax active. 80%+ of breakouts fail. Scalps only (₹1k risk). Flat by 15:15 IST.
+        </div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px; font-family:var(--font-mono); font-size:11.5px; flex-wrap:wrap;">
+      <div style="background:var(--bg-card); padding:5px 10px; border-radius:6px; border:1px solid var(--border-subtle);">
+        <span style="color:var(--text-muted);">N500:</span> 
+        <span id="regime-adv" style="color:var(--accent-green); font-weight:700;">--</span> Adv / 
+        <span id="regime-dec" style="color:var(--accent-red); font-weight:700;">--</span> Dec
+      </div>
+      <div style="background:var(--bg-card); padding:5px 10px; border-radius:6px; border:1px solid var(--border-subtle);">
+        <span style="color:var(--text-muted);">Thrust:</span> 
+        <span id="regime-up4" style="color:var(--accent-green); font-weight:700;">+4%: --</span> | 
+        <span id="regime-dn4" style="color:var(--accent-red); font-weight:700;">-4%: --</span>
+      </div>
+      <div style="background:var(--bg-card); padding:5px 10px; border-radius:6px; border:1px solid var(--border-subtle);">
+        <span style="color:var(--text-muted);">Swing Risk:</span> 
+        <span id="regime-risk" style="color:#f43f5e; font-weight:800;">₹0 / Trade</span>
+      </div>
+      <div style="background:var(--bg-card); padding:5px 10px; border-radius:6px; border:1px solid var(--border-subtle);">
+        <span style="color:var(--text-muted);">Intra Scalp:</span> 
+        <span id="regime-intra" style="color:var(--accent-gold); font-weight:800;">₹1,000</span>
+      </div>
+    </div>
+  </div>
+
   <!-- KPI Summary Ribbon -->
   <div class="kpi-row">
     <div class="kpi-card">
@@ -1184,6 +1220,71 @@
     pulseIndicator.style.backgroundColor = '#71717a';
   }
 
+  function updateRegimeBanner(regime) {
+    const banner = document.getElementById('regime-banner');
+    if (!banner) return;
+    if (!regime || !regime.state_code) {
+      banner.style.display = 'none';
+      return;
+    }
+    banner.style.display = 'flex';
+
+    const iconEl = document.getElementById('regime-icon');
+    const titleEl = document.getElementById('regime-title');
+    const tagEl = document.getElementById('regime-tag');
+    const guidanceEl = document.getElementById('regime-guidance');
+    const advEl = document.getElementById('regime-adv');
+    const decEl = document.getElementById('regime-dec');
+    const up4El = document.getElementById('regime-up4');
+    const dn4El = document.getElementById('regime-dn4');
+    const riskEl = document.getElementById('regime-risk');
+    const intraEl = document.getElementById('regime-intra');
+
+    const alloc = (regime.swing_allocation_pct !== undefined) ? regime.swing_allocation_pct : 0;
+    const isRed = (alloc === 0);
+    const isAmber = (alloc > 0 && alloc <= 50);
+
+    if (isRed) {
+      banner.style.border = '1px solid #f43f5e';
+      banner.style.background = 'rgba(244, 63, 94, 0.14)';
+      iconEl.innerText = '⛔';
+      titleEl.style.color = '#f43f5e';
+      titleEl.innerText = `${regime.state_label || 'DEFENSIVE REGIME'} (0% SWING RISK)`;
+      tagEl.style.background = '#f43f5e';
+      tagEl.innerText = 'CASH MODE';
+      riskEl.style.color = '#f43f5e';
+      riskEl.innerText = '₹0 / Trade (0%)';
+    } else if (isAmber) {
+      banner.style.border = '1px solid #f59e0b';
+      banner.style.background = 'rgba(245, 158, 11, 0.14)';
+      iconEl.innerText = '⚡';
+      titleEl.style.color = '#f59e0b';
+      titleEl.innerText = `${regime.state_label || 'IGNITION PILOT'} (${alloc}% RISK)`;
+      tagEl.style.background = '#f59e0b';
+      tagEl.innerText = 'PILOT ALLOC';
+      riskEl.style.color = '#f59e0b';
+      riskEl.innerText = `₹${(regime.swing_risk_per_trade || 2500).toLocaleString('en-IN')} (${alloc}%)`;
+    } else {
+      banner.style.border = '1px solid #00c087';
+      banner.style.background = 'rgba(0, 192, 135, 0.14)';
+      iconEl.innerText = '🟢';
+      titleEl.style.color = '#00c087';
+      titleEl.innerText = `${regime.state_label || 'TREND EXPANSION'} (100% RISK)`;
+      tagEl.style.background = '#00c087';
+      tagEl.innerText = 'EXPANSION';
+      riskEl.style.color = '#00c087';
+      riskEl.innerText = `₹${(regime.swing_risk_per_trade || 10000).toLocaleString('en-IN')} (100%)`;
+    }
+
+    guidanceEl.innerText = regime.guidance || 'Preserve capital. Await Day-1 Ignition thrust spark.';
+    const snap = regime.breadth_snapshot || {};
+    advEl.innerText = snap.advancers !== undefined ? snap.advancers : '--';
+    decEl.innerText = snap.decliners !== undefined ? snap.decliners : '--';
+    up4El.innerText = `+4%: ${snap.up_4_count !== undefined ? snap.up_4_count : '--'}`;
+    dn4El.innerText = `-4%: ${snap.dn_4_count !== undefined ? snap.dn_4_count : '--'}`;
+    intraEl.innerText = `₹${(regime.intraday_risk_per_trade || 1000).toLocaleString('en-IN')}`;
+  }
+
   function processIncomingData(data, feedSource) {
     if (!data) return;
     try {
@@ -1207,6 +1308,9 @@
     if (data.source) {
       sourceLabel.innerText = `${data.source} • ${feedSource || 'Fast Edge'}`;
     }
+
+    window.CURRENT_MARKET_REGIME = data.market_regime || null;
+    updateRegimeBanner(data.market_regime);
 
     RAW_STOCKS = data.stocks || [];
     CHARTS_DATA = {};
@@ -1782,6 +1886,52 @@
     const emaLabel = isStealthMode ? '10-MA: ' : '10 EMA: ';
     const emaValStr = ema10 ? (isStealthMode ? ema10.toFixed(2) : ('₹' + ema10.toFixed(2))) : '--';
 
+    // Dynamic Risk & Sizing Box
+    let sizingHtml = '';
+    const regime = window.CURRENT_MARKET_REGIME;
+    const ltpPrice = Number(data.ltp) || 0;
+    const slPrice = dayLow || (data.pivot ? Number(data.pivot) : 0);
+    const riskPerShare = (ltpPrice > 0 && slPrice > 0 && ltpPrice > slPrice) ? (ltpPrice - slPrice) : 0;
+    const riskPct = (ltpPrice > 0 && riskPerShare > 0) ? ((riskPerShare / ltpPrice) * 100).toFixed(1) : '--';
+
+    const intraRiskAmt = (regime && regime.intraday_risk_per_trade) ? regime.intraday_risk_per_trade : 1000;
+    const intraQty = (riskPerShare > 0) ? Math.floor(intraRiskAmt / riskPerShare) : 0;
+
+    let swingRiskAmt = (regime && regime.swing_risk_per_trade !== undefined) ? regime.swing_risk_per_trade : 0;
+    let swingAlloc = (regime && regime.swing_allocation_pct !== undefined) ? regime.swing_allocation_pct : 0;
+    let swingQtyText = '';
+    let regimeShieldBadge = '';
+
+    if (swingAlloc === 0) {
+      swingQtyText = '<span style="color:#f43f5e; font-weight:800;">0 (BLOCKED — CASH REGIME)</span>';
+      regimeShieldBadge = `<div style="margin-top:4px; padding:4px 8px; background:rgba(244,63,94,0.15); border:1px solid #f43f5e; border-radius:4px; font-size:10.5px; color:#fca5a5;">
+        ⛔ <strong>FOMO SHIELD:</strong> Swing allocation is 0% (Washout / Defensive). No new swing trades permitted! Scalp only if taking trade.
+      </div>`;
+    } else {
+      const swingQty = (riskPerShare > 0) ? Math.floor(swingRiskAmt / riskPerShare) : 0;
+      swingQtyText = `<span style="color:#00c087; font-weight:800;">${swingQty} shares</span> (₹${swingRiskAmt.toLocaleString('en-IN')} risk)`;
+    }
+
+    sizingHtml = `
+      <div style="margin-top:8px; padding:8px 12px; background:rgba(17,22,34,0.9); border:1px solid var(--border-subtle); border-radius:6px; font-size:11px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div>
+            <span style="color:var(--text-muted);">Risk/Share:</span> 
+            <strong style="color:#ffffff;">${riskPerShare > 0 ? ('₹' + riskPerShare.toFixed(2) + ' (' + riskPct + '%)') : 'SL Not Set'}</strong>
+          </div>
+          <div>
+            <span style="color:var(--text-muted);">⚡ Intra Scalp (₹${intraRiskAmt}):</span> 
+            <strong style="color:var(--accent-gold);">${intraQty > 0 ? (intraQty + ' shares') : '--'}</strong>
+          </div>
+          <div>
+            <span style="color:var(--text-muted);">📈 Swing Trade:</span> 
+            ${swingQtyText}
+          </div>
+        </div>
+        ${regimeShieldBadge}
+      </div>
+    `;
+
     el.innerHTML = `
       <div class="guardrail-left">
         <span style="color:var(--text-muted); font-size:11px;">${emaLabel}<strong style="color:#ffffff;">${emaValStr}</strong></span>
@@ -1791,6 +1941,9 @@
       <div class="guardrail-right">
         ${adviceHtml}
         ${lodNote}
+      </div>
+      <div style="width:100%;">
+        ${sizingHtml}
       </div>
     `;
   }
