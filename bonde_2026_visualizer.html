@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pradeep Bonde Situational Awareness Visualizer (2026)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --background: #090d16;
+      --card: #101623;
+      --border: #1f293d;
+      --foreground: #f1f5f9;
+      --muted-foreground: #94a3b8;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-amber: #f59e0b;
+      --accent-blue: #3b82f6;
+    }
+    body {
+      background: var(--background);
+      color: var(--foreground);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+      margin: 0;
+      padding: 12px;
+      user-select: none;
+    }
+    .glow-green { box-shadow: 0 0 14px rgba(16, 185, 129, 0.4); }
+    .glow-red { box-shadow: 0 0 14px rgba(239, 68, 68, 0.4); }
+    .glow-amber { box-shadow: 0 0 14px rgba(245, 158, 11, 0.4); }
+    .btn-active {
+      background: #2563eb !important;
+      color: #ffffff !important;
+      border-color: #3b82f6 !important;
+    }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-2 sm:p-4">
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-6 shadow-2xl max-w-7xl mx-auto">
+    
+    <!-- Header Ribbon -->
+    <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[var(--border)]">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xl sm:text-2xl font-black tracking-tight text-white">NIFTY SMALLCAP 100</span>
+          <span class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">2026 YTD Audit</span>
+          <span class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Stockbee Model</span>
+        </div>
+        <p class="text-xs sm:text-sm text-[var(--muted-foreground)] mt-1">
+          Interactive replay of Pradeep Bonde's 5 core behavioral mandates & warning triggers across 199 trading sessions.
+        </p>
+      </div>
+
+      <!-- Controls: Toggle Index & Highlight Filter -->
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <div class="flex rounded-lg bg-[var(--background)] p-1 border border-[var(--border)]">
+          <button id="btn-smallcap" class="px-3 py-1.5 rounded-md font-bold btn-active transition" onclick="setAsset('smallcap')">Smallcap 100</button>
+          <button id="btn-nifty" class="px-3 py-1.5 rounded-md font-bold text-[var(--muted-foreground)] hover:text-white transition" onclick="setAsset('nifty')">Nifty 50</button>
+        </div>
+
+        <div class="flex rounded-lg bg-[var(--background)] p-1 border border-[var(--border)]">
+          <button class="filter-btn px-2.5 py-1 rounded font-semibold text-[var(--muted-foreground)] hover:text-white transition btn-active" data-filter="all" onclick="setFilter('all', this)">All (199)</button>
+          <button class="filter-btn px-2.5 py-1 rounded font-semibold text-emerald-400 hover:bg-emerald-500/20 transition" data-filter="IGNITION" onclick="setFilter('IGNITION', this)">🟢 Ignition (38)</button>
+          <button class="filter-btn px-2.5 py-1 rounded font-semibold text-rose-400 hover:bg-rose-500/20 transition" data-filter="CLIMAX" onclick="setFilter('CLIMAX', this)">🔴 Climax (13)</button>
+          <button class="filter-btn px-2.5 py-1 rounded font-semibold text-amber-400 hover:bg-amber-500/20 transition" data-filter="OVERHEATED" onclick="setFilter('OVERHEATED', this)">⚠️ Froth (19)</button>
+          <button class="filter-btn px-2.5 py-1 rounded font-semibold text-blue-400 hover:bg-blue-500/20 transition" data-filter="EXPANSION" onclick="setFilter('EXPANSION', this)">🚀 Sweet Spot (31)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Milestone Quick Jump Bar -->
+    <div class="flex items-center gap-2 overflow-x-auto py-2.5 text-xs text-[var(--muted-foreground)] border-b border-[var(--border)] scrollbar-none">
+      <span class="font-bold text-white shrink-0">📍 Key Turning Points:</span>
+      <button class="px-2.5 py-1 rounded bg-rose-500/10 border border-rose-500/30 text-rose-300 hover:bg-rose-500/20 shrink-0 font-medium transition" onclick="jumpToDate('23-Mar-2026')">
+        🔴 Mar 23: 1,288 Down (Generational Climax Low)
+      </button>
+      <button class="px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 shrink-0 font-medium transition" onclick="jumpToDate('01-Apr-2026')">
+        🟢 Apr 01: 1,426 Up (Mega Day-1 Ignition Spark)
+      </button>
+      <button class="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20 shrink-0 font-medium transition" onclick="jumpToDate('08-May-2026')">
+        ⚠️ May 08: 5D Ratio 4.54 (Froth Top Before May 12 Crash)
+      </button>
+      <button class="px-2.5 py-1 rounded bg-rose-500/10 border border-rose-500/30 text-rose-300 hover:bg-rose-500/20 shrink-0 font-medium transition" onclick="jumpToDate('21-Oct-2026')">
+        🔴 Oct 21: 630 Down (Latest Climax Washout)
+      </button>
+    </div>
+
+    <!-- Active Crosshair Data Inspection Bar -->
+    <div id="inspector-bar" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 py-3 border-b border-[var(--border)] text-xs font-mono">
+      <div class="bg-[var(--background)] p-2 rounded border border-[var(--border)]">
+        <span class="text-[var(--muted-foreground)] block text-[10px]">SESSION DATE</span>
+        <strong id="bar-date" class="text-white text-sm">--</strong>
+      </div>
+      <div class="bg-[var(--background)] p-2 rounded border border-[var(--border)]">
+        <span class="text-[var(--muted-foreground)] block text-[10px]" id="bar-asset-label">INDEX CLOSE</span>
+        <strong id="bar-price" class="text-cyan-400 text-sm">--</strong>
+      </div>
+      <div class="bg-[var(--background)] p-2 rounded border border-[var(--border)]">
+        <span class="text-[var(--muted-foreground)] block text-[10px]">BONDE REGIME STATE</span>
+        <strong id="bar-state" class="text-white text-xs truncate block">--</strong>
+      </div>
+      <div class="bg-[var(--background)] p-2 rounded border border-[var(--border)]">
+        <span class="text-[var(--muted-foreground)] block text-[10px]">RISK ALLOCATION</span>
+        <strong id="bar-alloc" class="text-yellow-400 text-sm">--</strong>
+      </div>
+      <div class="bg-[var(--background)] p-2 rounded border border-[var(--border)]">
+        <span class="text-[var(--muted-foreground)] block text-[10px]">4% THRUST (+/-)</span>
+        <strong id="bar-thrust" class="text-white text-xs">--</strong>
+      </div>
+      <div class="bg-[var(--background)] p-2 rounded border border-[var(--border)]">
+        <span class="text-[var(--muted-foreground)] block text-[10px]">5D / 10D RATIO</span>
+        <strong id="bar-ratio" class="text-white text-xs">--</strong>
+      </div>
+    </div>
+
+    <!-- Guidance Banner for Hovered Point -->
+    <div id="guidance-box" class="my-2.5 p-2.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span id="guide-icon" class="text-base">📢</span>
+        <span id="guide-text" class="text-[var(--foreground)] font-medium">Hover over any candle/session on the chart below to inspect the quantified market mandate.</span>
+      </div>
+      <span id="guide-badge" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-700 text-white">READY</span>
+    </div>
+
+    <!-- Chart Canvas Container -->
+    <div class="relative w-full mt-2" style="height: 440px;">
+      <canvas id="mainChart" class="w-full h-full block cursor-crosshair"></canvas>
+    </div>
+
+    <!-- Legend & Quantitative Truth Footer -->
+    <div class="mt-4 pt-3 border-t border-[var(--border)] flex flex-wrap items-center justify-between text-xs text-[var(--muted-foreground)] gap-2">
+      <div class="flex flex-wrap items-center gap-4">
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> 🟢 Day-1 Ignition (67.6% 5D Success)</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span> 🔴 Selling Climax (87.3% Cash Protection)</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span> ⚠️ Froth / Warning (55.6% Cool-off Precursor)</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> 🚀 Sweet Spot (100% Sizing Allowed)</span>
+      </div>
+      <div class="font-mono text-[11px] text-slate-400">
+        Data: Chhirag Kedia Master Sheet • 199 Points
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const DATA = [{"date": "01-Jan-2026", "date_short": "Jan 01", "nifty": 26146.55, "smallcap": 17704.9, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 104, "dn_4": 30, "ratio_5d": 1.81, "ratio_10d": 2.3, "net_breadth": 3.4}, {"date": "02-Jan-2026", "date_short": "Jan 02", "nifty": 26328.55, "smallcap": 17832.05, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 157, "dn_4": 26, "ratio_5d": 2.24, "ratio_10d": 2.68, "net_breadth": 6.02}, {"date": "05-Jan-2026", "date_short": "Jan 05", "nifty": 26250.3, "smallcap": 17926.4, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 97, "dn_4": 76, "ratio_5d": 2.59, "ratio_10d": 2.34, "net_breadth": 0.96}, {"date": "06-Jan-2026", "date_short": "Jan 06", "nifty": 26178.7, "smallcap": 17887.85, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 69, "dn_4": 59, "ratio_5d": 2.52, "ratio_10d": 2.0, "net_breadth": 0.46}, {"date": "07-Jan-2026", "date_short": "Jan 07", "nifty": 26140.75, "smallcap": 17958.5, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 109, "dn_4": 29, "ratio_5d": 2.44, "ratio_10d": 2.03, "net_breadth": 3.67}, {"date": "08-Jan-2026", "date_short": "Jan 08", "nifty": 25876.85, "smallcap": 17601.05, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 26, "dn_4": 221, "ratio_5d": 1.11, "ratio_10d": 1.39, "net_breadth": -8.96}, {"date": "09-Jan-2026", "date_short": "Jan 09", "nifty": 25683.3, "smallcap": 17282.65, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 27, "dn_4": 204, "ratio_5d": 0.56, "ratio_10d": 1.06, "net_breadth": -8.13}, {"date": "12-Jan-2026", "date_short": "Jan 12", "nifty": 25790.25, "smallcap": 17193.3, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 67, "dn_4": 127, "ratio_5d": 0.47, "ratio_10d": 1.02, "net_breadth": -2.75}, {"date": "13-Jan-2026", "date_short": "Jan 13", "nifty": 25732.3, "smallcap": 17295.8, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 96, "dn_4": 41, "ratio_5d": 0.52, "ratio_10d": 1.05, "net_breadth": 2.53}, {"date": "14-Jan-2026", "date_short": "Jan 14", "nifty": 25665.6, "smallcap": 17410.85, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 98, "dn_4": 41, "ratio_5d": 0.5, "ratio_10d": 1.0, "net_breadth": 2.62}, {"date": "16-Jan-2026", "date_short": "Jan 16", "nifty": 25694.35, "smallcap": 17362.3, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 94, "dn_4": 81, "ratio_5d": 0.77, "ratio_10d": 0.93, "net_breadth": 0.6}, {"date": "19-Jan-2026", "date_short": "Jan 19", "nifty": 25585.5, "smallcap": 17190.7, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 51, "dn_4": 168, "ratio_5d": 0.89, "ratio_10d": 0.7, "net_breadth": -5.35}, {"date": "20-Jan-2026", "date_short": "Jan 20", "nifty": 25232.5, "smallcap": 16701.05, "state_code": "CLIMAX", "state_label": "\ud83d\udd34 SELLING CLIMAX (Washout Peak)", "alloc": 0, "up_4": 24, "dn_4": 617, "ratio_5d": 0.38, "ratio_10d": 0.42, "net_breadth": -27.2}, {"date": "21-Jan-2026", "date_short": "Jan 21", "nifty": 25157.5, "smallcap": 16551.2, "state_code": "WASHOUT_CONT", "state_label": "\ud83d\udd34 WASHOUT CONTINUATION", "alloc": 0, "up_4": 56, "dn_4": 265, "ratio_5d": 0.28, "ratio_10d": 0.36, "net_breadth": -9.58}, {"date": "22-Jan-2026", "date_short": "Jan 22", "nifty": 25289.9, "smallcap": 16677.25, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 269, "dn_4": 47, "ratio_5d": 0.42, "ratio_10d": 0.45, "net_breadth": 10.18}, {"date": "23-Jan-2026", "date_short": "Jan 23", "nifty": 25048.65, "smallcap": 16352.75, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 57, "dn_4": 343, "ratio_5d": 0.32, "ratio_10d": 0.43, "net_breadth": -13.11}, {"date": "27-Jan-2026", "date_short": "Jan 27", "nifty": 25175.4, "smallcap": 16419.35, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 129, "dn_4": 161, "ratio_5d": 0.37, "ratio_10d": 0.5, "net_breadth": -1.46}, {"date": "28-Jan-2026", "date_short": "Jan 28", "nifty": 25342.75, "smallcap": 16790.95, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 477, "dn_4": 36, "ratio_5d": 1.16, "ratio_10d": 0.75, "net_breadth": 20.2}, {"date": "29-Jan-2026", "date_short": "Jan 29", "nifty": 25418.9, "smallcap": 16825.0, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 145, "dn_4": 119, "ratio_5d": 1.53, "ratio_10d": 0.75, "net_breadth": 1.19}, {"date": "30-Jan-2026", "date_short": "Jan 30", "nifty": 25320.65, "smallcap": 16879.1, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 242, "dn_4": 88, "ratio_5d": 1.41, "ratio_10d": 0.8, "net_breadth": 7.05}, {"date": "01-Feb-2026", "date_short": "Feb 01", "nifty": 24825.45, "smallcap": 16418.15, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 100, "dn_4": 270, "ratio_5d": 1.62, "ratio_10d": 0.73, "net_breadth": -7.77}, {"date": "02-Feb-2026", "date_short": "Feb 02", "nifty": 25088.4, "smallcap": 16523.35, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 100, "dn_4": 112, "ratio_5d": 1.7, "ratio_10d": 0.78, "net_breadth": -0.55}, {"date": "03-Feb-2026", "date_short": "Feb 03", "nifty": 25727.55, "smallcap": 16988.95, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 657, "dn_4": 24, "ratio_5d": 2.03, "ratio_10d": 1.52, "net_breadth": 28.94}, {"date": "04-Feb-2026", "date_short": "Feb 04", "nifty": 25776.0, "smallcap": 17205.1, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 315, "dn_4": 66, "ratio_5d": 2.53, "ratio_10d": 1.97, "net_breadth": 11.39}, {"date": "05-Feb-2026", "date_short": "Feb 05", "nifty": 25642.8, "smallcap": 16983.9, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 99, "dn_4": 122, "ratio_5d": 2.14, "ratio_10d": 1.73, "net_breadth": -1.05}, {"date": "06-Feb-2026", "date_short": "Feb 06", "nifty": 25693.7, "smallcap": 16938.65, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 101, "dn_4": 102, "ratio_5d": 2.99, "ratio_10d": 2.15, "net_breadth": -0.05}, {"date": "09-Feb-2026", "date_short": "Feb 09", "nifty": 25867.3, "smallcap": 17385.9, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 505, "dn_4": 34, "ratio_5d": 4.82, "ratio_10d": 2.82, "net_breadth": 21.5}, {"date": "10-Feb-2026", "date_short": "Feb 10", "nifty": 25935.15, "smallcap": 17451.2, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 205, "dn_4": 58, "ratio_5d": 3.2, "ratio_10d": 2.48, "net_breadth": 6.73}, {"date": "11-Feb-2026", "date_short": "Feb 11", "nifty": 25953.85, "smallcap": 17455.0, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 138, "dn_4": 101, "ratio_5d": 2.51, "ratio_10d": 2.52, "net_breadth": 1.69}, {"date": "12-Feb-2026", "date_short": "Feb 12", "nifty": 25807.2, "smallcap": 17344.1, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 95, "dn_4": 144, "ratio_5d": 2.38, "ratio_10d": 2.24, "net_breadth": -2.24}, {"date": "13-Feb-2026", "date_short": "Feb 13", "nifty": 25471.1, "smallcap": 17032.9, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 60, "dn_4": 232, "ratio_5d": 1.76, "ratio_10d": 2.29, "net_breadth": -7.87}, {"date": "16-Feb-2026", "date_short": "Feb 16", "nifty": 25682.75, "smallcap": 17050.9, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 82, "dn_4": 180, "ratio_5d": 0.81, "ratio_10d": 2.12, "net_breadth": -4.46}, {"date": "17-Feb-2026", "date_short": "Feb 17", "nifty": 25725.4, "smallcap": 17146.7, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 168, "dn_4": 45, "ratio_5d": 0.77, "ratio_10d": 1.63, "net_breadth": 5.61}, {"date": "18-Feb-2026", "date_short": "Feb 18", "nifty": 25819.35, "smallcap": 17239.25, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 109, "dn_4": 43, "ratio_5d": 0.8, "ratio_10d": 1.47, "net_breadth": 3.01}, {"date": "19-Feb-2026", "date_short": "Feb 19", "nifty": 25454.35, "smallcap": 17020.35, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 59, "dn_4": 121, "ratio_5d": 0.77, "ratio_10d": 1.44, "net_breadth": -2.83}, {"date": "20-Feb-2026", "date_short": "Feb 20", "nifty": 25571.25, "smallcap": 17002.15, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 78, "dn_4": 58, "ratio_5d": 1.11, "ratio_10d": 1.48, "net_breadth": 0.91}, {"date": "23-Feb-2026", "date_short": "Feb 23", "nifty": 25713.0, "smallcap": 17051.95, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 79, "dn_4": 97, "ratio_5d": 1.36, "ratio_10d": 0.99, "net_breadth": -0.82}, {"date": "24-Feb-2026", "date_short": "Feb 24", "nifty": 25424.65, "smallcap": 16958.65, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 39, "dn_4": 159, "ratio_5d": 0.76, "ratio_10d": 0.77, "net_breadth": -5.47}, {"date": "25-Feb-2026", "date_short": "Feb 25", "nifty": 25482.5, "smallcap": 17118.7, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 93, "dn_4": 80, "ratio_5d": 0.68, "ratio_10d": 0.74, "net_breadth": 0.59}, {"date": "26-Feb-2026", "date_short": "Feb 26", "nifty": 25496.55, "smallcap": 17117.65, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 106, "dn_4": 46, "ratio_5d": 0.9, "ratio_10d": 0.82, "net_breadth": 2.73}, {"date": "27-Feb-2026", "date_short": "Feb 27", "nifty": 25178.65, "smallcap": 16928.9, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 73, "dn_4": 116, "ratio_5d": 0.78, "ratio_10d": 0.94, "net_breadth": -1.96}, {"date": "02-Mar-2026", "date_short": "Mar 02", "nifty": 24865.7, "smallcap": 16632.4, "state_code": "CLIMAX", "state_label": "\ud83d\udd34 SELLING CLIMAX (Washout Peak)", "alloc": 0, "up_4": 38, "dn_4": 522, "ratio_5d": 0.38, "ratio_10d": 0.66, "net_breadth": -21.95}, {"date": "04-Mar-2026", "date_short": "Mar 04", "nifty": 24480.5, "smallcap": 16281.5, "state_code": "WASHOUT_CONT", "state_label": "\ud83d\udd34 WASHOUT CONTINUATION", "alloc": 0, "up_4": 73, "dn_4": 437, "ratio_5d": 0.32, "ratio_10d": 0.45, "net_breadth": -16.54}, {"date": "05-Mar-2026", "date_short": "Mar 05", "nifty": 24765.9, "smallcap": 16538.8, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 195, "dn_4": 42, "ratio_5d": 0.42, "ratio_10d": 0.5, "net_breadth": 6.95}, {"date": "06-Mar-2026", "date_short": "Mar 06", "nifty": 24450.45, "smallcap": 16498.9, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 104, "dn_4": 82, "ratio_5d": 0.4, "ratio_10d": 0.54, "net_breadth": 1.0}, {"date": "09-Mar-2026", "date_short": "Mar 09", "nifty": 24028.05, "smallcap": 16132.2, "state_code": "WASHOUT_CONT", "state_label": "\ud83d\udd34 WASHOUT CONTINUATION", "alloc": 0, "up_4": 45, "dn_4": 484, "ratio_5d": 0.29, "ratio_10d": 0.41, "net_breadth": -20.71}, {"date": "10-Mar-2026", "date_short": "Mar 10", "nifty": 24261.6, "smallcap": 16473.8, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 402, "dn_4": 35, "ratio_5d": 0.75, "ratio_10d": 0.58, "net_breadth": 16.66}, {"date": "11-Mar-2026", "date_short": "Mar 11", "nifty": 23866.85, "smallcap": 16414.85, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 134, "dn_4": 78, "ratio_5d": 1.19, "ratio_10d": 0.65, "net_breadth": 2.54}, {"date": "12-Mar-2026", "date_short": "Mar 12", "nifty": 23639.15, "smallcap": 16305.25, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 106, "dn_4": 93, "ratio_5d": 1.0, "ratio_10d": 0.65, "net_breadth": 0.59}, {"date": "13-Mar-2026", "date_short": "Mar 13", "nifty": 23151.1, "smallcap": 15895.25, "state_code": "CLIMAX", "state_label": "\ud83d\udd34 SELLING CLIMAX (Washout Peak)", "alloc": 0, "up_4": 33, "dn_4": 597, "ratio_5d": 0.55, "ratio_10d": 0.48, "net_breadth": -25.58}, {"date": "16-Mar-2026", "date_short": "Mar 16", "nifty": 23408.8, "smallcap": 15810.35, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 71, "dn_4": 232, "ratio_5d": 0.72, "ratio_10d": 0.46, "net_breadth": -7.28}, {"date": "17-Mar-2026", "date_short": "Mar 17", "nifty": 23581.15, "smallcap": 15912.9, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 158, "dn_4": 58, "ratio_5d": 0.47, "ratio_10d": 0.61, "net_breadth": 4.54}, {"date": "18-Mar-2026", "date_short": "Mar 18", "nifty": 23777.8, "smallcap": 16179.15, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 463, "dn_4": 22, "ratio_5d": 0.83, "ratio_10d": 0.98, "net_breadth": 20.01}, {"date": "19-Mar-2026", "date_short": "Mar 19", "nifty": 23002.15, "smallcap": 15704.25, "state_code": "WASHOUT_CONT", "state_label": "\ud83d\udd34 WASHOUT CONTINUATION", "alloc": 0, "up_4": 35, "dn_4": 497, "ratio_5d": 0.54, "ratio_10d": 0.71, "net_breadth": -20.94}, {"date": "20-Mar-2026", "date_short": "Mar 20", "nifty": 23114.5, "smallcap": 15718.6, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 156, "dn_4": 51, "ratio_5d": 1.03, "ratio_10d": 0.74, "net_breadth": 4.76}, {"date": "23-Mar-2026", "date_short": "Mar 23", "nifty": 22512.65, "smallcap": 15098.7, "state_code": "CLIMAX", "state_label": "\ud83d\udd34 SELLING CLIMAX (Washout Peak)", "alloc": 0, "up_4": 18, "dn_4": 1288, "ratio_5d": 0.43, "ratio_10d": 0.54, "net_breadth": -57.44}, {"date": "24-Mar-2026", "date_short": "Mar 24", "nifty": 22912.4, "smallcap": 15495.2, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 393, "dn_4": 58, "ratio_5d": 0.56, "ratio_10d": 0.53, "net_breadth": 15.19}, {"date": "25-Mar-2026", "date_short": "Mar 25", "nifty": 23306.45, "smallcap": 15896.55, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 313, "dn_4": 39, "ratio_5d": 0.47, "ratio_10d": 0.6, "net_breadth": 12.42}, {"date": "27-Mar-2026", "date_short": "Mar 27", "nifty": 22819.6, "smallcap": 15620.0, "state_code": "CLIMAX", "state_label": "\ud83d\udd34 SELLING CLIMAX (Washout Peak)", "alloc": 0, "up_4": 46, "dn_4": 916, "ratio_5d": 0.39, "ratio_10d": 0.45, "net_breadth": -39.44}, {"date": "30-Mar-2026", "date_short": "Mar 30", "nifty": 22331.4, "smallcap": 15203.8, "state_code": "CLIMAX", "state_label": "\ud83d\udd34 SELLING CLIMAX (Washout Peak)", "alloc": 0, "up_4": 50, "dn_4": 1053, "ratio_5d": 0.24, "ratio_10d": 0.4, "net_breadth": -45.34}, {"date": "01-Apr-2026", "date_short": "Apr 01", "nifty": 22679.4, "smallcap": 15709.8, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 1426, "dn_4": 17, "ratio_5d": 1.07, "ratio_10d": 0.77, "net_breadth": 63.76}, {"date": "02-Apr-2026", "date_short": "Apr 02", "nifty": 22713.1, "smallcap": 15650.5, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 294, "dn_4": 41, "ratio_5d": 1.03, "ratio_10d": 0.8, "net_breadth": 11.43}, {"date": "06-Apr-2026", "date_short": "Apr 06", "nifty": 22968.25, "smallcap": 15853.05, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 360, "dn_4": 23, "ratio_5d": 1.06, "ratio_10d": 0.78, "net_breadth": 15.17}, {"date": "07-Apr-2026", "date_short": "Apr 07", "nifty": 23123.65, "smallcap": 15843.3, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 226, "dn_4": 29, "ratio_5d": 2.03, "ratio_10d": 0.93, "net_breadth": 8.9}, {"date": "08-Apr-2026", "date_short": "Apr 08", "nifty": 23997.35, "smallcap": 16538.05, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 1118, "dn_4": 19, "ratio_5d": 26.56, "ratio_10d": 1.22, "net_breadth": 49.64}, {"date": "09-Apr-2026", "date_short": "Apr 09", "nifty": 23775.1, "smallcap": 16566.0, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 155, "dn_4": 54, "ratio_5d": 12.97, "ratio_10d": 1.95, "net_breadth": 4.56}, {"date": "10-Apr-2026", "date_short": "Apr 10", "nifty": 24050.6, "smallcap": 16840.1, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 376, "dn_4": 12, "ratio_5d": 16.32, "ratio_10d": 1.98, "net_breadth": 16.47}, {"date": "13-Apr-2026", "date_short": "Apr 13", "nifty": 23842.65, "smallcap": 16762.0, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 140, "dn_4": 92, "ratio_5d": 9.79, "ratio_10d": 1.86, "net_breadth": 2.16}, {"date": "15-Apr-2026", "date_short": "Apr 15", "nifty": 24231.3, "smallcap": 17156.4, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 565, "dn_4": 17, "ratio_5d": 12.15, "ratio_10d": 3.47, "net_breadth": 24.79}, {"date": "16-Apr-2026", "date_short": "Apr 16", "nifty": 24196.75, "smallcap": 17308.85, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 197, "dn_4": 26, "ratio_5d": 7.14, "ratio_10d": 14.74, "net_breadth": 7.74}, {"date": "17-Apr-2026", "date_short": "Apr 17", "nifty": 24353.55, "smallcap": 17565.7, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 268, "dn_4": 13, "ratio_5d": 9.68, "ratio_10d": 11.36, "net_breadth": 11.53}, {"date": "20-Apr-2026", "date_short": "Apr 20", "nifty": 24364.85, "smallcap": 17486.9, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 120, "dn_4": 107, "ratio_5d": 5.13, "ratio_10d": 9.08, "net_breadth": 0.56}, {"date": "21-Apr-2026", "date_short": "Apr 21", "nifty": 24576.6, "smallcap": 17641.5, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 181, "dn_4": 61, "ratio_5d": 6.07, "ratio_10d": 7.88, "net_breadth": 5.22}, {"date": "22-Apr-2026", "date_short": "Apr 22", "nifty": 24378.1, "smallcap": 17840.35, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 203, "dn_4": 46, "ratio_5d": 3.88, "ratio_10d": 7.53, "net_breadth": 6.83}, {"date": "23-Apr-2026", "date_short": "Apr 23", "nifty": 24173.05, "smallcap": 17720.75, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 137, "dn_4": 75, "ratio_5d": 3.04, "ratio_10d": 4.72, "net_breadth": 2.7}, {"date": "24-Apr-2026", "date_short": "Apr 24", "nifty": 23897.95, "smallcap": 17567.2, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 60, "dn_4": 179, "ratio_5d": 1.5, "ratio_10d": 3.64, "net_breadth": -5.19}, {"date": "27-Apr-2026", "date_short": "Apr 27", "nifty": 24092.7, "smallcap": 17900.65, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 353, "dn_4": 30, "ratio_5d": 2.38, "ratio_10d": 3.48, "net_breadth": 14.0}, {"date": "28-Apr-2026", "date_short": "Apr 28", "nifty": 23995.7, "smallcap": 17976.1, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 135, "dn_4": 56, "ratio_5d": 2.3, "ratio_10d": 3.69, "net_breadth": 3.44}, {"date": "29-Apr-2026", "date_short": "Apr 29", "nifty": 24177.65, "smallcap": 18093.15, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 130, "dn_4": 72, "ratio_5d": 1.97, "ratio_10d": 2.7, "net_breadth": 2.53}, {"date": "30-Apr-2026", "date_short": "Apr 30", "nifty": 23997.55, "smallcap": 18007.15, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 87, "dn_4": 78, "ratio_5d": 1.84, "ratio_10d": 2.35, "net_breadth": 0.39}, {"date": "04-May-2026", "date_short": "May 04", "nifty": 24119.3, "smallcap": 18132.5, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 271, "dn_4": 63, "ratio_5d": 3.26, "ratio_10d": 2.18, "net_breadth": 9.01}, {"date": "05-May-2026", "date_short": "May 05", "nifty": 24032.8, "smallcap": 18182.4, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 154, "dn_4": 65, "ratio_5d": 2.32, "ratio_10d": 2.36, "net_breadth": 3.87}, {"date": "06-May-2026", "date_short": "May 06", "nifty": 24330.95, "smallcap": 18534.1, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 293, "dn_4": 38, "ratio_5d": 2.96, "ratio_10d": 2.59, "net_breadth": 11.09}, {"date": "07-May-2026", "date_short": "May 07", "nifty": 24326.65, "smallcap": 18695.65, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 294, "dn_4": 27, "ratio_5d": 4.05, "ratio_10d": 2.8, "net_breadth": 11.61}, {"date": "08-May-2026", "date_short": "May 08", "nifty": 24176.15, "smallcap": 18737.0, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 177, "dn_4": 69, "ratio_5d": 4.54, "ratio_10d": 2.88, "net_breadth": 4.69}, {"date": "11-May-2026", "date_short": "May 11", "nifty": 23815.85, "smallcap": 18525.8, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 111, "dn_4": 236, "ratio_5d": 2.37, "ratio_10d": 2.73, "net_breadth": -5.41}, {"date": "12-May-2026", "date_short": "May 12", "nifty": 23379.55, "smallcap": 17939.0, "state_code": "CLIMAX", "state_label": "\ud83d\udd34 SELLING CLIMAX (Washout Peak)", "alloc": 0, "up_4": 43, "dn_4": 750, "ratio_5d": 0.82, "ratio_10d": 1.16, "net_breadth": -30.79}, {"date": "13-May-2026", "date_short": "May 13", "nifty": 23412.6, "smallcap": 17994.05, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 168, "dn_4": 80, "ratio_5d": 0.68, "ratio_10d": 1.17, "net_breadth": 3.83}, {"date": "14-May-2026", "date_short": "May 14", "nifty": 23689.6, "smallcap": 17991.55, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 124, "dn_4": 92, "ratio_5d": 0.51, "ratio_10d": 1.15, "net_breadth": 1.39}, {"date": "15-May-2026", "date_short": "May 15", "nifty": 23643.5, "smallcap": 17882.6, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 99, "dn_4": 131, "ratio_5d": 0.42, "ratio_10d": 1.12, "net_breadth": -1.39}, {"date": "18-May-2026", "date_short": "May 18", "nifty": 23649.95, "smallcap": 17656.75, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 92, "dn_4": 261, "ratio_5d": 0.4, "ratio_10d": 0.89, "net_breadth": -7.33}, {"date": "19-May-2026", "date_short": "May 19", "nifty": 23618.0, "smallcap": 17863.55, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 204, "dn_4": 51, "ratio_5d": 1.12, "ratio_10d": 0.93, "net_breadth": 6.66}, {"date": "20-May-2026", "date_short": "May 20", "nifty": 23659.0, "smallcap": 17870.9, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 141, "dn_4": 61, "ratio_5d": 1.11, "ratio_10d": 0.83, "net_breadth": 3.48}, {"date": "21-May-2026", "date_short": "May 21", "nifty": 23654.7, "smallcap": 17983.05, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 178, "dn_4": 51, "ratio_5d": 1.29, "ratio_10d": 0.75, "net_breadth": 5.53}, {"date": "22-May-2026", "date_short": "May 22", "nifty": 23719.3, "smallcap": 17956.2, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 131, "dn_4": 79, "ratio_5d": 1.49, "ratio_10d": 0.72, "net_breadth": 2.26}, {"date": "25-May-2026", "date_short": "May 25", "nifty": 24031.7, "smallcap": 18202.7, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 268, "dn_4": 61, "ratio_5d": 3.04, "ratio_10d": 0.89, "net_breadth": 8.96}, {"date": "26-May-2026", "date_short": "May 26", "nifty": 23913.7, "smallcap": 18267.2, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 158, "dn_4": 83, "ratio_5d": 2.61, "ratio_10d": 1.65, "net_breadth": 3.26}, {"date": "27-May-2026", "date_short": "May 27", "nifty": 23907.15, "smallcap": 18294.3, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 200, "dn_4": 70, "ratio_5d": 2.72, "ratio_10d": 1.7, "net_breadth": 5.65}, {"date": "29-May-2026", "date_short": "May 29", "nifty": 23547.75, "smallcap": 18138.8, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 161, "dn_4": 215, "ratio_5d": 1.81, "ratio_10d": 1.54, "net_breadth": -2.35}, {"date": "01-Jun-2026", "date_short": "Jun 01", "nifty": 23382.6, "smallcap": 17979.8, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 134, "dn_4": 249, "ratio_5d": 1.36, "ratio_10d": 1.41, "net_breadth": -4.98}, {"date": "02-Jun-2026", "date_short": "Jun 02", "nifty": 23483.55, "smallcap": 18052.3, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 197, "dn_4": 59, "ratio_5d": 1.26, "ratio_10d": 1.81, "net_breadth": 5.99}, {"date": "03-Jun-2026", "date_short": "Jun 03", "nifty": 23405.6, "smallcap": 18032.05, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 120, "dn_4": 79, "ratio_5d": 1.21, "ratio_10d": 1.68, "net_breadth": 1.78}, {"date": "04-Jun-2026", "date_short": "Jun 04", "nifty": 23416.55, "smallcap": 18121.05, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 181, "dn_4": 49, "ratio_5d": 1.22, "ratio_10d": 1.74, "net_breadth": 5.73}, {"date": "05-Jun-2026", "date_short": "Jun 05", "nifty": 23366.7, "smallcap": 18110.3, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 142, "dn_4": 73, "ratio_5d": 1.52, "ratio_10d": 1.66, "net_breadth": 3.0}, {"date": "08-Jun-2026", "date_short": "Jun 08", "nifty": 23123.0, "smallcap": 17763.45, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 68, "dn_4": 262, "ratio_5d": 1.36, "ratio_10d": 1.36, "net_breadth": -8.42}, {"date": "09-Jun-2026", "date_short": "Jun 09", "nifty": 23242.1, "smallcap": 18063.6, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 269, "dn_4": 51, "ratio_5d": 1.52, "ratio_10d": 1.37, "net_breadth": 9.49}, {"date": "10-Jun-2026", "date_short": "Jun 10", "nifty": 23214.95, "smallcap": 17822.5, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 80, "dn_4": 161, "ratio_5d": 1.24, "ratio_10d": 1.22, "net_breadth": -3.52}, {"date": "11-Jun-2026", "date_short": "Jun 11", "nifty": 23161.6, "smallcap": 17702.6, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 63, "dn_4": 156, "ratio_5d": 0.89, "ratio_10d": 1.05, "net_breadth": -4.04}, {"date": "12-Jun-2026", "date_short": "Jun 12", "nifty": 23622.9, "smallcap": 18197.45, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 476, "dn_4": 20, "ratio_5d": 1.47, "ratio_10d": 1.49, "net_breadth": 19.81}, {"date": "15-Jun-2026", "date_short": "Jun 15", "nifty": 23853.9, "smallcap": 18400.0, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 319, "dn_4": 33, "ratio_5d": 2.86, "ratio_10d": 2.03, "net_breadth": 12.37}, {"date": "16-Jun-2026", "date_short": "Jun 16", "nifty": 23989.15, "smallcap": 18477.75, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 171, "dn_4": 45, "ratio_5d": 2.67, "ratio_10d": 2.03, "net_breadth": 5.46}, {"date": "17-Jun-2026", "date_short": "Jun 17", "nifty": 24085.7, "smallcap": 18623.2, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 170, "dn_4": 44, "ratio_5d": 4.02, "ratio_10d": 2.17, "net_breadth": 5.46}, {"date": "18-Jun-2026", "date_short": "Jun 18", "nifty": 24168.0, "smallcap": 18705.6, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 171, "dn_4": 43, "ratio_5d": 7.07, "ratio_10d": 2.17, "net_breadth": 5.55}, {"date": "19-Jun-2026", "date_short": "Jun 19", "nifty": 24013.1, "smallcap": 18784.45, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 184, "dn_4": 40, "ratio_5d": 4.95, "ratio_10d": 2.3, "net_breadth": 6.24}, {"date": "22-Jun-2026", "date_short": "Jun 22", "nifty": 24102.9, "smallcap": 18897.0, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 239, "dn_4": 42, "ratio_5d": 4.37, "ratio_10d": 3.37, "net_breadth": 8.51}, {"date": "23-Jun-2026", "date_short": "Jun 23", "nifty": 23824.1, "smallcap": 18805.9, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 82, "dn_4": 103, "ratio_5d": 3.11, "ratio_10d": 2.84, "net_breadth": -0.91}, {"date": "24-Jun-2026", "date_short": "Jun 24", "nifty": 24021.65, "smallcap": 18879.3, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 123, "dn_4": 68, "ratio_5d": 2.7, "ratio_10d": 3.36, "net_breadth": 2.39}, {"date": "25-Jun-2026", "date_short": "Jun 25", "nifty": 24056.0, "smallcap": 18790.35, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 87, "dn_4": 116, "ratio_5d": 1.94, "ratio_10d": 3.65, "net_breadth": -1.26}, {"date": "29-Jun-2026", "date_short": "Jun 29", "nifty": 23946.25, "smallcap": 18673.1, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 114, "dn_4": 142, "ratio_5d": 1.37, "ratio_10d": 2.46, "net_breadth": -1.21}, {"date": "30-Jun-2026", "date_short": "Jun 30", "nifty": 23865.75, "smallcap": 18863.1, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 173, "dn_4": 53, "ratio_5d": 1.2, "ratio_10d": 2.18, "net_breadth": 5.2}, {"date": "01-Jul-2026", "date_short": "Jul 01", "nifty": 24005.85, "smallcap": 18931.05, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 161, "dn_4": 64, "ratio_5d": 1.49, "ratio_10d": 2.1, "net_breadth": 4.2}, {"date": "02-Jul-2026", "date_short": "Jul 02", "nifty": 24175.7, "smallcap": 19167.8, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 185, "dn_4": 45, "ratio_5d": 1.71, "ratio_10d": 2.12, "net_breadth": 6.05}, {"date": "03-Jul-2026", "date_short": "Jul 03", "nifty": 24270.85, "smallcap": 19175.1, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 126, "dn_4": 73, "ratio_5d": 2.01, "ratio_10d": 1.98, "net_breadth": 2.29}, {"date": "06-Jul-2026", "date_short": "Jul 06", "nifty": 24430.35, "smallcap": 19319.1, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 136, "dn_4": 71, "ratio_5d": 2.55, "ratio_10d": 1.83, "net_breadth": 2.8}, {"date": "07-Jul-2026", "date_short": "Jul 07", "nifty": 24398.7, "smallcap": 19213.4, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 67, "dn_4": 114, "ratio_5d": 1.84, "ratio_10d": 1.48, "net_breadth": -2.03}, {"date": "08-Jul-2026", "date_short": "Jul 08", "nifty": 23882.05, "smallcap": 18783.3, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 44, "dn_4": 305, "ratio_5d": 0.92, "ratio_10d": 1.16, "net_breadth": -11.28}, {"date": "09-Jul-2026", "date_short": "Jul 09", "nifty": 23962.8, "smallcap": 19120.85, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 246, "dn_4": 28, "ratio_5d": 1.05, "ratio_10d": 1.32, "net_breadth": 9.41}, {"date": "10-Jul-2026", "date_short": "Jul 10", "nifty": 24206.9, "smallcap": 19416.5, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 194, "dn_4": 27, "ratio_5d": 1.26, "ratio_10d": 1.57, "net_breadth": 7.21}, {"date": "13-Jul-2026", "date_short": "Jul 13", "nifty": 24211.0, "smallcap": 19422.95, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 173, "dn_4": 43, "ratio_5d": 1.4, "ratio_10d": 1.83, "net_breadth": 5.59}, {"date": "14-Jul-2026", "date_short": "Jul 14", "nifty": 24052.05, "smallcap": 19227.35, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 67, "dn_4": 88, "ratio_5d": 1.47, "ratio_10d": 1.63, "net_breadth": -0.91}, {"date": "15-Jul-2026", "date_short": "Jul 15", "nifty": 24078.5, "smallcap": 19355.35, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 120, "dn_4": 53, "ratio_5d": 3.35, "ratio_10d": 1.6, "net_breadth": 2.89}, {"date": "16-Jul-2026", "date_short": "Jul 16", "nifty": 24072.75, "smallcap": 19336.25, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 90, "dn_4": 62, "ratio_5d": 2.36, "ratio_10d": 1.46, "net_breadth": 1.2}, {"date": "17-Jul-2026", "date_short": "Jul 17", "nifty": 24334.3, "smallcap": 19296.3, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 55, "dn_4": 104, "ratio_5d": 1.44, "ratio_10d": 1.33, "net_breadth": -2.11}, {"date": "20-Jul-2026", "date_short": "Jul 20", "nifty": 24238.5, "smallcap": 19326.45, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 123, "dn_4": 59, "ratio_5d": 1.24, "ratio_10d": 1.33, "net_breadth": 2.76}, {"date": "21-Jul-2026", "date_short": "Jul 21", "nifty": 24187.7, "smallcap": 19428.05, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 129, "dn_4": 46, "ratio_5d": 1.6, "ratio_10d": 1.52, "net_breadth": 3.57}, {"date": "22-Jul-2026", "date_short": "Jul 22", "nifty": 23996.25, "smallcap": 19129.25, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 77, "dn_4": 124, "ratio_5d": 1.2, "ratio_10d": 2.01, "net_breadth": -2.02}, {"date": "23-Jul-2026", "date_short": "Jul 23", "nifty": 23869.6, "smallcap": 18936.35, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 85, "dn_4": 83, "ratio_5d": 1.13, "ratio_10d": 1.62, "net_breadth": 0.09}, {"date": "24-Jul-2026", "date_short": "Jul 24", "nifty": 23767.45, "smallcap": 18874.95, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 99, "dn_4": 55, "ratio_5d": 1.4, "ratio_10d": 1.42, "net_breadth": 1.89}, {"date": "27-Jul-2026", "date_short": "Jul 27", "nifty": 23995.95, "smallcap": 19122.6, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 194, "dn_4": 58, "ratio_5d": 1.59, "ratio_10d": 1.42, "net_breadth": 5.84}, {"date": "28-Jul-2026", "date_short": "Jul 28", "nifty": 23985.35, "smallcap": 19080.7, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 68, "dn_4": 146, "ratio_5d": 1.12, "ratio_10d": 1.32, "net_breadth": -3.36}, {"date": "29-Jul-2026", "date_short": "Jul 29", "nifty": 24250.2, "smallcap": 19362.35, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 167, "dn_4": 57, "ratio_5d": 1.54, "ratio_10d": 1.37, "net_breadth": 4.74}, {"date": "30-Jul-2026", "date_short": "Jul 30", "nifty": 24317.15, "smallcap": 19254.45, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 65, "dn_4": 103, "ratio_5d": 1.41, "ratio_10d": 1.27, "net_breadth": -1.63}, {"date": "31-Jul-2026", "date_short": "Jul 31", "nifty": 24383.6, "smallcap": 19339.65, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 180, "dn_4": 58, "ratio_5d": 1.6, "ratio_10d": 1.5, "net_breadth": 5.24}, {"date": "03-Aug-2026", "date_short": "Aug 03", "nifty": 24774.3, "smallcap": 19589.35, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 295, "dn_4": 46, "ratio_5d": 1.89, "ratio_10d": 1.75, "net_breadth": 10.67}, {"date": "04-Aug-2026", "date_short": "Aug 04", "nifty": 24614.9, "smallcap": 19635.25, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 157, "dn_4": 69, "ratio_5d": 2.59, "ratio_10d": 1.73, "net_breadth": 3.78}, {"date": "05-Aug-2026", "date_short": "Aug 05", "nifty": 24624.65, "smallcap": 19783.7, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 181, "dn_4": 53, "ratio_5d": 2.67, "ratio_10d": 2.05, "net_breadth": 5.49}, {"date": "06-Aug-2026", "date_short": "Aug 06", "nifty": 24636.0, "smallcap": 19878.25, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 136, "dn_4": 80, "ratio_5d": 3.1, "ratio_10d": 2.13, "net_breadth": 2.4}, {"date": "07-Aug-2026", "date_short": "Aug 07", "nifty": 24570.65, "smallcap": 19867.8, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 129, "dn_4": 107, "ratio_5d": 2.53, "ratio_10d": 2.02, "net_breadth": 0.94}, {"date": "10-Aug-2026", "date_short": "Aug 10", "nifty": 24583.8, "smallcap": 19813.95, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 173, "dn_4": 129, "ratio_5d": 1.77, "ratio_10d": 1.83, "net_breadth": 1.88}, {"date": "11-Aug-2026", "date_short": "Aug 11", "nifty": 24471.7, "smallcap": 19857.15, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 149, "dn_4": 107, "ratio_5d": 1.61, "ratio_10d": 2.02, "net_breadth": 1.8}, {"date": "12-Aug-2026", "date_short": "Aug 12", "nifty": 24435.95, "smallcap": 19821.65, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 134, "dn_4": 127, "ratio_5d": 1.31, "ratio_10d": 1.82, "net_breadth": 0.3}, {"date": "13-Aug-2026", "date_short": "Aug 13", "nifty": 24395.85, "smallcap": 19875.1, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 174, "dn_4": 105, "ratio_5d": 1.32, "ratio_10d": 1.94, "net_breadth": 2.95}, {"date": "14-Aug-2026", "date_short": "Aug 14", "nifty": 24366.0, "smallcap": 19738.55, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 115, "dn_4": 110, "ratio_5d": 1.29, "ratio_10d": 1.76, "net_breadth": 0.21}, {"date": "17-Aug-2026", "date_short": "Aug 17", "nifty": 24287.65, "smallcap": 19809.25, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 178, "dn_4": 122, "ratio_5d": 1.31, "ratio_10d": 1.51, "net_breadth": 2.28}, {"date": "18-Aug-2026", "date_short": "Aug 18", "nifty": 24154.9, "smallcap": 19808.85, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 163, "dn_4": 86, "ratio_5d": 1.38, "ratio_10d": 1.49, "net_breadth": 3.12}, {"date": "19-Aug-2026", "date_short": "Aug 19", "nifty": 24078.3, "smallcap": 19707.15, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 129, "dn_4": 94, "ratio_5d": 1.47, "ratio_10d": 1.38, "net_breadth": 1.42}, {"date": "20-Aug-2026", "date_short": "Aug 20", "nifty": 24231.85, "smallcap": 19841.45, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 191, "dn_4": 63, "ratio_5d": 1.63, "ratio_10d": 1.46, "net_breadth": 5.2}, {"date": "21-Aug-2026", "date_short": "Aug 21", "nifty": 24252.0, "smallcap": 19977.75, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 163, "dn_4": 45, "ratio_5d": 2.01, "ratio_10d": 1.58, "net_breadth": 4.79}, {"date": "24-Aug-2026", "date_short": "Aug 24", "nifty": 24219.05, "smallcap": 19926.75, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 183, "dn_4": 82, "ratio_5d": 2.24, "ratio_10d": 1.67, "net_breadth": 4.09}, {"date": "25-Aug-2026", "date_short": "Aug 25", "nifty": 24334.55, "smallcap": 19906.6, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 111, "dn_4": 82, "ratio_5d": 2.12, "ratio_10d": 1.67, "net_breadth": 1.18}, {"date": "26-Aug-2026", "date_short": "Aug 26", "nifty": 24207.75, "smallcap": 20067.3, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 188, "dn_4": 51, "ratio_5d": 2.59, "ratio_10d": 1.89, "net_breadth": 5.55}, {"date": "27-Aug-2026", "date_short": "Aug 27", "nifty": 24090.85, "smallcap": 20040.65, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 100, "dn_4": 101, "ratio_5d": 2.06, "ratio_10d": 1.81, "net_breadth": -0.04}, {"date": "28-Aug-2026", "date_short": "Aug 28", "nifty": 24175.65, "smallcap": 20080.0, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 199, "dn_4": 48, "ratio_5d": 2.14, "ratio_10d": 2.07, "net_breadth": 6.11}, {"date": "31-Aug-2026", "date_short": "Aug 31", "nifty": 24080.4, "smallcap": 19931.65, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 155, "dn_4": 138, "ratio_5d": 1.79, "ratio_10d": 2.0, "net_breadth": 0.69}, {"date": "01-Sep-2026", "date_short": "Sep 01", "nifty": 24055.8, "smallcap": 19886.25, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 111, "dn_4": 123, "ratio_5d": 1.63, "ratio_10d": 1.85, "net_breadth": -0.48}, {"date": "02-Sep-2026", "date_short": "Sep 02", "nifty": 23914.45, "smallcap": 19812.25, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 126, "dn_4": 66, "ratio_5d": 1.45, "ratio_10d": 1.91, "net_breadth": 2.42}, {"date": "03-Sep-2026", "date_short": "Sep 03", "nifty": 23873.45, "smallcap": 20050.75, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 201, "dn_4": 50, "ratio_5d": 1.86, "ratio_10d": 1.96, "net_breadth": 6.1}, {"date": "04-Sep-2026", "date_short": "Sep 04", "nifty": 23897.7, "smallcap": 20095.45, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 204, "dn_4": 56, "ratio_5d": 1.84, "ratio_10d": 1.98, "net_breadth": 5.97}, {"date": "07-Sep-2026", "date_short": "Sep 07", "nifty": 23779.15, "smallcap": 20100.2, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 180, "dn_4": 98, "ratio_5d": 2.09, "ratio_10d": 1.94, "net_breadth": 3.3}, {"date": "08-Sep-2026", "date_short": "Sep 08", "nifty": 23635.1, "smallcap": 20133.75, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 166, "dn_4": 85, "ratio_5d": 2.47, "ratio_10d": 2.0, "net_breadth": 3.26}, {"date": "09-Sep-2026", "date_short": "Sep 09", "nifty": 23431.5, "smallcap": 20036.9, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 152, "dn_4": 102, "ratio_5d": 2.31, "ratio_10d": 1.84, "net_breadth": 2.01}, {"date": "10-Sep-2026", "date_short": "Sep 10", "nifty": 23477.8, "smallcap": 20021.95, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 152, "dn_4": 97, "ratio_5d": 1.95, "ratio_10d": 1.91, "net_breadth": 2.22}, {"date": "11-Sep-2026", "date_short": "Sep 11", "nifty": 23398.1, "smallcap": 19906.3, "state_code": "EXPANSION", "state_label": "\ud83d\udfe2 TREND EXPANSION (The Sweet Spot)", "alloc": 100, "up_4": 121, "dn_4": 89, "ratio_5d": 1.64, "ratio_10d": 1.73, "net_breadth": 1.29}, {"date": "15-Sep-2026", "date_short": "Sep 15", "nifty": 23118.6, "smallcap": 19422.45, "state_code": "CLIMAX", "state_label": "\ud83d\udd34 SELLING CLIMAX (Washout Peak)", "alloc": 0, "up_4": 75, "dn_4": 577, "ratio_5d": 0.7, "ratio_10d": 1.11, "net_breadth": -20.19}, {"date": "16-Sep-2026", "date_short": "Sep 16", "nifty": 23217.6, "smallcap": 19388.3, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 121, "dn_4": 148, "ratio_5d": 0.61, "ratio_10d": 1.1, "net_breadth": -1.09}, {"date": "17-Sep-2026", "date_short": "Sep 17", "nifty": 23270.6, "smallcap": 19535.7, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 208, "dn_4": 61, "ratio_5d": 0.7, "ratio_10d": 1.16, "net_breadth": 5.92}, {"date": "18-Sep-2026", "date_short": "Sep 18", "nifty": 23346.4, "smallcap": 19875.7, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 267, "dn_4": 55, "ratio_5d": 0.85, "ratio_10d": 1.2, "net_breadth": 8.51}, {"date": "21-Sep-2026", "date_short": "Sep 21", "nifty": 23414.3, "smallcap": 19861.5, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 220, "dn_4": 70, "ratio_5d": 0.98, "ratio_10d": 1.2, "net_breadth": 6.0}, {"date": "22-Sep-2026", "date_short": "Sep 22", "nifty": 23329.0, "smallcap": 19815.45, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 168, "dn_4": 57, "ratio_5d": 2.51, "ratio_10d": 1.23, "net_breadth": 4.46}, {"date": "23-Sep-2026", "date_short": "Sep 23", "nifty": 23446.8, "smallcap": 19991.5, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 242, "dn_4": 41, "ratio_5d": 3.89, "ratio_10d": 1.33, "net_breadth": 8.05}, {"date": "24-Sep-2026", "date_short": "Sep 24", "nifty": 23063.1, "smallcap": 19684.75, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 95, "dn_4": 170, "ratio_5d": 2.52, "ratio_10d": 1.22, "net_breadth": -3.01}, {"date": "25-Sep-2026", "date_short": "Sep 25", "nifty": 23140.5, "smallcap": 19715.25, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 162, "dn_4": 62, "ratio_5d": 2.22, "ratio_10d": 1.26, "net_breadth": 4.01}, {"date": "28-Sep-2026", "date_short": "Sep 28", "nifty": 22780.25, "smallcap": 19351.1, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 81, "dn_4": 238, "ratio_5d": 1.32, "ratio_10d": 1.11, "net_breadth": -6.27}, {"date": "29-Sep-2026", "date_short": "Sep 29", "nifty": 22716.2, "smallcap": 19193.55, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 150, "dn_4": 110, "ratio_5d": 1.18, "ratio_10d": 1.69, "net_breadth": 1.6}, {"date": "30-Sep-2026", "date_short": "Sep 30", "nifty": 22620.45, "smallcap": 19245.7, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 150, "dn_4": 97, "ratio_5d": 0.94, "ratio_10d": 1.82, "net_breadth": 2.12}, {"date": "01-Oct-2026", "date_short": "Oct 01", "nifty": 22421.95, "smallcap": 19058.65, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 80, "dn_4": 228, "ratio_5d": 0.85, "ratio_10d": 1.43, "net_breadth": -5.91}, {"date": "05-Oct-2026", "date_short": "Oct 05", "nifty": 22555.75, "smallcap": 19149.1, "state_code": "DEFENSIVE", "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING", "alloc": 0, "up_4": 155, "dn_4": 141, "ratio_5d": 0.76, "ratio_10d": 1.24, "net_breadth": 0.56}, {"date": "06-Oct-2026", "date_short": "Oct 06", "nifty": 22776.1, "smallcap": 19448.7, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 310, "dn_4": 55, "ratio_5d": 1.34, "ratio_10d": 1.33, "net_breadth": 10.18}, {"date": "07-Oct-2026", "date_short": "Oct 07", "nifty": 22603.05, "smallcap": 19506.95, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 186, "dn_4": 72, "ratio_5d": 1.49, "ratio_10d": 1.33, "net_breadth": 4.55}, {"date": "08-Oct-2026", "date_short": "Oct 08", "nifty": 22231.8, "smallcap": 19050.1, "state_code": "CLIMAX", "state_label": "\ud83d\udd34 SELLING CLIMAX (Washout Peak)", "alloc": 0, "up_4": 55, "dn_4": 534, "ratio_5d": 0.76, "ratio_10d": 0.84, "net_breadth": -19.08}, {"date": "09-Oct-2026", "date_short": "Oct 09", "nifty": 22520.45, "smallcap": 19153.7, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 166, "dn_4": 84, "ratio_5d": 0.99, "ratio_10d": 0.92, "net_breadth": 3.27}, {"date": "12-Oct-2026", "date_short": "Oct 12", "nifty": 22363.35, "smallcap": 19425.8, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 195, "dn_4": 95, "ratio_5d": 1.09, "ratio_10d": 0.92, "net_breadth": 3.97}, {"date": "13-Oct-2026", "date_short": "Oct 13", "nifty": 22721.95, "smallcap": 19447.4, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 166, "dn_4": 84, "ratio_5d": 0.88, "ratio_10d": 1.08, "net_breadth": 3.27}, {"date": "14-Oct-2026", "date_short": "Oct 14", "nifty": 22622.7, "smallcap": 19384.8, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 231, "dn_4": 45, "ratio_5d": 0.97, "ratio_10d": 1.18, "net_breadth": 7.42}, {"date": "15-Oct-2026", "date_short": "Oct 15", "nifty": 22997.35, "smallcap": 19131.7, "state_code": "OVERHEATED", "state_label": "\u26a0\ufe0f OVERHEATED / DIVERGENCE (Cool-Off Imminent)", "alloc": 25, "up_4": 90, "dn_4": 218, "ratio_5d": 1.61, "ratio_10d": 1.05, "net_breadth": -5.11}, {"date": "16-Oct-2026", "date_short": "Oct 16", "nifty": 23146.15, "smallcap": 19129.8, "state_code": "IGNITION", "state_label": "\ud83d\udfe2 DAY-1 IGNITION REVERSAL", "alloc": 25, "up_4": 175, "dn_4": 75, "ratio_5d": 1.66, "ratio_10d": 1.23, "net_breadth": 3.99}, {"date": "19-Oct-2026", "date_short": "Oct 19", "nifty": 22888.95, "smallcap": 18935.75, "state_code": "SELECTIVE", "state_label": "\ud83d\udfe1 SELECTIVE ROTATION (Half Size)", "alloc": 50, "up_4": 77, "dn_4": 288, "ratio_5d": 1.04, "ratio_10d": 1.07, "net_breadth": -8.41}, {"date": "21-Oct-2026", "date_short": "Oct 21", "nifty": 22811.35, "smallcap": 18487.3, "state_code": "CLIMAX", "state_label": "\ud83d\udd34 SELLING CLIMAX (Washout Peak)", "alloc": 0, "up_4": 35, "dn_4": 630, "ratio_5d": 0.48, "ratio_10d": 0.65, "net_breadth": -23.72}, {"date": "22-Oct-2026", "date_short": "Oct 22", "nifty": 22687.65, "smallcap": 18275.9, "state_code": "WASHOUT_CONT", "state_label": "\ud83d\udd34 WASHOUT CONTINUATION", "alloc": 0, "up_4": 68, "dn_4": 265, "ratio_5d": 0.3, "ratio_10d": 0.54, "net_breadth": -7.86}];
+    let activeAsset = 'smallcap'; // 'smallcap' or 'nifty'
+    let activeFilter = 'all';     // 'all', 'IGNITION', 'CLIMAX', 'OVERHEATED', 'EXPANSION'
+    let hoveredIndex = DATA.length - 1; // Default to last day (Oct 22, 2026)
+
+    const canvas = document.getElementById('mainChart');
+    const ctx = canvas.getContext('2d');
+
+    function setAsset(asset) {
+      activeAsset = asset;
+      document.getElementById('btn-smallcap').className = asset === 'smallcap' ? 'px-3 py-1.5 rounded-md font-bold btn-active transition' : 'px-3 py-1.5 rounded-md font-bold text-[var(--muted-foreground)] hover:text-white transition';
+      document.getElementById('btn-nifty').className = asset === 'nifty' ? 'px-3 py-1.5 rounded-md font-bold btn-active transition' : 'px-3 py-1.5 rounded-md font-bold text-[var(--muted-foreground)] hover:text-white transition';
+      document.getElementById('bar-asset-label').innerText = asset === 'smallcap' ? 'SMALLCAP 100' : 'NIFTY 50';
+      render();
+    }
+
+    function setFilter(filter, btn) {
+      activeFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('btn-active'));
+      btn.classList.add('btn-active');
+      render();
+    }
+
+    function jumpToDate(dateStr) {
+      const idx = DATA.findIndex(d => d.date === dateStr);
+      if (idx !== -1) {
+        hoveredIndex = idx;
+        render();
+      }
+    }
+
+    function updateInspector(d) {
+      if (!d) return;
+      document.getElementById('bar-date').innerText = d.date;
+      const price = d[activeAsset] ? Number(d[activeAsset]).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '--';
+      document.getElementById('bar-price').innerText = '₹' + price;
+      document.getElementById('bar-state').innerText = d.state_label;
+      document.getElementById('bar-alloc').innerText = d.alloc + '% RISK';
+      document.getElementById('bar-alloc').style.color = d.alloc === 0 ? '#ef4444' : (d.alloc === 25 ? '#f59e0b' : (d.alloc === 50 ? '#38bdf8' : '#10b981'));
+      document.getElementById('bar-thrust').innerHTML = `<span class="text-emerald-400">+4%: ${d.up_4}</span> | <span class="text-rose-400">-4%: ${d.dn_4}</span>`;
+      document.getElementById('bar-ratio').innerText = `${d.ratio_5d} / ${d.ratio_10d}`;
+
+      const gBox = document.getElementById('guidance-box');
+      const gText = document.getElementById('guide-text');
+      const gIcon = document.getElementById('guide-icon');
+      const gBadge = document.getElementById('guide-badge');
+
+      if (d.alloc === 0) {
+        gBox.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+        gBox.style.background = 'rgba(239, 68, 68, 0.08)';
+        gIcon.innerText = '🛑';
+        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-500 text-white';
+        gBadge.innerText = 'CASH / DEFENSIVE (0% RISK)';
+        gText.innerHTML = `<strong>MANDATE: SIT ON HANDS / HOLD CASH.</strong> Selling pressure active (${d.dn_4} down). 80%+ of breakouts fail. Zero new swing positions.`;
+      } else if (d.state_code === 'IGNITION') {
+        gBox.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        gBox.style.background = 'rgba(16, 185, 129, 0.08)';
+        gIcon.innerText = '🟢';
+        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500 text-white';
+        gBadge.innerText = 'DAY-1 IGNITION SPARK (25% PILOT)';
+        gText.innerHTML = `<strong>MANDATE: TEST THE WATERS (25% Pilot).</strong> Massive institutional spark (${d.up_4} up vs ${d.dn_4} down). Buy top 1-2 Relative Strength leaders with 0.25R pilot risk.`;
+      } else if (d.state_code === 'OVERHEATED') {
+        gBox.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+        gBox.style.background = 'rgba(245, 158, 11, 0.08)';
+        gIcon.innerText = '⚠️';
+        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-black';
+        gBadge.innerText = 'OVERBOUGHT FROTH (HARVEST)';
+        gText.innerHTML = `<strong>MANDATE: THROTTLE DOWN / DO NOT CHASE.</strong> 5D Ratio stretched to ${d.ratio_5d}. Tighten stops to Daily Low / 10 EMA. Sell 1/3 into strength.`;
+      } else if (d.state_code === 'EXPANSION') {
+        gBox.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+        gBox.style.background = 'rgba(59, 130, 246, 0.08)';
+        gIcon.innerText = '🚀';
+        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-600 text-white';
+        gBadge.innerText = 'FULL STEAM AHEAD (100% RISK)';
+        gText.innerHTML = `<strong>MANDATE: EXPANSION SWEET SPOT.</strong> Institutional tide fully supportive. Breakout setups have low failure rates. Full 100% position size permitted.`;
+      } else {
+        gBox.style.borderColor = 'rgba(56, 189, 248, 0.3)';
+        gBox.style.background = 'rgba(56, 189, 248, 0.06)';
+        gIcon.innerText = '🟡';
+        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-cyan-700 text-white';
+        gBadge.innerText = 'SELECTIVE ROTATION (50% RISK)';
+        gText.innerHTML = `<strong>MANDATE: CHERRY-PICK A+ SETUPS.</strong> Choppy/selective market. Require 2x volume confirmation on 3m ORB breakouts. Half risk (50%) only.`;
+      }
+    }
+
+    function render() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const W = rect.width;
+      const H = rect.height;
+
+      if (canvas.width !== Math.floor(W * dpr) || canvas.height !== Math.floor(H * dpr)) {
+        canvas.width = Math.floor(W * dpr);
+        canvas.height = Math.floor(H * dpr);
+      }
+
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, W, H);
+
+      // Layout split: Top 72% for Price Chart, Bottom 28% for Momentum Thrust (+4% / -4%)
+      const topHeight = H * 0.70;
+      const bottomHeight = H * 0.26;
+      const subTop = topHeight + 10;
+      const padL = 10;
+      const padR = 65;
+      const plotW = W - padL - padR;
+
+      // Extract Prices
+      const prices = DATA.map(d => d[activeAsset] || 0);
+      const minP = Math.min(...prices.filter(p => p > 0)) * 0.985;
+      const maxP = Math.max(...prices.filter(p => p > 0)) * 1.015;
+
+      const getX = (i) => padL + (i / (DATA.length - 1)) * plotW;
+      const getY = (p) => topHeight - 15 - ((p - minP) / (maxP - minP)) * (topHeight - 35);
+
+      // Grid Lines
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 0.8;
+      ctx.setLineDash([3, 4]);
+
+      const pStep = (maxP - minP) / 5;
+      for (let s = 0; s <= 5; s++) {
+        const pVal = minP + s * pStep;
+        const yVal = getY(pVal);
+        ctx.beginPath();
+        ctx.moveTo(padL, yVal);
+        ctx.lineTo(W - padR, yVal);
+        ctx.stroke();
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '10px ui-monospace, SFMono-Regular, monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('₹' + Math.round(pVal).toLocaleString('en-IN'), W - padR + 6, yVal + 3);
+      }
+
+      // Monthly Separators on X Axis
+      ctx.setLineDash([2, 5]);
+      ctx.strokeStyle = '#334155';
+      let lastMonth = '';
+      DATA.forEach((d, i) => {
+        const m = d.date.split('-')[1];
+        if (m !== lastMonth) {
+          lastMonth = m;
+          const x = getX(i);
+          ctx.beginPath();
+          ctx.moveTo(x, 10);
+          ctx.lineTo(x, H - 15);
+          ctx.stroke();
+
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = 'bold 10px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(m, x, topHeight + 5);
+        }
+      });
+      ctx.setLineDash([]);
+
+      // Draw Price Area Gradient
+      const grad = ctx.createLinearGradient(0, 0, 0, topHeight);
+      grad.addColorStop(0, activeAsset === 'smallcap' ? 'rgba(56, 189, 248, 0.28)' : 'rgba(168, 85, 247, 0.28)');
+      grad.addColorStop(1, 'rgba(15, 23, 42, 0.0)');
+
+      ctx.beginPath();
+      ctx.moveTo(getX(0), topHeight - 15);
+      DATA.forEach((d, i) => {
+        ctx.lineTo(getX(i), getY(d[activeAsset]));
+      });
+      ctx.lineTo(getX(DATA.length - 1), topHeight - 15);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Draw Main Price Line
+      ctx.beginPath();
+      ctx.strokeStyle = activeAsset === 'smallcap' ? '#38bdf8' : '#c084fc';
+      ctx.lineWidth = 2.2;
+      DATA.forEach((d, i) => {
+        const x = getX(i);
+        const y = getY(d[activeAsset]);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Draw 20-Day EMA Line
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.65)';
+      ctx.lineWidth = 1.3;
+      let ema = null;
+      const k = 2 / (20 + 1);
+      DATA.forEach((d, i) => {
+        const p = d[activeAsset];
+        if (ema === null) ema = p;
+        else ema = (p * k) + (ema * (1 - k));
+        const x = getX(i);
+        const y = getY(ema);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // ==========================================
+      // SUB-PANE: 4% MOMENTUM THRUST HISTOGRAM
+      // ==========================================
+      const maxThrust = Math.max(...DATA.map(d => Math.max(d.up_4, d.dn_4)));
+      const subZeroY = subTop + bottomHeight * 0.5;
+      const subScale = (bottomHeight * 0.44) / (maxThrust || 1);
+
+      // Sub-pane background & zero line
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
+      ctx.fillRect(padL, subTop, plotW, bottomHeight);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padL, subZeroY);
+      ctx.lineTo(W - padR, subZeroY);
+      ctx.stroke();
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('+4% Thrust', W - padR + 6, subTop + 14);
+      ctx.fillText('-4% Drag', W - padR + 6, subTop + bottomHeight - 6);
+
+      const barW = Math.max(1.8, (plotW / DATA.length) * 0.65);
+      DATA.forEach((d, i) => {
+        const x = getX(i);
+        // Green Up 4% Bar (Extends Up)
+        const hUp = d.up_4 * subScale;
+        ctx.fillStyle = (d.up_4 >= 150) ? '#10b981' : 'rgba(16, 185, 129, 0.45)';
+        ctx.fillRect(x - barW / 2, subZeroY - hUp, barW, hUp);
+
+        // Red Down 4% Bar (Extends Down)
+        const hDn = d.dn_4 * subScale;
+        ctx.fillStyle = (d.dn_4 >= 400) ? '#ef4444' : 'rgba(239, 68, 68, 0.45)';
+        ctx.fillRect(x - barW / 2, subZeroY, barW, hDn);
+      });
+
+      // ==========================================
+      // DRAW BONDE REGIME WARNING MARKERS / PINS
+      // ==========================================
+      DATA.forEach((d, i) => {
+        const isClimax = (d.dn_4 >= 400 || d.state_code === 'CLIMAX');
+        const isIgnition = (d.state_code === 'IGNITION');
+        const isFroth = (d.state_code === 'OVERHEATED');
+        const isExpansion = (d.state_code === 'EXPANSION');
+
+        const x = getX(i);
+        const y = getY(d[activeAsset]);
+
+        // Filter Check
+        if (activeFilter === 'IGNITION' && !isIgnition) return;
+        if (activeFilter === 'CLIMAX' && !isClimax) return;
+        if (activeFilter === 'OVERHEATED' && !isFroth) return;
+        if (activeFilter === 'EXPANSION' && !isExpansion) return;
+
+        // 1. CLIMAX WASHOUT MARKER (Red Circle + Down Triangle)
+        if (isClimax) {
+          ctx.save();
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Triangle above pointing down
+          ctx.beginPath();
+          ctx.moveTo(x, y - 9);
+          ctx.lineTo(x - 5, y - 18);
+          ctx.lineTo(x + 5, y - 18);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+        // 2. DAY-1 IGNITION SPARK (Glowing Emerald Pin + Up Arrow)
+        else if (isIgnition) {
+          ctx.save();
+          ctx.fillStyle = '#10b981';
+          ctx.shadowColor = '#10b981';
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Arrow pointing up from below
+          ctx.beginPath();
+          ctx.moveTo(x, y + 8);
+          ctx.lineTo(x - 5, y + 18);
+          ctx.lineTo(x + 5, y + 18);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+        // 3. OVERHEATED FROTH PIN (Amber Warning Hexagon)
+        else if (isFroth) {
+          ctx.save();
+          ctx.fillStyle = '#f59e0b';
+          ctx.beginPath();
+          ctx.arc(x, y, 4, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(x - 4, y - 16, 8, 8);
+          ctx.restore();
+        }
+        // 4. TREND EXPANSION (Subtle Blue Diamond)
+        else if (isExpansion && i % 2 === 0) {
+          ctx.save();
+          ctx.fillStyle = '#3b82f6';
+          ctx.beginPath();
+          ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      });
+
+      // ==========================================
+      // ACTIVE CROSSHAIR & TOOLTIP RENDERING
+      // ==========================================
+      if (hoveredIndex >= 0 && hoveredIndex < DATA.length) {
+        const hX = getX(hoveredIndex);
+        const hY = getY(DATA[hoveredIndex][activeAsset]);
+        const hItem = DATA[hoveredIndex];
+
+        updateInspector(hItem);
+
+        // Vertical Guide Line
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(hX, 10);
+        ctx.lineTo(hX, H - 5);
+        ctx.stroke();
+
+        // Horizontal Guide on Price
+        ctx.beginPath();
+        ctx.moveTo(padL, hY);
+        ctx.lineTo(W - padR, hY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Highlight Active Point Pulse
+        ctx.save();
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(hX, hY, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // Mouse Tracking for Interactive Crosshair
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const padL = 10;
+      const padR = 65;
+      const plotW = rect.width - padL - padR;
+
+      let idx = Math.round(((mouseX - padL) / plotW) * (DATA.length - 1));
+      if (idx < 0) idx = 0;
+      if (idx >= DATA.length) idx = DATA.length - 1;
+
+      if (idx !== hoveredIndex) {
+        hoveredIndex = idx;
+        render();
+      }
+    });
+
+    window.addEventListener('resize', render);
+
+    // Initial Render
+    render();
+  </script>
+</body>
+</html>
