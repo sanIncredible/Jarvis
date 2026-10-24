@@ -453,7 +453,19 @@
   .val-pos { color: #ffffff; font-weight: 800; }
   .val-neg { color: #71717a; font-weight: 700; }
 
-  /* Interactive Chart Modal / Popup — White Paper Theme (as shown in image) */
+  /* Interactive Chart Modal / Popup — White Paper Theme */
+  .chart-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(4, 6, 12, 0.75);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 9998;
+    touch-action: manipulation;
+  }
   .chart-popup {
     display: none;
     position: fixed;
@@ -469,18 +481,28 @@
   }
   .popup-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
     background: #111622;
     padding: 10px 14px;
     border-bottom: 1px solid var(--border-subtle);
     gap: 8px;
-    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .popup-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
   }
   .popup-title-group {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
   }
   .popup-title {
     font-size: 14px;
@@ -489,6 +511,46 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    white-space: nowrap;
+  }
+  .popup-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .popup-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    background: #1e293b;
+    color: #ffffff;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    font-size: 17px;
+    font-weight: 800;
+    cursor: pointer;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+    touch-action: manipulation;
+  }
+  .popup-close-btn:hover,
+  .popup-close-btn:active {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+  }
+  .popup-badges-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    width: 100%;
   }
   .popup-hud {
     background: #0a0d14;
@@ -499,6 +561,7 @@
     border-bottom: 1px solid var(--border-subtle);
     white-space: nowrap;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .popup-canvas-wrap {
     position: relative;
@@ -512,6 +575,7 @@
     height: 100%;
     cursor: crosshair;
     background: #0a0d14;
+    touch-action: none;
   }
   .popup-footer {
     display: flex;
@@ -522,6 +586,25 @@
     border-top: 1px solid var(--border-subtle);
     font-size: 11px;
     color: var(--text-muted);
+  }
+  .popup-footer-close {
+    display: none;
+    background: #1e293b;
+    color: #e2e8f0;
+    border: 1px solid #475569;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: all 0.15s ease;
+  }
+  .popup-footer-close:hover,
+  .popup-footer-close:active {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #ef4444;
   }
 
   /* Execution Guardrail & Overextension Badges */
@@ -609,6 +692,81 @@
     font-size: 11px;
     color: var(--text-dim);
     line-height: 1.6;
+  }
+
+  /* Mobile Phone & Tablet Responsive Styles */
+  @media (max-width: 768px) {
+    .chart-popup {
+      position: fixed !important;
+      left: 8px !important;
+      right: 8px !important;
+      top: 10px !important;
+      width: auto !important;
+      max-width: calc(100vw - 16px) !important;
+      max-height: calc(100dvh - 20px) !important;
+      border-radius: 10px !important;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.95) !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+    .popup-header {
+      padding: 8px 10px;
+      gap: 6px;
+    }
+    .popup-header-top {
+      gap: 6px;
+    }
+    .popup-title-group {
+      gap: 6px;
+    }
+    .popup-title {
+      font-size: 12.5px;
+    }
+    .popup-actions {
+      gap: 6px;
+    }
+    .popup-close-btn {
+      width: 38px;
+      height: 38px;
+      min-width: 38px;
+      font-size: 20px;
+      background: #334155;
+      border-color: #64748b;
+    }
+    .popup-canvas-wrap {
+      height: 240px !important;
+    }
+    .popup-hud {
+      font-size: 10px;
+      padding: 5px 8px;
+    }
+    .popup-badges-row {
+      gap: 4px;
+      font-size: 10.5px;
+    }
+    .popup-guardrail {
+      padding: 6px 10px;
+      font-size: 10.5px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .guardrail-right {
+      text-align: left;
+    }
+    .popup-footer {
+      padding: 6px 10px;
+      font-size: 10px;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .popup-footer-close {
+      display: inline-flex;
+    }
+    .btn-preview-eye {
+      padding: 5px 9px;
+      font-size: 12px;
+    }
   }
 </style>
 </head>
@@ -782,25 +940,30 @@
     Cluster Telemetry &amp; Node Observer Daemon • Distributed Ingress Telemetry Pipeline • High-Throughput Stream • Press [?] for Diagnostics
   </div>
 
+  <!-- Chart Modal Backdrop (Click/tap outside to close) -->
+  <div id="chart-backdrop" class="chart-backdrop" onclick="hideChartPopup()"></div>
+
   <!-- Interactive Candlestick Chart Modal -->
   <div id="chart-popup" class="chart-popup" onmouseenter="cancelHidePopup()" onmouseleave="scheduleHidePopup()">
     <div class="popup-header">
-      <div class="popup-title-group">
-        <span id="popup-title" class="popup-title">📈 SYMBOL</span>
-        <div class="pill-selector">
-          <button id="tf-btn-3m" class="pill-btn active" onclick="switchTimeframe('3m')">3m</button>
-          <button id="tf-btn-d" class="pill-btn" onclick="switchTimeframe('D')">Daily</button>
+      <div class="popup-header-top">
+        <div class="popup-title-group">
+          <span id="popup-title" class="popup-title">📈 SYMBOL</span>
+          <div class="pill-selector">
+            <button id="tf-btn-3m" class="pill-btn active" onclick="switchTimeframe('3m')">3m</button>
+            <button id="tf-btn-d" class="pill-btn" onclick="switchTimeframe('D')">Daily</button>
+          </div>
+          <div class="pill-selector">
+            <button id="style-btn-vol" class="pill-btn active" onclick="switchChartStyle('vol')" title="Volume Candles (Candle body width expands with trading volume)">📊 Vol Candles</button>
+            <button id="style-btn-std" class="pill-btn" onclick="switchChartStyle('std')" title="Standard Fixed-Width Candlesticks">🕯 Standard</button>
+          </div>
         </div>
-        <div class="pill-selector">
-          <button id="style-btn-vol" class="pill-btn active" onclick="switchChartStyle('vol')" title="Volume Candles (Candle body width expands with trading volume)">📊 Vol Candles</button>
-          <button id="style-btn-std" class="pill-btn" onclick="switchChartStyle('std')" title="Standard Fixed-Width Candlesticks">🕯 Standard</button>
+        <div class="popup-actions">
+          <a id="popup-app-link" href="#" target="_blank" class="btn-tv-app" title="Launch Native TradingView Desktop / Web">🚀 TV App ↗</a>
+          <button id="popup-close-btn" class="popup-close-btn" onclick="hideChartPopup()" title="Close chart (Esc)" aria-label="Close chart">✕</button>
         </div>
       </div>
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span id="popup-badges" style="display:inline-flex; gap:6px;"></span>
-        <a id="popup-app-link" href="#" target="_blank" class="btn-tv-app" title="Launch Native TradingView Desktop / Web">🚀 TV App ↗</a>
-        <button class="btn-preview-eye" onclick="hideChartPopup()" style="font-size:14px; padding:3px 8px;">✕</button>
-      </div>
+      <div id="popup-badges" class="popup-badges-row"></div>
     </div>
     <div id="popup-hud" class="popup-hud">
       Hover crosshair over candles to inspect OHLCV metrics
@@ -811,9 +974,13 @@
     <div id="popup-guardrail" class="popup-guardrail"></div>
     <div class="popup-footer">
       <span id="popup-footer-note">💡 Upper Baseline Envelope | Dynamic 3m Boundary Thresholds</span>
-      <span id="popup-bar-count">0 Candles</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span id="popup-bar-count">0 Candles</span>
+        <button class="popup-footer-close" onclick="hideChartPopup()" title="Close chart">Close ✕</button>
+      </div>
     </div>
   </div>
+
 
 <script>
   let RAW_STOCKS = [];
@@ -1016,6 +1183,7 @@
   const pulseIndicator = document.getElementById('pulse-indicator');
   const sourceLabel = document.getElementById('source-label');
   const searchInput = document.getElementById('search-input');
+  const chartBackdrop = document.getElementById('chart-backdrop');
   const popup = document.getElementById('chart-popup');
   const popupTitle = document.getElementById('popup-title');
   const popupBadges = document.getElementById('popup-badges');
@@ -2310,26 +2478,44 @@
       clearTimeout(popupTimer);
       popupTimer = null;
     }
+    const isMobile = window.innerWidth <= 768;
     const popupWidth = Math.min(680, window.innerWidth - 20);
-    const popupHeight = 420;
-    let x = e.clientX || (window.innerWidth / 2 - popupWidth / 2);
-    let y = e.clientY || (window.innerHeight / 2 - popupHeight / 2);
+    const popupHeight = isMobile ? 380 : 420;
 
-    let left = x + 15;
-    let top = y - 40;
+    if (isMobile) {
+      popup.style.left = '8px';
+      popup.style.right = '8px';
+      popup.style.top = '10px';
+      if (chartBackdrop) chartBackdrop.style.display = 'block';
+    } else {
+      let x = (e && e.clientX) ? e.clientX : (window.innerWidth / 2 - popupWidth / 2);
+      let y = (e && e.clientY) ? e.clientY : (window.innerHeight / 2 - popupHeight / 2);
 
-    if (left + popupWidth > window.innerWidth) left = x - popupWidth - 15;
-    if (left < 10) left = 10;
-    if (top + popupHeight > window.innerHeight) top = window.innerHeight - popupHeight - 15;
-    if (top < 10) top = 10;
+      let left = x + 15;
+      let top = y - 40;
 
-    popup.style.left = left + 'px';
-    popup.style.top = top + 'px';
+      if (left + popupWidth > window.innerWidth) left = x - popupWidth - 15;
+      if (left < 10) left = 10;
+      if (top + popupHeight > window.innerHeight) top = window.innerHeight - popupHeight - 15;
+      if (top < 10) top = 10;
+
+      popup.style.left = left + 'px';
+      popup.style.top = top + 'px';
+      popup.style.right = 'auto';
+      if (forceTap && chartBackdrop) {
+        chartBackdrop.style.display = 'block';
+      } else if (chartBackdrop) {
+        chartBackdrop.style.display = 'none';
+      }
+    }
+
     popup.style.display = 'flex';
 
     activeSym = sym;
     const data = CHARTS_DATA[sym];
-    popupAppLink.href = 'https://in.tradingview.com/chart/?symbol=NSE:' + sym;
+    if (popupAppLink) {
+      popupAppLink.href = 'https://in.tradingview.com/chart/?symbol=NSE:' + sym;
+    }
 
     if (data) {
       updatePopupHeader(data);
@@ -2357,6 +2543,7 @@
   }, { passive: true });
 
   function scheduleHidePopup() {
+    if (window.innerWidth <= 768) return; // Never auto-hide on mobile/tablet via hover timer
     popupTimer = setTimeout(hideChartPopup, 350);
   }
   function cancelHidePopup() {
@@ -2367,8 +2554,33 @@
   }
   function hideChartPopup() {
     popup.style.display = 'none';
-    if (popupTimer) clearTimeout(popupTimer);
+    if (chartBackdrop) chartBackdrop.style.display = 'none';
+    if (popupTimer) {
+      clearTimeout(popupTimer);
+      popupTimer = null;
+    }
   }
+
+  // Tap/click outside chart modal to dismiss on touch or desktop
+  document.addEventListener('pointerdown', function(e) {
+    if (popup && popup.style.display === 'flex') {
+      if (!popup.contains(e.target) && !e.target.closest('.btn-preview-eye') && !e.target.closest('tr')) {
+        hideChartPopup();
+      }
+    }
+  });
+
+  // Responsive re-center & redraw on resize / orientation change
+  window.addEventListener('resize', function() {
+    if (popup && popup.style.display === 'flex' && activeSym && CHARTS_DATA[activeSym]) {
+      if (window.innerWidth <= 768) {
+        popup.style.left = '8px';
+        popup.style.right = '8px';
+        popup.style.top = '10px';
+      }
+      drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    }
+  });
 
   // Keyboard Shortcuts for Pro Traders & DevOps Telemetry
   window.addEventListener('keydown', function(e) {
