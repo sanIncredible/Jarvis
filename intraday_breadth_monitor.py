@@ -298,6 +298,53 @@ def calculate_intraday_breadth(constituents: List[Dict[str, str]], cfg: Dict[str
     up_2_list = [r for r in results if r["pct_change"] >= 2.0]
     dn_2_list = [r for r in results if r["pct_change"] <= -2.0]
 
+    # =========================================================================
+    # CHHIRAG KEDIA INSTITUTIONAL BREADTH METRICS (INTRADAY QUALITY ENGINE)
+    # =========================================================================
+    # 1. Breakouts Attempted (Day High >= 4% above prev_close)
+    bo_candidates = [r for r in results if r["day_high"] >= r["prev_close"] * 1.04]
+    bo_sustained = 0
+    bo_failed = 0
+    for r in bo_candidates:
+        rng = r["day_high"] - r["day_low"]
+        if rng > 0:
+            rel_pos = (r["ltp"] - r["day_low"]) / rng
+            if rel_pos >= 0.60: # Closes/trades in top 40% of range -> SUSTAINED
+                bo_sustained += 1
+            else:
+                bo_failed += 1
+        else:
+            bo_sustained += 1
+    bo_sf_ratio = round(bo_sustained / max(bo_failed, 1), 2) if bo_candidates else 1.0
+
+    # 2. Breakdowns Attempted (Day Low <= -4% below prev_close)
+    bd_candidates = [r for r in results if r["day_low"] <= r["prev_close"] * 0.96]
+    bd_sustained = 0
+    bd_failed = 0
+    for r in bd_candidates:
+        rng = r["day_high"] - r["day_low"]
+        if rng > 0:
+            rel_pos = (r["ltp"] - r["day_low"]) / rng
+            if rel_pos <= 0.40: # Closes/trades in lower 40% of range -> SUSTAINED
+                bd_sustained += 1
+            else:
+                bd_failed += 1
+        else:
+            bd_sustained += 1
+    bd_sf_ratio = round(bd_sustained / max(bd_failed, 1), 2) if bd_candidates else 1.0
+
+    # 3. Range Expansion & Upper Half / Lower Half (UH/LH) Quality
+    rng_exp_list = [r for r in results if (r["day_high"] - r["day_low"]) / max(r["prev_close"], 0.01) >= 0.0501]
+    uh_count = 0
+    lh_count = 0
+    for r in rng_exp_list:
+        rng = r["day_high"] - r["day_low"]
+        if rng > 0 and (r["ltp"] - r["day_low"]) / rng >= 0.50:
+            uh_count += 1
+        else:
+            lh_count += 1
+    uh_lh_ratio = round(uh_count / max(lh_count, 1), 2) if rng_exp_list else 1.0
+
     all_changes = [r["pct_change"] for r in results]
     avg_change = round(sum(all_changes) / len(all_changes), 2)
     sorted_changes = sorted(all_changes)
@@ -310,40 +357,47 @@ def calculate_intraday_breadth(constituents: List[Dict[str, str]], cfg: Dict[str
     thrust_ratio = round(len(up_4_list) / max(len(dn_4_list), 1), 2)
     net_thrust = len(up_4_list) - len(dn_4_list)
 
-    # State Machine Evaluation
+    # State Machine Evaluation with Institutional Filter
     # 1. Day-1 Ignition Spark: Strong institutional thrust
     if len(up_4_list) >= 35 and len(dn_4_list) <= 12 and ad_ratio >= 2.2:
-        signal_state = "IGNITION"
-        signal_badge = "🟢 DAY-1 IGNITION REVERSAL"
-        guidance = "Institutional thrust spark detected! 25% pilot swing risk unlocked."
-        swing_multiplier = 0.25
-        risk_alert_type = "IGNITION_UNLOCKED"
+        if bo_sf_ratio >= 1.2:
+            signal_state = "IGNITION"
+            signal_badge = "🟢 DAY-1 IGNITION REVERSAL (High Conviction Thrust)"
+            guidance = f"Institutional thrust confirmed! Breakouts sticking (BO S/F: {bo_sf_ratio} >= 1.2). 25% pilot risk unlocked."
+            swing_multiplier = 0.25
+            risk_alert_type = "IGNITION_UNLOCKED"
+        else:
+            signal_state = "WEAK_IGNITION"
+            signal_badge = "🟡 WEAK IGNITION (Breakouts Fading / Churn)"
+            guidance = f"Thrust spark present but breakouts fading (BO S/F: {bo_sf_ratio} < 1.2). Caution: Require 2x volume confirmation."
+            swing_multiplier = 0.10
+            risk_alert_type = "IGNITION_WEAK"
     # 2. Climax / Washout Panic: Broad liquidation cascade
     elif len(dn_4_list) >= 60 or (ad_ratio <= 0.15 and len(decliners) >= 400):
         signal_state = "WASHOUT"
         signal_badge = "🔴 SELLING CLIMAX / WASHOUT"
-        guidance = "Heavy institutional liquidation active. 0% swing risk. SIT ON HANDS."
+        guidance = f"Heavy institutional liquidation active ({len(dn_4_list)} down >=4%). 0% swing risk. SIT ON HANDS."
         swing_multiplier = 0.0
         risk_alert_type = "WASHOUT_LOCKED"
-    # 3. Expansion Sweet Spot: Healthy broad participation
-    elif len(up_4_list) >= 20 and len(dn_4_list) <= 8 and ad_ratio >= 2.0:
+    # 3. Expansion Sweet Spot: Healthy broad participation & Breakouts Sticking
+    elif len(up_4_list) >= 20 and len(dn_4_list) <= 8 and ad_ratio >= 2.0 and bo_sf_ratio >= 1.2:
         signal_state = "EXPANSION"
-        signal_badge = "🟢 HEALTHY EXPANSION"
-        guidance = "Strong breadth tailwind. Breakouts have high follow-through."
+        signal_badge = "🟢 HEALTHY EXPANSION (Sweet Spot)"
+        guidance = f"Strong breadth tailwind & breakouts sustaining (BO S/F: {bo_sf_ratio}). Full 100% swing risk allowed."
         swing_multiplier = 1.0
         risk_alert_type = "EXPANSION_ACTIVE"
     # 4. Selective / Mixed: Stock-picking environment
     elif ad_ratio >= 0.9 and ad_ratio <= 2.0 and len(dn_4_list) < 25:
         signal_state = "SELECTIVE"
         signal_badge = "🟡 SELECTIVE ROTATION"
-        guidance = "Mixed breadth. Stick strictly to top relative strength leaders."
+        guidance = f"Mixed breadth (BO S/F: {bo_sf_ratio}). Half risk (50%) only. Stick strictly to top relative strength leaders."
         swing_multiplier = 0.50
         risk_alert_type = "SELECTIVE_ROTATION"
     # 5. Choppy / Defensive Drift
     else:
         signal_state = "DEFENSIVE"
         signal_badge = "⚠️ DEFENSIVE / HIGH FAKEOUT RISK"
-        guidance = "Weak breadth. 80%+ of breakouts fail. Preserve capital."
+        guidance = f"Defensive breadth. {round(bo_failed / max(len(bo_candidates), 1) * 100)}% of breakouts failing today (BO S/F: {bo_sf_ratio}). Preserve capital."
         swing_multiplier = 0.0
         risk_alert_type = "DEFENSIVE_CHOP"
 
@@ -375,6 +429,17 @@ def calculate_intraday_breadth(constituents: List[Dict[str, str]], cfg: Dict[str
         "dn_2_count": len(dn_2_list),
         "thrust_ratio": thrust_ratio,
         "net_thrust": net_thrust,
+        "breakouts_attempted": len(bo_candidates),
+        "breakouts_sustained": bo_sustained,
+        "breakouts_failed": bo_failed,
+        "bo_sf_ratio": bo_sf_ratio,
+        "breakdowns_attempted": len(bd_candidates),
+        "breakdowns_sustained": bd_sustained,
+        "breakdowns_failed": bd_failed,
+        "bd_sf_ratio": bd_sf_ratio,
+        "range_exp_count": len(rng_exp_list),
+        "uh_lh_ratio": uh_lh_ratio,
+        "breakout_trap_active": (bo_sf_ratio < 1.0 and len(bo_candidates) >= 5),
         "avg_change_pct": avg_change,
         "median_change_pct": median_change,
         "signal_state": signal_state,
@@ -431,6 +496,14 @@ def update_market_regime_state(breadth_data: Dict[str, Any]):
             "intraday_max_daily_loss": breadth_data["risk_matrix"]["intraday_max_daily_loss"],
             "intraday_max_open_trades": breadth_data["risk_matrix"]["intraday_max_open_trades"],
             "fakeout_warning": "HIGH FAKEOUT RISK: 80%+ of long breakouts fail in this regime." if breadth_data["risk_matrix"]["swing_multiplier"] == 0 else "NORMAL EXECUTION",
+            "breakout_quality": {
+                "bo_sf_ratio": breadth_data.get("bo_sf_ratio", 1.0),
+                "breakouts_attempted": breadth_data.get("breakouts_attempted", 0),
+                "breakouts_sustained": breadth_data.get("breakouts_sustained", 0),
+                "breakouts_failed": breadth_data.get("breakouts_failed", 0),
+                "uh_lh_ratio": breadth_data.get("uh_lh_ratio", 1.0),
+                "trap_active": breadth_data.get("breakout_trap_active", False)
+            },
             "breadth_snapshot": {
                 "advancers": breadth_data["advancers"],
                 "decliners": breadth_data["decliners"],
