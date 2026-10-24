@@ -758,6 +758,7 @@ def send_telegram_alert(msg_html: str, config: Dict[str, Any]) -> Tuple[bool, st
 def main():
     force_run = "--force" in sys.argv or "--test" in sys.argv
     now_dt = datetime.now()
+    cfg = load_config()
 
     print("=" * 65)
     print(f"⚡ JARVIS 09:14 AM PRE-OPEN SITUATIONAL AWARENESS")
@@ -837,6 +838,27 @@ def main():
         with open(regime_file, "w", encoding="utf-8") as f:
             json.dump(regime_payload, f, indent=2)
         print(f"💾 Synchronized {regime_file.name} (Allocation: {alloc_pct}%)")
+
+        # Save complete 09:14 SA summary and Telegram alert card for Web Dashboard & Tablet
+        sa_summary_file = BASE_DIR / "pre_market_summary.json"
+        sa_payload = {
+            "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
+            "date": bonde.get("date") if bonde else datetime.now().strftime("%d-%b-%Y"),
+            "bias": summary.get("bias", ""),
+            "nifty_ltp": summary.get("nifty_ltp"),
+            "nifty_chg_pct": summary.get("nifty_chg_pct"),
+            "advances": summary.get("advances", 0),
+            "declines": summary.get("declines", 0),
+            "top_sector": summary.get("top_sector"),
+            "worst_sector": summary.get("worst_sector"),
+            "benchmarks": summary.get("benchmarks", []),
+            "sectorals": summary.get("sectorals", []),
+            "bonde_breadth": bonde,
+            "telegram_msg_html": msg_html
+        }
+        with open(sa_summary_file, "w", encoding="utf-8") as saf:
+            json.dump(sa_payload, saf, indent=2)
+        print(f"💾 Synchronized {sa_summary_file.name} (Full 09:14 SA Card & Telegram Alert Saved)")
     except Exception as e:
         print(f"⚠️ Error updating market_regime.json: {e}")
 
