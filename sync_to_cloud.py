@@ -125,6 +125,14 @@ def main():
             ok_j = sync_file_to_github_api(gh_cfg, "data.json", f"sync data.json ({len(raw_syms)} symbols)")
             if (BASE_DIR / "pre_market_summary.py").is_file():
                 sync_file_to_github_api(gh_cfg, "pre_market_summary.py", "Update pre_market_summary engine")
+            if (BASE_DIR / "pre_market_summary.json").is_file():
+                sync_file_to_github_api(gh_cfg, "pre_market_summary.json", "Update 09:14 SA summary data")
+            if (BASE_DIR / "intraday_breadth_monitor.py").is_file():
+                sync_file_to_github_api(gh_cfg, "intraday_breadth_monitor.py", "Update intraday breadth monitor engine")
+            if (BASE_DIR / "market_regime.json").is_file():
+                sync_file_to_github_api(gh_cfg, "market_regime.json", "Update market regime state")
+            if (BASE_DIR / "intraday_breadth.json").is_file():
+                sync_file_to_github_api(gh_cfg, "intraday_breadth.json", "Update intraday breadth data")
             if ok_w and ok_j:
                 print("   ✅ GitHub Cloud Sync: SUCCESS! (watchlist, data.json, dashboard & index.html live)")
                 github_ok = True
@@ -147,12 +155,7 @@ def main():
             "-o", "ConnectTimeout=5"
         ]
 
-        # Note: Journal.xlsx is intentionally excluded here to prevent Excel Windows file-lock errors.
-        # sync_journal.py handles journal backups separately.
-        scp_cmd = [
-            "scp",
-            "-i", str(KEY_FILE)
-        ] + ssh_opts + [
+        scp_files = [
             str(WATCHLIST_FILE),
             str(CONFIG_FILE),
             str(BASE_DIR / "upstox_tablet_scanner.py"),
@@ -160,9 +163,20 @@ def main():
             str(BASE_DIR / "scanner_dashboard.html"),
             str(BASE_DIR / "data.json"),
             str(BASE_DIR / "pre_market_summary.py"),
+            str(BASE_DIR / "intraday_breadth_monitor.py"),
+            str(BASE_DIR / "market_regime.json"),
+            str(BASE_DIR / "intraday_breadth.json"),
             str(BASE_DIR / "sync_journal.py"),
             str(BASE_DIR / "check_tokens.py"),
-            str(BASE_DIR / "token_hub.py"),
+            str(BASE_DIR / "token_hub.py")
+        ]
+        if (BASE_DIR / "nifty500_constituents.json").is_file():
+            scp_files.append(str(BASE_DIR / "nifty500_constituents.json"))
+
+        scp_cmd = [
+            "scp",
+            "-i", str(KEY_FILE)
+        ] + ssh_opts + scp_files + [
             f"{SERVER_USER}@{SERVER_IP}:{REMOTE_DIR}/"
         ]
 
