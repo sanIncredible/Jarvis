@@ -2422,10 +2422,22 @@ def export_static_html(results, now_str, port):
                 except Exception:
                     pass
 
+        # Load 09:14 Situational Awareness pre-market summary if available
+        sa_summary_data = {}
+        for sa_p in ["pre_market_summary.json", os.path.join(script_dir, "pre_market_summary.json")]:
+            if os.path.isfile(sa_p):
+                try:
+                    with open(sa_p, "r", encoding="utf-8") as saf:
+                        sa_summary_data = json.load(saf)
+                    break
+                except Exception:
+                    pass
+
         payload = {
             "updated_at": now_str,
             "source": source_label,
             "market_regime": regime_data,
+            "pre_market_summary": sa_summary_data,
             "stocks": stocks_payload
         }
 
