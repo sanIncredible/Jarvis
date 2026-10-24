@@ -1,20 +1,28 @@
 {
-  "updated_at": "2026-10-24 00:17:32 IST",
-  "state_code": "WASHOUT",
-  "state_label": "\ud83d\udd34 SELLING CLIMAX / WASHOUT",
-  "guidance": "Heavy institutional liquidation active. 0% swing risk. SIT ON HANDS.",
+  "updated_at": "2026-10-24 16:09:31 IST",
+  "state_code": "DEFENSIVE",
+  "state_label": "\u26a0\ufe0f DEFENSIVE / HIGH FAKEOUT RISK",
+  "guidance": "Defensive breadth. 0% of breakouts failing today (BO S/F: 2.0). Preserve capital.",
   "swing_allocation_pct": 0,
   "swing_risk_per_trade": 0,
   "intraday_risk_per_trade": 1000,
   "intraday_max_daily_loss": 2000,
   "intraday_max_open_trades": 2,
   "fakeout_warning": "HIGH FAKEOUT RISK: 80%+ of long breakouts fail in this regime.",
+  "breakout_quality": {
+    "bo_sf_ratio": 2.0,
+    "breakouts_attempted": 2,
+    "breakouts_sustained": 2,
+    "breakouts_failed": 0,
+    "uh_lh_ratio": 1.0,
+    "trap_active": false
+  },
   "breadth_snapshot": {
-    "advancers": 43,
-    "decliners": 457,
-    "ad_ratio": 0.09,
-    "up_4_count": 3,
-    "dn_4_count": 87,
-    "net_thrust": -84
+    "advancers": 23,
+    "decliners": 225,
+    "ad_ratio": 0.1,
+    "up_4_count": 2,
+    "dn_4_count": 42,
+    "net_thrust": -40
   }
 }
