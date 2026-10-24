@@ -1,0 +1,37 @@
+{
+  "as_of_date": "2026-10-22",
+  "evaluated_at": "2026-10-24 16:10:31 IST",
+  "regime_code": "DEFENSIVE_WATERFALL",
+  "regime_badge": "\ud83d\uded1 DEFENSIVE / SELLING CASCADE ACTIVE",
+  "mandate": "CASH IS KING: Broad selling pressure active. 85%+ of long setups fail. Sit on hands.",
+  "swing_allocation_pct": 0,
+  "swing_risk_per_trade": 0,
+  "base_risk_per_trade": 10000,
+  "breakout_quality": {
+    "health": "TRAP_FAILING",
+    "description": "Distribution day! 60%+ of breakout attempts are failing.",
+    "bo_sf_ratio": 0.65,
+    "sustained": 132,
+    "failed": 202,
+    "total_attempted": 334
+  },
+  "institutional_layers": {
+    "ma_breadth_20ema_pct": 12.3,
+    "ma_breadth_50ema_pct": 13.8,
+    "ma_status": "OVERSOLD_WASHED_OUT",
+    "momentum_leaders_25pct_20d": 38,
+    "momentum_laggards_25pct_20d": 68,
+    "momentum_status": "DEFICIT_NO_FUEL",
+    "net_52w_highs_lows": -339,
+    "within_15pct_52wh": 314,
+    "within_15pct_52wl": 1073,
+    "uh_lh_ratio": 0.55
+  },
+  "setups_allowed": [
+    "Cash Preservation"
+  ],
+  "setups_blocked": [
+    "All Long Swing Positions"
+  ],
+  "stop_loss_mandate": "Immediate exit at Stop Loss."
+}
