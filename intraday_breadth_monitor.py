@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 import urllib.request
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
 
 # Ensure UTF-8 output on Windows consoles
 if sys.platform == "win32":
@@ -166,36 +167,50 @@ def fetch_upstox_quotes_batch(isins: List[str], token: str) -> Dict[str, Dict[st
 
 def fetch_yahoo_quotes_fallback(symbols: List[str]) -> Dict[str, Dict[str, Any]]:
     """
-    Unauthenticated fallback using Yahoo Finance batch quote API.
+    Unauthenticated concurrent fallback using Yahoo Finance v8 chart API.
+    Does not require crumb or authentication, bypassing HTTP 401.
     """
     if not symbols:
         return {}
 
     quotes = {}
-    batch_size = 100
-    chunks = [symbols[i:i + batch_size] for i in range(0, len(symbols), batch_size)]
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
-    for ch in chunks:
-        sym_params = ",".join([f"{s}.NS" for s in ch])
-        url = f"https://query1.finance.yahoo.com/v7/finance/quote?symbols={sym_params}"
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    def fetch_single(sym: str) -> Tuple[str, Optional[Dict[str, Any]]]:
+        clean_sym = sym.replace(".NS", "").strip()
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{clean_sym}.NS?interval=1d&range=1d"
         try:
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=8) as resp:
+            with urllib.request.urlopen(req, timeout=4) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-                for q in data.get("quoteResponse", {}).get("result", []):
-                    sym = q.get("symbol", "").replace(".NS", "")
-                    quotes[sym] = {
-                        "last_price": q.get("regularMarketPrice", 0.0),
-                        "prev_close": q.get("regularMarketPreviousClose", 0.0),
-                        "net_change": q.get("regularMarketChange", 0.0),
-                        "pct_change": q.get("regularMarketChangePercent", 0.0),
-                        "volume": q.get("regularMarketVolume", 0),
-                        "symbol": sym,
-                        "source": "Yahoo Finance"
+                result_list = data.get("chart", {}).get("result", [])
+                if not result_list:
+                    return clean_sym, None
+                meta = result_list[0].get("meta", {})
+                lp = float(meta.get("regularMarketPrice") or 0.0)
+                pc = float(meta.get("chartPreviousClose") or meta.get("previousClose") or 0.0)
+                if lp > 0 and pc > 0:
+                    nc = round(lp - pc, 2)
+                    pct = round(((lp - pc) / pc) * 100, 2)
+                    return clean_sym, {
+                        "last_price": lp,
+                        "prev_close": pc,
+                        "net_change": nc,
+                        "pct_change": pct,
+                        "volume": meta.get("regularMarketVolume", 0),
+                        "symbol": clean_sym,
+                        "source": "Yahoo Finance (v8)"
                     }
-        except Exception as e:
-            print(f"⚠️ Yahoo Finance batch quote failed: {e}")
+        except Exception:
+            pass
+        return clean_sym, None
+
+    # Sample top 250 liquid symbols for high-speed fallback
+    target_symbols = symbols[:250]
+    with ThreadPoolExecutor(max_workers=35) as executor:
+        for sym, q in executor.map(fetch_single, target_symbols):
+            if q:
+                quotes[sym] = q
 
     return quotes
 
@@ -237,9 +252,9 @@ def calculate_intraday_breadth(constituents: List[Dict[str, str]], cfg: Dict[str
                 "day_low": q.get("ohlc", {}).get("low", lp)
             })
     else:
-        # Fallback to Yahoo Finance
-        print("⚠️ Upstox returned low quote count. Falling back to Yahoo Finance...")
-        data_source = "Yahoo Finance (Fallback)"
+        # Fallback to Yahoo Finance v8 chart
+        print("⚠️ Upstox token unavailable/expired. Activating concurrent Yahoo Finance v8 fallback...")
+        data_source = "Yahoo Finance (v8 Fallback)"
         symbols = [c["symbol"] for c in constituents if c.get("symbol")]
         y_quotes = fetch_yahoo_quotes_fallback(symbols)
         for sym, q in y_quotes.items():
@@ -262,6 +277,16 @@ def calculate_intraday_breadth(constituents: List[Dict[str, str]], cfg: Dict[str
 
     total_sampled = len(results)
     if total_sampled == 0:
+        # Check if existing cached breadth data exists
+        if INTRADAY_BREADTH_FILE.is_file():
+            try:
+                with open(INTRADAY_BREADTH_FILE, "r", encoding="utf-8") as f:
+                    cached = json.load(f)
+                    cached["source"] = "Cached EOD Snapshot (Offline/Weekend)"
+                    cached["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")
+                    return cached
+            except Exception:
+                pass
         return {"error": "Unable to fetch intraday breadth quotes."}
 
     advancers = [r for r in results if r["pct_change"] > 0]
