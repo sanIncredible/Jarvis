@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pradeep Bonde Situational Awareness Visualizer (2026)</title>
+  <title>Pradeep Bonde Situational Awareness Visualizer (2026) - Authentic Stockbee 4% Breadth</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
     :root {
@@ -33,6 +33,21 @@
       color: #ffffff !important;
       border-color: #3b82f6 !important;
     }
+    /* Custom scrollbar for key dates */
+    ::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1f293d;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
   </style>
 </head>
 <body class="bg-transparent text-[var(--foreground)] antialiased p-2 sm:p-4">
@@ -43,11 +58,11 @@
       <div>
         <div class="flex items-center gap-2">
           <span class="text-xl sm:text-2xl font-black tracking-tight text-white">NIFTY SMALLCAP 100</span>
-          <span class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">2026 YTD Audit</span>
-          <span class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Stockbee Model</span>
+          <span class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">2026 Audit</span>
+          <span class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Stockbee 4% Model</span>
         </div>
         <p class="text-xs sm:text-sm text-[var(--muted-foreground)] mt-1">
-          Interactive replay of Pradeep Bonde's 5 core behavioral mandates & warning triggers across 199 trading sessions.
+          Pradeep Bonde Situational Awareness: Price Action (Top) + Daily 4% Up / Down Breadth Oscillator (Bottom).
         </p>
       </div>
 
@@ -69,24 +84,24 @@
     </div>
 
     <!-- Milestone Quick Jump Bar -->
-    <div class="flex items-center gap-2 overflow-x-auto py-2.5 text-xs text-[var(--muted-foreground)] border-b border-[var(--border)] scrollbar-none">
-      <span class="font-bold text-white shrink-0">📍 Key Turning Points:</span>
+    <div class="flex items-center gap-2 overflow-x-auto py-2.5 text-xs text-[var(--muted-foreground)] border-b border-[var(--border)]">
+      <span class="font-bold text-white shrink-0">📍 Jump to Landmark Session:</span>
       <button class="px-2.5 py-1 rounded bg-rose-500/10 border border-rose-500/30 text-rose-300 hover:bg-rose-500/20 shrink-0 font-medium transition" onclick="jumpToDate('23-Mar-2026')">
-        🔴 Mar 23: 1,288 Down (Generational Climax Low)
+        🔴 Mar 23: 1,288 Down (All-Year Climax Low)
       </button>
       <button class="px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 shrink-0 font-medium transition" onclick="jumpToDate('01-Apr-2026')">
-        🟢 Apr 01: 1,426 Up (Mega Day-1 Ignition Spark)
+        🟢 Apr 01: 1,426 Up (Epic Day-1 Ignition Spark)
       </button>
       <button class="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20 shrink-0 font-medium transition" onclick="jumpToDate('08-May-2026')">
         ⚠️ May 08: 5D Ratio 4.54 (Froth Top Before May 12 Crash)
       </button>
       <button class="px-2.5 py-1 rounded bg-rose-500/10 border border-rose-500/30 text-rose-300 hover:bg-rose-500/20 shrink-0 font-medium transition" onclick="jumpToDate('21-Oct-2026')">
-        🔴 Oct 21: 630 Down (Latest Climax Washout)
+        🔴 Oct 21: 630 Down (Current Climax Washout)
       </button>
     </div>
 
     <!-- Active Crosshair Data Inspection Bar -->
-    <div id="inspector-bar" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 py-3 border-b border-[var(--border)] text-xs font-mono">
+    <div id="inspector-bar" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 py-3 border-b border-[var(--border)] text-xs font-mono">
       <div class="bg-[var(--background)] p-2 rounded border border-[var(--border)]">
         <span class="text-[var(--muted-foreground)] block text-[10px]">SESSION DATE</span>
         <strong id="bar-date" class="text-white text-sm">--</strong>
@@ -104,7 +119,7 @@
         <strong id="bar-alloc" class="text-yellow-400 text-sm">--</strong>
       </div>
       <div class="bg-[var(--background)] p-2 rounded border border-[var(--border)]">
-        <span class="text-[var(--muted-foreground)] block text-[10px]">4% THRUST (+/-)</span>
+        <span class="text-[var(--muted-foreground)] block text-[10px]">STOCKBEE 4% BARS</span>
         <strong id="bar-thrust" class="text-white text-xs">--</strong>
       </div>
       <div class="bg-[var(--background)] p-2 rounded border border-[var(--border)]">
@@ -119,24 +134,37 @@
         <span id="guide-icon" class="text-base">📢</span>
         <span id="guide-text" class="text-[var(--foreground)] font-medium">Hover over any candle/session on the chart below to inspect the quantified market mandate.</span>
       </div>
-      <span id="guide-badge" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-700 text-white">READY</span>
+      <span id="guide-badge" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-700 text-white shrink-0">READY</span>
     </div>
 
-    <!-- Chart Canvas Container -->
-    <div class="relative w-full mt-2" style="height: 440px;">
+    <!-- Main Chart Canvas Container (Expanded to 650px height for distinct top & bottom panes) -->
+    <div class="relative w-full mt-2" style="height: 650px;">
       <canvas id="mainChart" class="w-full h-full block cursor-crosshair"></canvas>
     </div>
 
-    <!-- Legend & Quantitative Truth Footer -->
-    <div class="mt-4 pt-3 border-t border-[var(--border)] flex flex-wrap items-center justify-between text-xs text-[var(--muted-foreground)] gap-2">
-      <div class="flex flex-wrap items-center gap-4">
-        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> 🟢 Day-1 Ignition (67.6% 5D Success)</span>
-        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span> 🔴 Selling Climax (87.3% Cash Protection)</span>
-        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span> ⚠️ Froth / Warning (55.6% Cool-off Precursor)</span>
-        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> 🚀 Sweet Spot (100% Sizing Allowed)</span>
+    <!-- Bottom Indicator Reference Legend & Model Rules -->
+    <div class="mt-4 pt-3 border-t border-[var(--border)] grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-[var(--muted-foreground)]">
+      <div class="flex flex-col gap-1.5">
+        <span class="font-bold text-white flex items-center gap-1.5">
+          <span>📊</span> Stockbee 4% Indicator Rules (Pradeep Bonde):
+        </span>
+        <div class="flex flex-wrap items-center gap-3 text-[11px]">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span> <strong>Green Bars Above 0:</strong> Daily stocks up &ge;4%</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500 inline-block"></span> <strong>Red Bars Below 0:</strong> Daily stocks down &ge;4%</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 text-[11px] font-mono">
+          <span class="text-emerald-400">--- +150 Line: Day-1 Ignition Spark</span>
+          <span class="text-rose-400">--- -400 Line: Selling Climax / Washout</span>
+        </div>
       </div>
-      <div class="font-mono text-[11px] text-slate-400">
-        Data: Chhirag Kedia Master Sheet • 199 Points
+      <div class="flex flex-col gap-1.5 md:items-end">
+        <span class="font-bold text-white flex items-center gap-1.5">
+          <span>🎯</span> Quantified 2026 Audit Proof:
+        </span>
+        <div class="text-[11px] text-slate-300 md:text-right">
+          <strong>Sit on Cash (0% Risk):</strong> 87.3% 3-day protection against falls.<br>
+          <strong>Ignition Spark (+150):</strong> 67.6% 5-day success with minimal whipsaw.
+        </div>
       </div>
     </div>
 
@@ -182,7 +210,7 @@
       document.getElementById('bar-state').innerText = d.state_label;
       document.getElementById('bar-alloc').innerText = d.alloc + '% RISK';
       document.getElementById('bar-alloc').style.color = d.alloc === 0 ? '#ef4444' : (d.alloc === 25 ? '#f59e0b' : (d.alloc === 50 ? '#38bdf8' : '#10b981'));
-      document.getElementById('bar-thrust').innerHTML = `<span class="text-emerald-400">+4%: ${d.up_4}</span> | <span class="text-rose-400">-4%: ${d.dn_4}</span>`;
+      document.getElementById('bar-thrust').innerHTML = `<span class="text-emerald-400 font-bold">▲ ${d.up_4}</span> / <span class="text-rose-400 font-bold">▼ ${d.dn_4}</span>`;
       document.getElementById('bar-ratio').innerText = `${d.ratio_5d} / ${d.ratio_10d}`;
 
       const gBox = document.getElementById('guidance-box');
@@ -194,35 +222,35 @@
         gBox.style.borderColor = 'rgba(239, 68, 68, 0.4)';
         gBox.style.background = 'rgba(239, 68, 68, 0.08)';
         gIcon.innerText = '🛑';
-        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-500 text-white';
+        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-500 text-white shrink-0';
         gBadge.innerText = 'CASH / DEFENSIVE (0% RISK)';
-        gText.innerHTML = `<strong>MANDATE: SIT ON HANDS / HOLD CASH.</strong> Selling pressure active (${d.dn_4} down). 80%+ of breakouts fail. Zero new swing positions.`;
+        gText.innerHTML = `<strong>MANDATE: SIT ON HANDS / HOLD CASH.</strong> Selling pressure active (${d.dn_4} down &ge;4%). 80%+ of breakouts fail in this regime. Zero new swing positions.`;
       } else if (d.state_code === 'IGNITION') {
         gBox.style.borderColor = 'rgba(16, 185, 129, 0.4)';
         gBox.style.background = 'rgba(16, 185, 129, 0.08)';
         gIcon.innerText = '🟢';
-        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500 text-white';
+        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500 text-white shrink-0';
         gBadge.innerText = 'DAY-1 IGNITION SPARK (25% PILOT)';
         gText.innerHTML = `<strong>MANDATE: TEST THE WATERS (25% Pilot).</strong> Massive institutional spark (${d.up_4} up vs ${d.dn_4} down). Buy top 1-2 Relative Strength leaders with 0.25R pilot risk.`;
       } else if (d.state_code === 'OVERHEATED') {
         gBox.style.borderColor = 'rgba(245, 158, 11, 0.4)';
         gBox.style.background = 'rgba(245, 158, 11, 0.08)';
         gIcon.innerText = '⚠️';
-        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-black';
+        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-black shrink-0';
         gBadge.innerText = 'OVERBOUGHT FROTH (HARVEST)';
         gText.innerHTML = `<strong>MANDATE: THROTTLE DOWN / DO NOT CHASE.</strong> 5D Ratio stretched to ${d.ratio_5d}. Tighten stops to Daily Low / 10 EMA. Sell 1/3 into strength.`;
       } else if (d.state_code === 'EXPANSION') {
         gBox.style.borderColor = 'rgba(59, 130, 246, 0.4)';
         gBox.style.background = 'rgba(59, 130, 246, 0.08)';
         gIcon.innerText = '🚀';
-        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-600 text-white';
+        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-600 text-white shrink-0';
         gBadge.innerText = 'FULL STEAM AHEAD (100% RISK)';
         gText.innerHTML = `<strong>MANDATE: EXPANSION SWEET SPOT.</strong> Institutional tide fully supportive. Breakout setups have low failure rates. Full 100% position size permitted.`;
       } else {
         gBox.style.borderColor = 'rgba(56, 189, 248, 0.3)';
         gBox.style.background = 'rgba(56, 189, 248, 0.06)';
         gIcon.innerText = '🟡';
-        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-cyan-700 text-white';
+        gBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-cyan-700 text-white shrink-0';
         gBadge.innerText = 'SELECTIVE ROTATION (50% RISK)';
         gText.innerHTML = `<strong>MANDATE: CHERRY-PICK A+ SETUPS.</strong> Choppy/selective market. Require 2x volume confirmation on 3m ORB breakouts. Half risk (50%) only.`;
       }
@@ -243,31 +271,57 @@
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, W, H);
 
-      // Layout split: Top 72% for Price Chart, Bottom 28% for Momentum Thrust (+4% / -4%)
-      const topHeight = H * 0.70;
-      const bottomHeight = H * 0.26;
-      const subTop = topHeight + 10;
-      const padL = 10;
-      const padR = 65;
+      // ==========================================
+      // GEOMETRY & PANE DEFINITION
+      // ==========================================
+      const padL = 12;
+      const padR = 75;
       const plotW = W - padL - padR;
 
-      // Extract Prices
+      // TOP PANE: Price Chart (Height ~380px)
+      const topPaneY = 15;
+      const topPaneH = 370;
+
+      // SEPARATOR / DIVIDER HEADER: (Height ~30px)
+      const sepY = topPaneY + topPaneH + 12;
+      const sepH = 26;
+
+      // BOTTOM PANE: Stockbee 4% Breadth Oscillator (Height ~200px)
+      const botPaneY = sepY + sepH + 8;
+      const botPaneH = H - botPaneY - 20;
+
+      // Zero-line in bottom pane sits exactly at middle:
+      const zeroY = botPaneY + (botPaneH / 2);
+
+      // Dynamic Scale Range for 4% Indicator:
+      // Max up in 2026 is 1426, max dn is 1288. Let's set scale to 1500 max.
+      const scaleLimit = 1500;
+      const pxPerUnit = (botPaneH * 0.46) / scaleLimit;
+
+      // ------------------------------------------
+      // TOP PANE: PRICE PLOT SETUP
+      // ------------------------------------------
       const prices = DATA.map(d => d[activeAsset] || 0);
       const minP = Math.min(...prices.filter(p => p > 0)) * 0.985;
       const maxP = Math.max(...prices.filter(p => p > 0)) * 1.015;
 
       const getX = (i) => padL + (i / (DATA.length - 1)) * plotW;
-      const getY = (p) => topHeight - 15 - ((p - minP) / (maxP - minP)) * (topHeight - 35);
+      const getY = (p) => (topPaneY + topPaneH - 10) - ((p - minP) / (maxP - minP)) * (topPaneH - 25);
 
-      // Grid Lines
+      // Background for Top Pane
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
+      ctx.fillRect(padL, topPaneY, plotW, topPaneH);
       ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 0.8;
-      ctx.setLineDash([3, 4]);
+      ctx.lineWidth = 1;
+      ctx.strokeRect(padL, topPaneY, plotW, topPaneH);
 
+      // Top Pane Horizontal Price Grids
+      ctx.setLineDash([3, 4]);
       const pStep = (maxP - minP) / 5;
       for (let s = 0; s <= 5; s++) {
         const pVal = minP + s * pStep;
         const yVal = getY(pVal);
+        ctx.strokeStyle = '#1e293b';
         ctx.beginPath();
         ctx.moveTo(padL, yVal);
         ctx.lineTo(W - padR, yVal);
@@ -279,9 +333,9 @@
         ctx.fillText('₹' + Math.round(pVal).toLocaleString('en-IN'), W - padR + 6, yVal + 3);
       }
 
-      // Monthly Separators on X Axis
+      // Monthly Vertical Gridlines (Shared across top and bottom)
       ctx.setLineDash([2, 5]);
-      ctx.strokeStyle = '#334155';
+      ctx.strokeStyle = '#223049';
       let lastMonth = '';
       DATA.forEach((d, i) => {
         const m = d.date.split('-')[1];
@@ -289,34 +343,35 @@
           lastMonth = m;
           const x = getX(i);
           ctx.beginPath();
-          ctx.moveTo(x, 10);
-          ctx.lineTo(x, H - 15);
+          ctx.moveTo(x, topPaneY);
+          ctx.lineTo(x, H - 20);
           ctx.stroke();
 
+          // Month Label on divider bar
           ctx.fillStyle = '#94a3b8';
           ctx.font = 'bold 10px sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(m, x, topHeight + 5);
+          ctx.fillText(m, x, sepY + 17);
         }
       });
       ctx.setLineDash([]);
 
-      // Draw Price Area Gradient
-      const grad = ctx.createLinearGradient(0, 0, 0, topHeight);
+      // Top Pane: Gradient Area Fill
+      const grad = ctx.createLinearGradient(0, topPaneY, 0, topPaneY + topPaneH);
       grad.addColorStop(0, activeAsset === 'smallcap' ? 'rgba(56, 189, 248, 0.28)' : 'rgba(168, 85, 247, 0.28)');
       grad.addColorStop(1, 'rgba(15, 23, 42, 0.0)');
 
       ctx.beginPath();
-      ctx.moveTo(getX(0), topHeight - 15);
+      ctx.moveTo(getX(0), topPaneY + topPaneH - 10);
       DATA.forEach((d, i) => {
         ctx.lineTo(getX(i), getY(d[activeAsset]));
       });
-      ctx.lineTo(getX(DATA.length - 1), topHeight - 15);
+      ctx.lineTo(getX(DATA.length - 1), topPaneY + topPaneH - 10);
       ctx.closePath();
       ctx.fillStyle = grad;
       ctx.fill();
 
-      // Draw Main Price Line
+      // Top Pane: Main Price Line
       ctx.beginPath();
       ctx.strokeStyle = activeAsset === 'smallcap' ? '#38bdf8' : '#c084fc';
       ctx.lineWidth = 2.2;
@@ -328,10 +383,10 @@
       });
       ctx.stroke();
 
-      // Draw 20-Day EMA Line
+      // Top Pane: 20-Day EMA Line
       ctx.beginPath();
-      ctx.strokeStyle = 'rgba(251, 191, 36, 0.65)';
-      ctx.lineWidth = 1.3;
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.75)';
+      ctx.lineWidth = 1.4;
       let ema = null;
       const k = 2 / (20 + 1);
       DATA.forEach((d, i) => {
@@ -345,45 +400,158 @@
       });
       ctx.stroke();
 
-      // ==========================================
-      // SUB-PANE: 4% MOMENTUM THRUST HISTOGRAM
-      // ==========================================
-      const maxThrust = Math.max(...DATA.map(d => Math.max(d.up_4, d.dn_4)));
-      const subZeroY = subTop + bottomHeight * 0.5;
-      const subScale = (bottomHeight * 0.44) / (maxThrust || 1);
+      // Top Pane: Legend Badge for EMA
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = '10px ui-monospace, monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText('— 20 EMA', W - padR - 10, topPaneY + 20);
 
-      // Sub-pane background & zero line
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
-      ctx.fillRect(padL, subTop, plotW, bottomHeight);
-      ctx.strokeStyle = '#334155';
+      // ==========================================
+      // SEPARATOR RIBBON / TITLE
+      // ==========================================
+      ctx.fillStyle = 'rgba(16, 22, 35, 0.9)';
+      ctx.fillRect(padL, sepY, plotW, sepH);
+      ctx.strokeStyle = '#1e293b';
       ctx.lineWidth = 1;
+      ctx.strokeRect(padL, sepY, plotW, sepH);
+
+      ctx.fillStyle = '#f1f5f9';
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('📈 STOCKBEE BREADTH: 4% GAINERS (GREEN UP) vs 4% LOSERS (RED DOWN)', padL + 12, sepY + 17);
+
+      // ==========================================
+      // BOTTOM PANE: AUTHENTIC STOCKBEE 4% OSCILLATOR
+      // ==========================================
+      // Bottom Pane Background
+      ctx.fillStyle = 'rgba(10, 15, 26, 0.7)';
+      ctx.fillRect(padL, botPaneY, plotW, botPaneH);
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(padL, botPaneY, plotW, botPaneH);
+
+      // Threshold Levels to Draw:
+      // +150 (Day 1 Ignition Spark)
+      // +400 (Super Thrust)
+      // -400 (Selling Climax / Washout)
+      // -1000 (Panic Capitulation)
+      const yP150 = zeroY - (150 * pxPerUnit);
+      const yP400 = zeroY - (400 * pxPerUnit);
+      const yP1000 = zeroY - (1000 * pxPerUnit);
+      const yM150 = zeroY + (150 * pxPerUnit);
+      const yM400 = zeroY + (400 * pxPerUnit);
+      const yM1000 = zeroY + (1000 * pxPerUnit);
+
+      // Reference Gridlines in Bottom Pane
+      ctx.setLineDash([3, 4]);
+
+      // +400 Super Thrust Grid
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.25)';
       ctx.beginPath();
-      ctx.moveTo(padL, subZeroY);
-      ctx.lineTo(W - padR, subZeroY);
+      ctx.moveTo(padL, yP400);
+      ctx.lineTo(W - padR, yP400);
       ctx.stroke();
 
-      ctx.fillStyle = '#64748b';
-      ctx.font = '9px monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText('+4% Thrust', W - padR + 6, subTop + 14);
-      ctx.fillText('-4% Drag', W - padR + 6, subTop + bottomHeight - 6);
+      // +150 Ignition Threshold (Prominent Emerald Dash)
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.65)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(padL, yP150);
+      ctx.lineTo(W - padR, yP150);
+      ctx.stroke();
 
-      const barW = Math.max(1.8, (plotW / DATA.length) * 0.65);
+      // -400 Climax Washout Threshold (Prominent Rose Dash)
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.65)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(padL, yM400);
+      ctx.lineTo(W - padR, yM400);
+      ctx.stroke();
+
+      // -1000 Panic Capitulation Grid
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padL, yM1000);
+      ctx.lineTo(W - padR, yM1000);
+      ctx.stroke();
+
+      // ZERO LINE (Solid Bold White/Slate Line)
+      ctx.setLineDash([]);
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(padL, zeroY);
+      ctx.lineTo(W - padR, zeroY);
+      ctx.stroke();
+
+      // Y-Axis Ticks and Labels for 4% Breadth Pane (Right Side)
+      ctx.font = '10px ui-monospace, SFMono-Regular, monospace';
+      ctx.textAlign = 'left';
+
+      // Zero
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillText('0', W - padR + 6, zeroY + 3.5);
+
+      // +150 Ignition
+      ctx.fillStyle = '#34d399';
+      ctx.fillText('+150 ⚡', W - padR + 6, yP150 + 3.5);
+
+      // +400 Thrust
+      ctx.fillStyle = '#10b981';
+      ctx.fillText('+400', W - padR + 6, yP400 + 3.5);
+
+      // +1000
+      ctx.fillStyle = '#059669';
+      ctx.fillText('+1000', W - padR + 6, yP1000 + 3.5);
+
+      // -150
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('-150', W - padR + 6, yM150 + 3.5);
+
+      // -400 Climax
+      ctx.fillStyle = '#f87171';
+      ctx.fillText('-400 💥', W - padR + 6, yM400 + 3.5);
+
+      // -1000 Panic
+      ctx.fillStyle = '#ef4444';
+      ctx.fillText('-1000', W - padR + 6, yM1000 + 3.5);
+
+      // ==========================================
+      // DRAW 4% UP (GREEN) & 4% DOWN (RED) BARS
+      // ==========================================
+      const barW = Math.max(2.0, (plotW / DATA.length) * 0.72);
+
       DATA.forEach((d, i) => {
         const x = getX(i);
-        // Green Up 4% Bar (Extends Up)
-        const hUp = d.up_4 * subScale;
-        ctx.fillStyle = (d.up_4 >= 150) ? '#10b981' : 'rgba(16, 185, 129, 0.45)';
-        ctx.fillRect(x - barW / 2, subZeroY - hUp, barW, hUp);
 
-        // Red Down 4% Bar (Extends Down)
-        const hDn = d.dn_4 * subScale;
-        ctx.fillStyle = (d.dn_4 >= 400) ? '#ef4444' : 'rgba(239, 68, 68, 0.45)';
-        ctx.fillRect(x - barW / 2, subZeroY, barW, hDn);
+        // 1. GREEN BAR: Rising ABOVE zero (Stocks Up >= 4%)
+        const hUp = Math.min(d.up_4 * pxPerUnit, zeroY - botPaneY);
+        if (hUp > 0) {
+          // Vibrant green if over ignition threshold (>=150), else muted green
+          if (d.up_4 >= 150) {
+            ctx.fillStyle = '#10b981';
+          } else {
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.45)';
+          }
+          ctx.fillRect(x - barW / 2, zeroY - hUp, barW, hUp);
+        }
+
+        // 2. RED BAR: Dropping BELOW zero (Stocks Down >= 4%)
+        const hDn = Math.min(d.dn_4 * pxPerUnit, (botPaneY + botPaneH) - zeroY);
+        if (hDn > 0) {
+          // Vibrant red if over selling climax threshold (>=400), else muted red
+          if (d.dn_4 >= 400) {
+            ctx.fillStyle = '#ef4444';
+          } else {
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.45)';
+          }
+          ctx.fillRect(x - barW / 2, zeroY, barW, hDn);
+        }
       });
 
       // ==========================================
-      // DRAW BONDE REGIME WARNING MARKERS / PINS
+      // DRAW BONDE REGIME WARNING MARKERS (Top Pane)
       // ==========================================
       DATA.forEach((d, i) => {
         const isClimax = (d.dn_4 >= 400 || d.state_code === 'CLIMAX');
@@ -408,9 +576,8 @@
           ctx.arc(x, y, 5, 0, Math.PI * 2);
           ctx.fill();
 
-          // Triangle above pointing down
           ctx.beginPath();
-          ctx.moveTo(x, y - 9);
+          ctx.moveTo(x, y - 8);
           ctx.lineTo(x - 5, y - 18);
           ctx.lineTo(x + 5, y - 18);
           ctx.closePath();
@@ -427,7 +594,6 @@
           ctx.arc(x, y, 5, 0, Math.PI * 2);
           ctx.fill();
 
-          // Arrow pointing up from below
           ctx.beginPath();
           ctx.moveTo(x, y + 8);
           ctx.lineTo(x - 5, y + 18);
@@ -461,7 +627,7 @@
       });
 
       // ==========================================
-      // ACTIVE CROSSHAIR & TOOLTIP RENDERING
+      // ACTIVE CROSSHAIR & HOVER INSPECTOR
       // ==========================================
       if (hoveredIndex >= 0 && hoveredIndex < DATA.length) {
         const hX = getX(hoveredIndex);
@@ -470,23 +636,23 @@
 
         updateInspector(hItem);
 
-        // Vertical Guide Line
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        // Continuous Vertical Guide Line Cutting across BOTH Panes
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
         ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
-        ctx.moveTo(hX, 10);
-        ctx.lineTo(hX, H - 5);
+        ctx.moveTo(hX, topPaneY);
+        ctx.lineTo(hX, botPaneY + botPaneH);
         ctx.stroke();
 
-        // Horizontal Guide on Price
+        // Horizontal Guide on Top Price
         ctx.beginPath();
         ctx.moveTo(padL, hY);
         ctx.lineTo(W - padR, hY);
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Highlight Active Point Pulse
+        // Highlight Active Top Price Point
         ctx.save();
         ctx.fillStyle = '#ffffff';
         ctx.shadowColor = '#38bdf8';
@@ -499,6 +665,44 @@
         ctx.lineWidth = 2.5;
         ctx.stroke();
         ctx.restore();
+
+        // Highlight Active Green and Red Bars in Bottom Pane
+        const activeUpH = Math.min(hItem.up_4 * pxPerUnit, zeroY - botPaneY);
+        const activeDnH = Math.min(hItem.dn_4 * pxPerUnit, (botPaneY + botPaneH) - zeroY);
+
+        ctx.save();
+        if (activeUpH > 0) {
+          ctx.fillStyle = '#34d399';
+          ctx.shadowColor = '#10b981';
+          ctx.shadowBlur = 10;
+          ctx.fillRect(hX - (barW * 1.5) / 2, zeroY - activeUpH, barW * 1.5, activeUpH);
+        }
+        if (activeDnH > 0) {
+          ctx.fillStyle = '#f87171';
+          ctx.shadowColor = '#ef4444';
+          ctx.shadowBlur = 10;
+          ctx.fillRect(hX - (barW * 1.5) / 2, zeroY, barW * 1.5, activeDnH);
+        }
+        ctx.restore();
+
+        // Dynamic Breadth Crosshair Pill (Directly above zero line)
+        ctx.save();
+        const pillText = `+4%: ${hItem.up_4}  |  -4%: ${hItem.dn_4}`;
+        ctx.font = 'bold 10px monospace';
+        const tW = ctx.measureText(pillText).width;
+        let pillX = hX + 8;
+        if (pillX + tW + 12 > W - padR) pillX = hX - tW - 20;
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1;
+        ctx.fillRect(pillX, zeroY - 14, tW + 12, 18);
+        ctx.strokeRect(pillX, zeroY - 14, tW + 12, 18);
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.textAlign = 'left';
+        ctx.fillText(pillText, pillX + 6, zeroY - 1);
+        ctx.restore();
       }
     }
 
@@ -506,8 +710,8 @@
     canvas.addEventListener('mousemove', (e) => {
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
-      const padL = 10;
-      const padR = 65;
+      const padL = 12;
+      const padR = 75;
       const plotW = rect.width - padL - padR;
 
       let idx = Math.round(((mouseX - padL) / plotW) * (DATA.length - 1));
