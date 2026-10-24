@@ -1582,15 +1582,28 @@ def generate_html_dashboard(results, now_str, port):
         color: #fff;
     }}
     .popup-close {{
-        background: transparent;
-        border: none;
-        color: #787b86;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        background: #2a2e39;
+        color: #fff;
+        border: 1px solid #363a45;
+        border-radius: 6px;
         font-size: 16px;
+        font-weight: bold;
         cursor: pointer;
-        padding: 2px 6px;
         line-height: 1;
+        flex-shrink: 0;
+        transition: all 0.15s;
     }}
-    .popup-close:hover {{ color: #fff; }}
+    .popup-close:hover, .popup-close:active {{
+        background: #ef4444;
+        border-color: #ef4444;
+        color: #fff;
+    }}
     .popup-btn-app {{
         display: inline-flex;
         align-items: center;
@@ -1672,19 +1685,20 @@ def generate_html_dashboard(results, now_str, port):
     <!-- Floating Hover Chart Popup -->
     <div id="chart-popup" class="chart-popup" onmouseenter="cancelHidePopup()" onmouseleave="scheduleHidePopup()">
         <div class="popup-header">
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span id="popup-title" style="font-weight:bold; color:#2962ff; font-size:13px;">📈 Symbol (3m Dynamic ORB)</span>
-                <!-- Timeframe Selector (3m vs Daily D) -->
-                <div class="tf-selector">
-                    <button id="tf-btn-3m" class="tf-btn active" onclick="switchTimeframe('3m')">3m</button>
-                    <button id="tf-btn-d" class="tf-btn" onclick="switchTimeframe('D')">D</button>
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span id="popup-title" style="font-weight:bold; color:#2962ff; font-size:13px;">📈 Symbol (3m Dynamic ORB)</span>
+                    <div class="tf-selector">
+                        <button id="tf-btn-3m" class="tf-btn active" onclick="switchTimeframe('3m')">3m</button>
+                        <button id="tf-btn-d" class="tf-btn" onclick="switchTimeframe('D')">D</button>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                    <a id="popup-app-link" href="#" target="_blank" class="popup-btn-app" title="Launch native TradingView App">🚀 Open in TV App ↗</a>
+                    <button class="popup-close" onclick="hideChartPopup()">✕</button>
                 </div>
             </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span id="popup-badges" style="display:inline-flex; gap:4px; font-size:11px;"></span>
-                <a id="popup-app-link" href="#" target="_blank" class="popup-btn-app" title="Launch native TradingView App">🚀 Open in TV App ↗</a>
-                <button class="popup-close" onclick="hideChartPopup()">✕</button>
-            </div>
+            <div id="popup-badges" style="display:flex; flex-wrap:wrap; gap:4px; font-size:11px; width:100%;"></div>
         </div>
         <div id="popup-legend" class="popup-legend">Hover or touch chart to inspect candle OHLC</div>
         <div class="popup-canvas-wrap">
