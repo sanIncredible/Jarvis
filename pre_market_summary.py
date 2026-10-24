@@ -394,6 +394,30 @@ def extract_bonde_breadth_metrics(file_path: Path) -> Optional[Dict[str, Any]]:
         last_item = history[-1]
         last_idx = last_item["row_idx"]
 
+        # Fetch Sectoral 5-Day ROC from SBE sheet
+        ws_sbe = wb['SBE']
+        headers_sbe = [c for c in next(ws_sbe.iter_rows(max_row=1, values_only=True))]
+        
+        # Scan from row 5600 to 5700 for last non-empty row in SBE
+        last_sbe_row = None
+        for r in ws_sbe.iter_rows(min_row=5600, max_row=5700, values_only=True):
+            if r[0] is not None and str(r[0]).strip() not in ('', 'None'):
+                last_sbe_row = r
+
+        sectors_roc = []
+        if last_sbe_row:
+            for c_idx in range(7, 45, 2):
+                if c_idx < len(headers_sbe):
+                    sec_name = str(headers_sbe[c_idx]).strip()
+                    val = last_sbe_row[c_idx+1] if c_idx+1 < len(last_sbe_row) else None
+                    if sec_name and val is not None:
+                        try:
+                            roc_pct = round(float(val) * 100.0, 2)
+                            sectors_roc.append({"sector": sec_name, "roc_5d_pct": roc_pct})
+                        except:
+                            pass
+        sectors_roc.sort(key=lambda x: x["roc_5d_pct"], reverse=True)
+
         # Fetch matching row in Market Map
         map_row = None
         for r in ws_m.iter_rows(min_row=last_idx, max_row=last_idx, values_only=True):
@@ -417,7 +441,12 @@ def extract_bonde_breadth_metrics(file_path: Path) -> Optional[Dict[str, Any]]:
             "nl_pct": nl_pct,
             "net_nh_nl": net_nh_nl,
             "net_15_hl": net_15_hl,
-            "net_30_hl": net_30_hl
+            "net_30_hl": net_30_hl,
+            "sectoral_5d_roc": {
+                "ranking": sectors_roc,
+                "top_3": sectors_roc[:3],
+                "bottom_3": sectors_roc[-3:] if len(sectors_roc) >= 3 else []
+            }
         })
 
         # Run Multi-Day State Machine
@@ -663,10 +692,26 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
         lines.append(f"• <b>Net NH-NL:</b> <code>{bonde['net_nh_nl']:+.2f}%</code> | <b>Net 15% H-L:</b> <code>{bonde['net_15_hl']:+.2f}%</code>")
         lines.append(f"• <b>Breakout Quality:</b> {bonde['bo_sustained']:.1f}% Sustained | <b>{bonde['bo_failure']:.1f}% Failed</b> (S/F: {bonde['bo_sf_ratio']:.2f})")
         lines.append(f"• <b>Breakdown Quality:</b> {bonde['bd_sustained']:.1f}% Sustained | {bonde['bd_failure']:.1f}% Failed (S/F: {bonde['bd_sf_ratio']:.2f})")
-        lines.append(f"• <b>Volume Ratio:</b> {bonde['vol_ratio']:.2f} (Above: {bonde['above_vol_pct']:.1f}% | Below: {bonde['below_vol_pct']:.1f}%)")
         lines.append(f"• <b>Close UH/LH:</b> {bonde['close_uh_pct']:.1f}% Upper | {bonde['close_lh_pct']:.1f}% Lower (UH/LH: {bonde['uh_lh_ratio']:+.1f}%)")
 
-    lines.append("")
+        # 5-Day Sectoral 5D ROC Leaders (Kedia SBE Clumping)
+        sec_data = bonde.get("sectoral_5d_roc", {})
+        leaders = sec_data.get("top_3", [])
+        laggards = sec_data.get("bottom_3", [])
+        if leaders:
+            lines.append("")
+            lines.append("🏆 <b>5-DAY SECTORAL LEADERS (Kedia 5D ROC Clumping):</b>")
+            medals = ["🥇", "🥈", "🥉"]
+            for m, item in zip(medals, leaders):
+                s_name = item['sector']
+                roc = item['roc_5d_pct']
+                sign = "+" if roc > 0 else ""
+                lines.append(f"• {m} <b>{s_name}:</b> <code>{sign}{roc:.2f}%</code> {'🚀' if roc >= 3.0 else '🟢'}")
+            if laggards:
+                lag_strs = [f"{item['sector']} ({item['roc_5d_pct']:+.2f}%)" for item in laggards]
+                lines.append(f"• 🔻 <b>Laggards:</b> {' | '.join(lag_strs)}")
+            top_sec_names = " and ".join([item['sector'] for item in leaders[:2]])
+            lines.append(f"• 💡 <b>Sector Theme Mandate:</b> Institutional accumulation active in <b>{top_sec_names}</b>. Prioritize watchlist breakout setups strictly in these sectors; avoid laggards.")
     lines.append("🏛 <b>BENCHMARK &amp; MARKET CAP INDICES:</b>")
     for b in benchmarks:
         icon = "🟢" if b["change_pct"] > 0 else ("🔴" if b["change_pct"] < 0 else "⚪")
