@@ -1034,7 +1034,7 @@
   </div>
 
   <!-- Discipline Shield & Bonde Market Regime Banner -->
-  <div id="regime-banner" style="display:none; margin-bottom:12px; border-radius:10px; padding:12px 18px; border:1px solid #f43f5e; background:rgba(244,63,94,0.12); align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; box-shadow:0 4px 18px rgba(0,0,0,0.6);">
+  <div id="regime-banner" style="display:flex; margin-bottom:12px; border-radius:10px; padding:12px 18px; border:1px solid #f43f5e; background:rgba(244,63,94,0.12); align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; box-shadow:0 4px 18px rgba(0,0,0,0.6);">
     <div style="display:flex; align-items:center; gap:12px; min-width:280px;">
       <span id="regime-icon" style="font-size:24px;">⛔</span>
       <div>
@@ -1662,8 +1662,14 @@
     const banner = document.getElementById('regime-banner');
     if (!banner) return;
     if (!regime || !regime.state_code) {
-      banner.style.display = 'none';
-      return;
+      regime = window.CURRENT_MARKET_REGIME || {
+        state_code: "WASHOUT",
+        state_label: "🔴 SELLING CLIMAX / WASHOUT",
+        guidance: "Preserve capital. 80%+ of breakouts fail in this regime. Scalps only (₹1k risk). Flat by 15:15 IST.",
+        swing_allocation_pct: 0,
+        swing_risk_per_trade: 0,
+        intraday_risk_per_trade: 1000
+      };
     }
     banner.style.display = 'flex';
 
