@@ -693,6 +693,9 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
         lines.append(f"• <b>Breakout Quality:</b> {bonde['bo_sustained']:.1f}% Sustained | <b>{bonde['bo_failure']:.1f}% Failed</b> (S/F: {bonde['bo_sf_ratio']:.2f})")
         lines.append(f"• <b>Breakdown Quality:</b> {bonde['bd_sustained']:.1f}% Sustained | {bonde['bd_failure']:.1f}% Failed (S/F: {bonde['bd_sf_ratio']:.2f})")
         lines.append(f"• <b>Close UH/LH:</b> {bonde['close_uh_pct']:.1f}% Upper | {bonde['close_lh_pct']:.1f}% Lower (UH/LH: {bonde['uh_lh_ratio']:+.1f}%)")
+        vol_r = bonde.get('vol_ratio', 0.0)
+        vol_state = "Capitulation Blowout 💥" if vol_r >= 1.50 and bonde.get('dn_4_cnt', 0) >= 300 else ("Institutional Surge 🚀" if vol_r >= 1.20 else ("Subdued / Dry 💤" if vol_r < 0.40 else "Normal Baseline ⚖️"))
+        lines.append(f"• <b>Vol Ratio (Inst. Participation):</b> <code>{vol_r:.2f}</code> ({bonde['above_vol_pct']:.1f}% High / {bonde['below_vol_pct']:.1f}% Low | {vol_state})")
 
         # 5-Day Sectoral 5D ROC Leaders (Kedia SBE Clumping)
         sec_data = bonde.get("sectoral_5d_roc", {})
@@ -860,6 +863,14 @@ def main():
         base_swing_risk = risk_cfg.get("swing", {}).get("base_risk_per_trade", 10000)
         swing_risk = int(base_swing_risk * swing_multiplier)
 
+        vol_r = bonde.get("vol_ratio", 0.50) if bonde else 0.50
+        vol_st = "PANIC_CAPITULATION" if vol_r >= 1.50 and (bonde and bonde.get("dn_4_cnt", 0) >= 300) else (
+            "INSTITUTIONAL_THRUST" if vol_r >= 1.50 and (bonde and bonde.get("up_4_cnt", 0) >= 200) else (
+            "ABOVE_AVERAGE" if vol_r >= 1.00 else (
+            "NORMAL_BASELINE" if vol_r >= 0.40 else "DRY_CHOP"
+        )))
+        bo_sf_r = bonde.get("bo_sf_ratio", 1.0) if bonde else 1.0
+
         regime_payload = {
             "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
             "state_code": bonde.get("state_code", "WASHOUT") if bonde else "WASHOUT",
@@ -871,6 +882,20 @@ def main():
             "intraday_max_daily_loss": risk_cfg.get("intraday", {}).get("max_daily_loss", 2000),
             "intraday_max_open_trades": risk_cfg.get("intraday", {}).get("max_open_trades", 2),
             "fakeout_warning": "HIGH FAKEOUT RISK: 80%+ of long breakouts fail in this regime." if alloc_pct == 0 else "NORMAL EXECUTION",
+            "breakout_quality": {
+                "bo_sf_ratio": bo_sf_r,
+                "bo_sustained_pct": bonde.get("bo_sustained", 0.0) if bonde else 0.0,
+                "bo_failure_pct": bonde.get("bo_failure", 0.0) if bonde else 0.0,
+                "uh_lh_ratio": bonde.get("uh_lh_ratio", 1.0) if bonde else 1.0,
+                "trap_active": (bo_sf_r < 1.0)
+            },
+            "volume_telemetry": {
+                "vol_ratio": vol_r,
+                "vol_state": vol_st,
+                "above_vol_pct": bonde.get("above_vol_pct", 0.0) if bonde else 0.0,
+                "below_vol_pct": bonde.get("below_vol_pct", 0.0) if bonde else 0.0,
+                "vol_description": f"Institutional Vol Ratio: {vol_r:.2f} ({vol_st})"
+            },
             "breadth_snapshot": {
                 "date": bonde.get("date") if bonde else "",
                 "up_4_count": bonde.get("up_4_cnt") if bonde else 0,
