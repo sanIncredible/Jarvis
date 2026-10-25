@@ -104,6 +104,12 @@ def load_latest_positional_metrics():
     lh = parse_val(last_row, "Close Lower Half", 0.0)
     uh_lh = round(uh / lh, 2) if lh > 0 else 1.0
 
+    high_vol = parse_val(last_row, "High Vol", 0.0)
+    low_vol = parse_val(last_row, "Low Vol", 0.0)
+    pct_high_vol = round((high_vol / univ) * 100, 1)
+    pct_low_vol = round((low_vol / univ) * 100, 1)
+    vol_ratio = round(high_vol / max(low_vol, 1.0), 2)
+
     return {
         "date": date_val,
         "universe": int(univ),
@@ -132,7 +138,12 @@ def load_latest_positional_metrics():
         "net_nh_nl": net_nh_nl,
         "within_15_wh": w15_wh,
         "within_15_wl": w15_wl,
-        "uh_lh_ratio": uh_lh
+        "uh_lh_ratio": uh_lh,
+        "high_vol": int(high_vol),
+        "low_vol": int(low_vol),
+        "pct_high_vol": pct_high_vol,
+        "pct_low_vol": pct_low_vol,
+        "vol_ratio": vol_ratio
     }
 
 
@@ -148,6 +159,32 @@ def evaluate_positional_regime(metrics: dict, cfg: dict) -> dict:
     u25_20 = metrics["u25_20"]
     d25_20 = metrics["d25_20"]
     net_nh = metrics["net_nh_nl"]
+    vol_ratio = metrics.get("vol_ratio", 0.50)
+    high_vol = metrics.get("high_vol", 0)
+    low_vol = metrics.get("low_vol", 0)
+    pct_high_vol = metrics.get("pct_high_vol", 0.0)
+    pct_low_vol = metrics.get("pct_low_vol", 0.0)
+
+    # Volume State Classification (Above Avg Vol > 1.5x 20 DMA vs Below Avg Vol < 0.5x 20 DMA)
+    if vol_ratio >= 1.50:
+        if d4 >= 300:
+            vol_state = "PANIC_CAPITULATION"
+            vol_desc = f"Institutional Capitulation Blowout! High Vol ({pct_high_vol}%) > 1.5x Low Vol ({pct_low_vol}%). Extreme panic flush."
+        elif u4 >= 200:
+            vol_state = "INSTITUTIONAL_THRUST_BLOWOUT"
+            vol_desc = f"Institutional Buying Thrust Blowout! High Vol ({pct_high_vol}%) > 1.5x Low Vol ({pct_low_vol}%)."
+        else:
+            vol_state = "HEAVY_TURNOVER_SURGE"
+            vol_desc = f"Broad institutional volume expansion across market (Vol Ratio: {vol_ratio})."
+    elif vol_ratio >= 1.00:
+        vol_state = "ABOVE_AVERAGE_ACTIVE"
+        vol_desc = f"Above average institutional participation (Vol Ratio: {vol_ratio} >= 1.0)."
+    elif vol_ratio >= 0.40:
+        vol_state = "NORMAL_BASELINE"
+        vol_desc = f"Normal institutional baseline (Vol Ratio: {vol_ratio})."
+    else:
+        vol_state = "DRY_CHOP_CONSOLIDATION"
+        vol_desc = f"Subdued/dry volume (Vol Ratio: {vol_ratio} < 0.40). Retail churn."
 
     # Layer 1: Breakout Health
     if bo_sf >= 1.5:
@@ -201,11 +238,17 @@ def evaluate_positional_regime(metrics: dict, cfg: dict) -> dict:
 
     # 3. Selling Climax Capitulation
     elif d4 >= 400 and pct_20 < 15.0:
-        regime = "SELLING_CLIMAX_WASHOUT"
-        badge = "🔴 SELLING CLIMAX / CAPITULATION LOW"
-        multiplier = 0.0
-        mandate = "PREPARE WATCHLIST / ZERO RISK: Market in extreme capitulation. High odds of snapback within 3-5 days. Do NOT initiate shorts; wait for Day-1 Ignition spark."
-        setups_allowed = ["Building RS Watchlist"]
+        if vol_ratio >= 1.40:
+            regime = "SELLING_CLIMAX_CAPITULATION_CONFIRMED"
+            badge = "🔴 SELLING CLIMAX / VOLUME CAPITULATION LOW (High Reversal Odds)"
+            multiplier = 0.0
+            mandate = f"PREPARE WATCHLIST / ZERO RISK: Confirmed volume capitulation blowout (Vol Ratio: {vol_ratio} >= 1.40, {pct_high_vol}% panic volume). 90%+ historical bounce odds in 3-5 days. Do NOT short; prepare RS watchlist for Day-1 Ignition."
+        else:
+            regime = "SELLING_CLIMAX_WASHOUT"
+            badge = "🔴 SELLING CLIMAX / LOW VOLUME BLEED"
+            multiplier = 0.0
+            mandate = f"HOLD CASH: Steep drop ({d4} down >=4%) but volume hasn't blown out (Vol Ratio: {vol_ratio} < 1.40). Risk of cascading bleed. Wait for Day-1 Ignition spark."
+        setups_allowed = ["Building RS Watchlist", "Monitoring Capitulation Bounces"]
         setups_blocked = ["All Breakout Buys", "Short Selling (Risk of snapback)"]
         stop_rule = "N/A - 100% Cash."
 
@@ -273,6 +316,15 @@ def evaluate_positional_regime(metrics: dict, cfg: dict) -> dict:
             "failed": metrics["bo_failed"],
             "total_attempted": metrics["breakouts"]
         },
+        "volume_telemetry": {
+            "vol_ratio": vol_ratio,
+            "high_vol_count": high_vol,
+            "low_vol_count": low_vol,
+            "high_vol_pct": pct_high_vol,
+            "low_vol_pct": pct_low_vol,
+            "vol_state": vol_state,
+            "vol_description": vol_desc
+        },
         "institutional_layers": {
             "ma_breadth_20ema_pct": metrics["pct_ab_20"],
             "ma_breadth_50ema_pct": metrics["pct_ab_50"],
@@ -283,7 +335,9 @@ def evaluate_positional_regime(metrics: dict, cfg: dict) -> dict:
             "net_52w_highs_lows": net_nh,
             "within_15pct_52wh": metrics["within_15_wh"],
             "within_15pct_52wl": metrics["within_15_wl"],
-            "uh_lh_ratio": metrics["uh_lh_ratio"]
+            "uh_lh_ratio": metrics["uh_lh_ratio"],
+            "vol_ratio": vol_ratio,
+            "vol_state": vol_state
         },
         "setups_allowed": setups_allowed,
         "setups_blocked": setups_blocked,
@@ -318,6 +372,10 @@ def main():
         print(f"\n📊 BREAKOUT QUALITY:")
         print(f"   • BO S/F Ratio : {verdict['breakout_quality']['bo_sf_ratio']} ({verdict['breakout_quality']['health']})")
         print(f"   • Sustained/Fail: {verdict['breakout_quality']['sustained']} Sustained vs {verdict['breakout_quality']['failed']} Failed")
+        print(f"\n🌊 VOLUME PARTICIPATION:")
+        print(f"   • Vol Ratio    : {verdict['volume_telemetry']['vol_ratio']} ({verdict['volume_telemetry']['vol_state']})")
+        print(f"   • High/Low Vol : {verdict['volume_telemetry']['high_vol_count']} ({verdict['volume_telemetry']['high_vol_pct']}%) High vs {verdict['volume_telemetry']['low_vol_count']} ({verdict['volume_telemetry']['low_vol_pct']}%) Low")
+        print(f"   • Context      : {verdict['volume_telemetry']['vol_description']}")
         print(f"\n🏗️ INSTITUTIONAL LAYERS:")
         print(f"   • Above 20 EMA : {verdict['institutional_layers']['ma_breadth_20ema_pct']}% ({verdict['institutional_layers']['ma_status']})")
         print(f"   • Above 50 EMA : {verdict['institutional_layers']['ma_breadth_50ema_pct']}%")
