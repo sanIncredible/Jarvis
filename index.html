@@ -453,7 +453,19 @@
   .val-pos { color: #ffffff; font-weight: 800; }
   .val-neg { color: #71717a; font-weight: 700; }
 
-  /* Interactive Chart Modal / Popup — White Paper Theme (as shown in image) */
+  /* Interactive Chart Modal / Popup — White Paper Theme */
+  .chart-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(4, 6, 12, 0.75);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 9998;
+    touch-action: manipulation;
+  }
   .chart-popup {
     display: none;
     position: fixed;
@@ -469,18 +481,28 @@
   }
   .popup-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
     background: #111622;
     padding: 10px 14px;
     border-bottom: 1px solid var(--border-subtle);
     gap: 8px;
-    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .popup-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
   }
   .popup-title-group {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
   }
   .popup-title {
     font-size: 14px;
@@ -489,6 +511,46 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    white-space: nowrap;
+  }
+  .popup-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .popup-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    background: #1e293b;
+    color: #ffffff;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    font-size: 17px;
+    font-weight: 800;
+    cursor: pointer;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+    touch-action: manipulation;
+  }
+  .popup-close-btn:hover,
+  .popup-close-btn:active {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+  }
+  .popup-badges-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    width: 100%;
   }
   .popup-hud {
     background: #0a0d14;
@@ -499,6 +561,7 @@
     border-bottom: 1px solid var(--border-subtle);
     white-space: nowrap;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .popup-canvas-wrap {
     position: relative;
@@ -512,6 +575,7 @@
     height: 100%;
     cursor: crosshair;
     background: #0a0d14;
+    touch-action: none;
   }
   .popup-footer {
     display: flex;
@@ -522,6 +586,25 @@
     border-top: 1px solid var(--border-subtle);
     font-size: 11px;
     color: var(--text-muted);
+  }
+  .popup-footer-close {
+    display: none;
+    background: #1e293b;
+    color: #e2e8f0;
+    border: 1px solid #475569;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: all 0.15s ease;
+  }
+  .popup-footer-close:hover,
+  .popup-footer-close:active {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #ef4444;
   }
 
   /* Execution Guardrail & Overextension Badges */
@@ -610,6 +693,295 @@
     color: var(--text-dim);
     line-height: 1.6;
   }
+
+  /* Mobile Phone & Tablet Responsive Styles */
+  @media (max-width: 768px) {
+    .chart-popup {
+      position: fixed !important;
+      left: 8px !important;
+      right: 8px !important;
+      top: 10px !important;
+      width: auto !important;
+      max-width: calc(100vw - 16px) !important;
+      max-height: calc(100dvh - 20px) !important;
+      border-radius: 10px !important;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.95) !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+    .popup-header {
+      padding: 8px 10px;
+      gap: 6px;
+    }
+    .popup-header-top {
+      gap: 6px;
+    }
+    .popup-title-group {
+      gap: 6px;
+    }
+    .popup-title {
+      font-size: 12.5px;
+    }
+    .popup-actions {
+      gap: 6px;
+    }
+    .popup-close-btn {
+      width: 38px;
+      height: 38px;
+      min-width: 38px;
+      font-size: 20px;
+      background: #334155;
+      border-color: #64748b;
+    }
+    .popup-canvas-wrap {
+      height: 240px !important;
+    }
+    .popup-hud {
+      font-size: 10px;
+      padding: 5px 8px;
+    }
+    .popup-badges-row {
+      gap: 4px;
+      font-size: 10.5px;
+    }
+    .popup-guardrail {
+      padding: 6px 10px;
+      font-size: 10.5px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .guardrail-right {
+      text-align: left;
+    }
+    .popup-footer {
+      padding: 6px 10px;
+      font-size: 10px;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .popup-footer-close {
+      display: inline-flex;
+    }
+    .btn-preview-eye {
+      padding: 5px 9px;
+      font-size: 12px;
+    }
+  }
+
+  /* 09:14 Situational Awareness & Telegram Alert Modal */
+  .btn-sa-tab {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid #60a5fa !important;
+    font-weight: 800 !important;
+    font-size: 11px !important;
+    padding: 5px 10px !important;
+    border-radius: 6px !important;
+    box-shadow: 0 0 10px rgba(37,99,235,0.35);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn-sa-tab:hover, .btn-sa-tab:active {
+    background: #3b82f6 !important;
+    box-shadow: 0 0 16px rgba(59,130,246,0.6);
+  }
+  .sa-popup {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    width: 760px;
+    max-width: 95vw;
+    max-height: 88vh;
+    background: #0d111a;
+    border: 1px solid #3b82f6;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.85);
+    overflow: hidden;
+    flex-direction: column;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .sa-popup-body {
+    padding: 14px 18px;
+    overflow-y: auto;
+    max-height: calc(88vh - 120px);
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: #090d16;
+  }
+  .sa-view { display: none; flex-direction: column; gap: 14px; }
+  .sa-view.active { display: flex; }
+
+  /* SA Action Mandate Banner */
+  .sa-mandate-card {
+    background: linear-gradient(135deg, rgba(244,63,94,0.18) 0%, rgba(15,23,42,0.85) 100%);
+    border: 1px solid #f43f5e;
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .sa-mandate-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #f43f5e;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sa-mandate-desc {
+    font-size: 12px;
+    color: #e2e8f0;
+    margin-top: 6px;
+    line-height: 1.45;
+  }
+
+  /* Breadth Grid */
+  .sa-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+  }
+  .sa-card {
+    background: #111622;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .sa-card-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .sa-card-val {
+    font-size: 14px;
+    font-weight: 800;
+    color: #ffffff;
+    font-family: var(--font-mono);
+  }
+  .sa-card-sub {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  /* Benchmark & Sector Ranking */
+  .sa-indices-box {
+    background: #111622;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .sa-indices-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #e2e8f0;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sa-index-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 12px;
+  }
+  .sa-index-row:last-child { border-bottom: none; }
+
+  /* Tactical Execution Orders */
+  .sa-orders-card {
+    background: #111622;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .sa-order-item {
+    font-size: 12px;
+    color: #cbd5e1;
+    margin-bottom: 8px;
+    line-height: 1.45;
+  }
+  .sa-order-item:last-child { margin-bottom: 0; }
+  .sa-order-label {
+    font-weight: 800;
+    color: #ffffff;
+    margin-right: 4px;
+  }
+
+  /* Telegram Alert Card */
+  .tg-message-card {
+    background: #17212b;
+    border: 1px solid #242f3d;
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  .tg-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+  .tg-bot-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #24a1de;
+    letter-spacing: 0.3px;
+  }
+  .tg-time {
+    font-size: 11px;
+    color: #708499;
+  }
+  .tg-content {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #e4ecf2;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .tg-content b { color: #ffffff; font-weight: 700; }
+  .tg-content code {
+    background: #0e1621;
+    color: #64b5f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+  }
+
+  /* Mobile Overrides for SA Popup */
+  @media (max-width: 768px) {
+    .sa-popup {
+      position: fixed !important;
+      left: 8px !important;
+      right: 8px !important;
+      top: 10px !important;
+      transform: none !important;
+      width: auto !important;
+      max-width: calc(100vw - 16px) !important;
+      max-height: calc(100dvh - 20px) !important;
+      border-radius: 10px !important;
+    }
+    .sa-popup-body {
+      padding: 10px 12px;
+      max-height: calc(100dvh - 130px);
+    }
+    .sa-grid-3 {
+      grid-template-columns: 1fr;
+    }
+  }
+
 </style>
 </head>
 <body>
@@ -650,6 +1022,7 @@
         <button class="pill-btn" onclick="setPollInterval(180)">3m</button>
       </div>
 
+      <button id="btn-sa-tab" class="btn-action btn-sa-tab" onclick="openSAModal()" title="View 09:14 AM Situational Awareness & Telegram Alert (Shortcut: A)">⚡ SA Alert (9:14)</button>
       <button class="btn-action" onclick="fetchData(true)" title="Force Refresh Metrics (Shortcut: R)">
         ⟳ Sync
       </button>
@@ -686,9 +1059,20 @@
         <span id="regime-dn4" style="color:var(--accent-red); font-weight:700;">-4%: --</span>
       </div>
       <div style="background:var(--bg-card); padding:5px 10px; border-radius:6px; border:1px solid var(--border-subtle);">
+        <span style="color:var(--text-muted);">BO S/F:</span> 
+        <span id="regime-bosf" style="color:var(--accent-green); font-weight:700;">--</span>
+      </div>
+      <div style="background:var(--bg-card); padding:5px 10px; border-radius:6px; border:1px solid var(--border-subtle);">
+        <span style="color:var(--text-muted);">Vol Ratio:</span> 
+        <span id="regime-vol" style="color:var(--accent-gold); font-weight:700;">--</span>
+      </div>
+      <div style="background:var(--bg-card); padding:5px 10px; border-radius:6px; border:1px solid var(--border-subtle);">
         <span style="color:var(--text-muted);">Swing Risk:</span> 
         <span id="regime-risk" style="color:#f43f5e; font-weight:800;">₹0 / Trade</span>
       </div>
+      <button onclick="openSAModal()" class="btn-action btn-sa-banner" style="font-size:11px; padding:4px 10px; background:#f43f5e; color:#fff; border-color:#f43f5e; border-radius:6px; font-weight:700; cursor:pointer;" title="View Complete 09:14 AM Situational Awareness Card">
+        📋 09:14 SA Card ↗
+      </button>
       <div style="background:var(--bg-card); padding:5px 10px; border-radius:6px; border:1px solid var(--border-subtle);">
         <span style="color:var(--text-muted);">Intra Scalp:</span> 
         <span id="regime-intra" style="color:var(--accent-gold); font-weight:800;">₹1,000</span>
@@ -736,6 +1120,7 @@
   <div class="toolbar">
     <div class="filter-chips">
       <span class="chip active" onclick="setFilter('all', this)">ALL (<span id="cnt-all">0</span>)</span>
+      <span class="chip chip-sa" onclick="openSAModal()" title="09:14 AM Situational Awareness & Telegram Alert" style="border-color:#3b82f6; color:#60a5fa; background:rgba(37,99,235,0.18); font-weight:700;">⚡ 09:14 SA</span>
       <span class="chip" onclick="setFilter('prime', this)" title="Filter stocks coiling near 10 EMA (<0.45% stretch - Tight base, minimal downside risk)"><span id="chip-lbl-prime">🟢 Prime Base</span> (<span id="cnt-prime">0</span>)</span>
       <span class="chip" onclick="setFilter('rev', this)"><span id="chip-lbl-rev">🔄 Failover</span> (<span id="cnt-rev">0</span>)</span>
       <span class="chip" onclick="setFilter('ss', this)"><span id="chip-lbl-ss">★ Priority</span> (<span id="cnt-ss">0</span>)</span>
@@ -782,25 +1167,73 @@
     Cluster Telemetry &amp; Node Observer Daemon • Distributed Ingress Telemetry Pipeline • High-Throughput Stream • Press [?] for Diagnostics
   </div>
 
+  <!-- Chart Modal Backdrop (Click/tap outside to close) -->
+  <div id="chart-backdrop" class="chart-backdrop" onclick="handleBackdropClick()"></div>
+
+
+  <!-- 09:14 AM Situational Awareness & Telegram Alert Modal -->
+  <div id="sa-popup" class="sa-popup">
+    <div class="popup-header">
+      <div class="popup-header-top">
+        <div class="popup-title-group">
+          <span class="popup-title">⚡ 09:14 AM SITUATIONAL AWARENESS</span>
+          <div class="pill-selector">
+            <button id="sa-tab-dash" class="pill-btn active" onclick="switchSAView('dash')">📊 Executive Card</button>
+            <button id="sa-tab-tg" class="pill-btn" onclick="switchSAView('tg')">📱 Telegram Alert</button>
+          </div>
+        </div>
+        <div class="popup-actions">
+          <button id="btn-copy-sa" class="btn-tv-app" onclick="copyTelegramAlert()" title="Copy Telegram Alert text">📋 Copy Alert</button>
+          <button class="popup-close-btn" onclick="closeSAModal()" title="Close (Esc)" aria-label="Close">✕</button>
+        </div>
+      </div>
+      <div id="sa-header-badges" class="popup-badges-row"></div>
+    </div>
+    <div class="sa-popup-body">
+      <div id="sa-view-dash" class="sa-view active">
+        <!-- Rendered dynamically -->
+      </div>
+      <div id="sa-view-tg" class="sa-view">
+        <div class="tg-message-card">
+          <div class="tg-header">
+            <span class="tg-bot-name">🤖 JARVIS TELEGRAM DISPATCH</span>
+            <span id="tg-time-badge" class="tg-time">09:14 AM IST</span>
+          </div>
+          <div id="tg-message-content" class="tg-content">
+            <!-- Rendered Telegram HTML -->
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="popup-footer">
+      <span id="sa-footer-timestamp">💡 Generated at 09:14 AM IST via Pre-Market Pulse Engine</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button class="popup-footer-close" onclick="closeSAModal()" title="Close">Close ✕</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Interactive Candlestick Chart Modal -->
   <div id="chart-popup" class="chart-popup" onmouseenter="cancelHidePopup()" onmouseleave="scheduleHidePopup()">
     <div class="popup-header">
-      <div class="popup-title-group">
-        <span id="popup-title" class="popup-title">📈 SYMBOL</span>
-        <div class="pill-selector">
-          <button id="tf-btn-3m" class="pill-btn active" onclick="switchTimeframe('3m')">3m</button>
-          <button id="tf-btn-d" class="pill-btn" onclick="switchTimeframe('D')">Daily</button>
+      <div class="popup-header-top">
+        <div class="popup-title-group">
+          <span id="popup-title" class="popup-title">📈 SYMBOL</span>
+          <div class="pill-selector">
+            <button id="tf-btn-3m" class="pill-btn active" onclick="switchTimeframe('3m')">3m</button>
+            <button id="tf-btn-d" class="pill-btn" onclick="switchTimeframe('D')">Daily</button>
+          </div>
+          <div class="pill-selector">
+            <button id="style-btn-vol" class="pill-btn active" onclick="switchChartStyle('vol')" title="Volume Candles (Candle body width expands with trading volume)">📊 Vol Candles</button>
+            <button id="style-btn-std" class="pill-btn" onclick="switchChartStyle('std')" title="Standard Fixed-Width Candlesticks">🕯 Standard</button>
+          </div>
         </div>
-        <div class="pill-selector">
-          <button id="style-btn-vol" class="pill-btn active" onclick="switchChartStyle('vol')" title="Volume Candles (Candle body width expands with trading volume)">📊 Vol Candles</button>
-          <button id="style-btn-std" class="pill-btn" onclick="switchChartStyle('std')" title="Standard Fixed-Width Candlesticks">🕯 Standard</button>
+        <div class="popup-actions">
+          <a id="popup-app-link" href="#" target="_blank" class="btn-tv-app" title="Launch Native TradingView Desktop / Web">🚀 TV App ↗</a>
+          <button id="popup-close-btn" class="popup-close-btn" onclick="hideChartPopup()" title="Close chart (Esc)" aria-label="Close chart">✕</button>
         </div>
       </div>
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span id="popup-badges" style="display:inline-flex; gap:6px;"></span>
-        <a id="popup-app-link" href="#" target="_blank" class="btn-tv-app" title="Launch Native TradingView Desktop / Web">🚀 TV App ↗</a>
-        <button class="btn-preview-eye" onclick="hideChartPopup()" style="font-size:14px; padding:3px 8px;">✕</button>
-      </div>
+      <div id="popup-badges" class="popup-badges-row"></div>
     </div>
     <div id="popup-hud" class="popup-hud">
       Hover crosshair over candles to inspect OHLCV metrics
@@ -811,9 +1244,13 @@
     <div id="popup-guardrail" class="popup-guardrail"></div>
     <div class="popup-footer">
       <span id="popup-footer-note">💡 Upper Baseline Envelope | Dynamic 3m Boundary Thresholds</span>
-      <span id="popup-bar-count">0 Candles</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span id="popup-bar-count">0 Candles</span>
+        <button class="popup-footer-close" onclick="hideChartPopup()" title="Close chart">Close ✕</button>
+      </div>
     </div>
   </div>
+
 
 <script>
   let RAW_STOCKS = [];
@@ -1016,6 +1453,7 @@
   const pulseIndicator = document.getElementById('pulse-indicator');
   const sourceLabel = document.getElementById('source-label');
   const searchInput = document.getElementById('search-input');
+  const chartBackdrop = document.getElementById('chart-backdrop');
   const popup = document.getElementById('chart-popup');
   const popupTitle = document.getElementById('popup-title');
   const popupBadges = document.getElementById('popup-badges');
@@ -1283,6 +1721,35 @@
     up4El.innerText = `+4%: ${snap.up_4_count !== undefined ? snap.up_4_count : '--'}`;
     dn4El.innerText = `-4%: ${snap.dn_4_count !== undefined ? snap.dn_4_count : '--'}`;
     intraEl.innerText = `₹${(regime.intraday_risk_per_trade || 1000).toLocaleString('en-IN')}`;
+
+    // Breakout Stickiness (BO S/F)
+    const bosfEl = document.getElementById('regime-bosf');
+    if (bosfEl) {
+      const bq = regime.breakout_quality || {};
+      const sf = bq.bo_sf_ratio !== undefined ? Number(bq.bo_sf_ratio) : null;
+      if (sf !== null && !isNaN(sf)) {
+        bosfEl.innerText = sf.toFixed(2);
+        bosfEl.style.color = (sf >= 1.2) ? 'var(--accent-green)' : (sf < 1.0 ? '#f43f5e' : 'var(--accent-gold)');
+      } else {
+        bosfEl.innerText = '--';
+        bosfEl.style.color = 'var(--text-muted)';
+      }
+    }
+
+    // Institutional Volume Ratio (Above Avg Vol >1.5x / Below Avg Vol <0.5x)
+    const volEl = document.getElementById('regime-vol');
+    if (volEl) {
+      const vt = regime.volume_telemetry || {};
+      const vr = vt.vol_ratio !== undefined ? Number(vt.vol_ratio) : null;
+      if (vr !== null && !isNaN(vr)) {
+        let vTag = vr >= 1.5 ? (isRed ? 'Blowout 💥' : 'Surge 🚀') : (vr >= 1.0 ? 'Active ⚡' : (vr < 0.40 ? 'Dry 💤' : 'Normal'));
+        volEl.innerText = `${vr.toFixed(2)} (${vTag})`;
+        volEl.style.color = (vr >= 1.5) ? (isRed ? '#f43f5e' : 'var(--accent-green)') : (vr >= 1.0 ? 'var(--accent-green)' : (vr < 0.40 ? 'var(--text-muted)' : 'var(--accent-gold)'));
+      } else {
+        volEl.innerText = '--';
+        volEl.style.color = 'var(--text-muted)';
+      }
+    }
   }
 
   function processIncomingData(data, feedSource) {
@@ -1311,6 +1778,10 @@
 
     window.CURRENT_MARKET_REGIME = data.market_regime || null;
     updateRegimeBanner(data.market_regime);
+
+    if (data.pre_market_summary && Object.keys(data.pre_market_summary).length > 0) {
+      window.PRE_MARKET_SUMMARY = data.pre_market_summary;
+    }
 
     RAW_STOCKS = data.stocks || [];
     CHARTS_DATA = {};
@@ -2310,26 +2781,44 @@
       clearTimeout(popupTimer);
       popupTimer = null;
     }
+    const isMobile = window.innerWidth <= 768;
     const popupWidth = Math.min(680, window.innerWidth - 20);
-    const popupHeight = 420;
-    let x = e.clientX || (window.innerWidth / 2 - popupWidth / 2);
-    let y = e.clientY || (window.innerHeight / 2 - popupHeight / 2);
+    const popupHeight = isMobile ? 380 : 420;
 
-    let left = x + 15;
-    let top = y - 40;
+    if (isMobile) {
+      popup.style.left = '8px';
+      popup.style.right = '8px';
+      popup.style.top = '10px';
+      if (chartBackdrop) chartBackdrop.style.display = 'block';
+    } else {
+      let x = (e && e.clientX) ? e.clientX : (window.innerWidth / 2 - popupWidth / 2);
+      let y = (e && e.clientY) ? e.clientY : (window.innerHeight / 2 - popupHeight / 2);
 
-    if (left + popupWidth > window.innerWidth) left = x - popupWidth - 15;
-    if (left < 10) left = 10;
-    if (top + popupHeight > window.innerHeight) top = window.innerHeight - popupHeight - 15;
-    if (top < 10) top = 10;
+      let left = x + 15;
+      let top = y - 40;
 
-    popup.style.left = left + 'px';
-    popup.style.top = top + 'px';
+      if (left + popupWidth > window.innerWidth) left = x - popupWidth - 15;
+      if (left < 10) left = 10;
+      if (top + popupHeight > window.innerHeight) top = window.innerHeight - popupHeight - 15;
+      if (top < 10) top = 10;
+
+      popup.style.left = left + 'px';
+      popup.style.top = top + 'px';
+      popup.style.right = 'auto';
+      if (forceTap && chartBackdrop) {
+        chartBackdrop.style.display = 'block';
+      } else if (chartBackdrop) {
+        chartBackdrop.style.display = 'none';
+      }
+    }
+
     popup.style.display = 'flex';
 
     activeSym = sym;
     const data = CHARTS_DATA[sym];
-    popupAppLink.href = 'https://in.tradingview.com/chart/?symbol=NSE:' + sym;
+    if (popupAppLink) {
+      popupAppLink.href = 'https://in.tradingview.com/chart/?symbol=NSE:' + sym;
+    }
 
     if (data) {
       updatePopupHeader(data);
@@ -2357,6 +2846,7 @@
   }, { passive: true });
 
   function scheduleHidePopup() {
+    if (window.innerWidth <= 768) return; // Never auto-hide on mobile/tablet via hover timer
     popupTimer = setTimeout(hideChartPopup, 350);
   }
   function cancelHidePopup() {
@@ -2365,9 +2855,325 @@
       popupTimer = null;
     }
   }
+  function handleBackdropClick() {
+    hideChartPopup();
+    closeSAModal();
+  }
+
   function hideChartPopup() {
     popup.style.display = 'none';
-    if (popupTimer) clearTimeout(popupTimer);
+    if (chartBackdrop) chartBackdrop.style.display = 'none';
+    if (popupTimer) {
+      clearTimeout(popupTimer);
+      popupTimer = null;
+    }
+  }
+
+  // Tap/click outside modal to dismiss on touch or desktop
+  document.addEventListener('pointerdown', function(e) {
+    if (popup && popup.style.display === 'flex') {
+      if (!popup.contains(e.target) && !e.target.closest('.btn-preview-eye') && !e.target.closest('tr')) {
+        hideChartPopup();
+      }
+    }
+    if (saPopup && saPopup.style.display === 'flex') {
+      if (!saPopup.contains(e.target) && !e.target.closest('.btn-sa-tab') && !e.target.closest('.chip-sa') && !e.target.closest('.btn-sa-banner')) {
+        closeSAModal();
+      }
+    }
+  });
+
+  // Responsive re-center & redraw on resize / orientation change
+  window.addEventListener('resize', function() {
+    if (popup && popup.style.display === 'flex' && activeSym && CHARTS_DATA[activeSym]) {
+      if (window.innerWidth <= 768) {
+        popup.style.left = '8px';
+        popup.style.right = '8px';
+        popup.style.top = '10px';
+      }
+      drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    }
+  });
+
+
+  // ==========================================
+  // 09:14 AM Situational Awareness & Telegram Modal Engine
+  // ==========================================
+  window.PRE_MARKET_SUMMARY = null;
+  const saPopup = document.getElementById('sa-popup');
+
+  function openSAModal() {
+    if (popupTimer) {
+      clearTimeout(popupTimer);
+      popupTimer = null;
+    }
+    if (popup && popup.style.display === 'flex') {
+      popup.style.display = 'none';
+    }
+    if (chartBackdrop) chartBackdrop.style.display = 'block';
+    if (saPopup) {
+      saPopup.style.display = 'flex';
+      loadSAMetrics();
+      renderSAContent();
+    }
+  }
+
+  function closeSAModal() {
+    if (saPopup) saPopup.style.display = 'none';
+    if (chartBackdrop && (!popup || popup.style.display !== 'flex')) {
+      chartBackdrop.style.display = 'none';
+    }
+  }
+
+  let activeSAView = 'dash';
+  function switchSAView(view) {
+    activeSAView = view;
+    const btnDash = document.getElementById('sa-tab-dash');
+    const btnTg = document.getElementById('sa-tab-tg');
+    const viewDash = document.getElementById('sa-view-dash');
+    const viewTg = document.getElementById('sa-view-tg');
+
+    if (view === 'tg') {
+      if (btnDash) btnDash.classList.remove('active');
+      if (btnTg) btnTg.classList.add('active');
+      if (viewDash) viewDash.classList.remove('active');
+      if (viewTg) viewTg.classList.add('active');
+    } else {
+      if (btnDash) btnDash.classList.add('active');
+      if (btnTg) btnTg.classList.remove('active');
+      if (viewDash) viewDash.classList.add('active');
+      if (viewTg) viewTg.classList.remove('active');
+    }
+  }
+
+  async function loadSAMetrics() {
+    if (window.PRE_MARKET_SUMMARY && window.PRE_MARKET_SUMMARY.bonde_breadth) {
+      renderSAContent();
+      return;
+    }
+    const t = Date.now();
+    try {
+      const res = await fetch(`pre_market_summary.json?_t=${t}`);
+      if (res.ok) {
+        window.PRE_MARKET_SUMMARY = await res.json();
+        renderSAContent();
+        return;
+      }
+    } catch (e) {}
+
+    // Fallback to GitHub raw
+    try {
+      const res = await fetch(`https://raw.githubusercontent.com/sanIncredible/Jarvis/main/pre_market_summary.json?_t=${t}`);
+      if (res.ok) {
+        window.PRE_MARKET_SUMMARY = await res.json();
+        renderSAContent();
+      }
+    } catch (e) {}
+  }
+
+  function renderSAContent() {
+    const sa = window.PRE_MARKET_SUMMARY;
+    const badgesRow = document.getElementById('sa-header-badges');
+    const viewDash = document.getElementById('sa-view-dash');
+    const viewTg = document.getElementById('tg-message-content');
+    const timeBadge = document.getElementById('tg-time-badge');
+    const footerTime = document.getElementById('sa-footer-timestamp');
+
+    if (!sa || !sa.bonde_breadth) {
+      if (viewDash) viewDash.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted);">⏳ Loading 09:14 Situational Awareness Card...</div>';
+      return;
+    }
+
+    const b = sa.bonde_breadth;
+    if (timeBadge) timeBadge.innerText = sa.updated_at || '09:14 AM IST';
+    if (footerTime) footerTime.innerText = `💡 Generated at ${sa.updated_at || '09:14 AM IST'} via Pre-Market Pulse Engine | Breadth Row: ${b.date || sa.date}`;
+
+    // Render Header Badges
+    if (badgesRow) {
+      const stateCol = (b.allocation_pct === 0) ? '#f43f5e' : (b.allocation_pct <= 50 ? '#f59e0b' : '#10b981');
+      badgesRow.innerHTML = `
+        <span class="pill-badge" style="background:#1e293b; color:#fff; border:1px solid #334155;">📅 ${sa.date || b.date}</span>
+        <span class="pill-badge" style="background:${stateCol}22; color:${stateCol}; border:1px solid ${stateCol}; font-weight:800;">${b.state_label || 'REGIME'}</span>
+        <span class="pill-badge" style="background:#1e293b; color:#cbd5e1; border:1px solid #334155;">💼 ${b.allocation_pct}% Swing Risk</span>
+        <span class="pill-badge" style="background:#1e293b; color:#cbd5e1; border:1px solid #334155;">🎯 Bias: ${sa.bias || 'Neutral'}</span>
+        <span class="pill-badge" style="background:#1e293b; color:#cbd5e1; border:1px solid #334155;">N50: 🟢 ${sa.advances || 0} Adv | 🔴 ${sa.declines || 0} Dec</span>
+      `;
+    }
+
+    // Render View 1: Executive Dashboard Card
+    if (viewDash) {
+      const mandateBorder = (b.allocation_pct === 0) ? '#f43f5e' : (b.allocation_pct <= 50 ? '#f59e0b' : '#10b981');
+      const mandateBg = (b.allocation_pct === 0) ? 'rgba(244,63,94,0.18)' : (b.allocation_pct <= 50 ? 'rgba(245,158,11,0.18)' : 'rgba(16,185,129,0.18)');
+
+      // Benchmarks list
+      let benchHtml = '';
+      if (sa.benchmarks && sa.benchmarks.length) {
+        benchHtml = sa.benchmarks.map(bm => {
+          const sign = bm.change_pct >= 0 ? '+' : '';
+          const col = bm.change_pct >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+          return `
+            <div class="sa-index-row">
+              <span style="font-weight:700; color:#fff;">${bm.name}</span>
+              <span>₹${Number(bm.ltp).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+              <span style="color:${col}; font-weight:800; font-family:var(--font-mono);">${sign}${bm.change_pct.toFixed(2)}%</span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Sectorals list (Top 4)
+      let secHtml = '';
+      if (sa.sectorals && sa.sectorals.length) {
+        secHtml = sa.sectorals.slice(0, 5).map(sc => {
+          const sign = sc.change_pct >= 0 ? '+' : '';
+          const col = sc.change_pct >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+          const tag = (sc.name === sa.top_sector) ? ' <span style="color:#f59e0b; font-weight:800; font-size:10px;">★ LEADER</span>' : ((sc.name === sa.worst_sector) ? ' <span style="color:#f43f5e; font-weight:800; font-size:10px;">⚠️ LAGGARD</span>' : '');
+          return `
+            <div class="sa-index-row">
+              <span style="font-weight:600; color:#cbd5e1;">${sc.name}${tag}</span>
+              <span style="color:${col}; font-weight:800; font-family:var(--font-mono);">${sign}${sc.change_pct.toFixed(2)}%</span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      viewDash.innerHTML = `
+        <!-- Mandate Headline -->
+        <div class="sa-mandate-card" style="border-color:${mandateBorder}; background:linear-gradient(135deg, ${mandateBg} 0%, rgba(15,23,42,0.85) 100%);">
+          <div class="sa-mandate-title" style="color:${mandateBorder};">
+            <span>🎯</span> ${b.mandate_headline || 'ACTION MANDATE'}
+          </div>
+          <div class="sa-mandate-desc">
+            <b>State Guidance:</b> ${b.state_action || ''}<br>
+            <b>Trajectory:</b> ${b.trajectory_context || ''}<br>
+            <b>Turning Trigger:</b> <code style="color:#38bdf8;">${b.ignition_trigger || 'None'}</code>
+          </div>
+        </div>
+
+        <!-- 6-Metric Bonde Breadth Monitor Grid -->
+        <div class="sa-grid-3">
+          <div class="sa-card">
+            <div class="sa-card-title">4% Thrust (Buying vs Selling)</div>
+            <div class="sa-card-val" style="color:${b.net_breadth >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'};">
+              ${b.net_breadth >= 0 ? '+' : ''}${b.net_breadth.toFixed(2)}%
+            </div>
+            <div class="sa-card-sub">🟢 ${b.up_4_cnt} Up (${b.up_4_pct.toFixed(1)}%) | 🔴 ${b.dn_4_cnt} Down (${b.dn_4_pct.toFixed(1)}%)</div>
+          </div>
+
+          <div class="sa-card">
+            <div class="sa-card-title">Breadth Ratios (5D / 10D)</div>
+            <div class="sa-card-val">${b.ratio_5d.toFixed(2)} <span style="color:#64748b; font-size:12px;">/</span> ${b.ratio_10d.toFixed(2)}</div>
+            <div class="sa-card-sub">&gt;1.0 Bullish Expansion | &lt;0.5 Selling Pressure</div>
+          </div>
+
+          <div class="sa-card">
+            <div class="sa-card-title">52-Week Highs vs Lows</div>
+            <div class="sa-card-val" style="color:${b.net_nh_nl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'};">
+              Net: ${b.net_nh_nl >= 0 ? '+' : ''}${b.net_nh_nl.toFixed(2)}%
+            </div>
+            <div class="sa-card-sub">${b.nh_cnt} New Highs | ${b.nl_cnt} New Lows</div>
+          </div>
+
+          <div class="sa-card">
+            <div class="sa-card-title">Breakout Quality Rate</div>
+            <div class="sa-card-val" style="color:${b.bo_failure > 50 ? '#f43f5e' : 'var(--accent-green)'};">
+              ${b.bo_failure.toFixed(1)}% FAILED
+            </div>
+            <div class="sa-card-sub">${b.bo_sustained.toFixed(1)}% Sustained (S/F: ${b.bo_sf_ratio.toFixed(2)})</div>
+          </div>
+
+          <div class="sa-card">
+            <div class="sa-card-title">Bonde Regime Detectors</div>
+            <div class="sa-card-val" style="font-size:12px;">
+              Washout: <span style="color:#f43f5e;">${b.washout_status || 'QUIET'}</span>
+            </div>
+            <div class="sa-card-sub">Ignition: ${b.ignition_status || 'STANDBY'} | Froth: ${b.froth_status || 'QUIET'}</div>
+          </div>
+
+          <div class="sa-card">
+            <div class="sa-card-title">Closing Range Quality</div>
+            <div class="sa-card-val">${b.close_uh_pct.toFixed(1)}% Upper Half</div>
+            <div class="sa-card-sub">${b.close_lh_pct.toFixed(1)}% Lower Half (Spread: ${b.uh_lh_ratio >= 0 ? '+' : ''}${b.uh_lh_ratio.toFixed(1)}%)</div>
+          </div>
+        </div>
+
+        <!-- Benchmarks & Relative Strength Two-Column Section -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:10px;">
+          <div class="sa-indices-box">
+            <div class="sa-indices-title">
+              <span>🏛 Benchmark Indices</span>
+              <span style="font-size:10.5px; color:#94a3b8;">${sa.bias || ''}</span>
+            </div>
+            ${benchHtml}
+          </div>
+
+          <div class="sa-indices-box">
+            <div class="sa-indices-title">
+              <span>🏭 Sectoral Momentum (RS)</span>
+              <span style="font-size:10.5px; color:#94a3b8;">Top Ranked</span>
+            </div>
+            ${secHtml}
+          </div>
+        </div>
+
+        <!-- Tactical Playbook & Orders Box -->
+        <div class="sa-orders-card">
+          <div style="font-size:12.5px; font-weight:800; color:#38bdf8; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+            <span>💡</span> Tactical Execution Orders &amp; Rules
+          </div>
+          <div class="sa-order-item">
+            <span class="sa-order-label">Intraday (09:15-15:15):</span> ${b.action_intra || 'Execute strictly according to 3m ORB criteria.'}
+          </div>
+          <div class="sa-order-item">
+            <span class="sa-order-label">Swing (1-10 Days):</span> ${b.action_swing || 'Hold in cash until confirmation.'}
+          </div>
+          <div class="sa-order-item">
+            <span class="sa-order-label">Positional:</span> ${b.action_positional || 'Protect capital.'}
+          </div>
+          <div class="sa-order-item">
+            <span class="sa-order-label">Bonde Playbook Rule:</span> <span style="color:#e2e8f0;">${b.tactical_rule || 'Demanding tight bases only.'}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Render View 2: Formatted Telegram Alert
+    if (viewTg && sa.telegram_msg_html) {
+      viewTg.innerHTML = sa.telegram_msg_html;
+    }
+  }
+
+  function copyTelegramAlert() {
+    const sa = window.PRE_MARKET_SUMMARY;
+    const btn = document.getElementById('btn-copy-sa');
+    if (!sa || !sa.telegram_msg_html) {
+      if (btn) btn.innerText = '⚠️ No alert';
+      return;
+    }
+    // Clean text for clipboard (strip HTML tags)
+    const tmp = document.createElement('div');
+    tmp.innerHTML = sa.telegram_msg_html;
+    const plainText = tmp.innerText || tmp.textContent;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(plainText).then(() => {
+        if (btn) {
+          btn.innerText = '✅ Copied!';
+          setTimeout(() => { btn.innerText = '📋 Copy Alert'; }, 2000);
+        }
+      });
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = plainText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      if (btn) {
+        btn.innerText = '✅ Copied!';
+        setTimeout(() => { btn.innerText = '📋 Copy Alert'; }, 2000);
+      }
+    }
   }
 
   // Keyboard Shortcuts for Pro Traders & DevOps Telemetry
@@ -2416,6 +3222,7 @@
   // Boot
   applyStealthModeUI();
   fetchData(true);
+  loadSAMetrics();
   startCountdown();
 </script>
 </body>
