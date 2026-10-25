@@ -1,8 +1,8 @@
 {
-  "updated_at": "2026-10-24 16:09:31 IST",
-  "state_code": "DEFENSIVE",
-  "state_label": "\u26a0\ufe0f DEFENSIVE / HIGH FAKEOUT RISK",
-  "guidance": "Defensive breadth. 0% of breakouts failing today (BO S/F: 2.0). Preserve capital.",
+  "updated_at": "2026-10-25 22:16:15 IST",
+  "state_code": "WASHOUT",
+  "state_label": "\ud83d\udd34 SELLING CLIMAX / WASHOUT",
+  "guidance": "Heavy institutional liquidation active (87 down >=4%). 0% swing risk. SIT ON HANDS.",
   "swing_allocation_pct": 0,
   "swing_risk_per_trade": 0,
   "intraday_risk_per_trade": 1000,
@@ -10,19 +10,28 @@
   "intraday_max_open_trades": 2,
   "fakeout_warning": "HIGH FAKEOUT RISK: 80%+ of long breakouts fail in this regime.",
   "breakout_quality": {
-    "bo_sf_ratio": 2.0,
-    "breakouts_attempted": 2,
-    "breakouts_sustained": 2,
-    "breakouts_failed": 0,
-    "uh_lh_ratio": 1.0,
-    "trap_active": false
+    "bo_sf_ratio": 0.67,
+    "breakouts_attempted": 10,
+    "breakouts_sustained": 4,
+    "breakouts_failed": 6,
+    "uh_lh_ratio": 0.2,
+    "trap_active": true
+  },
+  "volume_telemetry": {
+    "vol_ratio": 0.39,
+    "high_vol_count": 308,
+    "low_vol_count": 792,
+    "high_vol_pct": 12.3,
+    "low_vol_pct": 31.6,
+    "vol_state": "DRY_CHOP_CONSOLIDATION",
+    "vol_description": "Subdued/dry volume (Vol Ratio: 0.39 < 0.40). Retail churn."
   },
   "breadth_snapshot": {
-    "advancers": 23,
-    "decliners": 225,
-    "ad_ratio": 0.1,
-    "up_4_count": 2,
-    "dn_4_count": 42,
-    "net_thrust": -40
+    "advancers": 43,
+    "decliners": 457,
+    "ad_ratio": 0.09,
+    "up_4_count": 3,
+    "dn_4_count": 87,
+    "net_thrust": -84
   }
 }
