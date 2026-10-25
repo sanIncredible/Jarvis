@@ -1059,6 +1059,14 @@
         <span id="regime-dn4" style="color:var(--accent-red); font-weight:700;">-4%: --</span>
       </div>
       <div style="background:var(--bg-card); padding:5px 10px; border-radius:6px; border:1px solid var(--border-subtle);">
+        <span style="color:var(--text-muted);">BO S/F:</span> 
+        <span id="regime-bosf" style="color:var(--accent-green); font-weight:700;">--</span>
+      </div>
+      <div style="background:var(--bg-card); padding:5px 10px; border-radius:6px; border:1px solid var(--border-subtle);">
+        <span style="color:var(--text-muted);">Vol Ratio:</span> 
+        <span id="regime-vol" style="color:var(--accent-gold); font-weight:700;">--</span>
+      </div>
+      <div style="background:var(--bg-card); padding:5px 10px; border-radius:6px; border:1px solid var(--border-subtle);">
         <span style="color:var(--text-muted);">Swing Risk:</span> 
         <span id="regime-risk" style="color:#f43f5e; font-weight:800;">₹0 / Trade</span>
       </div>
@@ -1713,6 +1721,35 @@
     up4El.innerText = `+4%: ${snap.up_4_count !== undefined ? snap.up_4_count : '--'}`;
     dn4El.innerText = `-4%: ${snap.dn_4_count !== undefined ? snap.dn_4_count : '--'}`;
     intraEl.innerText = `₹${(regime.intraday_risk_per_trade || 1000).toLocaleString('en-IN')}`;
+
+    // Breakout Stickiness (BO S/F)
+    const bosfEl = document.getElementById('regime-bosf');
+    if (bosfEl) {
+      const bq = regime.breakout_quality || {};
+      const sf = bq.bo_sf_ratio !== undefined ? Number(bq.bo_sf_ratio) : null;
+      if (sf !== null && !isNaN(sf)) {
+        bosfEl.innerText = sf.toFixed(2);
+        bosfEl.style.color = (sf >= 1.2) ? 'var(--accent-green)' : (sf < 1.0 ? '#f43f5e' : 'var(--accent-gold)');
+      } else {
+        bosfEl.innerText = '--';
+        bosfEl.style.color = 'var(--text-muted)';
+      }
+    }
+
+    // Institutional Volume Ratio (Above Avg Vol >1.5x / Below Avg Vol <0.5x)
+    const volEl = document.getElementById('regime-vol');
+    if (volEl) {
+      const vt = regime.volume_telemetry || {};
+      const vr = vt.vol_ratio !== undefined ? Number(vt.vol_ratio) : null;
+      if (vr !== null && !isNaN(vr)) {
+        let vTag = vr >= 1.5 ? (isRed ? 'Blowout 💥' : 'Surge 🚀') : (vr >= 1.0 ? 'Active ⚡' : (vr < 0.40 ? 'Dry 💤' : 'Normal'));
+        volEl.innerText = `${vr.toFixed(2)} (${vTag})`;
+        volEl.style.color = (vr >= 1.5) ? (isRed ? '#f43f5e' : 'var(--accent-green)') : (vr >= 1.0 ? 'var(--accent-green)' : (vr < 0.40 ? 'var(--text-muted)' : 'var(--accent-gold)'));
+      } else {
+        volEl.innerText = '--';
+        volEl.style.color = 'var(--text-muted)';
+      }
+    }
   }
 
   function processIncomingData(data, feedSource) {
