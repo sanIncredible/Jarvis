@@ -1,6 +1,6 @@
 {
   "as_of_date": "2026-10-22",
-  "evaluated_at": "2026-10-24 16:10:31 IST",
+  "evaluated_at": "2026-10-25 22:12:56 IST",
   "regime_code": "DEFENSIVE_WATERFALL",
   "regime_badge": "\ud83d\uded1 DEFENSIVE / SELLING CASCADE ACTIVE",
   "mandate": "CASH IS KING: Broad selling pressure active. 85%+ of long setups fail. Sit on hands.",
@@ -15,6 +15,15 @@
     "failed": 202,
     "total_attempted": 334
   },
+  "volume_telemetry": {
+    "vol_ratio": 0.39,
+    "high_vol_count": 308,
+    "low_vol_count": 792,
+    "high_vol_pct": 12.3,
+    "low_vol_pct": 31.6,
+    "vol_state": "DRY_CHOP_CONSOLIDATION",
+    "vol_description": "Subdued/dry volume (Vol Ratio: 0.39 < 0.40). Retail churn."
+  },
   "institutional_layers": {
     "ma_breadth_20ema_pct": 12.3,
     "ma_breadth_50ema_pct": 13.8,
@@ -25,7 +34,9 @@
     "net_52w_highs_lows": -339,
     "within_15pct_52wh": 314,
     "within_15pct_52wl": 1073,
-    "uh_lh_ratio": 0.55
+    "uh_lh_ratio": 0.55,
+    "vol_ratio": 0.39,
+    "vol_state": "DRY_CHOP_CONSOLIDATION"
   },
   "setups_allowed": [
     "Cash Preservation"
