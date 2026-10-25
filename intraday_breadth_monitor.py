@@ -446,6 +446,11 @@ def calculate_intraday_breadth(constituents: List[Dict[str, str]], cfg: Dict[str
         "signal_badge": signal_badge,
         "guidance": guidance,
         "risk_alert_type": risk_alert_type,
+        "volume_telemetry": {
+            "vol_ratio": 0.50,
+            "vol_state": "NORMAL_BASELINE",
+            "vol_description": "Baseline volume participation."
+        },
         "top_gainers": [{"symbol": r["symbol"], "chg": r["pct_change"], "ltp": r["ltp"]} for r in top_gainers],
         "top_losers": [{"symbol": r["symbol"], "chg": r["pct_change"], "ltp": r["ltp"]} for r in top_losers],
         "risk_matrix": {
@@ -485,6 +490,23 @@ def update_market_regime_state(breadth_data: Dict[str, Any]):
             except Exception:
                 pass
 
+        vol_telemetry = existing_regime.get("volume_telemetry", {})
+        daily_pos_file = BASE_DIR / "daily_positional_regime.json"
+        if daily_pos_file.is_file():
+            try:
+                with open(daily_pos_file, "r", encoding="utf-8") as pf:
+                    pdata = json.load(pf)
+                    if "volume_telemetry" in pdata:
+                        vol_telemetry = pdata["volume_telemetry"]
+            except Exception:
+                pass
+        if not vol_telemetry:
+            vol_telemetry = {
+                "vol_ratio": 0.50,
+                "vol_state": "NORMAL_BASELINE",
+                "vol_description": "Baseline volume participation."
+            }
+
         regime_payload = {
             "updated_at": breadth_data["timestamp"],
             "state_code": breadth_data["signal_state"],
@@ -504,6 +526,7 @@ def update_market_regime_state(breadth_data: Dict[str, Any]):
                 "uh_lh_ratio": breadth_data.get("uh_lh_ratio", 1.0),
                 "trap_active": breadth_data.get("breakout_trap_active", False)
             },
+            "volume_telemetry": vol_telemetry,
             "breadth_snapshot": {
                 "advancers": breadth_data["advancers"],
                 "decliners": breadth_data["decliners"],
@@ -552,6 +575,8 @@ def build_telegram_html(data: Dict[str, Any]) -> str:
         f"• Advances/Declines: <b>{adv} Adv</b> | <b>{dec} Dec</b> (Ratio: <code>{ad_ratio:.2f}</code>)",
         f"• Momentum Thrust  : <b>🟢 +4% Up: {up4}</b> | <b>🔴 -4% Down: {dn4}</b>",
         f"• Net 4% Thrust    : <b>{net_th:+d}</b> (Thrust Ratio: <code>{th_ratio:.2f}</code>)",
+        f"• Breakout Stickiness: <b>{data.get('breakouts_sustained', 0)} Sustained</b> vs <b>{data.get('breakouts_failed', 0)} Failed</b> (S/F: <code>{data.get('bo_sf_ratio', 1.0):.2f}</code>)",
+        f"• Institutional Vol: Ratio <code>{data.get('volume_telemetry', {}).get('vol_ratio', 0.50):.2f}</code> ({data.get('volume_telemetry', {}).get('vol_state', 'NORMAL')})",
         f"• Universe Median  : <b>{med_chg:+.2f}%</b> [{source}]",
         "",
         "🛡️ <b>MANDATORY RISK MATRIX:</b>",
