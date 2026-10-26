@@ -1,76 +1,283 @@
 {
-  "timestamp": "2026-10-24 00:17:32 IST",
-  "time_str": "00:17:32 IST",
-  "source": "Upstox API v2",
-  "total_sampled": 500,
-  "advancers": 43,
-  "decliners": 457,
+  "timestamp": "2026-10-26 22:46:41 IST",
+  "time_str": "22:46:41 IST",
+  "source": "Yahoo Finance (v8 Fallback)",
+  "total_sampled": 246,
+  "advancers": 165,
+  "decliners": 81,
   "unchanged": 0,
-  "ad_ratio": 0.09,
-  "up_4_count": 3,
-  "dn_4_count": 87,
-  "up_2_count": 6,
-  "dn_2_count": 280,
-  "thrust_ratio": 0.03,
-  "net_thrust": -84,
-  "avg_change_pct": -2.34,
-  "median_change_pct": -2.31,
-  "signal_state": "WASHOUT",
-  "signal_badge": "\ud83d\udd34 SELLING CLIMAX / WASHOUT",
-  "guidance": "Heavy institutional liquidation active. 0% swing risk. SIT ON HANDS.",
-  "risk_alert_type": "WASHOUT_LOCKED",
+  "ad_ratio": 2.04,
+  "up_4_count": 14,
+  "dn_4_count": 3,
+  "up_2_count": 59,
+  "dn_2_count": 18,
+  "thrust_ratio": 4.67,
+  "net_thrust": 11,
+  "breakouts_attempted": 14,
+  "breakouts_sustained": 14,
+  "breakouts_failed": 0,
+  "bo_sf_ratio": 14.0,
+  "breakdowns_attempted": 3,
+  "breakdowns_sustained": 3,
+  "breakdowns_failed": 0,
+  "bd_sf_ratio": 3.0,
+  "range_exp_count": 0,
+  "uh_lh_ratio": 1.0,
+  "breakout_trap_active": false,
+  "avg_change_pct": 0.87,
+  "median_change_pct": 0.78,
+  "signal_state": "DEFENSIVE",
+  "signal_badge": "\u26a0\ufe0f DEFENSIVE / HIGH FAKEOUT RISK",
+  "guidance": "Defensive breadth. 0% of breakouts failing today (BO S/F: 14.0). Preserve capital.",
+  "risk_alert_type": "DEFENSIVE_CHOP",
+  "volume_telemetry": {
+    "vol_ratio": 0.5,
+    "vol_state": "NORMAL_BASELINE",
+    "vol_description": "Baseline volume participation."
+  },
+  "global_markets": {
+    "updated_at": "22:46:41 IST",
+    "bias_code": "BULLISH",
+    "bias_badge": "\ud83d\udfe2 STRONG RISK-ON (Global Tailwind)",
+    "us": [
+      {
+        "name": "S&P 500",
+        "region": "US",
+        "symbol": "^GSPC",
+        "display": "S&P 500",
+        "ltp": 7687.92,
+        "prev_close": 7663.43,
+        "change": 24.49,
+        "pct_change": 0.32,
+        "status": "OK"
+      },
+      {
+        "name": "Nasdaq",
+        "region": "US",
+        "symbol": "^IXIC",
+        "display": "Nasdaq",
+        "ltp": 26248.82,
+        "prev_close": 26008.86,
+        "change": 239.96,
+        "pct_change": 0.92,
+        "status": "OK"
+      },
+      {
+        "name": "Dow Jones",
+        "region": "US",
+        "symbol": "^DJI",
+        "display": "Dow Jones",
+        "ltp": 52365.24,
+        "prev_close": 52867.98,
+        "change": -502.74,
+        "pct_change": -0.95,
+        "status": "OK"
+      },
+      {
+        "name": "S&P 500 Fut",
+        "region": "US",
+        "symbol": "ES=F",
+        "display": "S&P Fut (ES)",
+        "ltp": 7717.75,
+        "prev_close": 7659.75,
+        "change": 58.0,
+        "pct_change": 0.76,
+        "status": "OK"
+      },
+      {
+        "name": "Nasdaq Fut",
+        "region": "US",
+        "symbol": "NQ=F",
+        "display": "Nasdaq Fut (NQ)",
+        "ltp": 29499.75,
+        "prev_close": 29117.75,
+        "change": 382.0,
+        "pct_change": 1.31,
+        "status": "OK"
+      }
+    ],
+    "europe": [
+      {
+        "name": "DAX (Germany)",
+        "region": "EUROPE",
+        "symbol": "^GDAXI",
+        "display": "DAX 40",
+        "ltp": 25410.84,
+        "prev_close": 25371.75,
+        "change": 39.09,
+        "pct_change": 0.15,
+        "status": "OK"
+      },
+      {
+        "name": "FTSE 100 (UK)",
+        "region": "EUROPE",
+        "symbol": "^FTSE",
+        "display": "FTSE 100",
+        "ltp": 10767.33,
+        "prev_close": 10725.0,
+        "change": 42.33,
+        "pct_change": 0.39,
+        "status": "OK"
+      },
+      {
+        "name": "CAC 40 (France)",
+        "region": "EUROPE",
+        "symbol": "^FCHI",
+        "display": "CAC 40",
+        "ltp": 7847.32,
+        "prev_close": 7782.82,
+        "change": 64.5,
+        "pct_change": 0.83,
+        "status": "OK"
+      },
+      {
+        "name": "Euro Stoxx 50",
+        "region": "EUROPE",
+        "symbol": "^STOXX50E",
+        "display": "Stoxx 50",
+        "ltp": 6116.23,
+        "prev_close": 6068.22,
+        "change": 48.01,
+        "pct_change": 0.79,
+        "status": "OK"
+      }
+    ],
+    "asia_asean": [
+      {
+        "name": "Nikkei 225",
+        "region": "ASIA_ASEAN",
+        "symbol": "^N225",
+        "display": "Nikkei 225",
+        "ltp": 62189.65,
+        "prev_close": 62693.16,
+        "change": -503.51,
+        "pct_change": -0.8,
+        "status": "OK"
+      },
+      {
+        "name": "Hang Seng",
+        "region": "ASIA_ASEAN",
+        "symbol": "^HSI",
+        "display": "Hang Seng",
+        "ltp": 23211.81,
+        "prev_close": 22934.68,
+        "change": 277.13,
+        "pct_change": 1.21,
+        "status": "OK"
+      },
+      {
+        "name": "Shanghai Comp",
+        "region": "ASIA_ASEAN",
+        "symbol": "000001.SS",
+        "display": "Shanghai",
+        "ltp": 3697.52,
+        "prev_close": 3690.47,
+        "change": 7.05,
+        "pct_change": 0.19,
+        "status": "OK"
+      },
+      {
+        "name": "Straits Times (SG)",
+        "region": "ASIA_ASEAN",
+        "symbol": "^STI",
+        "display": "Straits Times (SG)",
+        "ltp": 5415.91,
+        "prev_close": 5415.14,
+        "change": 0.77,
+        "pct_change": 0.01,
+        "status": "OK"
+      },
+      {
+        "name": "Kospi (KR)",
+        "region": "ASIA_ASEAN",
+        "symbol": "^KS11",
+        "display": "Kospi (KR)",
+        "ltp": 5469.47,
+        "prev_close": 5533.77,
+        "change": -64.3,
+        "pct_change": -1.16,
+        "status": "OK"
+      },
+      {
+        "name": "Jakarta Comp (ID)",
+        "region": "ASIA_ASEAN",
+        "symbol": "^JKSE",
+        "display": "Jakarta (ID)",
+        "ltp": 5373.09,
+        "prev_close": 5439.26,
+        "change": -66.16,
+        "pct_change": -1.22,
+        "status": "OK"
+      },
+      {
+        "name": "KLCI (MY)",
+        "region": "ASIA_ASEAN",
+        "symbol": "^KLSE",
+        "display": "KLCI (MY)",
+        "ltp": 1604.36,
+        "prev_close": 1611.56,
+        "change": -7.2,
+        "pct_change": -0.45,
+        "status": "OK"
+      }
+    ],
+    "us_futures_avg": 1.04,
+    "global_avg_chg": 0.14,
+    "total_tracked": 16,
+    "valid_count": 16
+  },
   "top_gainers": [
     {
-      "symbol": "IGIL",
-      "chg": 7.91,
-      "ltp": 381.15
+      "symbol": "ATHERENERG",
+      "chg": 14.13,
+      "ltp": 1575.0
     },
     {
-      "symbol": "CYIENT",
-      "chg": 7.81,
-      "ltp": 1233.0
+      "symbol": "CARBORUNIV",
+      "chg": 9.76,
+      "ltp": 1129.2
     },
     {
-      "symbol": "ETERNAL",
-      "chg": 4.25,
-      "ltp": 317.4
+      "symbol": "GRAPHITE",
+      "chg": 6.82,
+      "ltp": 736.05
     },
     {
-      "symbol": "STLTECH",
-      "chg": 3.22,
-      "ltp": 826.65
+      "symbol": "CONCORDBIO",
+      "chg": 6.66,
+      "ltp": 1311.2
     },
     {
-      "symbol": "IPCALAB",
-      "chg": 2.62,
-      "ltp": 1953.3
+      "symbol": "DRREDDY",
+      "chg": 6.62,
+      "ltp": 1310.9
     }
   ],
   "top_losers": [
     {
-      "symbol": "SWIGGY",
-      "chg": -16.75,
-      "ltp": 176.0
+      "symbol": "FIVESTAR",
+      "chg": -7.48,
+      "ltp": 414.85
     },
     {
-      "symbol": "J&KBANK",
-      "chg": -16.28,
-      "ltp": 113.09
+      "symbol": "AUBANK",
+      "chg": -6.85,
+      "ltp": 869.0
     },
     {
-      "symbol": "BBOX",
-      "chg": -9.03,
-      "ltp": 805.1
-    },
-    {
-      "symbol": "AFCONS",
-      "chg": -7.71,
-      "ltp": 217.84
+      "symbol": "CUB",
+      "chg": -6.32,
+      "ltp": 207.98
     },
     {
       "symbol": "ATUL",
-      "chg": -7.06,
-      "ltp": 5576.0
+      "chg": -3.98,
+      "ltp": 5354.0
+    },
+    {
+      "symbol": "BANKINDIA",
+      "chg": -3.57,
+      "ltp": 126.32
     }
   ],
   "risk_matrix": {
