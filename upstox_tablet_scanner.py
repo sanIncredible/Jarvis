@@ -217,6 +217,10 @@ def load_github_config():
 
 def sync_remote_files_from_github():
     """Pulls latest watchlist.txt and self-updates upstox_tablet_scanner.py from GitHub over HTTPS (443)."""
+    # Windows is the master workstation: NEVER overwrite local watchlist.txt from remote GitHub!
+    if sys.platform == "win32":
+        return
+
     gh_cfg = load_github_config()
     if not gh_cfg or not gh_cfg.get("token"):
         return
