@@ -1624,13 +1624,26 @@
 
       const successful = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
       if (successful.length > 0) {
-        // Sort: prefer highest stock count first, then freshest updated_at
+        // Sort: prefer freshest payload (updated_ts or parsed updated_at)
         successful.sort((a, b) => {
-          const lenDiff = (b.data.stocks?.length || 0) - (a.data.stocks?.length || 0);
-          if (lenDiff !== 0) return lenDiff;
-          const tA = a.data.updated_at || '';
-          const tB = b.data.updated_at || '';
-          return tB.localeCompare(tA);
+          const tsA = a.data.updated_ts || 0;
+          const tsB = b.data.updated_ts || 0;
+          if (tsA > 0 && tsB > 0 && tsA !== tsB) {
+            return tsB - tsA; // Freshest epoch timestamp wins
+          }
+
+          const parseSec = (tStr) => {
+            if (!tStr) return 0;
+            const p = tStr.replace(' IST', '').trim().split(':');
+            return (parseInt(p[0], 10) || 0) * 3600 + (parseInt(p[1], 10) || 0) * 60 + (parseInt(p[2], 10) || 0);
+          };
+          const secA = parseSec(a.data.updated_at);
+          const secB = parseSec(b.data.updated_at);
+          if (secA !== secB) {
+            return secB - secA; // Freshest IST time wins
+          }
+
+          return (b.data.stocks?.length || 0) - (a.data.stocks?.length || 0);
         });
         const best = successful[0];
         processIncomingData(best.data, best.name);
