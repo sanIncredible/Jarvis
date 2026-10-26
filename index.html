@@ -1153,7 +1153,7 @@
           <th onclick="handleSort('lod_dist')" style="text-align:right;" id="th-lod" title="Low of Day Distance (% of Daily ATR14): (LTP - Day Low) / ATR14">Span% <span id="sort-lod_dist" class="sort-icon"></span></th>
         </tr>
       </thead>
-      <tbody id="table-body">
+      <tbody id="table-body" onmouseenter="cancelHidePopup()">
         <tr>
           <td colspan="11" style="text-align:center; padding: 50px 10px; color:var(--text-muted); font-size:14px;">
             ⏳ Connecting to cloud feed payload (<code>data.json</code>)...
@@ -1440,9 +1440,12 @@
     localStorage.setItem('jarvis_stealth_mode', isStealthMode ? '1' : '0');
     applyStealthModeUI();
     renderFilteredTable();
-    if (activeSym && CHARTS_DATA[activeSym] && popup && popup.style.display === 'flex') {
-      updatePopupHeader(CHARTS_DATA[activeSym]);
-      drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    if (activeSym && popup && popup.style.display === 'flex') {
+      const data = getStockChartData(activeSym);
+      if (data) {
+        updatePopupHeader(data);
+        drawCanvasChart(canvas, data);
+      }
     }
   }
 
@@ -1970,9 +1973,12 @@
     renderFilteredTable();
 
     // If modal is active for a stock, refresh its chart live
-    if (activeSym && CHARTS_DATA[activeSym] && popup.style.display === 'flex') {
-      updatePopupHeader(CHARTS_DATA[activeSym]);
-      drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    if (activeSym && popup.style.display === 'flex') {
+      const data = getStockChartData(activeSym);
+      if (data) {
+        updatePopupHeader(data);
+        drawCanvasChart(canvas, data);
+      }
     }
     } catch (err) {
       console.error('Error processing incoming data:', err);
@@ -2164,9 +2170,12 @@
       btn3m.classList.add('active');
       btnD.classList.remove('active');
     }
-    if (activeSym && CHARTS_DATA[activeSym]) {
-      updatePopupHeader(CHARTS_DATA[activeSym]);
-      drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    if (activeSym) {
+      const data = getStockChartData(activeSym);
+      if (data) {
+        updatePopupHeader(data);
+        drawCanvasChart(canvas, data);
+      }
     }
   }
 
@@ -2199,8 +2208,11 @@
           : '💡 Gold Line = Previous Day High (PDH) | Cyan/Orange = 3m Dynamic ORB';
       }
     }
-    if (activeSym && CHARTS_DATA[activeSym]) {
-      drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    if (activeSym) {
+      const data = getStockChartData(activeSym);
+      if (data) {
+        drawCanvasChart(canvas, data);
+      }
     }
   }
 
@@ -2486,7 +2498,7 @@
 
     // Terminal-Style Bounded Bar Spacing
     const n = candles.length;
-    const maxBarSpacing = isDaily ? 20 : 15;
+    const maxBarSpacing = isDaily ? 28 : 22;
     const barSpacing = Math.min(plotW / Math.max(n, 1), maxBarSpacing);
 
     // Compute rolling Intraday 10 EMA series for 3m timeframe
@@ -2663,7 +2675,13 @@
     ctx.fillText(isStealthMode ? 'TRACE VOL' : 'VOL', padLeft + 4, volSeparatorY - 3);
     ctx.restore();
 
+    // Snapping Hover Calculation: Always snap cleanly to the nearest candle
     let hoveredCandle = null;
+    let hoverIdx = -1;
+    if (hoverX !== undefined && candles && candles.length > 0) {
+      hoverIdx = Math.round((hoverX - padLeft - barSpacing / 2) / barSpacing);
+      hoverIdx = Math.max(0, Math.min(candles.length - 1, hoverIdx));
+    }
     let lastLabelX = -999;
 
     candles.forEach((c, i) => {
@@ -2684,7 +2702,7 @@
         bWidth = Math.max(Math.min(barSpacing * 0.65 * factor, barSpacing - 1.2), 2.5);
       }
 
-      if (hoverX !== undefined && Math.abs(hoverX - cx) <= barSpacing / 2) {
+      if (i === hoverIdx) {
         hoveredCandle = Object.assign({}, c, { cx, oY, cY, hY, lY, isBull, bWidth, barIndex: i });
       }
 
@@ -2735,13 +2753,30 @@
       ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
       ctx.setLineDash([3, 3]);
       ctx.lineWidth = 1;
+      // Vertical crosshair through candle
       ctx.beginPath();
       ctx.moveTo(hoveredCandle.cx, padTop);
       ctx.lineTo(hoveredCandle.cx, H - padBottom);
       ctx.stroke();
+      // Horizontal crosshair to price axis
+      ctx.beginPath();
+      ctx.moveTo(padLeft, hoveredCandle.cY);
+      ctx.lineTo(W - padRight, hoveredCandle.cY);
+      ctx.stroke();
       ctx.restore();
 
       const cColor = hoveredCandle.isBull ? '#00c087' : '#f43f5e';
+
+      // Axis badge for hovered price
+      ctx.save();
+      ctx.fillStyle = cColor;
+      ctx.fillRect(W - padRight + 2, hoveredCandle.cY - 7, padRight - 4, 15);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 9px var(--font-mono)';
+      ctx.textAlign = 'left';
+      ctx.fillText(hoveredCandle.c.toFixed(1), W - padRight + 4, hoveredCandle.cY + 4);
+      ctx.restore();
+
       const vVal = hoveredCandle.v || 0;
       const volRatioStr = avgVol > 0 ? (' (' + (vVal / avgVol).toFixed(1) + 'x avg)') : '';
 
@@ -2782,6 +2817,37 @@
     }
   }
 
+  function getStockChartData(sym) {
+    if (!sym) return null;
+    if (CHARTS_DATA[sym]) return CHARTS_DATA[sym];
+    const upper = String(sym).toUpperCase();
+    if (CHARTS_DATA[upper]) return CHARTS_DATA[upper];
+    const foundKey = Object.keys(CHARTS_DATA).find(k => k.toUpperCase() === upper);
+    if (foundKey) return CHARTS_DATA[foundKey];
+    const rawStk = RAW_STOCKS.find(s => s.symbol && s.symbol.toUpperCase() === upper);
+    if (rawStk) {
+      return {
+        symbol: rawStk.symbol,
+        ltp: rawStk.ltp,
+        prev_close: rawStk.prev_close,
+        chg_pct: rawStk.chg_pct,
+        pivot: rawStk.pivot,
+        day_low: rawStk.day_low,
+        lod_dist: rawStk.lod_dist,
+        ema10: rawStk.ema10,
+        stretch_pct: rawStk.stretch_pct,
+        pdh: rawStk.pdh,
+        pdh_broken: rawStk.pdh_broken,
+        orb_high: rawStk.orb_high,
+        orb_low: rawStk.orb_low,
+        orb_status: rawStk.orb_status,
+        candles_3m: rawStk.candles_3m || [],
+        candles_d: rawStk.candles_d || []
+      };
+    }
+    return null;
+  }
+
   function showChartPopup(e, sym, forceTap) {
     if (popupTimer) {
       clearTimeout(popupTimer);
@@ -2800,12 +2866,28 @@
       let x = (e && e.clientX) ? e.clientX : (window.innerWidth / 2 - popupWidth / 2);
       let y = (e && e.clientY) ? e.clientY : (window.innerHeight / 2 - popupHeight / 2);
 
-      let left = x + 15;
+      let left = x + 20;
       let top = y - 40;
 
-      if (left + popupWidth > window.innerWidth) left = x - popupWidth - 15;
-      if (left < 10) left = 10;
-      if (top + popupHeight > window.innerHeight) top = window.innerHeight - popupHeight - 15;
+      // Smart anti-collision: Ensure popup never spawns directly under or engulfs the cursor
+      if (left + popupWidth > window.innerWidth - 15) {
+        if (x - popupWidth - 20 >= 15) {
+          left = x - popupWidth - 20;
+        } else {
+          // Viewport too narrow for pure horizontal offset; center within margins
+          left = Math.max(15, Math.min(window.innerWidth - popupWidth - 15, x - popupWidth / 2));
+          // Shift vertically above or below the cursor row so table row hover is never blocked
+          if (y + 35 + popupHeight <= window.innerHeight - 10) {
+            top = y + 35; // Below cursor row
+          } else if (y - popupHeight - 35 >= 10) {
+            top = y - popupHeight - 35; // Above cursor row
+          }
+        }
+      }
+
+      if (top + popupHeight > window.innerHeight - 10) {
+        top = window.innerHeight - popupHeight - 10;
+      }
       if (top < 10) top = 10;
 
       popup.style.left = left + 'px';
@@ -2821,39 +2903,65 @@
     popup.style.display = 'flex';
 
     activeSym = sym;
-    const data = CHARTS_DATA[sym];
     if (popupAppLink) {
       popupAppLink.href = 'https://in.tradingview.com/chart/?symbol=NSE:' + sym;
     }
 
+    const data = getStockChartData(sym);
     if (data) {
       updatePopupHeader(data);
       drawCanvasChart(canvas, data);
+    } else {
+      // Clear canvas and header so previous stock's chart never lingers
+      if (popupTitle) popupTitle.innerHTML = `📈 ${sym} <span style="font-size:11px; color:var(--text-muted);">(Awaiting Feed)</span>`;
+      if (popupBadges) popupBadges.innerHTML = `<span class="pill-badge" style="color:var(--text-muted);">Syncing telemetry...</span>`;
+      if (popupHud) popupHud.innerHTML = `Telemetries initializing...`;
+      if (popupBarCount) popupBarCount.innerText = `0 Candles`;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const W = rect.width || 680;
+      const H = rect.height || 360;
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
+      ctx.fillStyle = '#0a0d14';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#64748b';
+      ctx.font = '13px var(--font-sans)';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Telemetry pending for ${sym}...`, W / 2, H / 2);
     }
   }
 
   canvas.addEventListener('mousemove', function(e) {
-    if (!activeSym || !CHARTS_DATA[activeSym]) return;
+    if (!activeSym) return;
+    const data = getStockChartData(activeSym);
+    if (!data) return;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    drawCanvasChart(canvas, CHARTS_DATA[activeSym], x);
+    drawCanvasChart(canvas, data, x);
   });
   canvas.addEventListener('mouseleave', function() {
-    if (!activeSym || !CHARTS_DATA[activeSym]) return;
-    drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+    if (!activeSym) return;
+    const data = getStockChartData(activeSym);
+    if (!data) return;
+    drawCanvasChart(canvas, data);
   });
   canvas.addEventListener('touchmove', function(e) {
-    if (!activeSym || !CHARTS_DATA[activeSym]) return;
+    if (!activeSym) return;
+    const data = getStockChartData(activeSym);
+    if (!data) return;
     if (e.touches && e.touches[0]) {
       const rect = canvas.getBoundingClientRect();
       const x = e.touches[0].clientX - rect.left;
-      drawCanvasChart(canvas, CHARTS_DATA[activeSym], x);
+      drawCanvasChart(canvas, data, x);
     }
   }, { passive: true });
 
   function scheduleHidePopup() {
     if (window.innerWidth <= 768) return; // Never auto-hide on mobile/tablet via hover timer
-    popupTimer = setTimeout(hideChartPopup, 350);
+    if (popupTimer) clearTimeout(popupTimer);
+    popupTimer = setTimeout(hideChartPopup, 450);
   }
   function cancelHidePopup() {
     if (popupTimer) {
@@ -2891,13 +2999,14 @@
 
   // Responsive re-center & redraw on resize / orientation change
   window.addEventListener('resize', function() {
-    if (popup && popup.style.display === 'flex' && activeSym && CHARTS_DATA[activeSym]) {
+    if (popup && popup.style.display === 'flex' && activeSym) {
       if (window.innerWidth <= 768) {
         popup.style.left = '8px';
         popup.style.right = '8px';
         popup.style.top = '10px';
       }
-      drawCanvasChart(canvas, CHARTS_DATA[activeSym]);
+      const data = getStockChartData(activeSym);
+      if (data) drawCanvasChart(canvas, data);
     }
   });
 
