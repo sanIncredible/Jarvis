@@ -215,6 +215,117 @@ def fetch_yahoo_quotes_fallback(symbols: List[str]) -> Dict[str, Dict[str, Any]]
     return quotes
 
 
+# =============================================================================
+# GLOBAL MARKETS TELEMETRY (US, EUROPE, ASIA / ASEAN)
+# =============================================================================
+GLOBAL_MARKET_INDICES = [
+    # US Equity Benchmarks & 24h Futures
+    {"name": "S&P 500", "region": "US", "symbol": "^GSPC", "display": "S&P 500"},
+    {"name": "Nasdaq", "region": "US", "symbol": "^IXIC", "display": "Nasdaq"},
+    {"name": "Dow Jones", "region": "US", "symbol": "^DJI", "display": "Dow Jones"},
+    {"name": "S&P 500 Fut", "region": "US", "symbol": "ES=F", "display": "S&P Fut (ES)"},
+    {"name": "Nasdaq Fut", "region": "US", "symbol": "NQ=F", "display": "Nasdaq Fut (NQ)"},
+
+    # European Major Benchmarks
+    {"name": "DAX (Germany)", "region": "EUROPE", "symbol": "^GDAXI", "display": "DAX 40"},
+    {"name": "FTSE 100 (UK)", "region": "EUROPE", "symbol": "^FTSE", "display": "FTSE 100"},
+    {"name": "CAC 40 (France)", "region": "EUROPE", "symbol": "^FCHI", "display": "CAC 40"},
+    {"name": "Euro Stoxx 50", "region": "EUROPE", "symbol": "^STOXX50E", "display": "Stoxx 50"},
+
+    # Asian & ASEAN Major Indices
+    {"name": "Nikkei 225", "region": "ASIA_ASEAN", "symbol": "^N225", "display": "Nikkei 225"},
+    {"name": "Hang Seng", "region": "ASIA_ASEAN", "symbol": "^HSI", "display": "Hang Seng"},
+    {"name": "Shanghai Comp", "region": "ASIA_ASEAN", "symbol": "000001.SS", "display": "Shanghai"},
+    {"name": "Straits Times (SG)", "region": "ASIA_ASEAN", "symbol": "^STI", "display": "Straits Times (SG)"},
+    {"name": "Kospi (KR)", "region": "ASIA_ASEAN", "symbol": "^KS11", "display": "Kospi (KR)"},
+    {"name": "Jakarta Comp (ID)", "region": "ASIA_ASEAN", "symbol": "^JKSE", "display": "Jakarta (ID)"},
+    {"name": "KLCI (MY)", "region": "ASIA_ASEAN", "symbol": "^KLSE", "display": "KLCI (MY)"},
+]
+
+
+def fetch_global_markets() -> Dict[str, Any]:
+    """
+    Fetches real-time / current session quotes for US, Europe, and Asia/ASEAN major indices concurrently.
+    Returns categorized lists and overall global sentiment bias.
+    """
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+
+    def fetch_single(item: Dict[str, str]) -> Dict[str, Any]:
+        sym = item["symbol"]
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?interval=1d&range=2d"
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                result_list = data.get("chart", {}).get("result", [])
+                if not result_list:
+                    return {**item, "ltp": 0.0, "prev_close": 0.0, "change": 0.0, "pct_change": 0.0, "status": "NO_DATA"}
+                meta = result_list[0].get("meta", {})
+                ltp = float(meta.get("regularMarketPrice") or 0.0)
+                pc = float(meta.get("chartPreviousClose") or meta.get("previousClose") or ltp)
+                chg = ltp - pc
+                pct = round((chg / pc * 100.0), 2) if pc else 0.0
+                return {
+                    **item,
+                    "ltp": round(ltp, 2),
+                    "prev_close": round(pc, 2),
+                    "change": round(chg, 2),
+                    "pct_change": pct,
+                    "status": "OK"
+                }
+        except Exception as e:
+            return {**item, "ltp": 0.0, "prev_close": 0.0, "change": 0.0, "pct_change": 0.0, "status": f"ERR: {e}"}
+
+    with ThreadPoolExecutor(max_workers=16) as ex:
+        results = list(ex.map(fetch_single, GLOBAL_MARKET_INDICES))
+
+    us_items = [r for r in results if r["region"] == "US"]
+    eu_items = [r for r in results if r["region"] == "EUROPE"]
+    asia_items = [r for r in results if r["region"] == "ASIA_ASEAN"]
+
+    valid = [r for r in results if r["status"] == "OK" and r["prev_close"] > 0]
+    es = next((r for r in valid if r["symbol"] == "ES=F"), None)
+    nq = next((r for r in valid if r["symbol"] == "NQ=F"), None)
+    fut_avg = 0.0
+    fut_count = 0
+    if es:
+        fut_avg += es["pct_change"]
+        fut_count += 1
+    if nq:
+        fut_avg += nq["pct_change"]
+        fut_count += 1
+    if fut_count > 0:
+        fut_avg /= fut_count
+
+    pos_count = sum(1 for r in valid if r["pct_change"] > 0.05)
+    neg_count = sum(1 for r in valid if r["pct_change"] < -0.05)
+    avg_chg = sum(r["pct_change"] for r in valid) / max(len(valid), 1)
+
+    if (fut_avg >= 0.40 or avg_chg >= 0.35) and pos_count >= neg_count * 2:
+        bias_code, bias_badge = "BULLISH", "🟢 STRONG RISK-ON (Global Tailwind)"
+    elif fut_avg >= 0.15 or (avg_chg >= 0.10 and pos_count > neg_count):
+        bias_code, bias_badge = "MILD_BULLISH", "🟢 MILD RISK-ON (Positive Cues)"
+    elif (fut_avg <= -0.40 or avg_chg <= -0.35) and neg_count >= pos_count * 2:
+        bias_code, bias_badge = "BEARISH", "🔴 HEAVY RISK-OFF (Global Headwind)"
+    elif fut_avg <= -0.15 or (avg_chg <= -0.10 and neg_count > pos_count):
+        bias_code, bias_badge = "MILD_BEARISH", "🔴 MILD RISK-OFF (Cautious Cues)"
+    else:
+        bias_code, bias_badge = "MIXED", "🟡 MIXED / NEUTRAL CUES"
+
+    return {
+        "updated_at": datetime.now().strftime("%H:%M:%S IST"),
+        "bias_code": bias_code,
+        "bias_badge": bias_badge,
+        "us": us_items,
+        "europe": eu_items,
+        "asia_asean": asia_items,
+        "us_futures_avg": round(fut_avg, 2),
+        "global_avg_chg": round(avg_chg, 2),
+        "total_tracked": len(results),
+        "valid_count": len(valid)
+    }
+
+
 def calculate_intraday_breadth(constituents: List[Dict[str, str]], cfg: Dict[str, Any]) -> Dict[str, Any]:
     """
     Calculates breadth and thrust metrics for the liquid 500 universe.
@@ -414,6 +525,9 @@ def calculate_intraday_breadth(constituents: List[Dict[str, str]], cfg: Dict[str
     intra_daily_loss = intra_cfg.get("max_daily_loss", 2000)
     intra_max_open = intra_cfg.get("max_open_trades", 2)
 
+    # Fetch Real-Time Global Market Cues (US, Europe, Asia / ASEAN)
+    global_markets = fetch_global_markets()
+
     return {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
         "time_str": datetime.now().strftime("%H:%M:%S IST"),
@@ -451,6 +565,7 @@ def calculate_intraday_breadth(constituents: List[Dict[str, str]], cfg: Dict[str
             "vol_state": "NORMAL_BASELINE",
             "vol_description": "Baseline volume participation."
         },
+        "global_markets": global_markets,
         "top_gainers": [{"symbol": r["symbol"], "chg": r["pct_change"], "ltp": r["ltp"]} for r in top_gainers],
         "top_losers": [{"symbol": r["symbol"], "chg": r["pct_change"], "ltp": r["ltp"]} for r in top_losers],
         "risk_matrix": {
@@ -527,6 +642,7 @@ def update_market_regime_state(breadth_data: Dict[str, Any]):
                 "trap_active": breadth_data.get("breakout_trap_active", False)
             },
             "volume_telemetry": vol_telemetry,
+            "global_markets": breadth_data.get("global_markets", {}),
             "breadth_snapshot": {
                 "advancers": breadth_data["advancers"],
                 "decliners": breadth_data["decliners"],
@@ -578,13 +694,95 @@ def build_telegram_html(data: Dict[str, Any]) -> str:
         f"• Breakout Stickiness: <b>{data.get('breakouts_sustained', 0)} Sustained</b> vs <b>{data.get('breakouts_failed', 0)} Failed</b> (S/F: <code>{data.get('bo_sf_ratio', 1.0):.2f}</code>)",
         f"• Institutional Vol: Ratio <code>{data.get('volume_telemetry', {}).get('vol_ratio', 0.50):.2f}</code> ({data.get('volume_telemetry', {}).get('vol_state', 'NORMAL')})",
         f"• Universe Median  : <b>{med_chg:+.2f}%</b> [{source}]",
-        "",
+        ""
+    ]
+
+    # Format Global Markets Telemetry (US, Europe, Asia / ASEAN)
+    gm = data.get("global_markets", {})
+    if gm and (gm.get("us") or gm.get("europe") or gm.get("asia_asean")):
+        bias_badge = html.escape(gm.get("bias_badge", "⚪ NEUTRAL"))
+        lines.append("🌐 <b>GLOBAL CUES (US / EURO / ASEAN):</b>")
+        lines.append(f"• Tone: <b>{bias_badge}</b>")
+
+        # US & 24h Futures
+        us_items = gm.get("us", [])
+        if us_items:
+            spx = next((x for x in us_items if x["symbol"] == "^GSPC"), None)
+            es = next((x for x in us_items if x["symbol"] == "ES=F"), None)
+            ndx = next((x for x in us_items if x["symbol"] == "^IXIC"), None)
+            nq = next((x for x in us_items if x["symbol"] == "NQ=F"), None)
+            dji = next((x for x in us_items if x["symbol"] == "^DJI"), None)
+
+            lines.append("• 🇺🇸 <b>US & Futures:</b>")
+            if spx and es:
+                s_sign = "+" if spx["pct_change"] >= 0 else ""
+                e_sign = "+" if es["pct_change"] >= 0 else ""
+                lines.append(f"  - S&P 500: <code>{spx['ltp']:,.1f}</code> ({s_sign}{spx['pct_change']:.2f}%) | Fut: <code>{es['ltp']:,.1f}</code> ({e_sign}{es['pct_change']:.2f}%)")
+            elif spx:
+                s_sign = "+" if spx["pct_change"] >= 0 else ""
+                lines.append(f"  - S&P 500: <code>{spx['ltp']:,.1f}</code> ({s_sign}{spx['pct_change']:.2f}%)")
+
+            if ndx and nq:
+                n_sign = "+" if ndx["pct_change"] >= 0 else ""
+                q_sign = "+" if nq["pct_change"] >= 0 else ""
+                lines.append(f"  - Nasdaq : <code>{ndx['ltp']:,.1f}</code> ({n_sign}{ndx['pct_change']:.2f}%) | Fut: <code>{nq['ltp']:,.1f}</code> ({q_sign}{nq['pct_change']:.2f}%)")
+            elif ndx:
+                n_sign = "+" if ndx["pct_change"] >= 0 else ""
+                lines.append(f"  - Nasdaq : <code>{ndx['ltp']:,.1f}</code> ({n_sign}{ndx['pct_change']:.2f}%)")
+
+            if dji:
+                d_sign = "+" if dji["pct_change"] >= 0 else ""
+                lines.append(f"  - Dow Jones: <code>{dji['ltp']:,.1f}</code> ({d_sign}{dji['pct_change']:.2f}%)")
+
+        # Europe
+        eu_items = gm.get("europe", [])
+        if eu_items:
+            lines.append("• 🇪🇺 <b>Europe:</b>")
+            dax = next((x for x in eu_items if x["symbol"] == "^GDAXI"), None)
+            ftse = next((x for x in eu_items if x["symbol"] == "^FTSE"), None)
+            cac = next((x for x in eu_items if x["symbol"] == "^FCHI"), None)
+            stoxx = next((x for x in eu_items if x["symbol"] == "^STOXX50E"), None)
+            if dax and ftse:
+                d_sign = "+" if dax["pct_change"] >= 0 else ""
+                f_sign = "+" if ftse["pct_change"] >= 0 else ""
+                lines.append(f"  - DAX: <code>{dax['ltp']:,.1f}</code> ({d_sign}{dax['pct_change']:.2f}%) | FTSE: <code>{ftse['ltp']:,.1f}</code> ({f_sign}{ftse['pct_change']:.2f}%)")
+            if cac and stoxx:
+                c_sign = "+" if cac["pct_change"] >= 0 else ""
+                s_sign = "+" if stoxx["pct_change"] >= 0 else ""
+                lines.append(f"  - CAC 40: <code>{cac['ltp']:,.1f}</code> ({c_sign}{cac['pct_change']:.2f}%) | Stoxx 50: <code>{stoxx['ltp']:,.1f}</code> ({s_sign}{stoxx['pct_change']:.2f}%)")
+
+        # Asia & ASEAN
+        asia_items = gm.get("asia_asean", [])
+        if asia_items:
+            lines.append("• 🌏 <b>Asia & ASEAN:</b>")
+            n225 = next((x for x in asia_items if x["symbol"] == "^N225"), None)
+            hsi = next((x for x in asia_items if x["symbol"] == "^HSI"), None)
+            sti = next((x for x in asia_items if x["symbol"] == "^STI"), None)
+            ks11 = next((x for x in asia_items if x["symbol"] == "^KS11"), None)
+            jkse = next((x for x in asia_items if x["symbol"] == "^JKSE"), None)
+            klse = next((x for x in asia_items if x["symbol"] == "^KLSE"), None)
+
+            if n225 and hsi:
+                n_sign = "+" if n225["pct_change"] >= 0 else ""
+                h_sign = "+" if hsi["pct_change"] >= 0 else ""
+                lines.append(f"  - Nikkei: <code>{n225['ltp']:,.1f}</code> ({n_sign}{n225['pct_change']:.2f}%) | Hang Seng: <code>{hsi['ltp']:,.1f}</code> ({h_sign}{hsi['pct_change']:.2f}%)")
+            if sti and ks11:
+                st_sign = "+" if sti["pct_change"] >= 0 else ""
+                k_sign = "+" if ks11["pct_change"] >= 0 else ""
+                lines.append(f"  - Straits Times (SG): <code>{sti['ltp']:,.1f}</code> ({st_sign}{sti['pct_change']:.2f}%) | Kospi: <code>{ks11['ltp']:,.1f}</code> ({k_sign}{ks11['pct_change']:.2f}%)")
+            if jkse and klse:
+                j_sign = "+" if jkse["pct_change"] >= 0 else ""
+                m_sign = "+" if klse["pct_change"] >= 0 else ""
+                lines.append(f"  - Jakarta (ID): <code>{jkse['ltp']:,.1f}</code> ({j_sign}{jkse['pct_change']:.2f}%) | KLCI (MY): <code>{klse['ltp']:,.1f}</code> ({m_sign}{klse['pct_change']:.2f}%)")
+        lines.append("")
+
+    lines.extend([
         "🛡️ <b>MANDATORY RISK MATRIX:</b>",
         f"• 📈 <b>Swing Risk</b>   : <b>₹{swing_risk:,}</b> / trade (<b>{swing_mult}%</b> Risk Alloc)",
         f"• ⚡ <b>Intra Scalp</b>  : <b>₹{intra_risk:,}</b> / trade (Max Cap: <b>₹{intra_loss:,}</b>)",
         f"• 🎯 <b>Max Open Intra</b>: <b>{intra_max} trades max</b> (Flat by 15:15 IST)",
         ""
-    ]
+    ])
 
     gainers = data.get("top_gainers", [])
     if gainers:
@@ -667,6 +865,9 @@ def main():
     print(f"📊 Adv/Dec : {breadth['advancers']} Adv | {breadth['decliners']} Dec (Ratio: {breadth['ad_ratio']:.2f})")
     print(f"🚀 Thrust  : +4% Up: {breadth['up_4_count']} | -4% Down: {breadth['dn_4_count']} (Net: {breadth['net_thrust']:+d})")
     print(f"🚦 Signal  : {breadth['signal_badge']}")
+    gm = breadth.get("global_markets", {})
+    if gm:
+        print(f"🌐 Global  : {gm.get('bias_badge', 'NEUTRAL')} (US Fut: {gm.get('us_futures_avg', 0.0):+.2f}%)")
     print(f"📢 Guidance: {breadth['guidance']}")
     print(f"🛡️ Risk    : Swing ₹{breadth['risk_matrix']['swing_risk_per_trade']:,} | Intra ₹{breadth['risk_matrix']['intraday_risk_per_trade']:,}")
 
