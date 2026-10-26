@@ -3152,6 +3152,49 @@
         }).join('');
       }
 
+      // Global Markets Telemetry (US, Europe, Asia / ASEAN)
+      const gm = (window.CURRENT_MARKET_REGIME && window.CURRENT_MARKET_REGIME.global_markets) || (sa.global_markets || null);
+      let globalHtml = '';
+      if (gm && (gm.us || gm.europe || gm.asia_asean)) {
+        const renderList = (items) => {
+          if (!items || !items.length) return '<div style="color:#64748b; font-size:11px;">Awaiting telemetry...</div>';
+          return items.map(it => {
+            const sign = it.pct_change >= 0 ? '+' : '';
+            const col = it.pct_change >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            return `
+              <div class="sa-index-row">
+                <span style="font-weight:600; color:#cbd5e1;">${it.display || it.name}</span>
+                <span>${Number(it.ltp).toLocaleString('en-US', {minimumFractionDigits:1, maximumFractionDigits:1})}</span>
+                <span style="color:${col}; font-weight:800; font-family:var(--font-mono);">${sign}${it.pct_change.toFixed(2)}%</span>
+              </div>
+            `;
+          }).join('');
+        };
+
+        globalHtml = `
+          <div style="margin-top:10px; background:#0b111e; border:1px solid #1e293b; border-radius:8px; padding:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #1e293b; padding-bottom:6px;">
+              <span style="font-size:12px; font-weight:800; color:#38bdf8;">🌐 Global Markets Sentiment (US / Europe / ASEAN)</span>
+              <span style="font-size:11px; font-weight:700; color:#f8fafc;">${gm.bias_badge || '⚪ NEUTRAL'}</span>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+              <div>
+                <div style="font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:6px;">🇺🇸 US &amp; 24h Futures</div>
+                ${renderList(gm.us)}
+              </div>
+              <div>
+                <div style="font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:6px;">🇪🇺 European Major</div>
+                ${renderList(gm.europe)}
+              </div>
+              <div>
+                <div style="font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:6px;">🌏 Asia &amp; ASEAN Peers</div>
+                ${renderList(gm.asia_asean)}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
       viewDash.innerHTML = `
         <!-- Mandate Headline -->
         <div class="sa-mandate-card" style="border-color:${mandateBorder}; background:linear-gradient(135deg, ${mandateBg} 0%, rgba(15,23,42,0.85) 100%);">
@@ -3230,6 +3273,9 @@
             ${secHtml}
           </div>
         </div>
+
+        <!-- Global Markets Sentiment (US / Europe / ASEAN) -->
+        ${globalHtml}
 
         <!-- Tactical Playbook & Orders Box -->
         <div class="sa-orders-card">
