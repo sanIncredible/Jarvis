@@ -1,263 +1,263 @@
 {
-  "updated_at": "2026-10-24 16:56:41 IST",
-  "date": "22-Oct-2026",
-  "bias": "\ud83d\udd34 Mild Bearish Bias (-0.39%)",
-  "nifty_ltp": 22600.0,
-  "nifty_chg_pct": -0.386333533882978,
-  "advances": 0,
-  "declines": 10,
-  "top_sector": "Nifty IT",
-  "worst_sector": "Nifty Metal",
+  "updated_at": "2026-10-26 21:41:19 IST",
+  "date": "26-Oct-2026",
+  "bias": "\ud83d\udfe2 Strong Bullish Gap-Up (+0.68%)",
+  "nifty_ltp": 22753.2,
+  "nifty_chg_pct": 0.6778761061946935,
+  "advances": 10,
+  "declines": 0,
+  "top_sector": "Nifty Metal",
+  "worst_sector": "Nifty FMCG",
   "benchmarks": [
     {
       "name": "Nifty 50",
       "category": "Benchmark",
-      "ltp": 22600.0,
-      "prev_close": 22687.65,
-      "change": -87.65000000000146,
-      "change_pct": -0.386333533882978,
+      "ltp": 22753.2,
+      "prev_close": 22600.0,
+      "change": 153.20000000000073,
+      "change_pct": 0.6778761061946935,
       "source": "Yahoo"
     },
     {
       "name": "Nifty Bank",
       "category": "Benchmark",
-      "ltp": 54287.35,
-      "prev_close": 54925.7,
-      "change": -638.3499999999985,
-      "change_pct": -1.1622063988260478,
+      "ltp": 54366.7,
+      "prev_close": 54287.35,
+      "change": 79.34999999999854,
+      "change_pct": 0.14616664839967056,
       "source": "Yahoo"
     },
     {
       "name": "Nifty Midcap 100",
       "category": "Market Cap",
-      "ltp": 21427.6,
-      "prev_close": 21696.55,
-      "change": -268.9500000000007,
-      "change_pct": -1.239598000603786,
+      "ltp": 21608.75,
+      "prev_close": 21427.6,
+      "change": 181.15000000000146,
+      "change_pct": 0.8454049916929637,
       "source": "Yahoo"
     }
   ],
   "sectorals": [
     {
-      "name": "Nifty IT",
+      "name": "Nifty Metal",
       "category": "Sectoral",
-      "ltp": 31995.5,
-      "prev_close": 32081.25,
-      "change": -85.75,
-      "change_pct": -0.26729008377167346,
-      "source": "Yahoo"
-    },
-    {
-      "name": "Nifty Auto",
-      "category": "Sectoral",
-      "ltp": 24862.3,
-      "prev_close": 25011.5,
-      "change": -149.20000000000073,
-      "change_pct": -0.5965255982248195,
-      "source": "Yahoo"
-    },
-    {
-      "name": "Nifty FMCG",
-      "category": "Sectoral",
-      "ltp": 42680.7,
-      "prev_close": 43105.45,
-      "change": -424.75,
-      "change_pct": -0.9853742392203306,
+      "ltp": 11731.55,
+      "prev_close": 11478.2,
+      "change": 253.34999999999854,
+      "change_pct": 2.2072276140858196,
       "source": "Yahoo"
     },
     {
       "name": "Nifty Pharma",
       "category": "Sectoral",
-      "ltp": 25329.45,
-      "prev_close": 25596.65,
-      "change": -267.2000000000007,
-      "change_pct": -1.0438866023483568,
+      "ltp": 25774.25,
+      "prev_close": 25329.45,
+      "change": 444.7999999999993,
+      "change_pct": 1.756058658991803,
       "source": "Yahoo"
     },
     {
       "name": "Nifty Energy",
       "category": "Sectoral",
-      "ltp": 34520.05,
-      "prev_close": 35101.45,
-      "change": -581.3999999999942,
-      "change_pct": -1.6563418320325634,
+      "ltp": 35022.35,
+      "prev_close": 34520.05,
+      "change": 502.29999999999563,
+      "change_pct": 1.455096386013333,
+      "source": "Yahoo"
+    },
+    {
+      "name": "Nifty IT",
+      "category": "Sectoral",
+      "ltp": 32273.05,
+      "prev_close": 31995.5,
+      "change": 277.5499999999993,
+      "change_pct": 0.8674657373693153,
       "source": "Yahoo"
     },
     {
       "name": "Nifty Realty",
       "category": "Sectoral",
-      "ltp": 784.35,
-      "prev_close": 803.45,
-      "change": -19.100000000000023,
-      "change_pct": -2.3772481174933127,
+      "ltp": 789.7,
+      "prev_close": 784.35,
+      "change": 5.350000000000023,
+      "change_pct": 0.6820934531777934,
       "source": "Yahoo"
     },
     {
-      "name": "Nifty Metal",
+      "name": "Nifty Auto",
       "category": "Sectoral",
-      "ltp": 11478.2,
-      "prev_close": 11798.35,
-      "change": -320.14999999999964,
-      "change_pct": -2.713515025406092,
+      "ltp": 24970.75,
+      "prev_close": 24862.3,
+      "change": 108.45000000000073,
+      "change_pct": 0.4362026039425183,
+      "source": "Yahoo"
+    },
+    {
+      "name": "Nifty FMCG",
+      "category": "Sectoral",
+      "ltp": 42800.75,
+      "prev_close": 42680.7,
+      "change": 120.05000000000291,
+      "change_pct": 0.28127467450159654,
       "source": "Yahoo"
     }
   ],
   "bonde_breadth": {
-    "row_idx": 5646,
-    "date": "22-Oct-2026",
-    "universe": 2505,
-    "nifty_chg": -0.5452305549494861,
-    "up_4_cnt": 68,
-    "up_4_pct": 2.714570858283433,
-    "dn_4_cnt": 265,
-    "dn_4_pct": 10.578842315369261,
-    "net_breadth": -7.864271457085829,
-    "ratio_5d": 0.3014927297569303,
-    "ratio_10d": 0.5426937103141274,
-    "above_vol_pct": 12.295409181636726,
-    "below_vol_pct": 31.616766467065872,
-    "vol_ratio": 0.38888888888888884,
-    "range_lt3_pct": 25.788423153692612,
-    "range_gt5_pct": 36.287425149700596,
-    "volatility": 1.4071207430340558,
-    "close_uh_pct": 35.42354235423543,
-    "close_lh_pct": 64.57645764576458,
-    "uh_lh_ratio": -29.15291529152916,
-    "bo_sustained": 39.52095808383233,
-    "bo_failure": 60.47904191616767,
-    "bo_sf_ratio": 0.6534653465346535,
-    "bd_sustained": 66.5648854961832,
-    "bd_failure": 33.43511450381679,
-    "bd_sf_ratio": 1.9908675799086757,
-    "nh_cnt": 12,
-    "nh_pct": 0.47904191616766467,
-    "nl_cnt": 351,
-    "nl_pct": 14.011976047904193,
-    "net_nh_nl": -13.532934131736528,
-    "net_15_hl": -30.29940119760479,
-    "net_30_hl": -9.141716566866265,
+    "row_idx": 5648,
+    "date": "26-Oct-2026",
+    "universe": 2519,
+    "nifty_chg": 0.6733118858006817,
+    "up_4_cnt": 250,
+    "up_4_pct": 9.924573243350537,
+    "dn_4_cnt": 165,
+    "dn_4_pct": 6.550218340611353,
+    "net_breadth": 3.3743549027391824,
+    "ratio_5d": 0.23965006364144234,
+    "ratio_10d": 0.5281556771002682,
+    "above_vol_pct": 12.74315204446209,
+    "below_vol_pct": 31.480746327907898,
+    "vol_ratio": 0.40479192938209335,
+    "range_lt3_pct": 16.157205240174672,
+    "range_gt5_pct": 44.73997618102422,
+    "volatility": 2.769041769041769,
+    "close_uh_pct": 58.118899733806565,
+    "close_lh_pct": 41.881100266193435,
+    "uh_lh_ratio": 16.237799467613122,
+    "bo_sustained": 55.1145038167939,
+    "bo_failure": 44.88549618320611,
+    "bo_sf_ratio": 1.2278911564625852,
+    "bd_sustained": 45.850622406639005,
+    "bd_failure": 54.149377593361,
+    "bd_sf_ratio": 0.846743295019157,
+    "nh_cnt": 13,
+    "nh_pct": 0.5160778086542279,
+    "nl_cnt": 350,
+    "nl_pct": 13.89440254069075,
+    "net_nh_nl": -13.378324732036523,
+    "net_15_hl": -35.80786026200873,
+    "net_30_hl": -16.91147280666931,
     "sectoral_5d_roc": {
       "ranking": [
         {
           "sector": "IT",
-          "roc_5d_pct": 6.33
-        },
-        {
-          "sector": "SERVICES",
-          "roc_5d_pct": 1.84
+          "roc_5d_pct": 1.09
         },
         {
           "sector": "PSU BANK",
-          "roc_5d_pct": 1.1
-        },
-        {
-          "sector": "INFRA",
-          "roc_5d_pct": 0.14
+          "roc_5d_pct": -0.01
         },
         {
           "sector": "PHARMA",
-          "roc_5d_pct": -0.55
+          "roc_5d_pct": -0.03
         },
         {
-          "sector": "AUTO",
-          "roc_5d_pct": -0.58
+          "sector": "INFRA",
+          "roc_5d_pct": -0.74
         },
         {
-          "sector": "BANK",
-          "roc_5d_pct": -0.71
+          "sector": "SERVICES",
+          "roc_5d_pct": -1.05
         },
         {
           "sector": "COMMODITIES",
-          "roc_5d_pct": -1.04
-        },
-        {
-          "sector": "PVT BANK",
-          "roc_5d_pct": -1.11
-        },
-        {
-          "sector": "FIN SERV",
-          "roc_5d_pct": -1.17
+          "roc_5d_pct": -1.83
         },
         {
           "sector": "CONSUMPTION",
-          "roc_5d_pct": -1.44
-        },
-        {
-          "sector": "METAL",
-          "roc_5d_pct": -1.74
-        },
-        {
-          "sector": "REALTY",
-          "roc_5d_pct": -2.35
-        },
-        {
-          "sector": "PSE",
-          "roc_5d_pct": -2.66
+          "roc_5d_pct": -2.26
         },
         {
           "sector": "CPSE",
-          "roc_5d_pct": -2.72
+          "roc_5d_pct": -2.46
         },
         {
-          "sector": "MEDIA",
-          "roc_5d_pct": -3.46
+          "sector": "BANK",
+          "roc_5d_pct": -2.65
+        },
+        {
+          "sector": "PSE",
+          "roc_5d_pct": -2.84
+        },
+        {
+          "sector": "AUTO",
+          "roc_5d_pct": -3.1
+        },
+        {
+          "sector": "PVT BANK",
+          "roc_5d_pct": -3.16
         },
         {
           "sector": "ENERGY",
-          "roc_5d_pct": -3.84
+          "roc_5d_pct": -3.23
+        },
+        {
+          "sector": "METAL",
+          "roc_5d_pct": -3.31
+        },
+        {
+          "sector": "FIN SERV",
+          "roc_5d_pct": -3.67
         },
         {
           "sector": "FMCG",
-          "roc_5d_pct": -4.78
+          "roc_5d_pct": -4.07
+        },
+        {
+          "sector": "REALTY",
+          "roc_5d_pct": -4.39
         },
         {
           "sector": "MNC",
-          "roc_5d_pct": -5.35
+          "roc_5d_pct": -5.32
+        },
+        {
+          "sector": "MEDIA",
+          "roc_5d_pct": -5.47
         }
       ],
       "top_3": [
         {
           "sector": "IT",
-          "roc_5d_pct": 6.33
-        },
-        {
-          "sector": "SERVICES",
-          "roc_5d_pct": 1.84
+          "roc_5d_pct": 1.09
         },
         {
           "sector": "PSU BANK",
-          "roc_5d_pct": 1.1
+          "roc_5d_pct": -0.01
+        },
+        {
+          "sector": "PHARMA",
+          "roc_5d_pct": -0.03
         }
       ],
       "bottom_3": [
         {
-          "sector": "ENERGY",
-          "roc_5d_pct": -3.84
-        },
-        {
-          "sector": "FMCG",
-          "roc_5d_pct": -4.78
+          "sector": "REALTY",
+          "roc_5d_pct": -4.39
         },
         {
           "sector": "MNC",
-          "roc_5d_pct": -5.35
+          "roc_5d_pct": -5.32
+        },
+        {
+          "sector": "MEDIA",
+          "roc_5d_pct": -5.47
         }
       ]
     },
-    "state_code": "WASHOUT_CONT",
-    "state_label": "\ud83d\udd34 WASHOUT CONTINUATION",
-    "state_action": "Sellers exhausting after climax. Sit in cash (0% allocation). Watch for Day-1 Ignition spark.",
+    "state_code": "DEFENSIVE",
+    "state_label": "\ud83d\udd34 DEFENSIVE / CASH IS KING",
+    "state_action": "Downtrend active (5D ratio &lt; 1.0). Zero fresh breakouts. Protect capital.",
     "allocation_pct": 0,
-    "trajectory_context": "Selling Climax occurred on 21-Oct-2026 (630 stocks crashed 4%). Yesterday selling contracted to 265.",
+    "trajectory_context": "Selling Climax occurred on 23-Oct-2026 (677 stocks crashed 4%). Yesterday selling contracted to 165.",
     "ignition_trigger": "Watch for Day-1 Ignition trigger: 4% Gainers &gt; 150 &amp; 4% Losers &lt; 80.",
-    "tactical_rule": "Zero fresh breakouts. Wait for the Day-1 Ignition spark before deploying any capital.",
-    "washout_status": "\ud83d\udd34 ACTIVE (Peak 630 on 21-Oct-2026; now 265)",
+    "tactical_rule": "Cash preservation mode. Avoid buying breakouts. Trailing stops tightened.",
+    "washout_status": "\ud83d\udd34 ACTIVE (Peak 677 on 23-Oct-2026; now 165)",
     "ignition_status": "\u26aa ARMED (Watching for &gt;150 Up / &lt;80 Down)",
-    "froth_status": "\u26aa QUIET (5D Ratio 0.30 \u2014 No froth)",
+    "froth_status": "\u26aa QUIET (5D Ratio 0.24 \u2014 No froth)",
     "mandate_headline": "\ud83d\uded1 SIT ON HANDS / HOLD CASH",
     "action_intra": "\ud83d\udfe1 <i>Permitted with Caution</i> (Quick 3m ORB scalps only on RS leaders; strictly square off before 03:15 PM; zero overnight hold).",
     "action_swing": "\u26d4 <b>DO NOT START NEW SWING TRADES</b> (Regime is Defensive / Washout. Wait for Day-1 Ignition confirmation spark).",
     "action_positional": "\u23f8\ufe0f <b>PAUSED / PROTECT CAPITAL</b> (Market structure broken; wait for breadth to base)."
   },
-  "telegram_msg_html": "\u26a1 <b>JARVIS PRE-OPEN SITUATIONAL AWARENESS</b>\n\ud83d\udcc5 <code>24 Oct 2026 | 16:56 IST</code> (Pre-Market Pulse)\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\ud83c\udfaf <b>Indicative Bias:</b> \ud83d\udd34 Mild Bearish Bias (-0.39%)\n\ud83d\udcca <b>Top 10 Indices Breadth:</b> \ud83d\udfe2 0 Adv | \ud83d\udd34 10 Dec\n\n\ud83d\udcca <b>CHHIRAG KEDIA'S MARKET BREADTH MONITOR</b>\n<i>(Stockbee / Pradeep Bonde Situational Awareness)</i>\n\ud83d\udea6 <b>Bonde Market State:</b> <b>\ud83d\udd34 WASHOUT CONTINUATION</b>\n\ud83d\udcbc <b>Swing Capital Allocation:</b> <b>0% Risk</b>\n\ud83c\udfaf <b>Action:</b> Sellers exhausting after climax. Sit in cash (0% allocation). Watch for Day-1 Ignition spark.\n\ud83d\udcc8 <b>Trajectory:</b> Selling Climax occurred on 21-Oct-2026 (630 stocks crashed 4%). Yesterday selling contracted to 265.\n\n\ud83d\udee1\ufe0f <b>BONDE DETECTOR SIGNALS:</b>\n\u2022 <b>Washout Climax:</b> \ud83d\udd34 ACTIVE (Peak 630 on 21-Oct-2026; now 265)\n\u2022 <b>Ignition Spark:</b> \u26aa ARMED (Watching for &gt;150 Up / &lt;80 Down)\n\u2022 <b>Froth Exhaustion:</b> \u26aa QUIET (5D Ratio 0.30 \u2014 No froth)\n\ud83d\udd14 <b>Turning Trigger:</b> <code>Watch for Day-1 Ignition trigger: 4% Gainers &gt; 150 &amp; 4% Losers &lt; 80.</code>\n\n\ud83d\udccb <b>LAST SESSION ROW METRICS (22-Oct-2026 | Row #5646):</b>\n\u2022 <b>4% Thrust:</b> \ud83d\udfe2 68 Up (2.7%) | \ud83d\udd34 265 Down (10.6%)\n\u2022 <b>Net 4% Breadth:</b> <code>-7.86%</code> \ud83d\udd34 Negative\n\u2022 <b>Ratios:</b> 5-Day: <b>0.30</b> | 10-Day: <b>0.54</b>\n\u2022 <b>52W NH vs NL:</b> 12 Highs (0.5%) | 351 Lows (14.0%)\n\u2022 <b>Net NH-NL:</b> <code>-13.53%</code> | <b>Net 15% H-L:</b> <code>-30.30%</code>\n\u2022 <b>Breakout Quality:</b> 39.5% Sustained | <b>60.5% Failed</b> (S/F: 0.65)\n\u2022 <b>Breakdown Quality:</b> 66.6% Sustained | 33.4% Failed (S/F: 1.99)\n\u2022 <b>Close UH/LH:</b> 35.4% Upper | 64.6% Lower (UH/LH: -29.2%)\n\n\ud83c\udfc6 <b>5-DAY SECTORAL LEADERS (Kedia 5D ROC Clumping):</b>\n\u2022 \ud83e\udd47 <b>IT:</b> <code>+6.33%</code> \ud83d\ude80\n\u2022 \ud83e\udd48 <b>SERVICES:</b> <code>+1.84%</code> \ud83d\udfe2\n\u2022 \ud83e\udd49 <b>PSU BANK:</b> <code>+1.10%</code> \ud83d\udfe2\n\u2022 \ud83d\udd3b <b>Laggards:</b> ENERGY (-3.84%) | FMCG (-4.78%) | MNC (-5.35%)\n\u2022 \ud83d\udca1 <b>Sector Theme Mandate:</b> Institutional accumulation active in <b>IT and SERVICES</b>. Prioritize watchlist breakout setups strictly in these sectors; avoid laggards.\n\ud83c\udfdb <b>BENCHMARK &amp; MARKET CAP INDICES:</b>\n\u2022 <b>Nifty 50</b>: \u20b922,600.00 (-87.65 | -0.39%) \ud83d\udd34\n\u2022 <b>Nifty Bank</b>: \u20b954,287.35 (-638.35 | -1.16%) \ud83d\udd34\n\u2022 <b>Nifty Midcap 100</b>: \u20b921,427.60 (-268.95 | -1.24%) \ud83d\udd34\n\n\ud83c\udfed <b>SECTORAL RELATIVE STRENGTH:</b>\n\u2022 <b>Nifty IT</b>: -0.27% \ud83d\udd34\n\u2022 <b>Nifty Auto</b>: -0.60% \ud83d\udd34\n\u2022 <b>Nifty FMCG</b>: -0.99% \ud83d\udd34\n\u2022 <b>Nifty Pharma</b>: -1.04% \ud83d\udd34\n\u2022 <b>Nifty Energy</b>: -1.66% \ud83d\udd34\n\u2022 <b>Nifty Realty</b>: -2.38% \ud83d\udd34\n\u2022 <b>Nifty Metal</b>: -2.71% \ud83d\udd34 \u26a0\ufe0f <i>[Lagging]</i>\n\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\ud83c\udfaf <b>EXECUTIVE ACTION ORDER (WHAT TO DO TODAY):</b>\n\u2022 <b>Mandate:</b> <b>\ud83d\uded1 SIT ON HANDS / HOLD CASH</b>\n\u2022 <b>Intraday (09:15-15:15):</b> \ud83d\udfe1 <i>Permitted with Caution</i> (Quick 3m ORB scalps only on RS leaders; strictly square off before 03:15 PM; zero overnight hold).\n\u2022 <b>Swing (1-10 Days):</b> \u26d4 <b>DO NOT START NEW SWING TRADES</b> (Regime is Defensive / Washout. Wait for Day-1 Ignition confirmation spark).\n\u2022 <b>Positional (Weeks):</b> \u23f8\ufe0f <b>PAUSED / PROTECT CAPITAL</b> (Market structure broken; wait for breadth to base).\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\ud83d\udca1 <b>TACTICAL PLAYBOOK (09:15 AM BELL):</b>\n\u2022 <b>Bonde Playbook:</b> Zero fresh breakouts. Wait for the Day-1 Ignition spark before deploying any capital.\n\u2022 <b>Rotation:</b> Focus intraday long candidates in <b>Nifty IT</b> (-0.27%). Avoid laggards in <b>Nifty Metal</b>.\n\u2022 <b>Index Guidance:</b> Defensive open. Be selective with long breakouts; demand Strong Start or strong sector backing.\n\u2022 <b>Scanner Status:</b> \ud83d\udfe2 Ready (25 stocks loaded for 3m ORB). First candle completes at <b>09:18 AM</b>.\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\ud83d\udcca <a href='https://sanincredible.github.io/Jarvis/'>Open Live 3M Terminal Dashboard</a>"
+  "telegram_msg_html": "\u26a1 <b>JARVIS PRE-OPEN SITUATIONAL AWARENESS</b>\n\ud83d\udcc5 <code>26 Oct 2026 | 21:41 IST</code> (Pre-Market Pulse)\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\ud83c\udfaf <b>EXECUTIVE REGIME &amp; INDICATIVE BIAS:</b>\n<pre>\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 METRIC           \u2502 STATUS / VALUE    \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 Market State     \u2502 DEFENSIVE / CASH  \u2502\n\u2502 Swing Risk Alloc \u2502 0% Risk           \u2502\n\u2502 Indicative Bias  \u2502 Bull Gap (+0.68%) \u2502\n\u2502 Indices (A : D)  \u2502 10 Adv : 0 Dec    \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n</pre>\n\n\ud83d\udee1\ufe0f <b>BONDE DETECTOR SIGNALS &amp; TRIGGERS:</b>\n<pre>\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 DETECTOR PULSE   \u2502 STATUS / TRIGGER  \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 Washout Climax   \u2502 ACTIVE (Selling)  \u2502\n\u2502 Ignition Spark   \u2502 ARMED (&gt;150u/&lt;80d \u2502\n\u2502 Froth Exhaust    \u2502 QUIET (5D:0.24)   \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n</pre>\n\ud83d\udd14 <b>Turning Trigger:</b> <code>Watch for Day-1 Ignition trigger: 4% Gainers &gt; 150 &amp; 4% Losers &lt; 80.</code>\n\n\ud83d\udccb <b>LAST SESSION BREADTH &amp; QUALITY (26-Oct-2026 | #5648):</b>\n<pre>\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 METRIC         \u2502      BULL \u2502      BEAR \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 4% Thrust      \u2502  250(10%) \u2502   165(7%) \u2502\n\u2502 52W High / Low \u2502    13(1%) \u2502  350(14%) \u2502\n\u2502 Breakout Qual  \u2502   55% Sus \u2502  45% Fail \u2502\n\u2502 Breakdown Qual \u2502   46% Sus \u2502  54% Fail \u2502\n\u2502 Close UH vs LH \u2502    58% UH \u2502    42% LH \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n</pre>\n<pre>\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 KEY RATIO      \u2502       VALUE \u2502  STATE   \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 Net 4% Breadth \u2502      +3.37% \u2502   BULL   \u2502\n\u2502 5D / 10D Ratio \u2502 0.24 / 0.53 \u2502  PULSE   \u2502\n\u2502 Net 52W NH-NL  \u2502     -13.38% \u2502 CONTRACT \u2502\n\u2502 Volume Ratio   \u2502       0.40x \u2502  NORMAL  \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n</pre>\n\n\ud83c\udfc6 <b>5-DAY SECTORAL LEADERS (Kedia 5D ROC Clumping):</b>\n<pre>\n\u250c\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  RK \u2502 SECTOR (5D ROC)     \u2502    RETURN \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502  1  \u2502 IT                  \u2502    +1.09% \u2502\n\u2502  2  \u2502 PSU BANK            \u2502    -0.01% \u2502\n\u2502  3  \u2502 PHARMA              \u2502    -0.03% \u2502\n\u2502  L  \u2502 REALTY              \u2502    -4.39% \u2502\n\u2502  L  \u2502 MNC                 \u2502    -5.32% \u2502\n\u2502  L  \u2502 MEDIA               \u2502    -5.47% \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n</pre>\n\ud83d\udca1 <b>Sector Mandate:</b> Institutional accumulation active in <b>IT and PSU BANK</b>. Prioritize watchlist breakout setups strictly in these sectors; avoid laggards.\n\n\ud83c\udfdb <b>BENCHMARKS &amp; SECTORAL MOMENTUM:</b>\n<pre>\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 INDEX / SECTOR  \u2502   LTP (\u20b9) \u2502   CHG % \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 Nifty 50        \u2502  22,753.2 \u2502  +0.68% \u2502\n\u2502 Nifty Bank      \u2502  54,366.7 \u2502  +0.15% \u2502\n\u2502 Nifty Midcap 10 \u2502  21,608.8 \u2502  +0.85% \u2502\n\u2502 Nifty Metal*    \u2502  11,731.5 \u2502  +2.21% \u2502\n\u2502 Nifty Pharma    \u2502  25,774.2 \u2502  +1.76% \u2502\n\u2502 Nifty Energy    \u2502  35,022.3 \u2502  +1.46% \u2502\n\u2502 Nifty IT        \u2502  32,273.0 \u2502  +0.87% \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n</pre>\n\u2022 <i>*Leader: Nifty Metal (+2.21%) | !Laggard: Nifty FMCG (+0.28%)</i>\n\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\ud83c\udfaf <b>EXECUTIVE ACTION ORDER (WHAT TO DO TODAY):</b>\n\u2022 <b>Mandate:</b> <b>\ud83d\uded1 SIT ON HANDS / HOLD CASH</b>\n\u2022 <b>Intraday (09:15-15:15):</b> \ud83d\udfe1 <i>Permitted with Caution</i> (Quick 3m ORB scalps only on RS leaders; strictly square off before 03:15 PM; zero overnight hold).\n\u2022 <b>Swing (1-10 Days):</b> \u26d4 <b>DO NOT START NEW SWING TRADES</b> (Regime is Defensive / Washout. Wait for Day-1 Ignition confirmation spark).\n\u2022 <b>Positional (Weeks):</b> \u23f8\ufe0f <b>PAUSED / PROTECT CAPITAL</b> (Market structure broken; wait for breadth to base).\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\ud83d\udca1 <b>TACTICAL PLAYBOOK (09:15 AM BELL):</b>\n\u2022 <b>Bonde Playbook:</b> Cash preservation mode. Avoid buying breakouts. Trailing stops tightened.\n\u2022 <b>Rotation:</b> Focus intraday long candidates in <b>Nifty Metal</b> (+2.21%). Avoid laggards in <b>Nifty FMCG</b>.\n\u2022 <b>Index Guidance:</b> Expect early momentum. Guard against chasing overextension; buy deep pullbacks to 10 EMA.\n\u2022 <b>Scanner Status:</b> \ud83d\udfe2 Ready (25 stocks loaded for 3m ORB). First candle completes at <b>09:18 AM</b>.\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\ud83d\udcca <a href='https://sanincredible.github.io/Jarvis/'>Open Live 3M Terminal Dashboard</a>"
 }
