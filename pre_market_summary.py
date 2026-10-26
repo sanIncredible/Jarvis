@@ -17,6 +17,7 @@ import os
 import sys
 import json
 import time
+import html
 import urllib.request
 import urllib.parse
 from datetime import datetime, date, timedelta
@@ -576,6 +577,38 @@ def get_watchlist_count() -> int:
         return 0
 
 
+def make_box_table(rows: List[List[Any]], headers: List[str], col_widths: List[int], aligns: Optional[List[str]] = None) -> str:
+    """
+    Renders an exact monospaced Unicode box-drawing table for Telegram <pre> blocks.
+    Fits cleanly within mobile screens and terminal consoles (~38-40 chars wide).
+    Safely escapes HTML entities (<, >, &) so Telegram never rejects formatted text.
+    """
+    if aligns is None:
+        aligns = ['left'] * len(headers)
+    top = '┌' + '┬'.join('─' * (w + 2) for w in col_widths) + '┐'
+    sep = '├' + '┼'.join('─' * (w + 2) for w in col_widths) + '┤'
+    bot = '└' + '┴'.join('─' * (w + 2) for w in col_widths) + '┘'
+
+    def pad_cell(val: Any, w: int, a: str) -> str:
+        s = str(val)[:w]
+        if a == 'right':
+            raw = ' ' + s.rjust(w) + ' '
+        elif a == 'center':
+            raw = ' ' + s.center(w) + ' '
+        else:
+            raw = ' ' + s.ljust(w) + ' '
+        return html.escape(raw)
+
+    def render_row(vals: List[Any]) -> str:
+        return '│' + '│'.join(pad_cell(v, w, a) for v, w, a in zip(vals, col_widths, aligns)) + '│'
+
+    res = [top, render_row(headers), sep]
+    for r in rows:
+        res.append(render_row(r))
+    res.append(bot)
+    return '\n'.join(res)
+
+
 def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
     """
     Compiles situational awareness data, Bonde breadth metrics, and builds rich Telegram HTML alert message.
@@ -656,46 +689,101 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
     now_dt = datetime.now()
     now_str = now_dt.strftime("%d %b %Y | %H:%M IST")
 
-    # 7. Build Rich HTML Telegram Message
+    def clean_plain(txt: str) -> str:
+        """Strips leading emojis/bullets for clean monospaced table display."""
+        if not txt:
+            return ""
+        for pfx in ["🔴 ", "🟢 ", "⚪ ", "★ ", "⚠️ ", "• ", "🎯 ", "📊 ", "🚦 ", "💼 ", "📈 "]:
+            txt = txt.replace(pfx, "")
+        return txt.strip()
+
+    # 7. Build Structured Tabular Telegram Message
     lines = [
-        f"⚡ <b>JARVIS PRE-OPEN SITUATIONAL AWARENESS</b>",
+        "⚡ <b>JARVIS PRE-OPEN SITUATIONAL AWARENESS</b>",
         f"📅 <code>{now_str}</code> (Pre-Market Pulse)",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        f"🎯 <b>Indicative Bias:</b> {bias_label}",
-        f"📊 <b>Top 10 Indices Breadth:</b> 🟢 {advances} Adv | 🔴 {declines} Dec" + (f" | ⚪ {unchanged} Flat" if unchanged else ""),
+        "🎯 <b>EXECUTIVE REGIME &amp; INDICATIVE BIAS:</b>",
     ]
 
+    # Table 1: Regime & Indicative Bias
+    t1_rows = []
+    if bonde:
+        state_str = clean_plain(bonde.get('state_label', bonde.get('regime_label', 'NEUTRAL')))
+        t1_rows.append(["Market State", state_str[:17]])
+        t1_rows.append(["Swing Risk Alloc", f"{bonde.get('allocation_pct', 0)}% Risk"])
+    bias_type = "Bull Gap " if ("Bullish" in bias_label or nifty_chg_pct > 0.15) else ("Bear Gap " if ("Gap-Down" in bias_label or nifty_chg_pct < -0.15) else "Flat Open ")
+    bias_cell = f"{bias_type}({nifty_chg_pct:+.2f}%)"
+    t1_rows.append(["Indicative Bias", bias_cell[:17]])
+    t1_rows.append(["Indices (A : D)", f"{advances} Adv : {declines} Dec"])
     if preopen_data and preopen_data.get("advances") is not None and (preopen_data["advances"] + preopen_data["declines"]) > 0:
-        lines.append(f"🏛 <b>Nifty 50 Pre-Open Fills:</b> 🟢 {preopen_data['advances']} Adv | 🔴 {preopen_data['declines']} Dec")
+        t1_rows.append(["Nifty50 Pre-Open", f"{preopen_data['advances']} Adv : {preopen_data['declines']} Dec"])
+
+    lines.append("<pre>")
+    lines.append(make_box_table(t1_rows, ["METRIC", "STATUS / VALUE"], [16, 17], ["left", "left"]))
+    lines.append("</pre>")
 
     # Stockbee / Pradeep Bonde Market Breadth Section
     if bonde:
         lines.append("")
-        lines.append("📊 <b>CHHIRAG KEDIA'S MARKET BREADTH MONITOR</b>")
-        lines.append("<i>(Stockbee / Pradeep Bonde Situational Awareness)</i>")
-        lines.append(f"🚦 <b>Bonde Market State:</b> <b>{bonde.get('state_label', bonde.get('regime_label', ''))}</b>")
-        lines.append(f"💼 <b>Swing Capital Allocation:</b> <b>{bonde.get('allocation_pct', 0)}% Risk</b>")
-        lines.append(f"🎯 <b>Action:</b> {bonde.get('state_action', '')}")
-        lines.append(f"📈 <b>Trajectory:</b> {bonde.get('trajectory_context', '')}")
+        lines.append("🛡️ <b>BONDE DETECTOR SIGNALS &amp; TRIGGERS:</b>")
+        w_raw = bonde.get('washout_status', 'QUIET')
+        if "ACTIVE" in w_raw:
+            w_val = f"ACTIVE ({bonde.get('peak_dn4_count', 0)}->{bonde.get('dn_4_cnt', 0)})" if bonde.get('peak_dn4_count') else "ACTIVE (Selling)"
+        elif "TRIGGERED" in w_raw:
+            w_val = "TRIGGERED"
+        else:
+            w_val = "QUIET"
+
+        i_raw = bonde.get('ignition_status', 'STANDBY')
+        if "ARMED" in i_raw:
+            i_val = "ARMED (>150u/<80d)"
+        elif "FIRED" in i_raw or "CONFIRMED" in i_raw:
+            i_val = "FIRED (Day-1)"
+        else:
+            i_val = "STANDBY"
+
+        f_raw = bonde.get('froth_status', 'QUIET')
+        if "EXHAUSTION" in f_raw or "FROTH" in f_raw:
+            f_val = "FROTH ALERT"
+        else:
+            f_val = f"QUIET (5D:{bonde.get('ratio_5d', 0):.2f})"
+
+        t2_rows = [
+            ["Washout Climax", w_val[:17]],
+            ["Ignition Spark", i_val[:17]],
+            ["Froth Exhaust",  f_val[:17]],
+        ]
+        lines.append("<pre>")
+        lines.append(make_box_table(t2_rows, ["DETECTOR PULSE", "STATUS / TRIGGER"], [16, 17], ["left", "left"]))
+        lines.append("</pre>")
+        if bonde.get('ignition_trigger'):
+            lines.append(f"🔔 <b>Turning Trigger:</b> <code>{bonde['ignition_trigger']}</code>")
+
         lines.append("")
-        lines.append("🛡️ <b>BONDE DETECTOR SIGNALS:</b>")
-        lines.append(f"• <b>Washout Climax:</b> {bonde.get('washout_status', '⚪ QUIET')}")
-        lines.append(f"• <b>Ignition Spark:</b> {bonde.get('ignition_status', '⚪ STANDBY')}")
-        lines.append(f"• <b>Froth Exhaustion:</b> {bonde.get('froth_status', '⚪ QUIET')}")
-        lines.append(f"🔔 <b>Turning Trigger:</b> <code>{bonde.get('ignition_trigger', '')}</code>")
-        lines.append("")
-        lines.append(f"📋 <b>LAST SESSION ROW METRICS ({bonde['date']} | Row #{bonde['row_idx']}):</b>")
-        lines.append(f"• <b>4% Thrust:</b> 🟢 {bonde['up_4_cnt']} Up ({bonde['up_4_pct']:.1f}%) | 🔴 {bonde['dn_4_cnt']} Down ({bonde['dn_4_pct']:.1f}%)")
-        lines.append(f"• <b>Net 4% Breadth:</b> <code>{bonde['net_breadth']:+.2f}%</code> {'🟢 Positive' if bonde['net_breadth'] > 0 else '🔴 Negative'}")
-        lines.append(f"• <b>Ratios:</b> 5-Day: <b>{bonde['ratio_5d']:.2f}</b> | 10-Day: <b>{bonde['ratio_10d']:.2f}</b>")
-        lines.append(f"• <b>52W NH vs NL:</b> {bonde['nh_cnt']} Highs ({bonde['nh_pct']:.1f}%) | {bonde['nl_cnt']} Lows ({bonde['nl_pct']:.1f}%)")
-        lines.append(f"• <b>Net NH-NL:</b> <code>{bonde['net_nh_nl']:+.2f}%</code> | <b>Net 15% H-L:</b> <code>{bonde['net_15_hl']:+.2f}%</code>")
-        lines.append(f"• <b>Breakout Quality:</b> {bonde['bo_sustained']:.1f}% Sustained | <b>{bonde['bo_failure']:.1f}% Failed</b> (S/F: {bonde['bo_sf_ratio']:.2f})")
-        lines.append(f"• <b>Breakdown Quality:</b> {bonde['bd_sustained']:.1f}% Sustained | {bonde['bd_failure']:.1f}% Failed (S/F: {bonde['bd_sf_ratio']:.2f})")
-        lines.append(f"• <b>Close UH/LH:</b> {bonde['close_uh_pct']:.1f}% Upper | {bonde['close_lh_pct']:.1f}% Lower (UH/LH: {bonde['uh_lh_ratio']:+.1f}%)")
+        lines.append(f"📋 <b>LAST SESSION BREADTH &amp; QUALITY ({bonde['date']} | #{bonde['row_idx']}):</b>")
+        t3_thrust = [
+            ["4% Thrust", f"{bonde['up_4_cnt']}({bonde['up_4_pct']:.0f}%)", f"{bonde['dn_4_cnt']}({bonde['dn_4_pct']:.0f}%)"],
+            ["52W High / Low", f"{bonde['nh_cnt']}({bonde['nh_pct']:.0f}%)", f"{bonde['nl_cnt']}({bonde['nl_pct']:.0f}%)"],
+            ["Breakout Qual", f"{bonde['bo_sustained']:.0f}% Sus", f"{bonde['bo_failure']:.0f}% Fail"],
+            ["Breakdown Qual", f"{bonde['bd_sustained']:.0f}% Sus", f"{bonde['bd_failure']:.0f}% Fail"],
+            ["Close UH vs LH", f"{bonde['close_uh_pct']:.0f}% UH", f"{bonde['close_lh_pct']:.0f}% LH"],
+        ]
+        lines.append("<pre>")
+        lines.append(make_box_table(t3_thrust, ["METRIC", "BULL", "BEAR"], [14, 9, 9], ["left", "right", "right"]))
+        lines.append("</pre>")
+
+        # Key Ratios Table
         vol_r = bonde.get('vol_ratio', 0.0)
-        vol_state = "Capitulation Blowout 💥" if vol_r >= 1.50 and bonde.get('dn_4_cnt', 0) >= 300 else ("Institutional Surge 🚀" if vol_r >= 1.20 else ("Subdued / Dry 💤" if vol_r < 0.40 else "Normal Baseline ⚖️"))
-        lines.append(f"• <b>Vol Ratio (Inst. Participation):</b> <code>{vol_r:.2f}</code> ({bonde['above_vol_pct']:.1f}% High / {bonde['below_vol_pct']:.1f}% Low | {vol_state})")
+        vol_state = "BLOWOUT" if vol_r >= 1.50 and bonde.get('dn_4_cnt', 0) >= 300 else ("SURGE" if vol_r >= 1.20 else ("DRY" if vol_r < 0.40 else "NORMAL"))
+        t3_ratios = [
+            ["Net 4% Breadth", f"{bonde['net_breadth']:+.2f}%", "BULL" if bonde['net_breadth'] > 0 else "BEAR"],
+            ["5D / 10D Ratio", f"{bonde['ratio_5d']:.2f} / {bonde['ratio_10d']:.2f}", "PULSE"],
+            ["Net 52W NH-NL", f"{bonde['net_nh_nl']:+.2f}%", "EXPAND" if bonde['net_nh_nl'] > 0 else "CONTRACT"],
+            ["Volume Ratio", f"{vol_r:.2f}x", vol_state],
+        ]
+        lines.append("<pre>")
+        lines.append(make_box_table(t3_ratios, ["KEY RATIO", "VALUE", "STATE"], [14, 11, 8], ["left", "right", "center"]))
+        lines.append("</pre>")
 
         # 5-Day Sectoral 5D ROC Leaders (Kedia SBE Clumping)
         sec_data = bonde.get("sectoral_5d_roc", {})
@@ -704,34 +792,30 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
         if leaders:
             lines.append("")
             lines.append("🏆 <b>5-DAY SECTORAL LEADERS (Kedia 5D ROC Clumping):</b>")
-            medals = ["🥇", "🥈", "🥉"]
-            for m, item in zip(medals, leaders):
-                s_name = item['sector']
-                roc = item['roc_5d_pct']
-                sign = "+" if roc > 0 else ""
-                lines.append(f"• {m} <b>{s_name}:</b> <code>{sign}{roc:.2f}%</code> {'🚀' if roc >= 3.0 else '🟢'}")
+            t4_rows = []
+            for idx, item in enumerate(leaders, 1):
+                t4_rows.append([str(idx), item['sector'][:19], f"{item['roc_5d_pct']:+.2f}%"])
             if laggards:
-                lag_strs = [f"{item['sector']} ({item['roc_5d_pct']:+.2f}%)" for item in laggards]
-                lines.append(f"• 🔻 <b>Laggards:</b> {' | '.join(lag_strs)}")
+                for item in laggards:
+                    t4_rows.append(["L", item['sector'][:19], f"{item['roc_5d_pct']:+.2f}%"])
+            lines.append("<pre>")
+            lines.append(make_box_table(t4_rows, ["RK", "SECTOR (5D ROC)", "RETURN"], [3, 19, 9], ["center", "left", "right"]))
+            lines.append("</pre>")
             top_sec_names = " and ".join([item['sector'] for item in leaders[:2]])
-            lines.append(f"• 💡 <b>Sector Theme Mandate:</b> Institutional accumulation active in <b>{top_sec_names}</b>. Prioritize watchlist breakout setups strictly in these sectors; avoid laggards.")
-    lines.append("🏛 <b>BENCHMARK &amp; MARKET CAP INDICES:</b>")
-    for b in benchmarks:
-        icon = "🟢" if b["change_pct"] > 0 else ("🔴" if b["change_pct"] < 0 else "⚪")
-        sign = "+" if b["change_pct"] > 0 else ""
-        lines.append(f"• <b>{b['name']}</b>: ₹{b['ltp']:,.2f} ({sign}{b['change']:,.2f} | {sign}{b['change_pct']:.2f}%) {icon}")
-
+            lines.append(f"💡 <b>Sector Mandate:</b> Institutional accumulation active in <b>{top_sec_names}</b>. Prioritize watchlist breakout setups strictly in these sectors; avoid laggards.")
     lines.append("")
-    lines.append("🏭 <b>SECTORAL RELATIVE STRENGTH:</b>")
-    for s in sectorals:
-        icon = "🟢" if s["change_pct"] > 0 else ("🔴" if s["change_pct"] < 0 else "⚪")
-        sign = "+" if s["change_pct"] > 0 else ""
-        tag = ""
-        if s == top_sector and s["change_pct"] > 0:
-            tag = " ★ <b>[Leading]</b>"
-        elif s == worst_sector and s["change_pct"] < 0:
-            tag = " ⚠️ <i>[Lagging]</i>"
-        lines.append(f"• <b>{s['name']}</b>: {sign}{s['change_pct']:.2f}% {icon}{tag}")
+    lines.append("🏛 <b>BENCHMARKS &amp; SECTORAL MOMENTUM:</b>")
+    t5_rows = []
+    for b in benchmarks:
+        t5_rows.append([b['name'][:15], f"{b['ltp']:,.1f}", f"{b['change_pct']:+.2f}%"])
+    for s in sectorals[:4]:
+        tag = "*" if (s == top_sector and s["change_pct"] > 0) else ("!" if (s == worst_sector and s["change_pct"] < 0) else "")
+        t5_rows.append([(s['name'][:14] + tag), f"{s['ltp']:,.1f}", f"{s['change_pct']:+.2f}%"])
+    lines.append("<pre>")
+    lines.append(make_box_table(t5_rows, ["INDEX / SECTOR", "LTP (₹)", "CHG %"], [15, 9, 7], ["left", "right", "right"]))
+    lines.append("</pre>")
+    if top_sector and worst_sector:
+        lines.append(f"• <i>*Leader: {top_sector['name']} ({top_sector['change_pct']:+.2f}%) | !Laggard: {worst_sector['name']} ({worst_sector['change_pct']:+.2f}%)</i>")
 
     lines.append("")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
