@@ -100,6 +100,8 @@ SYMBOL_TO_ISIN = {
     "ACMESOLAR": "INE620Z01019",
     "KRN": "INE0C9501010",
     "NOVARTIND": "INE234A01025",
+    "INDEGENE": "INE065X01017",
+    "INDGN": "INE065X01017",
 }
 
 INDEX_MAPPING = {
@@ -119,6 +121,7 @@ SYMBOL_ALIASES = {
     "DALTACORP": "DELTACORP",
     "SAMBHAV": "SAMBHV",
     "HBLPOWER": "HBLENGINE",
+    "INDEGENE": "INDGN",
 }
 
 
@@ -2255,7 +2258,7 @@ def start_web_server():
             pass
 
 
-def sync_file_to_github_api(gh_cfg, path, commit_msg):
+def sync_file_to_github_api(gh_cfg, path, commit_msg, max_retries=2):
     """Commits and pushes a file to GitHub repository using REST API (zero git CLI required on tablet)."""
     if not gh_cfg or not gh_cfg.get("token") or not os.path.isfile(path):
         return False
@@ -2266,41 +2269,61 @@ def sync_file_to_github_api(gh_cfg, path, commit_msg):
         repo = gh_cfg.get("repo", "Jarvis").strip()
         branch = gh_cfg.get("branch", "main").strip()
 
-        # Check existing sha to update or create
-        url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}?ref={branch}"
-        sha = None
-        req = urllib.request.Request(url, headers={
-            "Authorization": f"Bearer {token}",
-            "User-Agent": "Python-Tablet-Scanner",
-            "Accept": "application/vnd.github+json"
-        })
-        try:
-            with urllib.request.urlopen(req, timeout=8) as resp:
-                sha = json.loads(resp.read().decode()).get("sha")
-        except Exception:
-            pass
-
         with open(path, "rb") as f:
             content_bytes = f.read()
+        b64_content = base64.b64encode(content_bytes).decode("ascii")
 
-        payload = {
-            "message": commit_msg,
-            "content": base64.b64encode(content_bytes).decode("ascii"),
-            "branch": branch
-        }
-        if sha:
-            payload["sha"] = sha
+        for attempt in range(max_retries + 1):
+            # Check existing sha to update or create
+            t_ms = int(time.time() * 1000)
+            url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}?ref={branch}&_t={t_ms}"
+            sha = None
+            req = urllib.request.Request(url, headers={
+                "Authorization": f"Bearer {token}",
+                "User-Agent": "Python-Tablet-Scanner",
+                "Accept": "application/vnd.github+json",
+                "Cache-Control": "no-cache"
+            })
+            try:
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    resp_json = json.loads(resp.read().decode())
+                    sha = resp_json.get("sha")
+                    remote_content = resp_json.get("content", "").replace("\n", "").strip()
+                    # If content already matches remote repository exactly, treat as successful sync
+                    if remote_content == b64_content:
+                        return True
+            except Exception:
+                pass
 
-        put_url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
-        data = json.dumps(payload).encode("utf-8")
-        put_req = urllib.request.Request(put_url, data=data, method="PUT", headers={
-            "Authorization": f"Bearer {token}",
-            "User-Agent": "Python-Tablet-Scanner",
-            "Accept": "application/vnd.github+json",
-            "Content-Type": "application/json"
-        })
-        with urllib.request.urlopen(put_req, timeout=12) as resp:
-            return True
+            payload = {
+                "message": commit_msg,
+                "content": b64_content,
+                "branch": branch
+            }
+            if sha:
+                payload["sha"] = sha
+
+            put_url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
+            data = json.dumps(payload).encode("utf-8")
+            put_req = urllib.request.Request(put_url, data=data, method="PUT", headers={
+                "Authorization": f"Bearer {token}",
+                "User-Agent": "Python-Tablet-Scanner",
+                "Accept": "application/vnd.github+json",
+                "Content-Type": "application/json"
+            })
+            try:
+                with urllib.request.urlopen(put_req, timeout=12) as resp:
+                    return True
+            except urllib.error.HTTPError as he:
+                if he.code == 409 and attempt < max_retries:
+                    time.sleep(1.2)
+                    continue
+                return False
+            except Exception:
+                if attempt < max_retries:
+                    time.sleep(1.0)
+                    continue
+                return False
     except Exception:
         return False
 
@@ -2439,6 +2462,7 @@ def export_static_html(results, now_str, port):
 
         payload = {
             "updated_at": now_str,
+            "updated_ts": int(time.time()),
             "source": source_label,
             "market_regime": regime_data,
             "pre_market_summary": sa_summary_data,
