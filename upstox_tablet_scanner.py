@@ -36,7 +36,8 @@ if hasattr(sys.stdout, 'reconfigure'):
     except Exception:
         pass
 
-CONFIG_FILE = "config_credentials.json"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
+CONFIG_FILE = os.path.join(SCRIPT_DIR, "config_credentials.json")
 REFRESH_SECONDS = 180  # 3 minutes
 
 # Watchlist symbols
@@ -179,7 +180,7 @@ def load_upstox_token():
         return token
 
     # Primary source of truth: config_credentials.json
-    for cfg_path in [CONFIG_FILE, "credentials.json"]:
+    for cfg_path in [CONFIG_FILE, os.path.join(SCRIPT_DIR, "config_credentials.json"), os.path.join(SCRIPT_DIR, "credentials.json"), "config_credentials.json", "credentials.json"]:
         if os.path.exists(cfg_path):
             try:
                 with open(cfg_path, "r", encoding="utf-8") as f:
@@ -191,21 +192,22 @@ def load_upstox_token():
                 pass
 
     # Fallback to local txt file if present
-    if os.path.isfile("upstoxtoken.txt"):
-        try:
-            with open("upstoxtoken.txt", "r", encoding="utf-8") as f:
-                tok = f.read().strip()
-                if tok:
-                    return tok
-        except Exception:
-            pass
+    for txt_p in [os.path.join(SCRIPT_DIR, "upstoxtoken.txt"), "upstoxtoken.txt"]:
+        if os.path.isfile(txt_p):
+            try:
+                with open(txt_p, "r", encoding="utf-8") as f:
+                    tok = f.read().strip()
+                    if tok:
+                        return tok
+            except Exception:
+                pass
 
     return None
 
 
 def load_github_config():
     """Loads GitHub token and repo config from credentials file."""
-    for cfg_path in [CONFIG_FILE, "credentials.json"]:
+    for cfg_path in [CONFIG_FILE, os.path.join(SCRIPT_DIR, "config_credentials.json"), os.path.join(SCRIPT_DIR, "credentials.json"), "config_credentials.json", "credentials.json"]:
         if os.path.exists(cfg_path):
             try:
                 with open(cfg_path, "r", encoding="utf-8") as f:
@@ -302,7 +304,7 @@ def load_telegram_config():
     if token and chat_id:
         return {"enabled": True, "bot_token": token, "chat_id": chat_id}
 
-    for cfg_f in [CONFIG_FILE, "credentials.json"]:
+    for cfg_f in [CONFIG_FILE, os.path.join(SCRIPT_DIR, "config_credentials.json"), os.path.join(SCRIPT_DIR, "credentials.json"), "config_credentials.json", "credentials.json"]:
         if os.path.isfile(cfg_f):
             try:
                 with open(cfg_f, "r", encoding="utf-8") as f:
@@ -2260,8 +2262,16 @@ def start_web_server():
 
 def sync_file_to_github_api(gh_cfg, path, commit_msg, max_retries=2):
     """Commits and pushes a file to GitHub repository using REST API (zero git CLI required on tablet)."""
-    if not gh_cfg or not gh_cfg.get("token") or not os.path.isfile(path):
+    full_path = path
+    if not os.path.isabs(full_path):
+        candidates = [full_path, os.path.join(SCRIPT_DIR, full_path)]
+        for c in candidates:
+            if os.path.isfile(c):
+                full_path = c
+                break
+    if not gh_cfg or not gh_cfg.get("token") or not os.path.isfile(full_path):
         return False
+    remote_path = os.path.basename(path).replace("\\", "/")
     try:
         import base64
         token = gh_cfg["token"].strip()
@@ -2269,14 +2279,14 @@ def sync_file_to_github_api(gh_cfg, path, commit_msg, max_retries=2):
         repo = gh_cfg.get("repo", "Jarvis").strip()
         branch = gh_cfg.get("branch", "main").strip()
 
-        with open(path, "rb") as f:
+        with open(full_path, "rb") as f:
             content_bytes = f.read()
         b64_content = base64.b64encode(content_bytes).decode("ascii")
 
         for attempt in range(max_retries + 1):
             # Check existing sha to update or create
             t_ms = int(time.time() * 1000)
-            url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}?ref={branch}&_t={t_ms}"
+            url = f"https://api.github.com/repos/{owner}/{repo}/contents/{remote_path}?ref={branch}&_t={t_ms}"
             sha = None
             req = urllib.request.Request(url, headers={
                 "Authorization": f"Bearer {token}",
@@ -2303,7 +2313,7 @@ def sync_file_to_github_api(gh_cfg, path, commit_msg, max_retries=2):
             if sha:
                 payload["sha"] = sha
 
-            put_url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
+            put_url = f"https://api.github.com/repos/{owner}/{repo}/contents/{remote_path}"
             data = json.dumps(payload).encode("utf-8")
             put_req = urllib.request.Request(put_url, data=data, method="PUT", headers={
                 "Authorization": f"Bearer {token}",
