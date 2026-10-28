@@ -2297,7 +2297,11 @@
       popupAppLink.title = isStealthMode ? 'Open node telemetry trace' : 'Launch Native TradingView Desktop / Web';
     }
 
-    updatePopupGuardrail(data);
+    try {
+      updatePopupGuardrail(data);
+    } catch (errG) {
+      console.warn('Popup guardrail calculation warning:', errG);
+    }
   }
 
   function updatePopupGuardrail(data) {
@@ -2392,7 +2396,7 @@
     let sizingHtml = '';
     const regime = window.CURRENT_MARKET_REGIME;
     const ltpPrice = Number(data.ltp) || 0;
-    const slPrice = dayLow || (data.pivot ? Number(data.pivot) : 0);
+    const slPrice = Number(data.day_low) || (data.pivot ? Number(data.pivot) : 0);
     const riskPerShare = (ltpPrice > 0 && slPrice > 0 && ltpPrice > slPrice) ? (ltpPrice - slPrice) : 0;
     const riskPct = (ltpPrice > 0 && riskPerShare > 0) ? ((riskPerShare / ltpPrice) * 100).toFixed(1) : '--';
 
@@ -2922,8 +2926,16 @@
 
     const data = getStockChartData(sym);
     if (data) {
-      updatePopupHeader(data);
-      drawCanvasChart(canvas, data);
+      try {
+        updatePopupHeader(data);
+      } catch (eH) {
+        console.warn('Popup header update warning:', eH);
+      }
+      try {
+        drawCanvasChart(canvas, data);
+      } catch (eC) {
+        console.warn('Canvas chart render warning:', eC);
+      }
     } else {
       // Clear canvas and header so previous stock's chart never lingers
       if (popupTitle) popupTitle.innerHTML = `📈 ${sym} <span style="font-size:11px; color:var(--text-muted);">(Awaiting Feed)</span>`;
