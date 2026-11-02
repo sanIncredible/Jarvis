@@ -2697,6 +2697,15 @@ def run_upstox_scanner(once=False, auto_open_web=False):
     scanner_thread = threading.Thread(target=periodic_scanner, daemon=True)
     scanner_thread.start()
 
+    # Start Telegram Command Bot Engine (Always active on OCI VM / Linux, or on Windows if --bot passed)
+    if sys.platform != "win32" or "--bot" in sys.argv:
+        try:
+            from telegram_bot import start_telegram_bot_thread
+            start_telegram_bot_thread()
+            print(f"{GREEN}🤖 Telegram Command Bot Daemon Active (Listening for /add, /remove, /watchlist, /token...){RESET}")
+        except Exception as e:
+            print(f"{YELLOW}ℹ️ Telegram Bot notice: {e}{RESET}")
+
     # If running headless under systemd (no interactive terminal), stay alive and wait for stop event
     if not sys.stdin.isatty():
         try:
