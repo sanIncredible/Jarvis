@@ -743,6 +743,25 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
     b_label = "Upstox MTF" if broker == "upstox" else ("DhanHQ MTF" if broker == "dhan" else "Zerodha CNC (Delivery)")
     regime_warning = f"\n{calc['regime_note']}" if calc.get("regime_note") else ""
 
+    checklist_data = calc.get("checklist", {})
+    checklist_items = checklist_data.get("checklist", [])
+    warnings = checklist_data.get("warnings", [])
+    scanner_sig = checklist_data.get("scanner_signal")
+
+    checklist_lines = [f"• {c['text']}" for c in checklist_items]
+    checklist_block = "\n".join(checklist_lines)
+
+    if warnings:
+        warn_lines = "\n".join([f"  {i+1}. <i>{w}</i>" for i, w in enumerate(warnings)])
+        alert_block = (
+            f"\n🚨 <b>STRATEGY WARNINGS ({len(warnings)} Unsatisfied):</b>\n"
+            f"{warn_lines}\n"
+        )
+    else:
+        alert_block = "\n⭐ <b>A+ SETUP: All Strategy Checklist Rules Satisfied!</b>\n"
+
+    sig_line = f"🏷️ <b>Scanner Signal:</b> <code>{scanner_sig}</code>\n" if scanner_sig else ""
+
     preview_text = (
         "⚡ <b>JARVIS ORDER PREVIEW</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -754,15 +773,23 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
         f"💼 <b>Actual Exposure:</b> ₹{calc['actual_exposure']:,}\n"
         f"🛑 <b>Stop Loss:</b> <b>₹{calc['stop_loss']}</b> ({calc['sl_mode']}: -{calc['risk_pct']}%)\n"
         f"⚠️ <b>Total Risk ₹:</b> ₹{calc['total_risk_inr']:,}\n"
-        f"🌐 <b>Regime:</b> {calc['regime_label']}{regime_warning}\n"
+        f"{sig_line}"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📋 <b>STRATEGY CHECKLIST ({checklist_data.get('passed_count', 0)}/{checklist_data.get('total_count', 7)} Passed):</b>\n"
+        f"{checklist_block}\n"
+        f"{alert_block}"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         f"💡 <i>Reply <code>/buy {symbol} {mode} {broker} confirm</code> or tap below:</i>"
     )
 
+    btn_icon = "⚠️" if warnings else "✅"
+    warn_tag = f" ({len(warnings)} Warns)" if warnings else ""
+    btn_text = f"{btn_icon} Execute on {broker.upper()} ({calc['quantity']} shs{warn_tag})"
+
     reply_markup = {
         "inline_keyboard": [
             [
-                {"text": f"✅ Execute on {broker.upper()} ({calc['quantity']} shs)", "callback_data": f"buy_exec:{symbol}:{mode}:{sl_mode}:{broker}"}
+                {"text": btn_text, "callback_data": f"buy_exec:{symbol}:{mode}:{sl_mode}:{broker}"}
             ],
             [
                 {"text": f"{'👉 ' if broker == 'upstox' else ''}Upstox", "callback_data": f"buy_switch:{symbol}:{mode}:{sl_mode}:upstox"},
@@ -886,6 +913,8 @@ def handle_buy_command(args, from_chat_id):
     if auto_confirm:
         success, res = execute_broker_order(symbol, mode_arg=mode, sl_mode=sl_mode, broker=broker)
         if success:
+            warn_count = len(res.get("checklist", {}).get("warnings", []))
+            warn_str = f"⚠️ <b>Checklist:</b> <i>Executed with {warn_count} strategy warnings</i>\n" if warn_count > 0 else "⭐ <b>Checklist:</b> <i>A+ Setup - All Rules Passed</i>\n"
             return (
                 f"🎉 <b>ORDER EXECUTED ON {res['broker']}!</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -897,6 +926,7 @@ def handle_buy_command(args, from_chat_id):
                 f"🛑 <b>Stop Loss:</b> <b>₹{res['stop_loss']}</b> ({res['sl_mode']}: -{res['risk_pct']}%)\n"
                 f"⚠️ <b>Risk at SL:</b> ₹{res['total_risk_inr']:,}\n"
                 f"🌐 <b>Regime:</b> {res['regime_label']}\n"
+                f"{warn_str}"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"💡 <i>Recommendation: Set GTT / SL-M trigger at ₹{res['stop_loss']} in {res['broker']} app. Added to scanner watchlist.</i>"
             )
@@ -939,6 +969,8 @@ def handle_callback_query(cq):
         success, res = execute_broker_order(symbol, mode_arg=mode, sl_mode=sl_mode, broker=broker)
 
         if success:
+            warn_count = len(res.get("checklist", {}).get("warnings", []))
+            warn_str = f"⚠️ <b>Checklist:</b> <i>Executed with {warn_count} strategy warnings</i>\n" if warn_count > 0 else "⭐ <b>Checklist:</b> <i>A+ Setup - All Rules Passed</i>\n"
             receipt = (
                 f"🎉 <b>ORDER EXECUTED ON {res['broker']}!</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -950,6 +982,7 @@ def handle_callback_query(cq):
                 f"🛑 <b>Stop Loss:</b> <b>₹{res['stop_loss']}</b> ({res['sl_mode']}: -{res['risk_pct']}%)\n"
                 f"⚠️ <b>Risk at SL:</b> ₹{res['total_risk_inr']:,}\n"
                 f"🌐 <b>Regime:</b> {res['regime_label']}\n"
+                f"{warn_str}"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"💡 <i>Recommendation: Set GTT / SL-M trigger at ₹{res['stop_loss']} in {res['broker']} app. Added to scanner watchlist.</i>"
             )
