@@ -1,11 +1,5 @@
 # Upstox 3m ORB Scanner Watchlist
-
-
 # Add or remove NSE stock tickers below (one per line, or space/comma separated)
-
-
-
-
 
 TATAELXSI
 PVRINOX
@@ -19,6 +13,7 @@ KROSS
 WESTLIFE
 NSE
 ECLERX
-INDEGENE
+INDGN
 FEDERALBNK
 BHARTIHEXA
+INDEGENE
