@@ -702,17 +702,6 @@ def place_upstox_mtf_order(instrument_key, quantity, order_type="MARKET", price=
         return False, "Upstox access token missing in config_credentials.json"
 
     url = "https://api.upstox.com/v2/order/place"
-    payload = {
-        "quantity": int(quantity),
-        "product": "MTF",
-        "validity": "DAY",
-        "price": float(price) if order_type.upper() == "LIMIT" else 0.0,
-        "tag": "JARVIS_MTF",
-        "instrument_token": instrument_key,
-        "order_type": order_type.upper(),
-        "transaction_type": "BUY",
-        "disclosed_quantity": 0,
-        "trigger_price": 0.0,
     market_open = is_market_open()
     payload = {
         "quantity": int(quantity),
