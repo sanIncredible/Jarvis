@@ -207,11 +207,33 @@ def register_telegram_commands():
 # Watchlist Operations
 # ---------------------------------------------------------
 SYMBOL_ALIASES = {
+    "RIL": "RELIANCE",
+    "RELIANCEIND": "RELIANCE",
+    "SBI": "SBIN",
+    "SBIBK": "SBIN",
+    "HDFC": "HDFCBANK",
+    "HDFCBK": "HDFCBANK",
+    "KOTAK": "KOTAKBANK",
+    "KOTAKBK": "KOTAKBANK",
+    "ICICI": "ICICIBANK",
+    "ICICIBK": "ICICIBANK",
+    "AXIS": "AXISBANK",
+    "AXISBK": "AXISBANK",
+    "BHARTI": "BHARTIARTL",
+    "AIRTEL": "BHARTIARTL",
+    "INFOSYS": "INFY",
+    "MM": "M&M",
+    "TATAMOTOR": "TATAMOTORS",
+    "BAJAJAUTO": "BAJAJ-AUTO",
+    "LT": "LT",
+    "L&T": "LT",
     "JAYNECOND": "JAYNECOIND",
     "DALTACORP": "DELTACORP",
     "SAMBHAV": "SAMBHV",
     "HBLPOWER": "HBLENGINE",
     "INDEGENE": "INDGN",
+    "INDGEN": "INDGN",
+    "JIO": "JIOFIN",
 }
 
 
@@ -762,10 +784,13 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
 
     sig_line = f"🏷️ <b>Scanner Signal:</b> <code>{scanner_sig}</code>\n" if scanner_sig else ""
 
+    canonical_sym = quote_data["symbol"]
+    sym_display = f"{canonical_sym} (<i>{symbol}</i>)" if symbol.upper() != canonical_sym else canonical_sym
+
     preview_text = (
         "⚡ <b>JARVIS ORDER PREVIEW</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📌 <b>Symbol:</b> <b>{symbol}</b> (NSE Equity)\n"
+        f"📌 <b>Symbol:</b> <b>{sym_display}</b> (NSE Equity)\n"
         f"🏦 <b>Selected Broker:</b> <b>{b_label}</b>\n"
         f"💰 <b>Size Mode:</b> {calc['mode_label']}\n"
         f"📈 <b>Live LTP:</b> ₹{calc['ltp']:.2f}\n"
@@ -779,7 +804,7 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
         f"{checklist_block}\n"
         f"{alert_block}"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"💡 <i>Reply <code>/buy {symbol} {mode} {broker} confirm</code> or tap below:</i>"
+        f"💡 <i>Reply <code>/buy {canonical_sym} {mode} {broker} confirm</code> or tap below:</i>"
     )
 
     btn_icon = "⚠️" if warnings else "✅"
@@ -789,15 +814,15 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
     reply_markup = {
         "inline_keyboard": [
             [
-                {"text": btn_text, "callback_data": f"buy_exec:{symbol}:{mode}:{sl_mode}:{broker}"}
+                {"text": btn_text, "callback_data": f"buy_exec:{canonical_sym}:{mode}:{sl_mode}:{broker}"}
             ],
             [
-                {"text": f"{'👉 ' if broker == 'upstox' else ''}Upstox", "callback_data": f"buy_switch:{symbol}:{mode}:{sl_mode}:upstox"},
-                {"text": f"{'👉 ' if broker == 'dhan' else ''}DhanHQ", "callback_data": f"buy_switch:{symbol}:{mode}:{sl_mode}:dhan"},
-                {"text": f"{'👉 ' if broker == 'zerodha' else ''}Zerodha", "callback_data": f"buy_switch:{symbol}:{mode}:{sl_mode}:zerodha"}
+                {"text": f"{'👉 ' if broker == 'upstox' else ''}Upstox", "callback_data": f"buy_switch:{canonical_sym}:{mode}:{sl_mode}:upstox"},
+                {"text": f"{'👉 ' if broker == 'dhan' else ''}DhanHQ", "callback_data": f"buy_switch:{canonical_sym}:{mode}:{sl_mode}:dhan"},
+                {"text": f"{'👉 ' if broker == 'zerodha' else ''}Zerodha", "callback_data": f"buy_switch:{canonical_sym}:{mode}:{sl_mode}:zerodha"}
             ],
             [
-                {"text": "❌ Cancel Order", "callback_data": f"buy_cancel:{symbol}"}
+                {"text": "❌ Cancel Order", "callback_data": f"buy_cancel:{canonical_sym}"}
             ]
         ]
     }
