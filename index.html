@@ -1145,14 +1145,13 @@
           <th onclick="handleSort('is_ss')" style="text-align:center;" id="th-ss">Pri <span id="sort-is_ss" class="sort-icon"></span></th>
           <th onclick="handleSort('pdh')" style="text-align:center;" id="th-pdh">Peak <span id="sort-pdh" class="sort-icon"></span></th>
           <th onclick="handleSort('orb_status')" style="text-align:center;" id="th-orb">Band <span id="sort-orb_status" class="sort-icon"></span></th>
-          <th onclick="handleSort('tag')" style="text-align:center;" id="th-tag">Route <span id="sort-tag" class="sort-icon"></span></th>
           <th onclick="handleSort('signal')" id="th-signal">Runtime Status <span id="sort-signal" class="sort-icon"></span></th>
           <th onclick="handleSort('lod_dist')" style="text-align:right;" id="th-lod" title="Low of Day Distance (% of Daily ATR14): (LTP - Day Low) / ATR14">Span% <span id="sort-lod_dist" class="sort-icon"></span></th>
         </tr>
       </thead>
       <tbody id="table-body" onmouseenter="cancelHidePopup()">
         <tr>
-          <td colspan="8" style="text-align:center; padding: 50px 10px; color:var(--text-muted); font-size:14px;">
+          <td colspan="7" style="text-align:center; padding: 50px 10px; color:var(--text-muted); font-size:14px;">
             ⏳ Connecting to cloud feed payload (<code>data.json</code>)...
           </td>
         </tr>
@@ -2150,7 +2149,6 @@
           <td style="text-align:center;">${ss_html}</td>
           <td style="text-align:center;">${pdh_html}</td>
           <td style="text-align:center;">${orb_badge}</td>
-          <td style="text-align:center; color:var(--text-muted);">${stk.tag || '-'}</td>
           <td>
             <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
               ${sig_badge}
@@ -2162,7 +2160,7 @@
       `;
     });
 
-    tableBody.innerHTML = html || `<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">${isStealthMode ? 'No telemetry nodes match current filter.' : 'No stocks match current filter.'}</td></tr>`;
+    tableBody.innerHTML = html || `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">${isStealthMode ? 'No telemetry nodes match current filter.' : 'No stocks match current filter.'}</td></tr>`;
   }
 
   // Chart Timeframe Switcher
