@@ -1144,8 +1144,6 @@
           <th onclick="handleSort('symbol')" id="th-symbol">Endpoint / Node <span id="sort-symbol" class="sort-icon"></span></th>
           <th onclick="handleSort('is_ss')" style="text-align:center;" id="th-ss">Pri <span id="sort-is_ss" class="sort-icon"></span></th>
           <th onclick="handleSort('pdh')" style="text-align:center;" id="th-pdh">Peak <span id="sort-pdh" class="sort-icon"></span></th>
-          <th onclick="handleSort('h_pct')" style="text-align:right;" id="th-hpct">ΔH% <span id="sort-h_pct" class="sort-icon"></span></th>
-          <th onclick="handleSort('l_pct')" style="text-align:right;" id="th-lpct">ΔL% <span id="sort-l_pct" class="sort-icon"></span></th>
           <th onclick="handleSort('orb_status')" style="text-align:center;" id="th-orb">Band <span id="sort-orb_status" class="sort-icon"></span></th>
           <th onclick="handleSort('tag')" style="text-align:center;" id="th-tag">Route <span id="sort-tag" class="sort-icon"></span></th>
           <th onclick="handleSort('signal')" id="th-signal">Runtime Status <span id="sort-signal" class="sort-icon"></span></th>
@@ -1155,7 +1153,7 @@
       </thead>
       <tbody id="table-body" onmouseenter="cancelHidePopup()">
         <tr>
-          <td colspan="11" style="text-align:center; padding: 50px 10px; color:var(--text-muted); font-size:14px;">
+          <td colspan="9" style="text-align:center; padding: 50px 10px; color:var(--text-muted); font-size:14px;">
             ⏳ Connecting to cloud feed payload (<code>data.json</code>)...
           </td>
         </tr>
@@ -2152,8 +2150,6 @@
           </td>
           <td style="text-align:center;">${ss_html}</td>
           <td style="text-align:center;">${pdh_html}</td>
-          <td class="${stk.h_pct > 0 ? 'val-pos' : 'val-neg'}" style="text-align:right;">${h_str}</td>
-          <td class="${stk.l_pct > 0 ? 'val-pos' : 'val-neg'}" style="text-align:right;">${l_str}</td>
           <td style="text-align:center;">${orb_badge}</td>
           <td style="text-align:center; color:var(--text-muted);">${stk.tag || '-'}</td>
           <td>
@@ -2168,7 +2164,7 @@
       `;
     });
 
-    tableBody.innerHTML = html || `<tr><td colspan="11" style="text-align:center; padding:30px; color:var(--text-muted);">${isStealthMode ? 'No telemetry nodes match current filter.' : 'No stocks match current filter.'}</td></tr>`;
+    tableBody.innerHTML = html || `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">${isStealthMode ? 'No telemetry nodes match current filter.' : 'No stocks match current filter.'}</td></tr>`;
   }
 
   // Chart Timeframe Switcher
