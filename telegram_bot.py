@@ -181,7 +181,8 @@ def register_telegram_commands():
         return False
     url = f"https://api.telegram.org/bot{bot_token}/setMyCommands"
     commands = [
-        {"command": "buy", "description": "🛒 Place MTF Order with LoD Stop Loss (agg/mod/50k)"},
+        {"command": "buy", "description": "🛒 Place MTF/Equity Order (Upstox/Dhan/Zerodha)"},
+        {"command": "broker", "description": "🏦 View or switch default broker (Upstox/Dhan/Zerodha)"},
         {"command": "watchlist", "description": "📋 View active watchlist & TV chart links"},
         {"command": "add", "description": "➕ Add stock ticker(s) to scanner watchlist"},
         {"command": "remove", "description": "➖ Remove stock ticker(s) from watchlist"},
@@ -722,16 +723,115 @@ def handle_help_command():
     )
 
 
+def build_buy_preview(symbol, mode, sl_mode, broker):
+    """Builds interactive preview text and inline keyboard for any broker."""
+    from order_engine import fetch_live_quote, calculate_order_sizing
+
+    quote_data, err = fetch_live_quote(symbol)
+    if not quote_data:
+        return f"❌ <b>Quote Failed for {symbol}:</b>\n{err}", None
+
+    calc = calculate_order_sizing(quote_data, mode_arg=mode, sl_mode=sl_mode)
+    if calc["quantity"] <= 0:
+        return (
+            f"❌ <b>Sizing Error for {symbol}:</b>\n"
+            f"LTP (₹{calc['ltp']}) exceeds allocated size (₹{calc['target_size']:,}).\n"
+            f"Cannot buy even 1 share with {calc['mode_label']} mode.",
+            None
+        )
+
+    b_label = "Upstox MTF" if broker == "upstox" else ("DhanHQ MTF" if broker == "dhan" else "Zerodha CNC (Delivery)")
+    regime_warning = f"\n{calc['regime_note']}" if calc.get("regime_note") else ""
+
+    preview_text = (
+        "⚡ <b>JARVIS ORDER PREVIEW</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📌 <b>Symbol:</b> <b>{symbol}</b> (NSE Equity)\n"
+        f"🏦 <b>Selected Broker:</b> <b>{b_label}</b>\n"
+        f"💰 <b>Size Mode:</b> {calc['mode_label']}\n"
+        f"📈 <b>Live LTP:</b> ₹{calc['ltp']:.2f}\n"
+        f"🎯 <b>Calculated Qty:</b> <b>{calc['quantity']} shares</b>\n"
+        f"💼 <b>Actual Exposure:</b> ₹{calc['actual_exposure']:,}\n"
+        f"🛑 <b>Stop Loss:</b> <b>₹{calc['stop_loss']}</b> ({calc['sl_mode']}: -{calc['risk_pct']}%)\n"
+        f"⚠️ <b>Total Risk ₹:</b> ₹{calc['total_risk_inr']:,}\n"
+        f"🌐 <b>Regime:</b> {calc['regime_label']}{regime_warning}\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"💡 <i>Reply <code>/buy {symbol} {mode} {broker} confirm</code> or tap below:</i>"
+    )
+
+    reply_markup = {
+        "inline_keyboard": [
+            [
+                {"text": f"✅ Execute on {broker.upper()} ({calc['quantity']} shs)", "callback_data": f"buy_exec:{symbol}:{mode}:{sl_mode}:{broker}"}
+            ],
+            [
+                {"text": f"{'👉 ' if broker == 'upstox' else ''}Upstox", "callback_data": f"buy_switch:{symbol}:{mode}:{sl_mode}:upstox"},
+                {"text": f"{'👉 ' if broker == 'dhan' else ''}DhanHQ", "callback_data": f"buy_switch:{symbol}:{mode}:{sl_mode}:dhan"},
+                {"text": f"{'👉 ' if broker == 'zerodha' else ''}Zerodha", "callback_data": f"buy_switch:{symbol}:{mode}:{sl_mode}:zerodha"}
+            ],
+            [
+                {"text": "❌ Cancel Order", "callback_data": f"buy_cancel:{symbol}"}
+            ]
+        ]
+    }
+
+    return preview_text, reply_markup
+
+
+def handle_broker_command(args):
+    """Handles /broker command to view or switch default broker."""
+    from order_engine import get_default_broker, set_default_broker, SUPPORTED_BROKERS, load_config
+    arg = args.strip().lower()
+    if arg:
+        if arg in SUPPORTED_BROKERS:
+            ok, b = set_default_broker(arg)
+            if ok:
+                b_name = "Upstox (MTF)" if b == "upstox" else ("DhanHQ (MTF)" if b == "dhan" else "Zerodha (CNC)")
+                return f"✅ <b>Default Broker Updated:</b> Now set to <b>{b_name}</b> for all <code>/buy</code> orders!"
+            return f"❌ Failed to set default broker: {b}"
+        else:
+            return f"❓ Unknown broker: <code>{arg}</code>. Supported brokers: <code>upstox</code>, <code>dhan</code>, <code>zerodha</code>."
+
+    curr_broker = get_default_broker()
+    cfg = load_config()
+    u_ok = bool(cfg.get("upstox", {}).get("access_token"))
+    d_ok = bool(cfg.get("dhan", {}).get("access_token"))
+    z_ok = bool(cfg.get("zerodha", {}).get("access_token"))
+
+    u_stat = "🟢 Active (MTF)" if u_ok else "⚠️ No Token"
+    d_stat = "🟢 Active (MTF)" if d_ok else "⚠️ No Token"
+    z_stat = "🟢 Active (CNC)" if z_ok else "⚠️ No Token"
+
+    curr_display = "UPSTOX (MTF)" if curr_broker == "upstox" else ("DHANHQ (MTF)" if curr_broker == "dhan" else "ZERODHA (CNC)")
+
+    return (
+        f"🏦 <b>CURRENT DEFAULT BROKER: {curr_display}</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"• <b>Upstox</b>  : {u_stat} {'👈 [DEFAULT]' if curr_broker == 'upstox' else ''}\n"
+        f"• <b>DhanHQ</b>  : {d_stat} {'👈 [DEFAULT]' if curr_broker == 'dhan' else ''}\n"
+        f"• <b>Zerodha</b> : {z_stat} {'👈 [DEFAULT]' if curr_broker == 'zerodha' else ''}\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "💡 <b>To switch default broker:</b>\n"
+        "• <code>/broker upstox</code>\n"
+        "• <code>/broker dhan</code>\n"
+        "• <code>/broker zerodha</code>\n\n"
+        "<i>Or specify directly when placing orders:</i>\n"
+        "• <code>/buy INFY agg dhan</code>\n"
+        "• <code>/buy RELIANCE mod upstox</code>\n"
+        "• <code>/buy TCS 50k zerodha</code>"
+    )
+
+
 def handle_buy_command(args, from_chat_id):
     """
-    Handles /buy or /mtf command.
-    Syntax: /buy <SYMBOL> [agg|mod|50k] [lod|regime] [confirm|now]
+    Handles /buy or /mtf command across Upstox, Dhan, or Zerodha.
+    Syntax: /buy <SYMBOL> [agg|mod|50k] [lod|regime] [upstox|dhan|zerodha] [confirm]
     """
     if not args:
         return (
-            "🛒 <b>JARVIS MTF ORDER PLACEMENT</b>\n"
+            "🛒 <b>JARVIS MULTI-BROKER ORDER PLACEMENT</b>\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "<b>Usage:</b> <code>/buy &lt;SYMBOL&gt; [mode] [sl] [confirm]</code>\n\n"
+            "<b>Usage:</b> <code>/buy &lt;SYMBOL&gt; [mode] [sl] [broker] [confirm]</code>\n\n"
             "<b>Sizing Modes:</b>\n"
             "• <code>agg</code> / <code>1.5L</code> — Aggressive (₹1,50,000 exposure)\n"
             "• <code>mod</code> / <code>1L</code>   — Moderate (₹1,00,000 exposure - Default)\n"
@@ -740,24 +840,35 @@ def handle_buy_command(args, from_chat_id):
             "<b>Stop Loss Options:</b>\n"
             "• <code>lod</code> — Low of Day (Default)\n"
             "• <code>regime</code> — Adjusted based on Market Regime\n\n"
+            "<b>Brokers Supported:</b>\n"
+            "• <code>upstox</code> — Upstox MTF (Margin Trading Facility)\n"
+            "• <code>dhan</code>   — DhanHQ MTF (Margin Trading Facility)\n"
+            "• <code>zerodha</code>— Zerodha Kite (CNC Delivery)\n\n"
             "<b>Examples:</b>\n"
-            "• <code>/buy RELIANCE</code> — Preview ₹1L MTF Buy with LoD SL\n"
-            "• <code>/buy INFY agg</code> — Preview ₹1.5L MTF Buy\n"
-            "• <code>/buy TATAMOTORS 50k</code> — Preview ₹50K MTF Buy\n"
-            "• <code>/buy TCS agg confirm</code> — Instant 1-shot execution\n"
+            "• <code>/buy RELIANCE</code> — Preview ₹1L on default broker\n"
+            "• <code>/buy INFY agg dhan</code> — Preview ₹1.5L on DhanHQ MTF\n"
+            "• <code>/buy TCS 50k zerodha</code> — Preview ₹50K on Zerodha\n"
+            "• <code>/buy TATAMOTORS mod confirm</code> — Instant 1-shot execution\n"
+            "• <code>/broker</code> — View/switch default broker\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "💡 <i>MTF (Margin Trading Facility) enables 3x-4x broker leverage while capping your capital exposure!</i>"
+            "💡 <i>MTF enables 3x-4x broker leverage while capping your maximum capital exposure!</i>"
         )
 
     tokens = [t.strip() for t in args.split() if t.strip()]
     raw_sym = tokens[0].upper()
     symbol = SYMBOL_ALIASES.get(raw_sym, raw_sym)
 
+    from order_engine import (
+        MODE_SIZES,
+        SUPPORTED_BROKERS,
+        get_default_broker,
+        execute_broker_order
+    )
+
+    broker = get_default_broker()
     mode = "mod"
     sl_mode = "lod"
     auto_confirm = False
-
-    from order_engine import MODE_SIZES, fetch_live_quote, calculate_order_sizing, execute_mtf_order
 
     for tok in tokens[1:]:
         tok_lower = tok.lower()
@@ -767,75 +878,39 @@ def handle_buy_command(args, from_chat_id):
             sl_mode = "lod"
         elif tok_lower in ("regime", "reg", "market_regime"):
             sl_mode = "regime"
+        elif tok_lower in SUPPORTED_BROKERS:
+            broker = tok_lower
         elif tok_lower in MODE_SIZES or tok_lower.endswith("k") or tok_lower.endswith("l") or tok_lower.isdigit():
             mode = tok_lower
 
-    quote_data, err = fetch_live_quote(symbol)
-    if not quote_data:
-        return f"❌ <b>Quote Failed for {symbol}:</b>\n{err}"
-
-    calc = calculate_order_sizing(quote_data, mode_arg=mode, sl_mode=sl_mode)
-    if calc["quantity"] <= 0:
-        return (
-            f"❌ <b>Sizing Error for {symbol}:</b>\n"
-            f"LTP (₹{calc['ltp']}) exceeds allocated size (₹{calc['target_size']:,}).\n"
-            f"Cannot buy even 1 share with {calc['mode_label']} mode."
-        )
-
     if auto_confirm:
-        success, res = execute_mtf_order(symbol, mode_arg=mode, sl_mode=sl_mode)
+        success, res = execute_broker_order(symbol, mode_arg=mode, sl_mode=sl_mode, broker=broker)
         if success:
             return (
-                "🎉 <b>ORDER EXECUTED ON UPSTOX!</b>\n"
+                f"🎉 <b>ORDER EXECUTED ON {res['broker']}!</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"📌 <b>Symbol:</b> {res['symbol']}\n"
                 f"🎯 <b>Order ID:</b> <code>{res['order_id']}</code>\n"
-                "📦 <b>Product:</b> MTF (Margin Trading Facility)\n"
+                f"📦 <b>Product:</b> {res['product_label']}\n"
                 f"📈 <b>Quantity:</b> <b>{res['quantity']} shares</b> @ ₹{res['ltp']}\n"
                 f"💰 <b>Exposure:</b> ₹{res['actual_exposure']:,} ({res['mode_label']})\n"
                 f"🛑 <b>Stop Loss:</b> <b>₹{res['stop_loss']}</b> ({res['sl_mode']}: -{res['risk_pct']}%)\n"
                 f"⚠️ <b>Risk at SL:</b> ₹{res['total_risk_inr']:,}\n"
                 f"🌐 <b>Regime:</b> {res['regime_label']}\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"💡 <i>Recommendation: Set GTT / SL-M trigger at ₹{res['stop_loss']} in broker app. Added to scanner watchlist.</i>"
+                f"💡 <i>Recommendation: Set GTT / SL-M trigger at ₹{res['stop_loss']} in {res['broker']} app. Added to scanner watchlist.</i>"
             )
         else:
             return (
-                f"❌ <b>ORDER FAILED AT BROKER</b>\n"
+                f"❌ <b>ORDER FAILED AT {broker.upper()}</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"📌 <b>Symbol:</b> {symbol}\n"
                 f"⚠️ <b>Error:</b> {res}\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 <i>Check token validity (/token) or MTF eligibility of this stock.</i>"
+                f"💡 <i>Check token validity (/token) or MTF eligibility of this stock on {broker.upper()}.</i>"
             )
 
-    regime_warning = f"\n{calc['regime_note']}" if calc.get("regime_note") else ""
-    preview_text = (
-        "⚡ <b>JARVIS MTF ORDER PREVIEW</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📌 <b>Symbol:</b> <b>{symbol}</b> (NSE Equity)\n"
-        f"💰 <b>Size Mode:</b> {calc['mode_label']}\n"
-        f"📈 <b>Live LTP:</b> ₹{calc['ltp']:.2f}\n"
-        f"🎯 <b>Calculated Qty:</b> <b>{calc['quantity']} shares</b>\n"
-        f"💼 <b>Actual Exposure:</b> ₹{calc['actual_exposure']:,}\n"
-        f"🛑 <b>Stop Loss:</b> <b>₹{calc['stop_loss']}</b> ({calc['sl_mode']}: -{calc['risk_pct']}%)\n"
-        f"⚠️ <b>Total Risk ₹:</b> ₹{calc['total_risk_inr']:,}\n"
-        f"🌐 <b>Regime:</b> {calc['regime_label']}{regime_warning}\n"
-        f"🏦 <b>Broker Product:</b> Upstox MTF (Margin Trading Facility)\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"💡 <i>Reply <code>/buy {symbol} {mode} confirm</code> or tap below:</i>"
-    )
-
-    reply_markup = {
-        "inline_keyboard": [
-            [
-                {"text": f"✅ Execute MTF Buy ({calc['quantity']} shs)", "callback_data": f"buy_exec:{symbol}:{mode}:{sl_mode}"},
-                {"text": "❌ Cancel", "callback_data": f"buy_cancel:{symbol}"}
-            ]
-        ]
-    }
-
-    return (preview_text, reply_markup)
+    return build_buy_preview(symbol, mode, sl_mode, broker)
 
 
 def handle_callback_query(cq):
@@ -856,38 +931,51 @@ def handle_callback_query(cq):
         symbol = parts[1] if len(parts) > 1 else ""
         mode = parts[2] if len(parts) > 2 else "mod"
         sl_mode = parts[3] if len(parts) > 3 else "lod"
+        broker = parts[4] if len(parts) > 4 else "upstox"
 
-        answer_callback_query(cq_id, f"Submitting MTF Buy for {symbol}...")
+        answer_callback_query(cq_id, f"Submitting order for {symbol} on {broker.upper()}...")
 
-        from order_engine import execute_mtf_order
-        success, res = execute_mtf_order(symbol, mode_arg=mode, sl_mode=sl_mode)
+        from order_engine import execute_broker_order
+        success, res = execute_broker_order(symbol, mode_arg=mode, sl_mode=sl_mode, broker=broker)
 
         if success:
             receipt = (
-                "🎉 <b>ORDER EXECUTED ON UPSTOX!</b>\n"
+                f"🎉 <b>ORDER EXECUTED ON {res['broker']}!</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"📌 <b>Symbol:</b> {res['symbol']}\n"
                 f"🎯 <b>Order ID:</b> <code>{res['order_id']}</code>\n"
-                "📦 <b>Product:</b> MTF (Margin Trading Facility)\n"
+                f"📦 <b>Product:</b> {res['product_label']}\n"
                 f"📈 <b>Quantity:</b> <b>{res['quantity']} shares</b> @ ₹{res['ltp']}\n"
                 f"💰 <b>Exposure:</b> ₹{res['actual_exposure']:,} ({res['mode_label']})\n"
                 f"🛑 <b>Stop Loss:</b> <b>₹{res['stop_loss']}</b> ({res['sl_mode']}: -{res['risk_pct']}%)\n"
                 f"⚠️ <b>Risk at SL:</b> ₹{res['total_risk_inr']:,}\n"
                 f"🌐 <b>Regime:</b> {res['regime_label']}\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"💡 <i>Recommendation: Set GTT / SL-M trigger at ₹{res['stop_loss']} in broker app. Added to scanner watchlist.</i>"
+                f"💡 <i>Recommendation: Set GTT / SL-M trigger at ₹{res['stop_loss']} in {res['broker']} app. Added to scanner watchlist.</i>"
             )
         else:
             receipt = (
-                f"❌ <b>ORDER FAILED AT BROKER</b>\n"
+                f"❌ <b>ORDER FAILED AT {broker.upper()}</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"📌 <b>Symbol:</b> {symbol}\n"
                 f"⚠️ <b>Error:</b> {res}\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 <i>Check token validity (/token) or MTF eligibility of this stock.</i>"
+                f"💡 <i>Check token validity (/token) or MTF eligibility of this stock on {broker.upper()}.</i>"
             )
 
         edit_telegram_msg(chat_id, msg_id, receipt, reply_markup={"inline_keyboard": []})
+
+    elif cq_data.startswith("buy_switch:"):
+        parts = cq_data.split(":")
+        symbol = parts[1] if len(parts) > 1 else ""
+        mode = parts[2] if len(parts) > 2 else "mod"
+        sl_mode = parts[3] if len(parts) > 3 else "lod"
+        new_broker = parts[4] if len(parts) > 4 else "upstox"
+
+        answer_callback_query(cq_id, f"Switched to {new_broker.upper()}")
+        text, markup = build_buy_preview(symbol, mode, sl_mode, new_broker)
+        if markup:
+            edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
 
     elif cq_data.startswith("buy_cancel"):
         sym = cq_data.split(":")[1] if ":" in cq_data else "Trade"
@@ -895,7 +983,7 @@ def handle_callback_query(cq):
         edit_telegram_msg(
             chat_id,
             msg_id,
-            f"❌ <b>Order Cancelled:</b> MTF buy request for <b>{sym}</b> was discarded.",
+            f"❌ <b>Order Cancelled:</b> Trade request for <b>{sym}</b> was discarded.",
             reply_markup={"inline_keyboard": []}
         )
 
@@ -955,6 +1043,8 @@ def dispatch_command(msg_text, from_chat_id):
         return handle_update_token_command("zerodha", args)
     elif cmd in ("/buy", "/mtf", "/order"):
         return handle_buy_command(args, from_chat_id)
+    elif cmd in ("/broker", "/brokers"):
+        return handle_broker_command(args)
     elif cmd in ("/scan", "/refresh"):
         return handle_scan_command()
     elif cmd == "/regime":
