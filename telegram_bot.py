@@ -119,6 +119,89 @@ def send_telegram_msg(chat_id, text, parse_mode="HTML", reply_markup=None):
         return False, str(e)
 
 
+def edit_telegram_msg(chat_id, message_id, text, parse_mode="HTML", reply_markup=None):
+    """Edits an existing Telegram message in place."""
+    bot_token, _ = get_telegram_config()
+    if not bot_token or not chat_id or not message_id:
+        return False, "Missing parameters"
+
+    url = f"https://api.telegram.org/bot{bot_token}/editMessageText"
+    payload = {
+        "chat_id": chat_id,
+        "message_id": message_id,
+        "text": text,
+        "parse_mode": parse_mode,
+        "disable_web_page_preview": True
+    }
+    if reply_markup is not None:
+        payload["reply_markup"] = reply_markup
+
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={
+        "Content-Type": "application/json",
+        "User-Agent": "Jarvis-Telegram-Bot"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return True, json.loads(resp.read().decode())
+    except Exception as e:
+        return False, str(e)
+
+
+def answer_callback_query(callback_query_id, text=None, show_alert=False):
+    """Acknowledges an inline keyboard button tap in Telegram."""
+    bot_token, _ = get_telegram_config()
+    if not bot_token or not callback_query_id:
+        return False
+
+    url = f"https://api.telegram.org/bot{bot_token}/answerCallbackQuery"
+    payload = {
+        "callback_query_id": callback_query_id,
+        "show_alert": show_alert
+    }
+    if text:
+        payload["text"] = text
+
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={
+        "Content-Type": "application/json",
+        "User-Agent": "Jarvis-Telegram-Bot"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return True
+    except Exception:
+        return False
+
+
+def register_telegram_commands():
+    """Registers bot commands with Telegram API for autocomplete menu."""
+    bot_token, _ = get_telegram_config()
+    if not bot_token:
+        return False
+    url = f"https://api.telegram.org/bot{bot_token}/setMyCommands"
+    commands = [
+        {"command": "buy", "description": "🛒 Place MTF Order with LoD Stop Loss (agg/mod/50k)"},
+        {"command": "watchlist", "description": "📋 View active watchlist & TV chart links"},
+        {"command": "add", "description": "➕ Add stock ticker(s) to scanner watchlist"},
+        {"command": "remove", "description": "➖ Remove stock ticker(s) from watchlist"},
+        {"command": "token", "description": "🎟️ Check broker token health (Upstox/Dhan/Zerodha)"},
+        {"command": "scan", "description": "⚡ Trigger instant market scan & cloud push"},
+        {"command": "regime", "description": "🧭 View market regime & risk guidance"},
+        {"command": "help", "description": "📖 Show complete command cockpit & manual"}
+    ]
+    data = json.dumps({"commands": commands}).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={
+        "Content-Type": "application/json",
+        "User-Agent": "Jarvis-Telegram-Bot"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            return True
+    except Exception:
+        return False
+
+
 # ---------------------------------------------------------
 # Watchlist Operations
 # ---------------------------------------------------------
@@ -612,6 +695,14 @@ def handle_help_command():
     return (
         "⚡ <b>JARVIS TELEGRAM COMMAND COCKPIT</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "🛒 <b>MTF Broker Orders:</b>\n"
+        "• <code>/buy &lt;SYM&gt; [mode] [sl]</code> — Place MTF Order with LoD SL\n"
+        "  - <code>/buy RELIANCE agg</code> — ₹1.5L Aggressive Size\n"
+        "  - <code>/buy RELIANCE mod</code> — ₹1.0L Moderate Size (Default)\n"
+        "  - <code>/buy RELIANCE 50k</code> — ₹50K Conservative / 50% Risk\n"
+        "  - <code>/buy RELIANCE mod regime</code> — Regime Capped Risk SL\n"
+        "  - <code>/buy RELIANCE agg confirm</code> — Instant 1-shot execution\n"
+        "  - <i>Interactive buttons with LoD Stop-Loss & Risk calculation!</i>\n\n"
         "📋 <b>Watchlist Commands:</b>\n"
         "• <code>/add &lt;SYMBOL...&gt;</code> — Add stock(s) to scanner watchlist\n"
         "• <code>/remove &lt;SYMBOL...&gt;</code> — Remove stock(s) from watchlist\n"
@@ -629,6 +720,184 @@ def handle_help_command():
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         "📊 <a href='https://sanincredible.github.io/Jarvis/'>Open Live Web Dashboard</a>"
     )
+
+
+def handle_buy_command(args, from_chat_id):
+    """
+    Handles /buy or /mtf command.
+    Syntax: /buy <SYMBOL> [agg|mod|50k] [lod|regime] [confirm|now]
+    """
+    if not args:
+        return (
+            "🛒 <b>JARVIS MTF ORDER PLACEMENT</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "<b>Usage:</b> <code>/buy &lt;SYMBOL&gt; [mode] [sl] [confirm]</code>\n\n"
+            "<b>Sizing Modes:</b>\n"
+            "• <code>agg</code> / <code>1.5L</code> — Aggressive (₹1,50,000 exposure)\n"
+            "• <code>mod</code> / <code>1L</code>   — Moderate (₹1,00,000 exposure - Default)\n"
+            "• <code>50k</code> / <code>low</code>  — Conservative / 50% Risk (₹50,000 exposure)\n"
+            "• Custom: e.g. <code>75k</code>, <code>200000</code>\n\n"
+            "<b>Stop Loss Options:</b>\n"
+            "• <code>lod</code> — Low of Day (Default)\n"
+            "• <code>regime</code> — Adjusted based on Market Regime\n\n"
+            "<b>Examples:</b>\n"
+            "• <code>/buy RELIANCE</code> — Preview ₹1L MTF Buy with LoD SL\n"
+            "• <code>/buy INFY agg</code> — Preview ₹1.5L MTF Buy\n"
+            "• <code>/buy TATAMOTORS 50k</code> — Preview ₹50K MTF Buy\n"
+            "• <code>/buy TCS agg confirm</code> — Instant 1-shot execution\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "💡 <i>MTF (Margin Trading Facility) enables 3x-4x broker leverage while capping your capital exposure!</i>"
+        )
+
+    tokens = [t.strip() for t in args.split() if t.strip()]
+    raw_sym = tokens[0].upper()
+    symbol = SYMBOL_ALIASES.get(raw_sym, raw_sym)
+
+    mode = "mod"
+    sl_mode = "lod"
+    auto_confirm = False
+
+    from order_engine import MODE_SIZES, fetch_live_quote, calculate_order_sizing, execute_mtf_order
+
+    for tok in tokens[1:]:
+        tok_lower = tok.lower()
+        if tok_lower in ("confirm", "now", "exec", "execute", "yes"):
+            auto_confirm = True
+        elif tok_lower in ("lod", "daylow", "low_of_day"):
+            sl_mode = "lod"
+        elif tok_lower in ("regime", "reg", "market_regime"):
+            sl_mode = "regime"
+        elif tok_lower in MODE_SIZES or tok_lower.endswith("k") or tok_lower.endswith("l") or tok_lower.isdigit():
+            mode = tok_lower
+
+    quote_data, err = fetch_live_quote(symbol)
+    if not quote_data:
+        return f"❌ <b>Quote Failed for {symbol}:</b>\n{err}"
+
+    calc = calculate_order_sizing(quote_data, mode_arg=mode, sl_mode=sl_mode)
+    if calc["quantity"] <= 0:
+        return (
+            f"❌ <b>Sizing Error for {symbol}:</b>\n"
+            f"LTP (₹{calc['ltp']}) exceeds allocated size (₹{calc['target_size']:,}).\n"
+            f"Cannot buy even 1 share with {calc['mode_label']} mode."
+        )
+
+    if auto_confirm:
+        success, res = execute_mtf_order(symbol, mode_arg=mode, sl_mode=sl_mode)
+        if success:
+            return (
+                "🎉 <b>ORDER EXECUTED ON UPSTOX!</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📌 <b>Symbol:</b> {res['symbol']}\n"
+                f"🎯 <b>Order ID:</b> <code>{res['order_id']}</code>\n"
+                "📦 <b>Product:</b> MTF (Margin Trading Facility)\n"
+                f"📈 <b>Quantity:</b> <b>{res['quantity']} shares</b> @ ₹{res['ltp']}\n"
+                f"💰 <b>Exposure:</b> ₹{res['actual_exposure']:,} ({res['mode_label']})\n"
+                f"🛑 <b>Stop Loss:</b> <b>₹{res['stop_loss']}</b> ({res['sl_mode']}: -{res['risk_pct']}%)\n"
+                f"⚠️ <b>Risk at SL:</b> ₹{res['total_risk_inr']:,}\n"
+                f"🌐 <b>Regime:</b> {res['regime_label']}\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"💡 <i>Recommendation: Set GTT / SL-M trigger at ₹{res['stop_loss']} in broker app. Added to scanner watchlist.</i>"
+            )
+        else:
+            return (
+                f"❌ <b>ORDER FAILED AT BROKER</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📌 <b>Symbol:</b> {symbol}\n"
+                f"⚠️ <b>Error:</b> {res}\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 <i>Check token validity (/token) or MTF eligibility of this stock.</i>"
+            )
+
+    regime_warning = f"\n{calc['regime_note']}" if calc.get("regime_note") else ""
+    preview_text = (
+        "⚡ <b>JARVIS MTF ORDER PREVIEW</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📌 <b>Symbol:</b> <b>{symbol}</b> (NSE Equity)\n"
+        f"💰 <b>Size Mode:</b> {calc['mode_label']}\n"
+        f"📈 <b>Live LTP:</b> ₹{calc['ltp']:.2f}\n"
+        f"🎯 <b>Calculated Qty:</b> <b>{calc['quantity']} shares</b>\n"
+        f"💼 <b>Actual Exposure:</b> ₹{calc['actual_exposure']:,}\n"
+        f"🛑 <b>Stop Loss:</b> <b>₹{calc['stop_loss']}</b> ({calc['sl_mode']}: -{calc['risk_pct']}%)\n"
+        f"⚠️ <b>Total Risk ₹:</b> ₹{calc['total_risk_inr']:,}\n"
+        f"🌐 <b>Regime:</b> {calc['regime_label']}{regime_warning}\n"
+        f"🏦 <b>Broker Product:</b> Upstox MTF (Margin Trading Facility)\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"💡 <i>Reply <code>/buy {symbol} {mode} confirm</code> or tap below:</i>"
+    )
+
+    reply_markup = {
+        "inline_keyboard": [
+            [
+                {"text": f"✅ Execute MTF Buy ({calc['quantity']} shs)", "callback_data": f"buy_exec:{symbol}:{mode}:{sl_mode}"},
+                {"text": "❌ Cancel", "callback_data": f"buy_cancel:{symbol}"}
+            ]
+        ]
+    }
+
+    return (preview_text, reply_markup)
+
+
+def handle_callback_query(cq):
+    """Processes interactive inline keyboard button taps."""
+    bot_token, authorized_chat_id = get_telegram_config()
+    cq_id = cq.get("id")
+    cq_data = cq.get("data", "")
+    cq_msg = cq.get("message", {})
+    chat_id = cq_msg.get("chat", {}).get("id")
+    msg_id = cq_msg.get("message_id")
+
+    if authorized_chat_id and str(chat_id) != str(authorized_chat_id):
+        answer_callback_query(cq_id, "Unauthorized", show_alert=True)
+        return
+
+    if cq_data.startswith("buy_exec:"):
+        parts = cq_data.split(":")
+        symbol = parts[1] if len(parts) > 1 else ""
+        mode = parts[2] if len(parts) > 2 else "mod"
+        sl_mode = parts[3] if len(parts) > 3 else "lod"
+
+        answer_callback_query(cq_id, f"Submitting MTF Buy for {symbol}...")
+
+        from order_engine import execute_mtf_order
+        success, res = execute_mtf_order(symbol, mode_arg=mode, sl_mode=sl_mode)
+
+        if success:
+            receipt = (
+                "🎉 <b>ORDER EXECUTED ON UPSTOX!</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📌 <b>Symbol:</b> {res['symbol']}\n"
+                f"🎯 <b>Order ID:</b> <code>{res['order_id']}</code>\n"
+                "📦 <b>Product:</b> MTF (Margin Trading Facility)\n"
+                f"📈 <b>Quantity:</b> <b>{res['quantity']} shares</b> @ ₹{res['ltp']}\n"
+                f"💰 <b>Exposure:</b> ₹{res['actual_exposure']:,} ({res['mode_label']})\n"
+                f"🛑 <b>Stop Loss:</b> <b>₹{res['stop_loss']}</b> ({res['sl_mode']}: -{res['risk_pct']}%)\n"
+                f"⚠️ <b>Risk at SL:</b> ₹{res['total_risk_inr']:,}\n"
+                f"🌐 <b>Regime:</b> {res['regime_label']}\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"💡 <i>Recommendation: Set GTT / SL-M trigger at ₹{res['stop_loss']} in broker app. Added to scanner watchlist.</i>"
+            )
+        else:
+            receipt = (
+                f"❌ <b>ORDER FAILED AT BROKER</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📌 <b>Symbol:</b> {symbol}\n"
+                f"⚠️ <b>Error:</b> {res}\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 <i>Check token validity (/token) or MTF eligibility of this stock.</i>"
+            )
+
+        edit_telegram_msg(chat_id, msg_id, receipt, reply_markup={"inline_keyboard": []})
+
+    elif cq_data.startswith("buy_cancel"):
+        sym = cq_data.split(":")[1] if ":" in cq_data else "Trade"
+        answer_callback_query(cq_id, "Order cancelled")
+        edit_telegram_msg(
+            chat_id,
+            msg_id,
+            f"❌ <b>Order Cancelled:</b> MTF buy request for <b>{sym}</b> was discarded.",
+            reply_markup={"inline_keyboard": []}
+        )
 
 
 # ---------------------------------------------------------
@@ -684,6 +953,8 @@ def dispatch_command(msg_text, from_chat_id):
         return handle_update_token_command("dhan", args)
     elif cmd == "/zerodha":
         return handle_update_token_command("zerodha", args)
+    elif cmd in ("/buy", "/mtf", "/order"):
+        return handle_buy_command(args, from_chat_id)
     elif cmd in ("/scan", "/refresh"):
         return handle_scan_command()
     elif cmd == "/regime":
@@ -705,10 +976,16 @@ def run_telegram_bot_loop(stop_event=None):
         print("⚠️ Telegram bot_token not configured. Bot listener not started.")
         return
 
+    # Auto-register commands menu with Telegram API
+    try:
+        register_telegram_commands()
+    except Exception:
+        pass
+
     print("=" * 60)
     print("🤖 JARVIS TELEGRAM COMMAND ENGINE ACTIVE")
     print(f"   Chat ID: {authorized_chat_id or 'All (Unrestricted)'}")
-    print("   Listening for /add, /remove, /watchlist, /token, /upstox, /scan...")
+    print("   Listening for /buy, /add, /remove, /watchlist, /token, /scan...")
     print("=" * 60)
 
     offset = None
@@ -729,6 +1006,13 @@ def run_telegram_bot_loop(stop_event=None):
                 updates = data.get("result", [])
                 for u in updates:
                     offset = u["update_id"] + 1
+
+                    # Handle interactive inline keyboard clicks
+                    cq = u.get("callback_query")
+                    if cq:
+                        handle_callback_query(cq)
+                        continue
+
                     msg = u.get("message") or u.get("edited_message")
                     if not msg or not msg.get("text"):
                         continue
@@ -741,7 +1025,10 @@ def run_telegram_bot_loop(stop_event=None):
 
                     reply = dispatch_command(text, chat_id)
                     if reply:
-                        send_telegram_msg(chat_id, reply)
+                        if isinstance(reply, tuple):
+                            send_telegram_msg(chat_id, reply[0], reply_markup=reply[1])
+                        else:
+                            send_telegram_msg(chat_id, reply)
 
         except urllib.error.HTTPError as he:
             if he.code == 409:
