@@ -1147,13 +1147,12 @@
           <th onclick="handleSort('orb_status')" style="text-align:center;" id="th-orb">Band <span id="sort-orb_status" class="sort-icon"></span></th>
           <th onclick="handleSort('tag')" style="text-align:center;" id="th-tag">Route <span id="sort-tag" class="sort-icon"></span></th>
           <th onclick="handleSort('signal')" id="th-signal">Runtime Status <span id="sort-signal" class="sort-icon"></span></th>
-          <th onclick="handleSort('strength_score')" style="text-align:right;" id="th-score">QoS <span id="sort-strength_score" class="sort-icon"></span></th>
           <th onclick="handleSort('lod_dist')" style="text-align:right;" id="th-lod" title="Low of Day Distance (% of Daily ATR14): (LTP - Day Low) / ATR14">Span% <span id="sort-lod_dist" class="sort-icon"></span></th>
         </tr>
       </thead>
       <tbody id="table-body" onmouseenter="cancelHidePopup()">
         <tr>
-          <td colspan="9" style="text-align:center; padding: 50px 10px; color:var(--text-muted); font-size:14px;">
+          <td colspan="8" style="text-align:center; padding: 50px 10px; color:var(--text-muted); font-size:14px;">
             ⏳ Connecting to cloud feed payload (<code>data.json</code>)...
           </td>
         </tr>
@@ -2158,13 +2157,12 @@
               ${stretch_badge}
             </div>
           </td>
-          <td style="text-align:right; font-weight:800; color:#f4f4f5;">${Number(stk.strength_score).toFixed(1)}</td>
           <td style="text-align:right;">${lod_badge}</td>
         </tr>
       `;
     });
 
-    tableBody.innerHTML = html || `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">${isStealthMode ? 'No telemetry nodes match current filter.' : 'No stocks match current filter.'}</td></tr>`;
+    tableBody.innerHTML = html || `<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">${isStealthMode ? 'No telemetry nodes match current filter.' : 'No stocks match current filter.'}</td></tr>`;
   }
 
   // Chart Timeframe Switcher
