@@ -67,6 +67,45 @@ MODE_SIZES = {
 
 SUPPORTED_BROKERS = ("upstox", "dhan", "zerodha")
 
+# Common Trader Nicknames & Symbol Aliases (Auto-mapped to official NSE EQ symbols)
+COMMON_SYMBOL_ALIASES = {
+    "RIL": "RELIANCE",
+    "RELIANCEIND": "RELIANCE",
+    "SBI": "SBIN",
+    "SBIBK": "SBIN",
+    "HDFC": "HDFCBANK",
+    "HDFCBK": "HDFCBANK",
+    "KOTAK": "KOTAKBANK",
+    "KOTAKBK": "KOTAKBANK",
+    "ICICI": "ICICIBANK",
+    "ICICIBK": "ICICIBANK",
+    "AXIS": "AXISBANK",
+    "AXISBK": "AXISBANK",
+    "BHARTI": "BHARTIARTL",
+    "AIRTEL": "BHARTIARTL",
+    "INFOSYS": "INFY",
+    "MM": "M&M",
+    "TATAMOTOR": "TATAMOTORS",
+    "BAJAJAUTO": "BAJAJ-AUTO",
+    "LT": "LT",
+    "L&T": "LT",
+    "JAYNECOND": "JAYNECOIND",
+    "DALTACORP": "DELTACORP",
+    "SAMBHAV": "SAMBHV",
+    "HBLPOWER": "HBLENGINE",
+    "INDEGENE": "INDGN",
+    "INDGEN": "INDGN",
+    "JIO": "JIOFIN",
+}
+
+
+def resolve_symbol(symbol: str) -> str:
+    """Normalizes symbol string and resolves trader nicknames / aliases to official NSE symbol."""
+    if not symbol:
+        return ""
+    s_clean = symbol.strip().upper().replace("NSE:", "").replace(".NS", "")
+    return COMMON_SYMBOL_ALIASES.get(s_clean, s_clean)
+
 
 def get_ist_now():
     """Returns current datetime in IST."""
@@ -168,7 +207,7 @@ def parse_size_mode(mode_arg):
 
 def resolve_dhan_security_id(symbol):
     """Resolves symbol to Dhan securityId from local cache or Dhan scrip master."""
-    sym_u = symbol.strip().upper()
+    sym_u = resolve_symbol(symbol).strip().upper()
     if DHAN_CACHE_FILE.is_file():
         try:
             with open(DHAN_CACHE_FILE, "r", encoding="utf-8") as f:
@@ -200,9 +239,10 @@ def resolve_dhan_security_id(symbol):
 
 def fetch_live_quote(symbol):
     """
-    Fetches live quote for a symbol from Upstox API v2.
+    Fetches live quote for a symbol from Upstox API v2 with automatic fallback.
     Returns dict with ltp, day_low, day_high, prev_close, instrument_key.
     """
+    symbol = resolve_symbol(symbol)
     try:
         from upstox_tablet_scanner import get_instrument_key
         instrument_key = get_instrument_key(symbol)
@@ -824,6 +864,7 @@ def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
     Executes full pipeline across any requested broker:
     Upstox (MTF), Dhan (MTF), or Zerodha (CNC).
     """
+    symbol = resolve_symbol(symbol)
     target_broker = (broker or get_default_broker()).strip().lower()
     if target_broker not in SUPPORTED_BROKERS:
         target_broker = "upstox"
