@@ -1,0 +1,784 @@
+#!/usr/bin/env python3
+"""
+⚡ JARVIS TELEGRAM COMMAND BOT & AUTOMATION ENGINE
+=================================================
+Enables complete remote management of Jarvis via Telegram:
+1. Watchlist Management:
+   - /add <SYMBOL...>    : Add stock(s) to watchlist & push to GitHub/Dashboard
+   - /remove <SYMBOL...> : Remove stock(s) from watchlist & push to GitHub/Dashboard
+   - /watchlist or /list : View all active watchlist stocks with TradingView links
+2. Token Management:
+   - /token or /tokens   : Check live health of Upstox, Dhan, Zerodha tokens
+   - /upstox <TOKEN>     : Update Upstox access token & test live quote
+   - /dhan <TOKEN>       : Update Dhan access token & test orderbook
+   - /zerodha <TOKEN>    : Update Zerodha access token & test trades
+   - Smart Auto-Detect   : Simply paste any JWT or token -> auto-detects broker, saves & verifies!
+3. Scanner & Market Control:
+   - /scan or /refresh   : Trigger instant market scan & push fresh data to dashboard
+   - /regime             : View current market regime & capital allocation guidance
+   - /help or /start     : Show full command menu and interactive guide
+4. Security:
+   - Restricts commands strictly to the authorized Telegram Chat ID in config_credentials.json.
+"""
+
+import os
+import sys
+import json
+import time
+import base64
+import threading
+import urllib.request
+import urllib.error
+from pathlib import Path
+from datetime import datetime, timezone, timedelta
+
+# Ensure UTF-8 output on Windows consoles
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+CONFIG_FILE = SCRIPT_DIR / "config_credentials.json"
+WATCHLIST_FILE = SCRIPT_DIR / "watchlist.txt"
+UPSTOX_TOKEN_FILE = SCRIPT_DIR / "upstoxtoken.txt"
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def get_ist_now():
+    """Returns current datetime in IST."""
+    return datetime.now(timezone.utc).astimezone(IST).replace(tzinfo=None)
+
+
+# ---------------------------------------------------------
+# Configuration & Credentials Management
+# ---------------------------------------------------------
+def load_config():
+    """Loads configuration from config_credentials.json."""
+    for c_path in [CONFIG_FILE, SCRIPT_DIR / "credentials.json"]:
+        if c_path.is_file():
+            try:
+                with open(c_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+    return {}
+
+
+def save_config(cfg):
+    """Saves updated configuration to config_credentials.json safely."""
+    try:
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"❌ Error saving config_credentials.json: {e}")
+        return False
+
+
+def get_telegram_config():
+    """Retrieves bot token and authorized chat ID."""
+    cfg = load_config()
+    tg = cfg.get("telegram", {})
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip() or tg.get("bot_token", "").strip()
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip() or str(tg.get("chat_id", "")).strip()
+    return bot_token, chat_id
+
+
+# ---------------------------------------------------------
+# Telegram Bot API Helpers
+# ---------------------------------------------------------
+def send_telegram_msg(chat_id, text, parse_mode="HTML", reply_markup=None):
+    """Sends a Telegram message to a specific chat."""
+    bot_token, _ = get_telegram_config()
+    if not bot_token or not chat_id:
+        return False, "Missing bot_token or chat_id"
+
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": parse_mode,
+        "disable_web_page_preview": True
+    }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={
+        "Content-Type": "application/json",
+        "User-Agent": "Jarvis-Telegram-Bot"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return True, json.loads(resp.read().decode())
+    except Exception as e:
+        return False, str(e)
+
+
+# ---------------------------------------------------------
+# Watchlist Operations
+# ---------------------------------------------------------
+SYMBOL_ALIASES = {
+    "JAYNECOND": "JAYNECOIND",
+    "DALTACORP": "DELTACORP",
+    "SAMBHAV": "SAMBHV",
+    "HBLPOWER": "HBLENGINE",
+    "INDEGENE": "INDGN",
+}
+
+
+def read_watchlist_symbols():
+    """Reads all active symbols from watchlist.txt."""
+    if not WATCHLIST_FILE.is_file():
+        return []
+    syms = []
+    try:
+        with open(WATCHLIST_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                l = line.strip().upper()
+                if not l or l.startswith("#"):
+                    continue
+                for s in l.replace(",", " ").split():
+                    canonical = SYMBOL_ALIASES.get(s, s)
+                    if canonical not in syms:
+                        syms.append(canonical)
+    except Exception as e:
+        print(f"Error reading watchlist: {e}")
+    return syms
+
+
+def write_watchlist_symbols(symbols):
+    """Writes updated symbols back to watchlist.txt cleanly."""
+    lines = [
+        "# Upstox 3m ORB Scanner Watchlist",
+        "# Add or remove NSE stock tickers below (one per line, or space/comma separated)",
+        ""
+    ]
+    seen = set()
+    for s in symbols:
+        s_u = s.strip().upper()
+        if s_u and s_u not in seen and not s_u.startswith("#"):
+            seen.add(s_u)
+            lines.append(s_u)
+
+    try:
+        with open(WATCHLIST_FILE, "w", encoding="utf-8", newline="\n") as f:
+            f.write("\n".join(lines) + "\n")
+        return True
+    except Exception as e:
+        print(f"Error writing watchlist: {e}")
+        return False
+
+
+def push_watchlist_and_data_to_github():
+    """Pushes watchlist.txt and data.json to GitHub repository via REST API."""
+    try:
+        from upstox_tablet_scanner import load_github_config, sync_file_to_github_api
+        gh_cfg = load_github_config()
+        if gh_cfg:
+            syms = read_watchlist_symbols()
+            sync_file_to_github_api(gh_cfg, "watchlist.txt", f"Update watchlist via Telegram ({len(syms)} symbols)")
+            if (SCRIPT_DIR / "data.json").is_file():
+                sync_file_to_github_api(gh_cfg, "data.json", f"Sync data.json via Telegram ({len(syms)} symbols)")
+            return True
+    except Exception as e:
+        print(f"GitHub Push notice: {e}")
+    return False
+
+
+def trigger_immediate_rescan():
+    """Runs a fresh scan and updates static html / data.json."""
+    try:
+        from upstox_tablet_scanner import scan_watchlist, export_static_html
+        results = scan_watchlist()
+        now_str = get_ist_now().strftime("%H:%M:%S IST")
+        export_static_html(results, now_str, 5000)
+        push_watchlist_and_data_to_github()
+        return results
+    except Exception as e:
+        print(f"Immediate rescan note: {e}")
+        return None
+
+
+# ---------------------------------------------------------
+# Token Health & Verification Engine
+# ---------------------------------------------------------
+def test_upstox_token(token):
+    """Tests live Upstox access token by querying RELIANCE LTP."""
+    token = token.strip()
+    if not token:
+        return False, "Token is empty"
+    url = "https://api.upstox.com/v2/market-quote/ltp?instrument_key=NSE_EQ|INE002A01018"
+    req = urllib.request.Request(url, headers={
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json",
+        "User-Agent": "Jarvis-Token-Checker"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            if resp.status == 200:
+                d = json.loads(resp.read().decode())
+                data_obj = d.get("data", {})
+                first_k = next(iter(data_obj.values()), {}) if data_obj else {}
+                ltp = first_k.get("last_price")
+                return True, f"Active (RELIANCE LTP: ₹{ltp})" if ltp else "Active"
+            return False, f"HTTP {resp.status}"
+    except urllib.error.HTTPError as he:
+        return False, f"HTTP {he.code} ({he.reason})"
+    except Exception as e:
+        return False, str(e)
+
+
+def test_dhan_token(token, client_id):
+    """Tests live Dhan access token by querying orderbook/trades."""
+    token = token.strip()
+    client_id = client_id.strip()
+    if not token or not client_id:
+        return False, "Missing token or client_id"
+    url = "https://api.dhan.co/v2/trades"
+    req = urllib.request.Request(url, headers={
+        "access-token": token,
+        "client-id": client_id,
+        "Content-Type": "application/json",
+        "User-Agent": "Jarvis-Token-Checker"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            if resp.status == 200:
+                return True, "Active (Orderbook OK)"
+            return False, f"HTTP {resp.status}"
+    except urllib.error.HTTPError as he:
+        if he.code == 401:
+            return False, "Expired (Needs 30-day renewal)"
+        return False, f"HTTP {he.code}"
+    except Exception as e:
+        return False, str(e)
+
+
+def test_zerodha_token(api_key, token):
+    """Tests live Zerodha Kite access token."""
+    api_key = api_key.strip()
+    token = token.strip()
+    if not api_key or not token:
+        return False, "Missing api_key or token"
+    url = "https://api.kite.trade/trades"
+    req = urllib.request.Request(url, headers={
+        "X-Kite-Version": "3",
+        "Authorization": f"token {api_key}:{token}",
+        "User-Agent": "Jarvis-Token-Checker"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            if resp.status == 200:
+                return True, "Active (Ready for trades)"
+            return False, f"HTTP {resp.status}"
+    except urllib.error.HTTPError as he:
+        if he.code in (401, 403):
+            return False, "Expired (Daily 6 AM rule)"
+        return False, f"HTTP {he.code}"
+    except Exception as e:
+        return False, str(e)
+
+
+def detect_token_type(raw_token):
+    """Intelligently detects whether a token string is Upstox, Dhan, or Zerodha."""
+    raw_token = raw_token.strip()
+    if raw_token.startswith("eyJ"):
+        try:
+            parts = raw_token.split(".")
+            if len(parts) >= 2:
+                payload = parts[1]
+                payload += "=" * (-len(payload) % 4)
+                data = json.loads(base64.urlsafe_b64decode(payload.encode()).decode())
+                iss = str(data.get("iss", "")).lower()
+                if "dhan" in iss:
+                    return "dhan", data
+                if "udapi" in iss or "upstox" in iss:
+                    return "upstox", data
+                if "sub" in data and len(str(data.get("sub", ""))) == 6:
+                    return "upstox", data
+        except Exception:
+            pass
+    # Zerodha tokens are 32-character hexadecimal/alphanumeric strings
+    if len(raw_token) == 32 and raw_token.isalnum():
+        return "zerodha", None
+    return "unknown", None
+
+
+def update_broker_token(broker_name, token):
+    """Updates config_credentials.json (and upstoxtoken.txt if Upstox) and verifies immediately."""
+    broker_name = broker_name.lower().strip()
+    cfg = load_config()
+
+    if broker_name == "upstox":
+        cfg.setdefault("upstox", {})["access_token"] = token
+        save_config(cfg)
+        # Also write upstoxtoken.txt
+        try:
+            with open(UPSTOX_TOKEN_FILE, "w", encoding="utf-8") as f:
+                f.write(token)
+        except Exception:
+            pass
+        ok, msg = test_upstox_token(token)
+        return ok, broker_name, msg
+
+    elif broker_name == "dhan":
+        cfg.setdefault("dhan", {})["access_token"] = token
+        save_config(cfg)
+        cid = cfg.get("dhan", {}).get("client_id", "")
+        ok, msg = test_dhan_token(token, cid)
+        return ok, broker_name, msg
+
+    elif broker_name == "zerodha":
+        cfg.setdefault("zerodha", {})["access_token"] = token
+        save_config(cfg)
+        ak = cfg.get("zerodha", {}).get("api_key", "")
+        ok, msg = test_zerodha_token(ak, token)
+        return ok, broker_name, msg
+
+    return False, broker_name, f"Unknown broker '{broker_name}'"
+
+
+# ---------------------------------------------------------
+# Command Handlers
+# ---------------------------------------------------------
+def handle_add_command(args_text):
+    """Handles /add <SYMBOL...>"""
+    if not args_text.strip():
+        return (
+            "⚠️ <b>Usage:</b> <code>/add &lt;SYMBOL&gt;</code>\n"
+            "Example: <code>/add TATAMOTORS</code> or <code>/add BEL, HAL, INFY</code>"
+        )
+
+    current_syms = read_watchlist_symbols()
+    current_set = set(current_syms)
+
+    raw_items = args_text.replace(",", " ").split()
+    added = []
+    already_present = []
+
+    for item in raw_items:
+        s_u = item.strip().upper()
+        if not s_u or s_u.startswith("#"):
+            continue
+        canonical = SYMBOL_ALIASES.get(s_u, s_u)
+        if canonical in current_set:
+            already_present.append(canonical)
+        else:
+            current_syms.append(canonical)
+            current_set.add(canonical)
+            added.append(canonical)
+
+    if not added and already_present:
+        return f"ℹ️ Already in watchlist: <b>{', '.join(already_present)}</b> (Total: {len(current_syms)})"
+
+    if not added:
+        return "⚠️ No valid symbols provided to add."
+
+    # Write updated list
+    write_watchlist_symbols(current_syms)
+
+    # Push to GitHub & Trigger Rescan in Background Thread
+    threading.Thread(target=trigger_immediate_rescan, daemon=True).start()
+
+    res = (
+        f"✅ <b>Added to Watchlist ({len(added)}):</b> <b>{', '.join(added)}</b>\n"
+        f"📋 <b>Total Stocks:</b> {len(current_syms)}\n"
+    )
+    if already_present:
+        res += f"ℹ️ <i>Already present: {', '.join(already_present)}</i>\n"
+    res += (
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "⚡ <i>Background scan & GitHub Cloud sync triggered!</i>\n"
+        "📊 <a href='https://sanincredible.github.io/Jarvis/'>Open Live Dashboard</a>"
+    )
+    return res
+
+
+def handle_remove_command(args_text):
+    """Handles /remove or /del <SYMBOL...>"""
+    if not args_text.strip():
+        return (
+            "⚠️ <b>Usage:</b> <code>/remove &lt;SYMBOL&gt;</code>\n"
+            "Example: <code>/remove PVRINOX</code> or <code>/del FSL, OAL</code>"
+        )
+
+    current_syms = read_watchlist_symbols()
+    raw_items = [s.strip().upper() for s in args_text.replace(",", " ").split() if s.strip()]
+
+    removed = []
+    not_found = []
+
+    for item in raw_items:
+        canonical = SYMBOL_ALIASES.get(item, item)
+        matched = None
+        for s in current_syms:
+            if s.upper() == canonical or s.upper() == item:
+                matched = s
+                break
+        if matched:
+            current_syms.remove(matched)
+            removed.append(matched)
+        else:
+            not_found.append(item)
+
+    if not removed and not_found:
+        return f"⚠️ Symbol(s) not found in watchlist: <b>{', '.join(not_found)}</b>"
+
+    write_watchlist_symbols(current_syms)
+
+    # Push to GitHub & Trigger Rescan in Background Thread
+    threading.Thread(target=trigger_immediate_rescan, daemon=True).start()
+
+    res = (
+        f"🗑️ <b>Removed from Watchlist:</b> <b>{', '.join(removed)}</b>\n"
+        f"📋 <b>Remaining Stocks:</b> {len(current_syms)}\n"
+    )
+    if not_found:
+        res += f"ℹ️ <i>Not in list: {', '.join(not_found)}</i>\n"
+    res += (
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "📊 <a href='https://sanincredible.github.io/Jarvis/'>Open Live Dashboard</a>"
+    )
+    return res
+
+
+def handle_watchlist_command():
+    """Handles /watchlist or /list"""
+    syms = read_watchlist_symbols()
+    if not syms:
+        return "📋 <b>Watchlist is currently empty.</b>\nAdd symbols using <code>/add &lt;SYMBOL&gt;</code>"
+
+    lines = [
+        f"📋 <b>ACTIVE WATCHLIST ({len(syms)} Stocks)</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    ]
+    for idx, s in enumerate(syms, 1):
+        tv_link = f"https://in.tradingview.com/chart/?symbol=NSE:{s}"
+        lines.append(f"<b>{idx}.</b> <a href='{tv_link}'>{s}</a>")
+
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("💡 <i>Use /add &lt;SYM&gt; to add or /remove &lt;SYM&gt; to delete.</i>")
+    lines.append("📊 <a href='https://sanincredible.github.io/Jarvis/'>Open Live Dashboard</a>")
+    return "\n".join(lines)
+
+
+def handle_token_status_command():
+    """Handles /token, /tokens, or /status"""
+    cfg = load_config()
+
+    lines = [
+        "⚡ <b>JARVIS BROKER TOKENS & SYSTEM STATUS</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    ]
+
+    # 1. Upstox
+    u_tok = cfg.get("upstox", {}).get("access_token", "").strip()
+    if not u_tok and UPSTOX_TOKEN_FILE.is_file():
+        try:
+            with open(UPSTOX_TOKEN_FILE, "r", encoding="utf-8") as f:
+                u_tok = f.read().strip()
+        except Exception:
+            pass
+    if u_tok:
+        ok_u, msg_u = test_upstox_token(u_tok)
+        badge_u = "✅ ACTIVE" if ok_u else "❌ EXPIRED"
+        lines.append(f"• <b>Upstox Feed :</b> {badge_u} ({msg_u})")
+    else:
+        lines.append("• <b>Upstox Feed :</b> ⚠️ NOT CONFIGURED")
+
+    # 2. Dhan
+    d_tok = cfg.get("dhan", {}).get("access_token", "").strip()
+    d_cid = cfg.get("dhan", {}).get("client_id", "").strip()
+    if d_tok and d_cid:
+        ok_d, msg_d = test_dhan_token(d_tok, d_cid)
+        badge_d = "✅ ACTIVE" if ok_d else "⚠️ EXPIRED"
+        lines.append(f"• <b>DhanHQ     :</b> {badge_d} ({msg_d})")
+    else:
+        lines.append("• <b>DhanHQ     :</b> ⚠️ NOT CONFIGURED")
+
+    # 3. Zerodha
+    z_tok = cfg.get("zerodha", {}).get("access_token", "").strip()
+    z_ak = cfg.get("zerodha", {}).get("api_key", "").strip()
+    if z_tok and z_ak:
+        ok_z, msg_z = test_zerodha_token(z_ak, z_tok)
+        badge_z = "✅ ACTIVE" if ok_z else "⚠️ EXPIRED"
+        lines.append(f"• <b>Zerodha Kite:</b> {badge_z} ({msg_z})")
+    else:
+        lines.append("• <b>Zerodha Kite:</b> ⚠️ NOT CONFIGURED")
+
+    # Watchlist & Regime
+    syms = read_watchlist_symbols()
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append(f"📋 <b>Watchlist  :</b> {len(syms)} active stocks")
+
+    regime_file = SCRIPT_DIR / "market_regime.json"
+    if regime_file.is_file():
+        try:
+            with open(regime_file, "r", encoding="utf-8") as f:
+                r_data = json.load(f)
+                r_label = r_data.get("state_label", "Unknown")
+                lines.append(f"🧭 <b>Regime     :</b> {r_label}")
+        except Exception:
+            pass
+
+    lines.append(f"🕒 <b>Checked At :</b> {get_ist_now().strftime('%H:%M:%S IST')}")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("💡 <i>To update: /upstox &lt;token&gt; or /dhan &lt;token&gt;</i>")
+    return "\n".join(lines)
+
+
+def handle_update_token_command(broker_name, token_str):
+    """Handles explicit /upstox <token>, /dhan <token>, /zerodha <token>"""
+    if not token_str.strip():
+        return f"⚠️ <b>Usage:</b> <code>/{broker_name} &lt;TOKEN&gt;</code>"
+
+    token_clean = token_str.strip()
+    ok, b_name, msg = update_broker_token(broker_name, token_clean)
+
+    if ok:
+        return (
+            f"✅ <b>{b_name.upper()} Token Successfully Updated & Verified!</b>\n"
+            f"• <b>Status:</b> 🟢 ACTIVE\n"
+            f"• <b>Verification:</b> {msg}\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🚀 <i>The scanner engine has adopted the new credentials immediately.</i>"
+        )
+    else:
+        return (
+            f"⚠️ <b>{b_name.upper()} Token Saved, But Verification Notice:</b>\n"
+            f"• <b>Test Result:</b> {msg}\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "💡 <i>Please verify that your broker session is active.</i>"
+        )
+
+
+def handle_pasted_token(raw_text):
+    """Auto-detects and updates any pasted JWT token or Zerodha token."""
+    b_type, meta = detect_token_type(raw_text)
+    if b_type == "unknown":
+        return None
+
+    ok, b_name, msg = update_broker_token(b_type, raw_text.strip())
+    status_icon = "🟢 ACTIVE" if ok else "⚠️ SAVED (Notice)"
+    return (
+        f"🤖 <b>Auto-Detected {b_name.upper()} Token!</b>\n"
+        f"• <b>Status:</b> {status_icon}\n"
+        f"• <b>Verification:</b> {msg}\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "✅ <i>Credentials saved to config_credentials.json.</i>"
+    )
+
+
+def handle_scan_command():
+    """Handles /scan or /refresh"""
+    threading.Thread(target=trigger_immediate_rescan, daemon=True).start()
+    return (
+        "⚡ <b>Instant Market Scan Initiated!</b>\n"
+        "Compiling 3m ORB, Institutional Scores, and PDH breaches across all watchlist stocks.\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "📊 <a href='https://sanincredible.github.io/Jarvis/'>View Live Dashboard Results</a>"
+    )
+
+
+def handle_regime_command():
+    """Handles /regime"""
+    regime_file = SCRIPT_DIR / "market_regime.json"
+    if not regime_file.is_file():
+        return "🧭 Market regime file not yet generated. Run scanner to compile."
+
+    try:
+        with open(regime_file, "r", encoding="utf-8") as f:
+            r = json.load(f)
+        return (
+            f"🧭 <b>CURRENT MARKET REGIME: {r.get('state_label', 'N/A')}</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"• <b>Guidance :</b> {r.get('guidance', 'N/A')}\n"
+            f"• <b>Swing Alloc :</b> {r.get('swing_allocation_pct', 0)}%\n"
+            f"• <b>Intra Risk  :</b> ₹{r.get('intraday_risk_per_trade', 1000):,}\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🕒 <i>Updated: {r.get('updated_at', 'Today')}</i>"
+        )
+    except Exception as e:
+        return f"⚠️ Error loading regime: {e}"
+
+
+def handle_help_command():
+    """Handles /help or /start"""
+    return (
+        "⚡ <b>JARVIS TELEGRAM COMMAND COCKPIT</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "📋 <b>Watchlist Commands:</b>\n"
+        "• <code>/add &lt;SYMBOL...&gt;</code> — Add stock(s) to scanner watchlist\n"
+        "• <code>/remove &lt;SYMBOL...&gt;</code> — Remove stock(s) from watchlist\n"
+        "• <code>/watchlist</code> — Show full active watchlist & TV links\n\n"
+        "🎟️ <b>Token Management:</b>\n"
+        "• <code>/token</code> — Check live health of all broker tokens\n"
+        "• <code>/upstox &lt;TOKEN&gt;</code> — Update Upstox token & test feed\n"
+        "• <code>/dhan &lt;TOKEN&gt;</code> — Update DhanHQ access token\n"
+        "• <code>/zerodha &lt;TOKEN&gt;</code> — Update Zerodha Kite token\n"
+        "• <i>Tip: You can also just PASTE any token here directly!</i>\n\n"
+        "⚡ <b>Scanner & Market:</b>\n"
+        "• <code>/scan</code> — Trigger instant scan & push to cloud\n"
+        "• <code>/regime</code> — Current market regime & risk allocation\n"
+        "• <code>/status</code> — System, tokens & scanner status\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "📊 <a href='https://sanincredible.github.io/Jarvis/'>Open Live Web Dashboard</a>"
+    )
+
+
+# ---------------------------------------------------------
+# Core Message Dispatcher
+# ---------------------------------------------------------
+def dispatch_command(msg_text, from_chat_id):
+    """Processes incoming Telegram message and returns response text."""
+    bot_token, authorized_chat_id = get_telegram_config()
+
+    # Security: strict chat_id validation
+    if authorized_chat_id and str(from_chat_id) != str(authorized_chat_id):
+        print(f"⛔ Unauthorized access attempt from Chat ID: {from_chat_id}")
+        return "⛔ <b>Unauthorized:</b> Access restricted to the bot administrator."
+
+    text = msg_text.strip()
+    if not text:
+        return None
+
+    # Handle direct pasted tokens first
+    if text.startswith("eyJ") or (len(text) == 32 and text.isalnum() and not text.startswith("/")):
+        auto_resp = handle_pasted_token(text)
+        if auto_resp:
+            return auto_resp
+
+    # Normalize command
+    cmd_parts = text.split(maxsplit=1)
+    raw_cmd = cmd_parts[0].lower()
+    args = cmd_parts[1].strip() if len(cmd_parts) > 1 else ""
+
+    # Remove bot username suffix if present (e.g. /add@Sannin_100M_bot -> /add)
+    cmd = raw_cmd.split("@")[0]
+
+    if cmd in ("/start", "/help"):
+        return handle_help_command()
+    elif cmd in ("/add", "/addstock"):
+        return handle_add_command(args)
+    elif cmd in ("/remove", "/del", "/rm", "/delete"):
+        return handle_remove_command(args)
+    elif cmd in ("/watchlist", "/list", "/stocks"):
+        return handle_watchlist_command()
+    elif cmd in ("/token", "/tokens", "/status", "/check"):
+        # Check if sub-command provided (e.g. /token upstox <token>)
+        if args:
+            sub_parts = args.split(maxsplit=1)
+            sub_cmd = sub_parts[0].lower()
+            sub_tok = sub_parts[1] if len(sub_parts) > 1 else ""
+            if sub_cmd in ("upstox", "dhan", "zerodha"):
+                return handle_update_token_command(sub_cmd, sub_tok)
+        return handle_token_status_command()
+    elif cmd == "/upstox":
+        return handle_update_token_command("upstox", args)
+    elif cmd == "/dhan":
+        return handle_update_token_command("dhan", args)
+    elif cmd == "/zerodha":
+        return handle_update_token_command("zerodha", args)
+    elif cmd in ("/scan", "/refresh"):
+        return handle_scan_command()
+    elif cmd == "/regime":
+        return handle_regime_command()
+    else:
+        return (
+            f"❓ Unknown command: <code>{cmd}</code>\n"
+            "Type <code>/help</code> to view available commands."
+        )
+
+
+# ---------------------------------------------------------
+# Telegram Long-Polling Bot Loop
+# ---------------------------------------------------------
+def run_telegram_bot_loop(stop_event=None):
+    """Runs long polling loop to receive and execute Telegram commands."""
+    bot_token, authorized_chat_id = get_telegram_config()
+    if not bot_token:
+        print("⚠️ Telegram bot_token not configured. Bot listener not started.")
+        return
+
+    print("=" * 60)
+    print("🤖 JARVIS TELEGRAM COMMAND ENGINE ACTIVE")
+    print(f"   Chat ID: {authorized_chat_id or 'All (Unrestricted)'}")
+    print("   Listening for /add, /remove, /watchlist, /token, /upstox, /scan...")
+    print("=" * 60)
+
+    offset = None
+
+    while True:
+        if stop_event and stop_event.is_set():
+            print("Telegram Bot listener received stop signal.")
+            break
+
+        url = f"https://api.telegram.org/bot{bot_token}/getUpdates?timeout=20"
+        if offset is not None:
+            url += f"&offset={offset}"
+
+        req = urllib.request.Request(url, headers={"User-Agent": "Jarvis-Bot-Poller"})
+        try:
+            with urllib.request.urlopen(req, timeout=25) as resp:
+                data = json.loads(resp.read().decode())
+                updates = data.get("result", [])
+                for u in updates:
+                    offset = u["update_id"] + 1
+                    msg = u.get("message") or u.get("edited_message")
+                    if not msg or not msg.get("text"):
+                        continue
+                    chat = msg.get("chat", {})
+                    chat_id = chat.get("id")
+                    text = msg.get("text", "")
+                    sender = msg.get("from", {}).get("first_name", "User")
+
+                    print(f"📩 [{get_ist_now().strftime('%H:%M:%S')}] Telegram from {sender} ({chat_id}): {text[:50]}")
+
+                    reply = dispatch_command(text, chat_id)
+                    if reply:
+                        send_telegram_msg(chat_id, reply)
+
+        except urllib.error.HTTPError as he:
+            if he.code == 409:
+                # Conflict: another instance of getUpdates is active
+                time.sleep(5)
+            else:
+                time.sleep(2)
+        except Exception:
+            time.sleep(2)
+
+
+# ---------------------------------------------------------
+# Background Thread Runner
+# ---------------------------------------------------------
+_bot_thread = None
+_bot_stop_event = None
+
+
+def start_telegram_bot_thread():
+    """Starts the Telegram bot as a daemon background thread."""
+    global _bot_thread, _bot_stop_event
+    if _bot_thread and _bot_thread.is_alive():
+        return _bot_thread
+
+    _bot_stop_event = threading.Event()
+    _bot_thread = threading.Thread(
+        target=run_telegram_bot_loop,
+        args=(_bot_stop_event,),
+        daemon=True,
+        name="TelegramBotThread"
+    )
+    _bot_thread.start()
+    return _bot_thread
+
+
+if __name__ == "__main__":
+    try:
+        run_telegram_bot_loop()
+    except KeyboardInterrupt:
+        print("\nExiting Telegram Bot.")
