@@ -45,8 +45,19 @@ REGIME_FILE = SCRIPT_DIR / "market_regime.json"
 POSITIONAL_REGIME_FILE = SCRIPT_DIR / "daily_positional_regime.json"
 DHAN_CACHE_FILE = SCRIPT_DIR / "dhan_nse_cache.json"
 DATA_FILE = SCRIPT_DIR / "data.json"
+SERVER_IP = "80.225.210.222"
 
 IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def is_market_open():
+    """Returns True if current time is within normal market hours (09:15 - 15:30 IST, Mon-Fri)."""
+    now = get_ist_now()
+    if now.weekday() >= 5:
+        return False
+    market_open = now.replace(hour=9, minute=15, second=0, microsecond=0)
+    market_close = now.replace(hour=15, minute=30, second=0, microsecond=0)
+    return market_open <= now <= market_close
 
 # Standard Sizing Presets
 MODE_SIZES = {
@@ -702,7 +713,19 @@ def place_upstox_mtf_order(instrument_key, quantity, order_type="MARKET", price=
         "transaction_type": "BUY",
         "disclosed_quantity": 0,
         "trigger_price": 0.0,
-        "is_amo": False
+    market_open = is_market_open()
+    payload = {
+        "quantity": int(quantity),
+        "product": "MTF",
+        "validity": "DAY",
+        "price": float(price) if order_type.upper() == "LIMIT" else 0.0,
+        "tag": "JARVIS_MTF",
+        "instrument_token": instrument_key,
+        "order_type": order_type.upper(),
+        "transaction_type": "BUY",
+        "disclosed_quantity": 0,
+        "trigger_price": 0.0,
+        "is_amo": not market_open
     }
 
     req_data = json.dumps(payload).encode("utf-8")
@@ -721,13 +744,13 @@ def place_upstox_mtf_order(instrument_key, quantity, order_type="MARKET", price=
                 return True, order_id
             else:
                 errors = data.get("errors", [])
-                err_msg = errors[0].get("message") if errors else "Order placement failed"
+                err_msg = errors[0].get("message") if errors else (data.get("message") or "Order placement failed")
                 return False, err_msg
     except urllib.error.HTTPError as he:
         try:
             err_json = json.loads(he.read().decode())
             errors = err_json.get("errors", [])
-            err_msg = errors[0].get("message") if errors else f"HTTP {he.code}: {he.reason}"
+            err_msg = errors[0].get("message") if errors else (err_json.get("message") or f"HTTP {he.code}: {he.reason}")
             return False, err_msg
         except Exception:
             return False, f"Upstox HTTP {he.code}: {he.reason}"
@@ -749,6 +772,7 @@ def place_dhan_mtf_order(symbol, quantity, order_type="MARKET", price=0.0):
     if not sec_id:
         return False, f"Could not map securityId for {symbol} in Dhan instrument master"
 
+    market_open = is_market_open()
     url = "https://api.dhan.co/v2/orders"
     payload = {
         "dhanClientId": client_id,
@@ -761,14 +785,17 @@ def place_dhan_mtf_order(symbol, quantity, order_type="MARKET", price=0.0):
         "quantity": int(quantity),
         "price": float(price) if order_type.upper() == "LIMIT" else 0.0,
         "triggerPrice": 0.0,
-        "afterMarketOrder": False
+        "afterMarketOrder": not market_open
     }
+    if not market_open:
+        payload["amoTime"] = "OPEN"
 
     req_data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=req_data, method="POST", headers={
         "access-token": token,
         "client-id": client_id,
         "Content-Type": "application/json",
+        "Accept": "application/json",
         "User-Agent": "Jarvis-Order-Engine"
     })
 
@@ -779,12 +806,23 @@ def place_dhan_mtf_order(symbol, quantity, order_type="MARKET", price=0.0):
             order_status = data.get("orderStatus", "SUBMITTED")
             if order_id:
                 return True, f"{order_id} ({order_status})"
-            err_msg = data.get("message") or data.get("remarks") or "Order placement failed"
+            err_msg = data.get("errorMessage") or data.get("message") or data.get("remarks") or "Order placement failed"
             return False, err_msg
     except urllib.error.HTTPError as he:
         try:
             err_json = json.loads(he.read().decode())
-            err_msg = err_json.get("message") or err_json.get("remarks") or f"HTTP {he.code}: {he.reason}"
+            err_msg = (
+                err_json.get("errorMessage")
+                or err_json.get("message")
+                or err_json.get("remarks")
+                or f"HTTP {he.code}: {he.reason}"
+            )
+            err_code = err_json.get("errorCode", "")
+            if "Invalid IP" in err_msg or err_code == "DH-905":
+                err_msg = (
+                    f"DH-905 (Invalid IP): Dhan access token was generated before static IP ({SERVER_IP}) was registered. "
+                    "Please generate a fresh token at web.dhan.co and paste it into Telegram (/dhan <TOKEN>)."
+                )
             return False, err_msg
         except Exception:
             return False, f"Dhan HTTP {he.code}: {he.reason}"
