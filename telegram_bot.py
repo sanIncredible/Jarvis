@@ -1294,20 +1294,29 @@ def handle_trailing_command():
             r_sign = "+" if r_mult > 0 else ""
 
             src_tag = f" • <i>{source}</i>" if source != "LIVE BROKER" else ""
+            ema_str = ""
+            if p.get("ema10") and p.get("ema20"):
+                ema_str = f"\n  • <b>10 EMA:</b> ₹{p['ema10']:,.2f} | <b>20 EMA:</b> ₹{p['ema20']:,.2f}"
+                if p.get("atr14"):
+                    ema_str += f" | <b>ATR:</b> ₹{p['atr14']:,.2f}"
+
+            j_badge = p.get("jeff_badge", badge)
+            j_status = p.get("jeff_status", action_desc)
+
             lines.append(
                 f"<b>{sym}</b> [<code>{broker} • {prod}</code>]{src_tag}\n"
-                f"  • <b>Entry:</b> ₹{entry_p:,.2f} | <b>LTP:</b> ₹{ltp:,.2f} ({pct_sign}{pnl_pct:.2f}%)\n"
-                f"  • <b>P&L:</b> {pnl_icon} <b>{pnl_str}</b> | <b>R-Multiple:</b> {r_sign}{r_mult:.1f}R\n"
-                f"  • <b>Initial SL:</b> ₹{init_sl:,.2f} ➔ <b>Trail SL:</b> <b>₹{rec_sl:,.2f}</b>\n"
-                f"  • <b>Action:</b> <b>{badge}</b>\n"
-                f"    <i>{action_desc}</i>"
+                f"  • <b>Entry:</b> ₹{entry_p:,.2f} | <b>LTP:</b> ₹{ltp:,.2f} ({pct_sign}{pnl_pct:.2f}% | {r_sign}{r_mult:.1f}R)\n"
+                f"  • <b>Stop-Loss:</b> ₹{init_sl:,.2f} ➔ <b>Rec Trail:</b> <b>₹{rec_sl:,.2f}</b>\n"
+                f"  • <b>Jeff Sun Trail:</b> <b>{j_badge}</b>\n"
+                f"    <i>{j_status}</i>{ema_str}"
             )
 
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    lines.append("💡 <b>Trailing SL Strategy Rules:</b>")
-    lines.append("• <b>Gain &ge; +1.8R (+3%):</b> Move SL to Breakeven (Risk-Free!)")
-    lines.append("• <b>Gain &ge; +3.0R (+6%):</b> Book 50% partial & lock +1.5R profit")
-    lines.append("• <b>Danger Near SL (&le;1%):</b> Immediate risk alert warning")
+    lines.append("💡 <b>Jeff Sun Momentum Trailing Framework:</b>")
+    lines.append("• <b>Gain &ge; +1.5R (+2.5%):</b> Auto-Ratchet SL to Breakeven (+0.15% fee buffer)")
+    lines.append("• <b>10 EMA Trailing:</b> Ride winners while daily close holds above 10 EMA")
+    lines.append("• <b>Exit Trigger:</b> Daily Close &lt; 10 EMA + Next-Day 5m ORL Breakdown")
+    lines.append("• <b>Overextension:</b> If stretch &ge; 3.0x ATR from 50MA, book partials & tighten")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append(f"🕒 <i>Updated: {now_str}</i>")
 
@@ -1321,14 +1330,14 @@ def handle_trailing_command():
     ]
 
     if positions:
-        exit_btns = []
         for p in positions[:4]:
-            b_code = p["broker"][:1].lower()
+            b_code = p["broker"][:1].lower() if p.get("broker") else "u"
             sym = p["symbol"]
-            btn_label = f"🔴 Exit {sym[:8]}" if len(sym) > 8 else f"🔴 Exit {sym}"
-            exit_btns.append({"text": btn_label, "callback_data": f"ex_p:{b_code}:{sym}"})
-        for i in range(0, len(exit_btns), 2):
-            kb_rows.append(exit_btns[i:i+2])
+            short_s = sym[:8] if len(sym) > 8 else sym
+            kb_rows.append([
+                {"text": f"🛡️ Ratchet {short_s} to Cost", "callback_data": f"trail_be:{b_code}:{sym}"},
+                {"text": f"🔴 Exit {short_s}", "callback_data": f"ex_p:{b_code}:{sym}"}
+            ])
 
     reply_markup = {"inline_keyboard": kb_rows}
 
@@ -1704,6 +1713,43 @@ def handle_callback_query(cq):
         text = handle_watchlist_command()
         send_telegram_msg(chat_id, text)
 
+    elif cq_data.startswith("trail_be:"):
+        parts = cq_data.split(":")
+        b_code = parts[1]
+        sym = parts[2].upper()
+        answer_callback_query(cq_id, f"Ratcheting {sym} Stop-Loss to Breakeven...")
+        from order_engine import get_all_open_positions_with_trailing_sl, ratchet_stop_loss_to_breakeven
+        positions = get_all_open_positions_with_trailing_sl()
+        target_pos = next((p for p in positions if p["symbol"].upper() == sym), None)
+        if target_pos:
+            ok, res = ratchet_stop_loss_to_breakeven(
+                broker=target_pos["broker"],
+                symbol=sym,
+                quantity=target_pos["qty"],
+                entry_price=target_pos["entry_price"],
+                product=target_pos["product"]
+            )
+            be_sl = res.get("breakeven_sl", target_pos["entry_price"])
+            if ok:
+                answer_callback_query(cq_id, f"✅ {sym} SL moved to Breakeven ₹{be_sl:,.2f}!", show_alert=True)
+                send_telegram_msg(
+                    chat_id,
+                    f"🛡️ <b>STOP-LOSS RATCHETED TO BREAKEVEN: {sym}</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"• <b>Broker:</b> {target_pos['broker']} ({target_pos['product']})\n"
+                    f"• <b>Quantity:</b> {target_pos['qty']} shs\n"
+                    f"• <b>Entry Price:</b> ₹{target_pos['entry_price']:,.2f}\n"
+                    f"• <b>New Hard SL:</b> <b>₹{be_sl:,.2f}</b> (Entry + 0.15% brokerage buffer)\n"
+                    f"• <b>Risk Status:</b> 🟢 <b>100% Risk-Free (Free Roll!)</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"💡 <i>Remaining shares are now riding the 10 EMA (₹{target_pos.get('ema10', 'N/A')}).</i>"
+                )
+            else:
+                err_msg = res.get("message") or res.get("details") or "Broker error"
+                answer_callback_query(cq_id, f"⚠️ Notice: {err_msg}", show_alert=True)
+        else:
+            answer_callback_query(cq_id, f"Position for {sym} not found or already closed.", show_alert=True)
+
     elif cq_data.startswith("buy_prep:"):
         parts = cq_data.split(":")
         symbol = parts[1] if len(parts) > 1 else ""
@@ -1976,28 +2022,43 @@ def run_trailing_surveillance_worker():
                                 send_telegram_msg(chat_id, alert_msg, reply_markup={"inline_keyboard": kb})
                                 _sent_trailing_alerts[alert_key] = now_ts
 
-                        # 3. Healthy Trend (+1.8R or +3% gain) -> Trail to Cost
-                        elif (r_mult >= 1.8 or pnl_pct >= 3.0) and r_mult > 0:
-                            alert_key = (sym, "TRAIL_2R")
-                            last_sent = _sent_trailing_alerts.get(alert_key, 0)
-                            if now_ts - last_sent > 2700:  # 45 mins cooldown
-                                alert_msg = (
-                                    f"🟢 <b>PROFIT MILESTONE: {sym} REACHED +{r_mult:.1f}R!</b>\n"
-                                    "━━━━━━━━━━━━━━━━━━━━━━\n"
-                                    f"📌 <b>Symbol:</b> {sym} ({broker} • {prod})\n"
-                                    f"📈 <b>LTP:</b> ₹{ltp:,.2f} (Entry: ₹{entry_p:,.2f})\n"
-                                    f"🟢 <b>Gain:</b> <b>+{pnl_pct:.1f}%</b> (+{r_mult:.1f}R)\n"
-                                    f"💰 <b>Unrealized P&L:</b> ₹{pnl:+,.2f}\n"
-                                    f"🎯 <b>Recommendation:</b> Move Stop-Loss to Breakeven (₹{rec_sl:,.2f}) for a <b>100% Risk-Free Trade</b>!\n"
-                                    "━━━━━━━━━━━━━━━━━━━━━━\n"
-                                    "💡 <i>Your downside risk is now fully eliminated on this trade.</i>"
-                                )
-                                kb = [
-                                    [{"text": "🎯 Trailing Cockpit", "callback_data": "trail_refresh"}],
-                                    [{"text": f"🔴 Exit {sym}", "callback_data": f"ex_p:{b_code}:{sym}"}]
-                                ]
-                                send_telegram_msg(chat_id, alert_msg, reply_markup={"inline_keyboard": kb})
-                                _sent_trailing_alerts[alert_key] = now_ts
+                        # 3. JEFF SUN AUTOMATED BREAKEVEN RATCHET (+1.5R or +2.5% Gain)
+                        elif (r_mult >= 1.5 or pnl_pct >= 2.5) and r_mult > 0 and entry_p > 0:
+                            ratchet_key = (sym, "AUTO_BREAKEVEN")
+                            last_sent = _sent_trailing_alerts.get(ratchet_key, 0)
+                            if (now_ts - last_sent > 1800) and sl > 0:
+                                raw_be = entry_p * 1.0015
+                                breakeven_sl = round(round(raw_be / 0.05) * 0.05, 2)
+                                if sl < breakeven_sl:
+                                    from order_engine import ratchet_stop_loss_to_breakeven
+                                    r_ok, r_res = ratchet_stop_loss_to_breakeven(
+                                        broker=broker,
+                                        symbol=sym,
+                                        quantity=qty,
+                                        entry_price=entry_p,
+                                        product=prod
+                                    )
+                                    if r_ok:
+                                        _sent_trailing_alerts[ratchet_key] = now_ts
+                                        ema10_val = p.get("ema10", "N/A")
+                                        alert_msg = (
+                                            f"🛡️ <b>JEFF SUN AUTO-TRAIL: {sym} RATCHETED TO BREAKEVEN!</b>\n"
+                                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                            f"🚀 <b>Target Milestone Reached:</b> <b>+{r_mult:.1f}R (+{pnl_pct:.1f}%)</b>\n"
+                                            f"📌 <b>Symbol:</b> {sym} ({broker} • {prod} • {qty} shs)\n"
+                                            f"📈 <b>LTP:</b> ₹{ltp:,.2f} (Entry: ₹{entry_p:,.2f})\n"
+                                            f"🔒 <b>Broker Stop-Loss Ratcheted:</b> ₹{sl:,.2f} ➔ <b>₹{breakeven_sl:,.2f}</b>\n"
+                                            f"💰 <b>Covered Buffer:</b> Entry + 0.15% fee buffer\n"
+                                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                            "🎉 <b>Capital Risk is 100% ELIMINATED!</b>\n"
+                                            "• The trade is now a guaranteed risk-free runner.\n"
+                                            f"• <b>Trailing Guide:</b> Riding the <b>10 EMA</b> (₹{ema10_val}). Hold until daily close &lt; 10 EMA."
+                                        )
+                                        kb = [
+                                            [{"text": f"🟡 Book 50% ({max(1, qty//2)} shs)", "callback_data": f"ex_x:{b_code}:{sym}:half"}],
+                                            [{"text": "🎯 Trailing Cockpit", "callback_data": "trail_refresh"}, {"text": f"🔴 Exit {sym}", "callback_data": f"ex_p:{b_code}:{sym}"}]
+                                        ]
+                                        send_telegram_msg(chat_id, alert_msg, reply_markup={"inline_keyboard": kb})
         except Exception:
             pass
 
