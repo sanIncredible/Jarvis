@@ -183,6 +183,7 @@ def register_telegram_commands():
     commands = [
         {"command": "buy", "description": "🛒 Place MTF/Equity Order (Upstox/Dhan/Zerodha)"},
         {"command": "positions", "description": "📊 Live multi-broker positions & open P&L"},
+        {"command": "exit", "description": "🔴 Quick exit/square-off open positions"},
         {"command": "broker", "description": "🏦 View or switch default broker (Upstox/Dhan/Zerodha)"},
         {"command": "watchlist", "description": "📋 View active watchlist & TV chart links"},
         {"command": "add", "description": "➕ Add stock ticker(s) to scanner watchlist"},
@@ -729,6 +730,7 @@ def handle_help_command():
         "  - <i>Interactive buttons with LoD Stop-Loss & Risk calculation!</i>\n\n"
         "📊 <b>Positions & Portfolio:</b>\n"
         "• <code>/positions</code> or <code>/pos</code> — Live open positions & real-time P&L\n"
+        "• <code>/exit &lt;SYM&gt; [50%|all]</code> — 1-Tap quick exit/square-off\n"
         "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
         "📋 <b>Watchlist Commands:</b>\n"
         "• <code>/add &lt;SYMBOL...&gt;</code> — Add stock(s) to scanner watchlist\n"
@@ -949,15 +951,166 @@ def handle_positions_command():
 
     message_text = "\n".join(lines)
 
+    # Build inline keyboard with exit buttons + refresh
+    kb_rows = []
+    if positions:
+        exit_btns = []
+        for p in positions:
+            b_code = p["broker"][:1].lower()  # 'd', 'z', 'u'
+            sym = p["symbol"]
+            btn_label = f"🔴 Exit {sym[:10]}" if len(sym) > 10 else f"🔴 Exit {sym}"
+            exit_btns.append({"text": btn_label, "callback_data": f"ex_p:{b_code}:{sym}"})
+
+        for i in range(0, len(exit_btns), 2):
+            kb_rows.append(exit_btns[i:i+2])
+
+    kb_rows.append([{"text": "🔄 Refresh Positions", "callback_data": "pos_refresh"}])
+    reply_markup = {"inline_keyboard": kb_rows}
+
+    return message_text, reply_markup
+
+
+def build_exit_preview(symbol, broker_code=None):
+    """Builds confirmation card and 100%/50% exit buttons for a position."""
+    from order_engine import fetch_all_positions
+    all_pos, _, _ = fetch_all_positions()
+
+    sym_clean = symbol.strip().upper()
+    b_filter = {"d": "DHAN", "z": "ZERODHA", "u": "UPSTOX"}.get(broker_code, broker_code)
+    if b_filter:
+        b_filter = b_filter.upper()
+
+    target_pos = None
+    for p in all_pos:
+        p_sym = p["symbol"].upper()
+        if p_sym == sym_clean or p_sym.startswith(sym_clean) or sym_clean.startswith(p_sym):
+            if b_filter and p["broker"].upper() != b_filter:
+                continue
+            target_pos = p
+            break
+
+    if not target_pos:
+        return f"❌ <b>Position Not Found:</b> No active position found for <code>{symbol}</code>.", None
+
+    sym = target_pos["symbol"]
+    broker = target_pos["broker"]
+    b_code = broker[:1].lower()
+    abs_qty = abs(target_pos["qty"])
+    half_qty = max(1, abs_qty // 2)
+    ltp = target_pos["ltp"]
+    pnl = target_pos["pnl"]
+    pnl_pct = target_pos["pnl_pct"]
+    prod = target_pos.get("product", "MTF")
+
+    pnl_icon = "🟢" if pnl >= 0 else "🔴"
+    pnl_str = f"+₹{pnl:,.2f}" if pnl > 0 else (f"-₹{abs(pnl):,.2f}" if pnl < 0 else "₹0.00")
+    pct_sign = "+" if pnl_pct > 0 else ""
+    est_val = round(abs_qty * ltp, 2)
+
+    text = (
+        "⚠️ <b>CONFIRM POSITION EXIT / SQUARE-OFF</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📌 <b>Symbol:</b> <b>{sym}</b>\n"
+        f"🏦 <b>Broker:</b> <b>{broker}</b> ({prod})\n"
+        f"📦 <b>Open Quantity:</b> <b>{abs_qty} shares</b>\n"
+        f"📈 <b>Live LTP:</b> ₹{ltp:,.2f}\n"
+        f"💰 <b>Total Est. Value:</b> ~₹{est_val:,.2f}\n"
+        f"📊 <b>Unrealized P&L:</b> {pnl_icon} <b>{pnl_str}</b> ({pct_sign}{pnl_pct:.2f}%)\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "<i>Select quantity to execute MARKET sell immediately:</i>"
+    )
+
+    btn_row1 = [
+        {"text": f"🔴 Exit 100% ({abs_qty} shs)", "callback_data": f"ex_x:{b_code}:{sym}:all"}
+    ]
+    if abs_qty > 1:
+        btn_row1.append({"text": f"🟡 Exit 50% ({half_qty} shs)", "callback_data": f"ex_x:{b_code}:{sym}:half"})
+
     reply_markup = {
         "inline_keyboard": [
+            btn_row1,
             [
-                {"text": "🔄 Refresh Positions", "callback_data": "pos_refresh"}
+                {"text": "📊 Back to Positions", "callback_data": "pos_refresh"},
+                {"text": "❌ Cancel", "callback_data": f"ex_c:{sym}"}
             ]
         ]
     }
+    return text, reply_markup
 
-    return message_text, reply_markup
+
+def handle_exit_command(args):
+    """
+    Handles /exit or /close or /squareoff command.
+    Syntax:
+      /exit -> Shows list of open positions with 1-tap exit buttons
+      /exit <SYM> [all|half|<qty>] [dhan|zerodha|upstox] [confirm]
+    """
+    from order_engine import execute_broker_exit
+    if not args.strip():
+        text, markup = handle_positions_command()
+        intro = (
+            "🔴 <b>JARVIS ONE-TAP POSITION EXIT</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "<i>Tap any position button below to square off or type:</i>\n"
+            "• <code>/exit MOTHERSON 100% confirm</code>\n"
+            "• <code>/exit ABDL 50% confirm</code>\n\n"
+        )
+        return intro + text, markup
+
+    tokens = [t.strip() for t in args.split() if t.strip()]
+    raw_sym = tokens[0].upper()
+    sym = SYMBOL_ALIASES.get(raw_sym, raw_sym)
+
+    ratio = "all"
+    broker = None
+    auto_confirm = False
+
+    for tok in tokens[1:]:
+        tok_lower = tok.lower()
+        if tok_lower in ("confirm", "now", "exec", "yes"):
+            auto_confirm = True
+        elif tok_lower in ("all", "100%", "full", "100"):
+            ratio = "all"
+        elif tok_lower in ("half", "50%", "halfway", "50"):
+            ratio = "half"
+        elif tok_lower in ("dhan", "zerodha", "upstox"):
+            broker = tok_lower
+        elif tok.isdigit():
+            ratio = int(tok)
+
+    if auto_confirm:
+        success, res = execute_broker_exit(sym, broker=broker, qty_ratio=ratio)
+        if success:
+            rem = res.get("remaining_qty", 0)
+            rem_str = f"• <b>Remaining Qty:</b> {rem} shares\n" if rem > 0 else "• <b>Status:</b> Position Fully Closed (0 shares)\n"
+            receipt = (
+                f"🎉 <b>POSITION EXITED ON {res['broker']}!</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📌 <b>Symbol:</b> {res['symbol']}\n"
+                f"🎯 <b>Order ID:</b> <code>{res['order_id']}</code>\n"
+                f"📦 <b>Sold Qty:</b> <b>{res['quantity']} shares</b> @ MARKET\n"
+                f"💼 <b>Product:</b> {res['product']}\n"
+                f"{rem_str}"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 <i>Market order submitted to exchange.</i>"
+            )
+            markup = {
+                "inline_keyboard": [
+                    [{"text": "📊 View Updated Positions", "callback_data": "pos_refresh"}]
+                ]
+            }
+            return receipt, markup
+        else:
+            return (
+                f"❌ <b>EXIT ORDER FAILED</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📌 <b>Symbol:</b> {sym}\n"
+                f"⚠️ <b>Error:</b> {res}\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 <i>Check token validity or broker terminal.</i>"
+            )
+
+    return build_exit_preview(sym, broker)
 
 
 def handle_buy_command(args, from_chat_id):
@@ -1136,6 +1289,69 @@ def handle_callback_query(cq):
         text, markup = handle_positions_command()
         edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
 
+    elif cq_data.startswith("ex_p:"):
+        parts = cq_data.split(":")
+        b_code = parts[1]
+        sym = ":".join(parts[2:])
+        answer_callback_query(cq_id, f"Opening exit prompt for {sym}...")
+        text, markup = build_exit_preview(sym, b_code)
+        if markup:
+            edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
+        else:
+            answer_callback_query(cq_id, "Position no longer open", show_alert=True)
+
+    elif cq_data.startswith("ex_x:"):
+        parts = cq_data.split(":")
+        b_code = parts[1]
+        ratio = parts[-1]
+        sym = ":".join(parts[2:-1]) if len(parts) > 3 else parts[2]
+        b_name = {"d": "DHAN", "z": "ZERODHA", "u": "UPSTOX"}.get(b_code, "")
+
+        answer_callback_query(cq_id, f"Executing market exit for {sym}...")
+
+        from order_engine import execute_broker_exit
+        success, res = execute_broker_exit(sym, broker=b_name, qty_ratio=ratio)
+        if success:
+            rem = res.get("remaining_qty", 0)
+            rem_str = f"• <b>Remaining Qty:</b> {rem} shares\n" if rem > 0 else "• <b>Status:</b> Position Fully Closed (0 shares)\n"
+            receipt = (
+                f"🎉 <b>POSITION EXITED ON {res['broker']}!</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📌 <b>Symbol:</b> {res['symbol']}\n"
+                f"🎯 <b>Order ID:</b> <code>{res['order_id']}</code>\n"
+                f"📦 <b>Sold Qty:</b> <b>{res['quantity']} shares</b> @ MARKET\n"
+                f"💼 <b>Product:</b> {res['product']}\n"
+                f"{rem_str}"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 <i>Market order submitted to exchange. Tap below to see live portfolio:</i>"
+            )
+            markup = {
+                "inline_keyboard": [
+                    [{"text": "📊 View Updated Positions", "callback_data": "pos_refresh"}]
+                ]
+            }
+            edit_telegram_msg(chat_id, msg_id, receipt, reply_markup=markup)
+        else:
+            receipt = (
+                f"❌ <b>EXIT ORDER FAILED</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📌 <b>Symbol:</b> {sym}\n"
+                f"⚠️ <b>Error:</b> {res}\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 <i>Check token validity or broker terminal.</i>"
+            )
+            markup = {
+                "inline_keyboard": [
+                    [{"text": "📊 Back to Positions", "callback_data": "pos_refresh"}]
+                ]
+            }
+            edit_telegram_msg(chat_id, msg_id, receipt, reply_markup=markup)
+
+    elif cq_data.startswith("ex_c:"):
+        answer_callback_query(cq_id, "Exit cancelled")
+        text, markup = handle_positions_command()
+        edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
+
 
 # ---------------------------------------------------------
 # Core Message Dispatcher
@@ -1177,6 +1393,8 @@ def dispatch_command(msg_text, from_chat_id):
         return handle_watchlist_command()
     elif cmd in ("/positions", "/pos", "/portfolio", "/pnl", "/holdings"):
         return handle_positions_command()
+    elif cmd in ("/exit", "/close", "/squareoff"):
+        return handle_exit_command(args)
     elif cmd in ("/token", "/tokens", "/status", "/check"):
         # Check if sub-command provided (e.g. /token upstox <token>)
         if args:
