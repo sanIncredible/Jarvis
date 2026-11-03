@@ -1399,6 +1399,272 @@ def execute_broker_exit(symbol, broker=None, exit_qty=None, qty_ratio="all"):
     return False, f"Unsupported broker: {b}"
 
 
+# ---------------------------------------------------------
+# Trailing Stop-Loss & Risk Breakeven Recommendation Engine
+# ---------------------------------------------------------
+def get_open_trades_from_logs():
+    """
+    Reads open trades from orders_log.json, Journal.xlsx, and TradeTrackerPro.xlsx.
+    Returns: dict keyed by uppercase symbol with trade metadata (entry, sl, target, qty, date, etc.)
+    """
+    logged_trades = {}
+
+    # 1. Check orders_log.json
+    if ORDERS_LOG_FILE.is_file():
+        try:
+            with open(ORDERS_LOG_FILE, "r", encoding="utf-8") as f:
+                orders = json.load(f)
+            for o in orders:
+                sym = str(o.get("symbol", "")).upper()
+                action = str(o.get("action", "")).upper()
+                status = str(o.get("status", "")).upper()
+                if not sym or status not in ("PLACED", "SUBMITTED"):
+                    continue
+                if action == "BUY":
+                    logged_trades[sym] = {
+                        "source": "orders_log.json",
+                        "symbol": sym,
+                        "broker": o.get("broker", "UNKNOWN"),
+                        "product": o.get("product", "MTF"),
+                        "entry_price": float(o.get("ltp", 0) or 0),
+                        "stop_loss": float(o.get("stop_loss", 0) or 0),
+                        "qty": int(o.get("quantity", 0) or 0),
+                        "timestamp": o.get("timestamp", ""),
+                        "mode": o.get("mode", "MODERATE")
+                    }
+                elif action == "EXIT":
+                    if sym in logged_trades:
+                        rem_qty = o.get("remaining_qty", 0)
+                        if rem_qty <= 0:
+                            logged_trades.pop(sym, None)
+                        else:
+                            logged_trades[sym]["qty"] = rem_qty
+        except Exception as e:
+            print(f"Notice reading orders_log.json: {e}")
+
+    # 2. Check active Journal.xlsx
+    for x_path in [SCRIPT_DIR / "Journal.xlsx"]:
+        if not x_path.is_file():
+            continue
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(x_path, data_only=True)
+            if "Trade Journal" in wb.sheetnames:
+                ws = wb["Trade Journal"]
+                for r in list(ws.iter_rows(values_only=True))[1:]:
+                    if not r or len(r) < 11:
+                        continue
+                    sym = str(r[2] or "").strip().upper()
+                    status = str(r[10] or "").upper()
+                    exit_p = r[8]
+                    if sym and "CLOSED" not in status and (exit_p is None or exit_p == 0 or exit_p == ""):
+                        entry_p = float(r[4] or 0)
+                        sl_p = float(r[5] or 0)
+                        target_p = float(r[6] or 0)
+                        qty = int(float(r[7] or 0))
+                        logged_trades[sym] = {
+                            "source": x_path.name,
+                            "symbol": sym,
+                            "broker": "JOURNAL",
+                            "product": "SWING",
+                            "entry_price": entry_p,
+                            "stop_loss": sl_p,
+                            "target": target_p,
+                            "qty": qty,
+                            "date": str(r[1] or ""),
+                            "status": status
+                        }
+        except Exception:
+            pass
+
+    return logged_trades
+
+
+def get_all_open_positions_with_trailing_sl():
+    """
+    Consolidates ALL open positions across live brokers (Dhan, Zerodha, Upstox)
+    and trade logs/journals, evaluating Trailing Stop-Loss & Risk Breakeven recommendations.
+    Returns: list of enriched position dicts.
+    """
+    live_pos, totals, broker_status = fetch_all_positions()
+    logged_trades = get_open_trades_from_logs()
+
+    seen_symbols = set()
+    enriched = []
+
+    # 1. Process Live Broker Positions first
+    for p in live_pos:
+        sym = p["symbol"].upper()
+        seen_symbols.add(sym)
+
+        entry_p = float(p.get("avg_price", 0) or 0)
+        ltp = float(p.get("ltp", 0) or entry_p)
+        qty = int(p.get("qty", 0) or 0)
+        pnl = float(p.get("pnl", 0) or 0)
+        pnl_pct = float(p.get("pnl_pct", 0) or 0)
+        broker = p.get("broker", "UNKNOWN")
+        product = p.get("product", "MTF")
+
+        # Check if trade log has initial SL or target
+        log_meta = logged_trades.get(sym, {})
+        initial_sl = float(log_meta.get("stop_loss", 0) or 0)
+        target_p = float(log_meta.get("target", 0) or 0)
+
+        # If initial SL not logged, derive structural SL from quote Day Low or 2.5% default
+        if initial_sl <= 0 and entry_p > 0:
+            if "CE" in sym or "PE" in sym or "NIFTY" in sym:
+                initial_sl = round(entry_p * 0.70, 2)
+            else:
+                q, _ = fetch_live_quote(sym)
+                dl = float(q.get("day_low", 0) or 0) if q else 0
+                if 0 < dl < entry_p and ((entry_p - dl) / entry_p) <= 0.05:
+                    initial_sl = round(dl, 2)
+                else:
+                    initial_sl = round(entry_p * 0.975, 2)
+
+        if target_p <= 0 and entry_p > 0 and initial_sl > 0:
+            target_p = round(entry_p + abs(entry_p - initial_sl) * 2.0, 2)
+
+        risk_per_share = max(0.10, abs(entry_p - initial_sl)) if entry_p > 0 and initial_sl > 0 else 1.0
+        r_multiple = round((ltp - entry_p) / risk_per_share, 2) if risk_per_share > 0 else 0.0
+        dist_to_sl_pct = round(((ltp - initial_sl) / ltp) * 100, 2) if ltp > 0 and initial_sl > 0 else 99.0
+
+        # Determine recommended trailing stop loss
+        is_option = "CE" in sym or "PE" in sym or "NIFTY" in sym
+        if is_option:
+            if pnl_pct >= 100.0:
+                recommended_sl = round(entry_p * 2.0, 2)
+                action_badge = "⭐ BOOK 50% & TRAIL"
+                action_text = f"Huge option gain (+{pnl_pct:.1f}%)! Book half and trail SL to ₹{recommended_sl:,.2f}"
+            elif pnl_pct >= 40.0:
+                recommended_sl = entry_p
+                action_badge = "🟢 TRAIL TO COST"
+                action_text = f"Solid gain (+{pnl_pct:.1f}%)! Trail SL to entry ₹{entry_p:,.2f} for risk-free trade"
+            elif ltp <= initial_sl:
+                recommended_sl = initial_sl
+                action_badge = "🔴 EXIT — SL HIT"
+                action_text = f"Option SL breached at ₹{initial_sl:,.2f}"
+            else:
+                recommended_sl = initial_sl
+                action_badge = "✅ HOLD"
+                action_text = f"Keep initial SL at ₹{initial_sl:,.2f}"
+        else:
+            if ltp <= initial_sl:
+                recommended_sl = initial_sl
+                action_badge = "🔴 EXIT — SL HIT"
+                action_text = f"Stop-Loss breached! Market price ₹{ltp:,.2f} is below SL ₹{initial_sl:,.2f}"
+            elif dist_to_sl_pct <= 1.0:
+                recommended_sl = initial_sl
+                action_badge = "🟡 DANGER — NEAR SL"
+                action_text = f"Danger! Price is only {dist_to_sl_pct:.1f}% away from SL ₹{initial_sl:,.2f}"
+            elif r_multiple >= 3.0 or pnl_pct >= 6.0:
+                recommended_sl = round(entry_p + (risk_per_share * 1.5), 2)
+                action_badge = "⭐ BOOK 50% & TRAIL"
+                action_text = f"Up +{r_multiple:.1f}R! Book 50% partial profit and trail SL to ₹{recommended_sl:,.2f} (+1.5R)"
+            elif r_multiple >= 1.8 or pnl_pct >= 3.0:
+                recommended_sl = entry_p
+                action_badge = "🟢 TRAIL TO COST"
+                action_text = f"Up +{r_multiple:.1f}R (+{pnl_pct:.1f}%)! Move SL to Breakeven ₹{entry_p:,.2f} (Risk-Free!)"
+            elif r_multiple >= 1.0 or pnl_pct >= 1.5:
+                recommended_sl = round(entry_p - (risk_per_share * 0.5), 2)
+                action_badge = "🔵 CUT RISK 50%"
+                action_text = f"Up +{r_multiple:.1f}R. Trail SL up to ₹{recommended_sl:,.2f} to cut max risk by 50%"
+            else:
+                recommended_sl = initial_sl
+                action_badge = "✅ HOLD — ON TRACK"
+                action_text = f"Position healthy. Keep stop at ₹{initial_sl:,.2f} (Target: ₹{target_p:,.2f})"
+
+        enriched.append({
+            "symbol": sym,
+            "broker": broker,
+            "product": product,
+            "source": "LIVE BROKER",
+            "qty": qty,
+            "entry_price": entry_p,
+            "ltp": ltp,
+            "pnl": pnl,
+            "pnl_pct": pnl_pct,
+            "initial_sl": initial_sl,
+            "target": target_p,
+            "recommended_sl": recommended_sl,
+            "r_multiple": r_multiple,
+            "dist_to_sl_pct": dist_to_sl_pct,
+            "action_badge": action_badge,
+            "action_text": action_text
+        })
+
+    # 2. Process any logged trades that are NOT already in live broker accounts
+    for sym, log_item in logged_trades.items():
+        if sym in seen_symbols:
+            continue
+        entry_p = float(log_item.get("entry_price", 0) or 0)
+        qty = int(log_item.get("qty", 0) or 0)
+        initial_sl = float(log_item.get("stop_loss", 0) or 0)
+        target_p = float(log_item.get("target", 0) or 0)
+        if entry_p <= 0 or qty <= 0:
+            continue
+
+        q, _ = fetch_live_quote(sym)
+        ltp = float(q.get("ltp", 0) or entry_p) if q else entry_p
+        pnl = round((ltp - entry_p) * qty, 2)
+        pnl_pct = round(((ltp - entry_p) / entry_p) * 100, 2)
+
+        if initial_sl <= 0:
+            initial_sl = round(entry_p * 0.975, 2)
+        if target_p <= 0:
+            target_p = round(entry_p + abs(entry_p - initial_sl) * 2.0, 2)
+
+        risk_per_share = max(0.10, abs(entry_p - initial_sl))
+        r_multiple = round((ltp - entry_p) / risk_per_share, 2)
+        dist_to_sl_pct = round(((ltp - initial_sl) / ltp) * 100, 2) if ltp > 0 else 99.0
+
+        if ltp <= initial_sl:
+            recommended_sl = initial_sl
+            action_badge = "🔴 EXIT — SL HIT"
+            action_text = f"Stop-Loss breached! Market price ₹{ltp:,.2f} is below SL ₹{initial_sl:,.2f}"
+        elif dist_to_sl_pct <= 1.0:
+            recommended_sl = initial_sl
+            action_badge = "🟡 DANGER — NEAR SL"
+            action_text = f"Danger! Price is only {dist_to_sl_pct:.1f}% away from SL ₹{initial_sl:,.2f}"
+        elif r_multiple >= 3.0 or pnl_pct >= 6.0:
+            recommended_sl = round(entry_p + (risk_per_share * 1.5), 2)
+            action_badge = "⭐ BOOK 50% & TRAIL"
+            action_text = f"Up +{r_multiple:.1f}R! Book 50% partial profit and trail SL to ₹{recommended_sl:,.2f}"
+        elif r_multiple >= 1.8 or pnl_pct >= 3.0:
+            recommended_sl = entry_p
+            action_badge = "🟢 TRAIL TO COST"
+            action_text = f"Up +{r_multiple:.1f}R! Move SL to Breakeven ₹{entry_p:,.2f} (Risk-Free!)"
+        elif r_multiple >= 1.0 or pnl_pct >= 1.5:
+            recommended_sl = round(entry_p - (risk_per_share * 0.5), 2)
+            action_badge = "🔵 CUT RISK 50%"
+            action_text = f"Up +{r_multiple:.1f}R. Trail SL up to ₹{recommended_sl:,.2f} to cut risk by 50%"
+        else:
+            recommended_sl = initial_sl
+            action_badge = "✅ HOLD — ON TRACK"
+            action_text = f"Position healthy. Keep stop at ₹{initial_sl:,.2f}"
+
+        enriched.append({
+            "symbol": sym,
+            "broker": log_item.get("broker", "LOGGED"),
+            "product": log_item.get("product", "LOG"),
+            "source": log_item.get("source", "TRADE LOG"),
+            "qty": qty,
+            "entry_price": entry_p,
+            "ltp": ltp,
+            "pnl": pnl,
+            "pnl_pct": pnl_pct,
+            "initial_sl": initial_sl,
+            "target": target_p,
+            "recommended_sl": recommended_sl,
+            "r_multiple": r_multiple,
+            "dist_to_sl_pct": dist_to_sl_pct,
+            "action_badge": action_badge,
+            "action_text": action_text
+        })
+
+    return enriched
+
+
 if __name__ == "__main__":
     test_sym = sys.argv[1] if len(sys.argv) > 1 else "RELIANCE"
     b = sys.argv[2] if len(sys.argv) > 2 else get_default_broker()
