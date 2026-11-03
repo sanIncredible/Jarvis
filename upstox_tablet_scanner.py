@@ -261,16 +261,12 @@ def sync_remote_files_from_github():
                         if content_str:
                             norm_content = content_str.replace("\r\n", "\n").replace("\r", "\n").strip()
                             remote_syms = [l.strip().upper() for l in norm_content.splitlines() if l.strip() and not l.startswith("#")]
-                            local_syms = []
-                            if os.path.isfile(filename):
-                                with open(filename, "r", encoding="utf-8") as lf:
-                                    local_syms = [l.strip().upper() for l in lf if l.strip() and not l.startswith("#")]
-                            merged_syms = list(dict.fromkeys(local_syms + remote_syms))
+                            # Authority policy: replace watchlist directly from remote master (don't merge old local symbols)
                             lines_out = [
                                 "# Upstox 3m ORB Scanner Watchlist",
                                 "# Add or remove NSE stock tickers below (one per line, or space/comma separated)",
                                 ""
-                            ] + merged_syms
+                            ] + remote_syms
                             with open(filename, "w", encoding="utf-8") as f:
                                 f.write("\n".join(lines_out) + "\n")
             except Exception:
