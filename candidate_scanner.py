@@ -439,7 +439,7 @@ def scan_nifty500_candidates(
     }
 
 
-def format_candidates_telegram_card(res, max_display=10):
+def format_candidates_telegram_card(res, max_display=10, is_morning=False):
     """
     Formats rich Telegram review card showing Tier 1 Pivot Doorsteps and Tier 2 Base Launchpads with 1-tap Add buttons.
     """
@@ -450,11 +450,18 @@ def format_candidates_telegram_card(res, max_display=10):
     if not candidates:
         return "ℹ️ <b>No stocks met today's Stage 2 VCP Coil threshold (Trend > 20/50 EMA, 5D range ≤ 2.5x ATR & near pivot/PDH).</b>", None
 
-    lines = [
-        "🎯 <b>NIFTY 500 INSTITUTIONAL SWING CANDIDATES</b>",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        "<i>Stage 2 VCP Coils poised for tomorrow's 3m ORB + PDH breakout</i>\n"
-    ]
+    if is_morning:
+        lines = [
+            "☀️ <b>JARVIS 09:10 AM PRE-MARKET CANDIDATES BRIEFING</b>",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            "<i>Top Nifty 500 Stage-2 VCP setups primed for today's 3m ORB + PDH breakout</i>\n"
+        ]
+    else:
+        lines = [
+            "🎯 <b>NIFTY 500 INSTITUTIONAL SWING CANDIDATES</b>",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            "<i>Stage 2 VCP Coils poised for tomorrow's 3m ORB + PDH breakout</i>\n"
+        ]
 
     tier1 = [c for c in candidates if c.get("tier") == "TIER 1"]
     tier2 = [c for c in candidates if c.get("tier") == "TIER 2"]
@@ -488,11 +495,14 @@ def format_candidates_telegram_card(res, max_display=10):
         lines.append("")
 
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    lines.append("💡 <i>Tap below to add vetted candidates to tomorrow's 3m scanner:</i>")
+    lines.append("💡 <i>Tap below to add vetted candidates to the 3m scanner watchlist:</i>")
 
     kb_rows = []
-    btn_row = []
     display_candidates = (tier1[:6] + tier2[:4])[:max_display]
+    if display_candidates:
+        kb_rows.append([{"text": "⚡ ➕ Add All Top 5 to Watchlist", "callback_data": "cand_add_top5"}])
+
+    btn_row = []
     for c in display_candidates:
         sym = c["symbol"]
         btn_row.append({"text": f"➕ Add {sym}", "callback_data": f"cand_add:{sym}"})
@@ -510,18 +520,80 @@ def format_candidates_telegram_card(res, max_display=10):
     return "\n".join(lines), {"inline_keyboard": kb_rows}
 
 
+def send_morning_candidate_card():
+    """
+    Dispatches the 09:10 AM Pre-Market Candidate Briefing card to Telegram.
+    Reads candidates.json (or triggers fresh scan if missing).
+    """
+    cfg = load_config()
+    tg_token = cfg.get("telegram", {}).get("bot_token")
+    tg_chat_id = cfg.get("telegram", {}).get("chat_id")
+    if not tg_token or not tg_chat_id:
+        print("❌ Telegram credentials missing in config_credentials.json")
+        return False
+
+    res = None
+    if CANDIDATES_JSON.is_file():
+        try:
+            with open(CANDIDATES_JSON, "r", encoding="utf-8") as f:
+                cdata = json.load(f)
+                if cdata.get("candidates"):
+                    res = {
+                        "status": "success",
+                        "updated_at": cdata.get("updated_at", ""),
+                        "count": cdata.get("count", 0),
+                        "candidates": cdata.get("candidates", [])
+                    }
+        except Exception as e:
+            print(f"Error loading candidates.json: {e}")
+
+    if not res or not res.get("candidates"):
+        print("Candidates cache missing or empty. Running fresh scan...")
+        res = scan_nifty500_candidates(top_n=15)
+
+    text, reply_markup = format_candidates_telegram_card(res, max_display=10, is_morning=True)
+
+    url = f"https://api.telegram.org/bot{tg_token}/sendMessage"
+    payload = {
+        "chat_id": tg_chat_id,
+        "text": text,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
+        "reply_markup": reply_markup
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            if resp.status == 200:
+                print("✅ 09:10 AM Morning Candidate Briefing Card dispatched successfully to Telegram!")
+                return True
+            else:
+                print(f"❌ Telegram API returned HTTP status {resp.status}")
+                return False
+    except Exception as e:
+        print(f"❌ Failed to dispatch Telegram morning card: {e}")
+        return False
+
+
 if __name__ == "__main__":
-    print("=" * 85)
-    print("⚡ SCANNING NIFTY 500 DUAL-TIER STAGE-2 VCP COIL CANDIDATES...")
-    print("=" * 85)
-    res = scan_nifty500_candidates()
-    if res.get("status") == "success":
-        print(f"✅ Filtered {res['count']} Setups from {res['total_scanned']} stocks (Tier 1: {res['tier1_count']} | Tier 2: {res['tier2_count']})!")
-        print(f"📁 Saved to: {CANDIDATES_FILE.name}")
-        for i, c in enumerate(res["candidates"], 1):
-            print(
-                f"{i:<2}. {c['symbol']:<12} ₹{c['ltp']:<9.2f} | [{c['tier']}] {c['coil_tag']:<18} | 20D Dist: {c['dist_pivot_20d_pct']:>+5.2f}% ({c['dist_pivot_atr']}x ATR) | "
-                f"PDH: {c['dist_pdh_pct']:>+5.2f}% | 5D VCP: {c['vcp_ratio_5d']}x ATR | Range: {c['daily_range_pct']:.2f}% | {c['vol_tag']:<22} | Move: {c['change_pct']:+5.1f}% | ₹{c['turnover_cr']:<5.1f} Cr"
-            )
+    if "--morning-card" in sys.argv:
+        print("=" * 85)
+        print("⚡ DISPATCHING 09:10 AM PRE-MARKET CANDIDATES BRIEFING CARD...")
+        print("=" * 85)
+        send_morning_candidate_card()
     else:
-        print(f"❌ Error: {res.get('message')}")
+        print("=" * 85)
+        print("⚡ SCANNING NIFTY 500 DUAL-TIER STAGE-2 VCP COIL CANDIDATES...")
+        print("=" * 85)
+        res = scan_nifty500_candidates()
+        if res.get("status") == "success":
+            print(f"✅ Filtered {res['count']} Setups from {res['total_scanned']} stocks (Tier 1: {res['tier1_count']} | Tier 2: {res['tier2_count']})!")
+            print(f"📁 Saved to: {CANDIDATES_FILE.name}")
+            for i, c in enumerate(res["candidates"], 1):
+                print(
+                    f"{i:<2}. {c['symbol']:<12} ₹{c['ltp']:<9.2f} | [{c['tier']}] {c['coil_tag']:<18} | 20D Dist: {c['dist_pivot_20d_pct']:>+5.2f}% ({c['dist_pivot_atr']}x ATR) | "
+                    f"PDH: {c['dist_pdh_pct']:>+5.2f}% | 5D VCP: {c['vcp_ratio_5d']}x ATR | Range: {c['daily_range_pct']:.2f}% | {c['vol_tag']:<22} | Move: {c['change_pct']:+5.1f}% | ₹{c['turnover_cr']:<5.1f} Cr"
+                )
+        else:
+            print(f"❌ Error: {res.get('message')}")
