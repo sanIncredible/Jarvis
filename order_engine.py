@@ -627,6 +627,7 @@ def calculate_order_sizing(quote_data, mode_arg="mod", sl_mode="lod"):
     regime = load_market_regime()
     regime_code = regime.get("state_code") or regime.get("regime_code", "NORMAL")
     regime_label = regime.get("state_label") or regime.get("regime_badge", "NORMAL")
+    alloc_pct = regime.get("swing_allocation_pct", 100)
 
     effective_size = base_size
     regime_note = ""
@@ -640,6 +641,15 @@ def calculate_order_sizing(quote_data, mode_arg="mod", sl_mode="lod"):
             regime_note = f"⚠️ Regime Multiplier ({mult}x applied due to {regime_code})"
         if effective_size < 25000:
             effective_size = 25000
+
+    # P2.1 Defensive Regime Auto-Cap: strictly limit exposure to ₹50k max during defensive/cash breadth regimes
+    is_defensive = str(regime_code).upper() in ("DEFENSIVE", "DEFENSIVE_WATERFALL", "CLIMAX", "WASHOUT", "CHOP") or alloc_pct == 0
+    if is_defensive:
+        if effective_size > 50000:
+            effective_size = 50000
+            mode_label = f"{mode_label} [DEFENSIVE CAP: ₹50k]"
+            cap_msg = f"🛡️ Defensive Regime ({regime_code}): Exposure capped to ₹50,000 max (Capital Preservation)"
+            regime_note = f"{regime_note} | {cap_msg}" if regime_note else cap_msg
 
     quantity = int(effective_size / ltp)
     if quantity == 0 and effective_size >= ltp:
