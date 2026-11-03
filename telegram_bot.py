@@ -1739,7 +1739,7 @@ def dispatch_command(msg_text, from_chat_id):
         return handle_remove_command(args)
     elif cmd in ("/watchlist", "/list", "/stocks", "watchlist", "list", "stocks"):
         return handle_watchlist_command()
-    elif cmd in ("/candidates", "/cand", "/screen", "/screener", "/eodscan", "candidates", "cand", "screen"):
+    elif cmd in ("/candidates", "/cand", "/screen", "/screener", "/eodscan", "/briefing", "candidates", "cand", "screen", "briefing"):
         return handle_candidates_command()
     elif cmd in ("/positions", "/pos", "/portfolio", "/pnl", "/holdings", "positions", "pos", "pnl"):
         return handle_positions_command()
@@ -1749,7 +1749,7 @@ def dispatch_command(msg_text, from_chat_id):
         return handle_funds_command()
     elif cmd in ("/exit", "/close", "/squareoff", "exit", "close"):
         return handle_exit_command(args)
-    elif cmd in ("/journal", "/syncjournal", "/sync", "journal", "sync"):
+    elif cmd in ("/journal", "/syncjournal", "/sync", "/eod", "/summary", "journal", "sync", "eod", "summary"):
         return handle_journal_command()
     elif cmd in ("/token", "/tokens", "/status", "/check", "token", "tokens", "status"):
         if args:
