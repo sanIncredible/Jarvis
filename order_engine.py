@@ -502,7 +502,7 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
             "rule": "Strong Start",
             "passed": True,
             "badge": "✅",
-            "text": "✅ <b>Strong Start:</b> Confirmed (Held > Prev Close)",
+            "text": "✅ <b>Strong Start:</b> Confirmed (Held above Prev Close)",
             "detail": "Pine Script SS criteria satisfied"
         })
     else:
@@ -542,7 +542,7 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
                 "text": f"⚠️ <b>Volume:</b> RVOL {rvol:.2f}x (Low Participation)",
                 "detail": "Volume below institutional participation threshold"
             })
-            warnings.append(f"Volume: Low relative volume (RVOL {rvol:.2f}x < 1.0x).")
+            warnings.append(f"Volume: Low relative volume (RVOL {rvol:.2f}x under 1.0x baseline).")
 
     # 6. Stop-Loss / LOD Risk Proximity
     if risk_pct is not None:
@@ -551,7 +551,7 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
                 "rule": "Stop Distance",
                 "passed": True,
                 "badge": "✅",
-                "text": f"✅ <b>Stop Distance:</b> {risk_pct:.1f}% (Tight Risk < 3%)",
+                "text": f"✅ <b>Stop Distance:</b> {risk_pct:.1f}% (Tight Risk under 3%)",
                 "detail": "Clean structural risk to Day Low"
             })
         elif risk_pct <= 4.0:
@@ -559,7 +559,7 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
                 "rule": "Stop Distance",
                 "passed": True,
                 "badge": "✅",
-                "text": f"✅ <b>Stop Distance:</b> {risk_pct:.1f}% (Acceptable <= 4%)",
+                "text": f"✅ <b>Stop Distance:</b> {risk_pct:.1f}% (Acceptable within 4%)",
                 "detail": "Reasonable distance to Day Low"
             })
         else:
@@ -567,10 +567,10 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
                 "rule": "Stop Distance",
                 "passed": False,
                 "badge": "⚠️",
-                "text": f"⚠️ <b>Stop Distance:</b> {risk_pct:.1f}% (WIDE > 4.0% limit)",
+                "text": f"⚠️ <b>Stop Distance:</b> {risk_pct:.1f}% (WIDE over 4.0% limit)",
                 "detail": "Excessive distance to LOD stop-loss"
             })
-            warnings.append(f"Wide Stop-Loss: Distance to Day Low is {risk_pct:.1f}% (> 4.0% optimal threshold). High drawdown risk.")
+            warnings.append(f"Wide Stop-Loss: Distance to Day Low is {risk_pct:.1f}% (over 4.0% optimal threshold). High drawdown risk.")
 
     # 7. 10 EMA Stretch / Overextension
     stretch_pct = sc_data.get("stretch_pct") if sc_data else None
@@ -597,7 +597,7 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
                 "rule": "10 EMA Stretch",
                 "passed": False,
                 "badge": "⚠️",
-                "text": f"⚠️ <b>10 EMA Stretch:</b> {sign}{stretch_pct:.1f}% (Extended > 4.5%)",
+                "text": f"⚠️ <b>10 EMA Stretch:</b> {sign}{stretch_pct:.1f}% (Extended over 4.5%)",
                 "detail": "Price extended from short term moving average"
             })
             warnings.append(f"Overextended: Price is stretched {sign}{stretch_pct:.1f}% above 10 EMA. Consider waiting for pullback.")
