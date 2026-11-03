@@ -96,7 +96,7 @@ def get_telegram_config():
 # Telegram Bot API Helpers
 # ---------------------------------------------------------
 def send_telegram_msg(chat_id, text, parse_mode="HTML", reply_markup=None):
-    """Sends a Telegram message to a specific chat."""
+    """Sends a Telegram message to a specific chat, falling back to plain text if markup parsing fails."""
     bot_token, _ = get_telegram_config()
     if not bot_token or not chat_id:
         return False, "Missing bot_token or chat_id"
@@ -119,12 +119,28 @@ def send_telegram_msg(chat_id, text, parse_mode="HTML", reply_markup=None):
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             return True, json.loads(resp.read().decode())
+    except urllib.error.HTTPError as he:
+        err_body = he.read().decode(errors="replace")
+        if he.code == 400 and parse_mode:
+            # Fallback retry without parse_mode if entity parsing failed
+            payload["parse_mode"] = None
+            retry_data = json.dumps(payload).encode("utf-8")
+            retry_req = urllib.request.Request(url, data=retry_data, headers={
+                "Content-Type": "application/json",
+                "User-Agent": "Jarvis-Telegram-Bot"
+            })
+            try:
+                with urllib.request.urlopen(retry_req, timeout=10) as retry_resp:
+                    return True, json.loads(retry_resp.read().decode())
+            except Exception as e2:
+                return False, f"{he} (fallback failed: {e2}) - {err_body}"
+        return False, f"{he}: {err_body}"
     except Exception as e:
         return False, str(e)
 
 
 def edit_telegram_msg(chat_id, message_id, text, parse_mode="HTML", reply_markup=None):
-    """Edits an existing Telegram message in place."""
+    """Edits an existing Telegram message in place, falling back to plain text if markup parsing fails."""
     bot_token, _ = get_telegram_config()
     if not bot_token or not chat_id or not message_id:
         return False, "Missing parameters"
@@ -148,6 +164,21 @@ def edit_telegram_msg(chat_id, message_id, text, parse_mode="HTML", reply_markup
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             return True, json.loads(resp.read().decode())
+    except urllib.error.HTTPError as he:
+        err_body = he.read().decode(errors="replace")
+        if he.code == 400 and parse_mode:
+            payload["parse_mode"] = None
+            retry_data = json.dumps(payload).encode("utf-8")
+            retry_req = urllib.request.Request(url, data=retry_data, headers={
+                "Content-Type": "application/json",
+                "User-Agent": "Jarvis-Telegram-Bot"
+            })
+            try:
+                with urllib.request.urlopen(retry_req, timeout=10) as retry_resp:
+                    return True, json.loads(retry_resp.read().decode())
+            except Exception as e2:
+                return False, f"{he} (fallback failed: {e2}) - {err_body}"
+        return False, f"{he}: {err_body}"
     except Exception as e:
         return False, str(e)
 
@@ -914,7 +945,10 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
     checklist_block = "\n".join(checklist_lines)
 
     if warnings:
-        warn_lines = "\n".join([f"  {i+1}. <i>{w}</i>" for i, w in enumerate(warnings)])
+        warn_lines = "\n".join([
+            f"  {i+1}. <i>{str(w).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')}</i>"
+            for i, w in enumerate(warnings)
+        ])
         alert_block = (
             f"\n🚨 <b>STRATEGY WARNINGS ({len(warnings)} Unsatisfied):</b>\n"
             f"{warn_lines}\n"
@@ -923,7 +957,8 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
         alert_block = "\n⭐ <b>A+ SETUP: All Strategy Checklist Rules Satisfied!</b>\n"
 
     sig_line = f"🏷️ <b>Scanner Signal:</b> <code>{scanner_sig}</code>\n" if scanner_sig else ""
-    reg_note_line = f"🛡️ <b>Regime Policy:</b> {calc['regime_note']}\n" if calc.get("regime_note") else ""
+    reg_note_safe = str(calc['regime_note']).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;') if calc.get("regime_note") else ""
+    reg_note_line = f"🛡️ <b>Regime Policy:</b> {reg_note_safe}\n" if reg_note_safe else ""
 
     canonical_sym = quote_data["symbol"]
     sym_display = f"{canonical_sym} (<i>{symbol}</i>)" if symbol.upper() != canonical_sym else canonical_sym
@@ -1762,7 +1797,9 @@ def handle_callback_query(cq):
 
         answer_callback_query(cq_id, f"Opening order preview for {symbol}...")
         preview_text, markup = build_buy_preview(symbol, mode, sl_mode, broker)
-        send_telegram_msg(chat_id, preview_text, reply_markup=markup)
+        ok, res = send_telegram_msg(chat_id, preview_text, reply_markup=markup)
+        if not ok:
+            print(f"⚠️ Failed to send order preview for {symbol}: {res}", flush=True)
 
 
 # ---------------------------------------------------------
