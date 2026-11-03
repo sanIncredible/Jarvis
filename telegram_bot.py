@@ -182,6 +182,7 @@ def register_telegram_commands():
     url = f"https://api.telegram.org/bot{bot_token}/setMyCommands"
     commands = [
         {"command": "buy", "description": "🛒 Place MTF/Equity Order (Upstox/Dhan/Zerodha)"},
+        {"command": "positions", "description": "📊 Live multi-broker positions & open P&L"},
         {"command": "broker", "description": "🏦 View or switch default broker (Upstox/Dhan/Zerodha)"},
         {"command": "watchlist", "description": "📋 View active watchlist & TV chart links"},
         {"command": "add", "description": "➕ Add stock ticker(s) to scanner watchlist"},
@@ -726,6 +727,9 @@ def handle_help_command():
         "  - <code>/buy RELIANCE mod regime</code> — Regime Capped Risk SL\n"
         "  - <code>/buy RELIANCE agg confirm</code> — Instant 1-shot execution\n"
         "  - <i>Interactive buttons with LoD Stop-Loss & Risk calculation!</i>\n\n"
+        "📊 <b>Positions & Portfolio:</b>\n"
+        "• <code>/positions</code> or <code>/pos</code> — Live open positions & real-time P&L\n"
+        "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
         "📋 <b>Watchlist Commands:</b>\n"
         "• <code>/add &lt;SYMBOL...&gt;</code> — Add stock(s) to scanner watchlist\n"
         "• <code>/remove &lt;SYMBOL...&gt;</code> — Remove stock(s) from watchlist\n"
@@ -872,6 +876,88 @@ def handle_broker_command(args):
         "• <code>/buy RELIANCE mod upstox</code>\n"
         "• <code>/buy TCS 50k zerodha</code>"
     )
+
+
+def handle_positions_command():
+    """
+    Fetches open positions across Upstox, Dhan, and Zerodha and returns
+    formatted summary card with inline refresh keyboard.
+    """
+    from order_engine import fetch_all_positions
+
+    positions, totals, broker_status = fetch_all_positions()
+
+    now_str = get_ist_now().strftime("%d %b %H:%M:%S IST")
+
+    # Format broker status summary
+    status_parts = []
+    for b in ("dhan", "upstox", "zerodha"):
+        st = broker_status.get(b, "N/A")
+        if "OK" in st:
+            status_parts.append(f"{b.capitalize()} 🟢")
+        elif "Not configured" in st:
+            status_parts.append(f"{b.capitalize()} ⚪")
+        else:
+            status_parts.append(f"{b.capitalize()} ⚠️")
+    status_str = " | ".join(status_parts)
+
+    lines = [
+        "📊 <b>JARVIS LIVE PORTFOLIO & POSITIONS</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    ]
+
+    if not positions:
+        lines.append("💤 <b>No Open Positions Active</b>")
+        lines.append("All multi-broker portfolios are currently 100% in cash.")
+    else:
+        for p in positions:
+            sym = p["symbol"]
+            broker = p["broker"]
+            prod = p["product"]
+            qty = p["qty"]
+            avg_p = p["avg_price"]
+            ltp = p["ltp"]
+            pnl = p["pnl"]
+            pnl_pct = p["pnl_pct"]
+            exposure = p["exposure"]
+
+            pnl_icon = "🟢" if pnl >= 0 else "🔴"
+            pnl_str = f"+₹{pnl:,.2f}" if pnl > 0 else (f"-₹{abs(pnl):,.2f}" if pnl < 0 else "₹0.00")
+            pct_sign = "+" if pnl_pct > 0 else ""
+            qty_sign = "+" if qty > 0 else ""
+
+            card = (
+                f"{pnl_icon} <b>{sym}</b> [<code>{broker} • {prod}</code>]\n"
+                f"  • <b>Qty:</b> {qty_sign}{qty} @ ₹{avg_p:,.2f} | <b>LTP:</b> ₹{ltp:,.2f}\n"
+                f"  • <b>P&L:</b> {pnl_icon} <b>{pnl_str}</b> ({pct_sign}{pnl_pct:.2f}%)\n"
+                f"  • <b>Exposure:</b> ₹{exposure:,.2f}"
+            )
+            lines.append(card)
+
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    tot_pnl = totals["total_pnl"]
+    tot_pnl_icon = "🟢" if tot_pnl >= 0 else "🔴"
+    tot_pnl_str = f"+₹{tot_pnl:,.2f}" if tot_pnl > 0 else (f"-₹{abs(tot_pnl):,.2f}" if tot_pnl < 0 else "₹0.00")
+
+    lines.append("💼 <b>PORTFOLIO TOTALS:</b>")
+    lines.append(f"• <b>Open Positions:</b> {totals['count']}")
+    lines.append(f"• <b>Total Net P&L:</b> {tot_pnl_icon} <b>{tot_pnl_str}</b>")
+    lines.append(f"• <b>Total Exposure:</b> ₹{totals['total_exposure']:,.2f}")
+    lines.append(f"• <b>Brokers Synced:</b> {status_str}")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append(f"🕒 <i>Updated: {now_str}</i>")
+
+    message_text = "\n".join(lines)
+
+    reply_markup = {
+        "inline_keyboard": [
+            [
+                {"text": "🔄 Refresh Positions", "callback_data": "pos_refresh"}
+            ]
+        ]
+    }
+
+    return message_text, reply_markup
 
 
 def handle_buy_command(args, from_chat_id):
@@ -1045,6 +1131,11 @@ def handle_callback_query(cq):
             reply_markup={"inline_keyboard": []}
         )
 
+    elif cq_data == "pos_refresh":
+        answer_callback_query(cq_id, "Refreshing live positions...")
+        text, markup = handle_positions_command()
+        edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
+
 
 # ---------------------------------------------------------
 # Core Message Dispatcher
@@ -1084,6 +1175,8 @@ def dispatch_command(msg_text, from_chat_id):
         return handle_remove_command(args)
     elif cmd in ("/watchlist", "/list", "/stocks"):
         return handle_watchlist_command()
+    elif cmd in ("/positions", "/pos", "/portfolio", "/pnl", "/holdings"):
+        return handle_positions_command()
     elif cmd in ("/token", "/tokens", "/status", "/check"):
         # Check if sub-command provided (e.g. /token upstox <token>)
         if args:
