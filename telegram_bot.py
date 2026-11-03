@@ -183,6 +183,7 @@ def register_telegram_commands():
     commands = [
         {"command": "buy", "description": "🛒 Place MTF/Equity Order (Upstox/Dhan/Zerodha)"},
         {"command": "positions", "description": "📊 Live multi-broker positions & open P&L"},
+        {"command": "trail", "description": "🎯 Trailing SL & Risk Breakeven recommendations"},
         {"command": "exit", "description": "🔴 Quick exit/square-off open positions"},
         {"command": "broker", "description": "🏦 View or switch default broker (Upstox/Dhan/Zerodha)"},
         {"command": "watchlist", "description": "📋 View active watchlist & TV chart links"},
@@ -730,6 +731,7 @@ def handle_help_command():
         "  - <i>Interactive buttons with LoD Stop-Loss & Risk calculation!</i>\n\n"
         "📊 <b>Positions & Portfolio:</b>\n"
         "• <code>/positions</code> or <code>/pos</code> — Live open positions & real-time P&L\n"
+        "• <code>/trail</code> or <code>/sl</code> — Trailing SL & Risk Breakeven recommendations\n"
         "• <code>/exit &lt;SYM&gt; [50%|all]</code> — 1-Tap quick exit/square-off\n"
         "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
         "📋 <b>Watchlist Commands:</b>\n"
@@ -964,7 +966,10 @@ def handle_positions_command():
         for i in range(0, len(exit_btns), 2):
             kb_rows.append(exit_btns[i:i+2])
 
-    kb_rows.append([{"text": "🔄 Refresh Positions", "callback_data": "pos_refresh"}])
+    kb_rows.append([
+        {"text": "🎯 Trailing SL Cockpit", "callback_data": "trail_refresh"},
+        {"text": "🔄 Refresh Positions", "callback_data": "pos_refresh"}
+    ])
     reply_markup = {"inline_keyboard": kb_rows}
 
     return message_text, reply_markup
@@ -1111,6 +1116,88 @@ def handle_exit_command(args):
             )
 
     return build_exit_preview(sym, broker)
+
+
+def handle_trailing_command():
+    """
+    Evaluates Trailing Stop-Loss & Risk Breakeven recommendations for ALL open positions
+    across live brokers and trade logs, returning formatted summary card and action buttons.
+    """
+    from order_engine import get_all_open_positions_with_trailing_sl
+    positions = get_all_open_positions_with_trailing_sl()
+
+    now_str = get_ist_now().strftime("%d %b %H:%M:%S IST")
+
+    lines = [
+        "🎯 <b>JARVIS LIVE TRAILING SL & RISK COCKPIT</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    ]
+
+    if not positions:
+        lines.append("💤 <b>No Open Positions Active</b>")
+        lines.append("All multi-broker portfolios and trade logs are currently 100% in cash.")
+    else:
+        for p in positions:
+            sym = p["symbol"]
+            broker = p["broker"]
+            prod = p["product"]
+            source = p.get("source", "LIVE")
+            entry_p = p["entry_price"]
+            ltp = p["ltp"]
+            pnl = p["pnl"]
+            pnl_pct = p["pnl_pct"]
+            r_mult = p["r_multiple"]
+            rec_sl = p["recommended_sl"]
+            init_sl = p["initial_sl"]
+            badge = p["action_badge"]
+            action_desc = p["action_text"]
+            qty = p["qty"]
+
+            pnl_icon = "🟢" if pnl >= 0 else "🔴"
+            pnl_str = f"+₹{pnl:,.2f}" if pnl > 0 else (f"-₹{abs(pnl):,.2f}" if pnl < 0 else "₹0.00")
+            pct_sign = "+" if pnl_pct > 0 else ""
+            r_sign = "+" if r_mult > 0 else ""
+
+            src_tag = f" • <i>{source}</i>" if source != "LIVE BROKER" else ""
+            lines.append(
+                f"<b>{sym}</b> [<code>{broker} • {prod}</code>]{src_tag}\n"
+                f"  • <b>Entry:</b> ₹{entry_p:,.2f} | <b>LTP:</b> ₹{ltp:,.2f} ({pct_sign}{pnl_pct:.2f}%)\n"
+                f"  • <b>P&L:</b> {pnl_icon} <b>{pnl_str}</b> | <b>R-Multiple:</b> {r_sign}{r_mult:.1f}R\n"
+                f"  • <b>Initial SL:</b> ₹{init_sl:,.2f} ➔ <b>Trail SL:</b> <b>₹{rec_sl:,.2f}</b>\n"
+                f"  • <b>Action:</b> <b>{badge}</b>\n"
+                f"    <i>{action_desc}</i>"
+            )
+
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("💡 <b>Trailing SL Strategy Rules:</b>")
+    lines.append("• <b>Gain &ge; +1.8R (+3%):</b> Move SL to Breakeven (Risk-Free!)")
+    lines.append("• <b>Gain &ge; +3.0R (+6%):</b> Book 50% partial & lock +1.5R profit")
+    lines.append("• <b>Danger Near SL (&le;1%):</b> Immediate risk alert warning")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append(f"🕒 <i>Updated: {now_str}</i>")
+
+    message_text = "\n".join(lines)
+
+    kb_rows = [
+        [
+            {"text": "🔄 Refresh Trailing SL", "callback_data": "trail_refresh"},
+            {"text": "📊 Live Positions", "callback_data": "pos_refresh"}
+        ]
+    ]
+
+    if positions:
+        exit_btns = []
+        for p in positions[:4]:
+            b_code = p["broker"][:1].lower()
+            sym = p["symbol"]
+            btn_label = f"🔴 Exit {sym[:8]}" if len(sym) > 8 else f"🔴 Exit {sym}"
+            exit_btns.append({"text": btn_label, "callback_data": f"ex_p:{b_code}:{sym}"})
+        for i in range(0, len(exit_btns), 2):
+            kb_rows.append(exit_btns[i:i+2])
+
+    reply_markup = {"inline_keyboard": kb_rows}
+
+    return message_text, reply_markup
 
 
 def handle_buy_command(args, from_chat_id):
@@ -1352,6 +1439,11 @@ def handle_callback_query(cq):
         text, markup = handle_positions_command()
         edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
 
+    elif cq_data == "trail_refresh":
+        answer_callback_query(cq_id, "Refreshing trailing SL recommendations...")
+        text, markup = handle_trailing_command()
+        edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
+
 
 # ---------------------------------------------------------
 # Core Message Dispatcher
@@ -1393,6 +1485,8 @@ def dispatch_command(msg_text, from_chat_id):
         return handle_watchlist_command()
     elif cmd in ("/positions", "/pos", "/portfolio", "/pnl", "/holdings"):
         return handle_positions_command()
+    elif cmd in ("/trail", "/trailing", "/sl", "/trails"):
+        return handle_trailing_command()
     elif cmd in ("/exit", "/close", "/squareoff"):
         return handle_exit_command(args)
     elif cmd in ("/token", "/tokens", "/status", "/check"):
