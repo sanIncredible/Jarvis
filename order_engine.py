@@ -1665,6 +1665,96 @@ def get_all_open_positions_with_trailing_sl():
     return enriched
 
 
+# ---------------------------------------------------------
+# Multi-Broker Capital & Funds Management
+# ---------------------------------------------------------
+def fetch_broker_funds():
+    """
+    Queries live available cash and margin across Dhan, Upstox, and Zerodha.
+    Returns:
+        dict with broker breakdowns and combined totals.
+    """
+    cfg = load_config()
+    funds = {
+        "dhan": {"enabled": False, "available_cash": 0.0, "collateral": 0.0, "utilized": 0.0, "withdrawable": 0.0, "error": None},
+        "upstox": {"enabled": False, "available_margin": 0.0, "used_margin": 0.0, "error": None},
+        "zerodha": {"enabled": False, "available_cash": 0.0, "live_balance": 0.0, "collateral": 0.0, "utilized": 0.0, "error": None},
+        "total_available_margin": 0.0
+    }
+
+    # 1. DhanHQ Margin & Funds
+    dhan = cfg.get("dhan", {})
+    d_token = dhan.get("access_token", "").strip()
+    d_client = dhan.get("client_id", "").strip()
+    if d_token and d_client:
+        funds["dhan"]["enabled"] = True
+        try:
+            req = urllib.request.Request("https://api.dhan.co/v2/fundlimit", headers={
+                "access-token": d_token,
+                "client-id": d_client,
+                "Accept": "application/json",
+                "User-Agent": "Jarvis-Order-Engine"
+            })
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                data = json.loads(resp.read().decode())
+                avail = float(data.get("availabelBalance", 0) or data.get("availMargin", 0) or 0)
+                funds["dhan"]["available_cash"] = round(avail, 2)
+                funds["dhan"]["collateral"] = round(float(data.get("collateralAmount", 0) or 0), 2)
+                funds["dhan"]["utilized"] = round(float(data.get("utilizedAmount", 0) or 0), 2)
+                funds["dhan"]["withdrawable"] = round(float(data.get("withdrawableBalance", 0) or 0), 2)
+                funds["total_available_margin"] += avail
+        except Exception as e:
+            funds["dhan"]["error"] = str(e)
+
+    # 2. Upstox Pro Funds & Margin
+    upstox = cfg.get("upstox", {})
+    u_token = upstox.get("access_token", "").strip()
+    if u_token:
+        funds["upstox"]["enabled"] = True
+        try:
+            req = urllib.request.Request("https://api.upstox.com/v2/user/get-funds-and-margin", headers={
+                "Authorization": f"Bearer {u_token}",
+                "Accept": "application/json",
+                "User-Agent": "Jarvis-Order-Engine"
+            })
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                data = json.loads(resp.read().decode())
+                eq = data.get("data", {}).get("equity", {})
+                avail = float(eq.get("available_margin", 0) or 0)
+                funds["upstox"]["available_margin"] = round(avail, 2)
+                funds["upstox"]["used_margin"] = round(float(eq.get("used_margin", 0) or 0), 2)
+                funds["total_available_margin"] += avail
+        except Exception as e:
+            funds["upstox"]["error"] = str(e)
+
+    # 3. Zerodha Kite Funds & Margin
+    zerodha = cfg.get("zerodha", {})
+    z_key = zerodha.get("api_key", "").strip()
+    z_token = zerodha.get("access_token", "").strip()
+    if z_key and z_token:
+        funds["zerodha"]["enabled"] = True
+        try:
+            req = urllib.request.Request("https://api.kite.trade/user/margins", headers={
+                "Authorization": f"token {z_key}:{z_token}",
+                "User-Agent": "Jarvis-Order-Engine"
+            })
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                data = json.loads(resp.read().decode())
+                eq = data.get("data", {}).get("equity", {})
+                avail_data = eq.get("available", {})
+                live_bal = float(avail_data.get("live_balance", 0) or avail_data.get("cash", 0) or 0)
+                funds["zerodha"]["available_cash"] = round(float(avail_data.get("cash", 0) or 0), 2)
+                funds["zerodha"]["live_balance"] = round(live_bal, 2)
+                funds["zerodha"]["collateral"] = round(float(avail_data.get("collateral", 0) or 0), 2)
+                funds["zerodha"]["utilized"] = round(float(eq.get("utilised", {}).get("debits", 0) or 0), 2)
+                funds["total_available_margin"] += live_bal
+        except Exception as e:
+            funds["zerodha"]["error"] = str(e)
+
+    funds["total_available_margin"] = round(funds["total_available_margin"], 2)
+    return funds
+
+
 if __name__ == "__main__":
     test_sym = sys.argv[1] if len(sys.argv) > 1 else "RELIANCE"
     b = sys.argv[2] if len(sys.argv) > 2 else get_default_broker()
