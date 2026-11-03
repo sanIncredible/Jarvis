@@ -2720,6 +2720,8 @@ def get_next_market_event(now):
 
 def live_terminal_timer():
     """Continuously prints live ticking countdown aligned to the current market lifecycle."""
+    if not sys.stdin.isatty():
+        return  # Headless mode (systemd/cron) - disable interactive countdown prompt to keep logs clean
     while not stop_scanner_event.is_set():
         if next_refresh_timestamp > 0:
             rem = int(next_refresh_timestamp - time.time())
