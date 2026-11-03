@@ -969,6 +969,166 @@ def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
     return success, calc if success else resp
 
 
+# ---------------------------------------------------------
+# Multi-Broker Open Positions & Portfolio Retrieval
+# ---------------------------------------------------------
+def fetch_all_positions():
+    """
+    Fetches open positions across Upstox, Dhan, and Zerodha.
+    Returns:
+        positions: list of dicts with keys:
+            symbol, broker, product, qty, avg_price, ltp, pnl, pnl_pct, exposure
+        totals: dict with total_pnl, total_exposure, count
+        broker_status: dict indicating which brokers were queried successfully
+    """
+    cfg = load_config()
+    all_pos = []
+    broker_status = {}
+
+    # 1. Dhan Positions
+    dhan = cfg.get("dhan", {})
+    d_token = dhan.get("access_token", "").strip()
+    d_client = dhan.get("client_id", "").strip()
+    if d_token and d_client:
+        try:
+            req = urllib.request.Request(
+                "https://api.dhan.co/v2/positions",
+                headers={
+                    "access-token": d_token,
+                    "client-id": d_client,
+                    "Accept": "application/json"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                d_pos = json.loads(resp.read().decode())
+                broker_status["dhan"] = f"OK ({len(d_pos)})"
+                for p in d_pos:
+                    net_qty = int(p.get("netQty", 0))
+                    if net_qty != 0:
+                        sym = p.get("tradingSymbol", "UNKNOWN")
+                        buy_avg = float(p.get("buyAvg", 0) or p.get("costPrice", 0) or 0)
+                        realized = float(p.get("realizedProfit", 0) or 0)
+                        unrealized = float(p.get("unrealizedProfit", 0) or 0)
+                        tot_pnl = realized + unrealized
+                        # Estimate LTP from cost and unrealized pnl if available
+                        ltp = buy_avg + (unrealized / net_qty) if net_qty != 0 and buy_avg > 0 else buy_avg
+                        exposure = round(abs(net_qty) * ltp, 2)
+                        pnl_pct = round((tot_pnl / (abs(net_qty) * buy_avg)) * 100, 2) if buy_avg > 0 else 0.0
+
+                        all_pos.append({
+                            "symbol": sym,
+                            "broker": "DHAN",
+                            "product": str(p.get("productType", "MTF")).upper(),
+                            "qty": net_qty,
+                            "avg_price": round(buy_avg, 2),
+                            "ltp": round(ltp, 2),
+                            "pnl": round(tot_pnl, 2),
+                            "pnl_pct": pnl_pct,
+                            "exposure": exposure
+                        })
+        except Exception as e:
+            broker_status["dhan"] = f"Error ({e})"
+    else:
+        broker_status["dhan"] = "Not configured"
+
+    # 2. Upstox Positions
+    upstox = cfg.get("upstox", {})
+    u_token = upstox.get("access_token", "").strip()
+    if u_token:
+        try:
+            req = urllib.request.Request(
+                "https://api.upstox.com/v2/portfolio/short-term-positions",
+                headers={
+                    "Authorization": f"Bearer {u_token}",
+                    "Accept": "application/json",
+                    "User-Agent": "Jarvis-Positions-Monitor"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                u_data = json.loads(resp.read().decode())
+                u_pos = u_data.get("data", [])
+                broker_status["upstox"] = f"OK ({len(u_pos)})"
+                for p in u_pos:
+                    net_qty = int(p.get("quantity", 0))
+                    if net_qty != 0:
+                        sym = p.get("trading_symbol", "UNKNOWN")
+                        avg_price = float(p.get("average_price", 0) or 0)
+                        pnl = float(p.get("pnl", 0) or 0)
+                        ltp = float(p.get("last_price", 0) or avg_price)
+                        exposure = round(abs(net_qty) * ltp, 2)
+                        pnl_pct = round((pnl / (abs(net_qty) * avg_price)) * 100, 2) if avg_price > 0 else 0.0
+
+                        all_pos.append({
+                            "symbol": sym,
+                            "broker": "UPSTOX",
+                            "product": str(p.get("product", "MTF")).upper(),
+                            "qty": net_qty,
+                            "avg_price": round(avg_price, 2),
+                            "ltp": round(ltp, 2),
+                            "pnl": round(pnl, 2),
+                            "pnl_pct": pnl_pct,
+                            "exposure": exposure
+                        })
+        except Exception as e:
+            broker_status["upstox"] = f"Error ({e})"
+    else:
+        broker_status["upstox"] = "Not configured"
+
+    # 3. Zerodha Kite Positions
+    zerodha = cfg.get("zerodha", {})
+    z_key = zerodha.get("api_key", "").strip()
+    z_token = zerodha.get("access_token", "").strip()
+    if z_key and z_token:
+        try:
+            req = urllib.request.Request(
+                "https://api.kite.trade/portfolio/positions",
+                headers={
+                    "X-Kite-Version": "3",
+                    "Authorization": f"token {z_key}:{z_token}"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                z_data = json.loads(resp.read().decode())
+                z_pos = z_data.get("data", {}).get("net", [])
+                broker_status["zerodha"] = f"OK ({len(z_pos)})"
+                for p in z_pos:
+                    net_qty = int(p.get("quantity", 0))
+                    if net_qty != 0:
+                        sym = p.get("tradingsymbol", "UNKNOWN")
+                        avg_price = float(p.get("average_price", 0) or 0)
+                        pnl = float(p.get("pnl", 0) or 0)
+                        ltp = float(p.get("last_price", 0) or avg_price)
+                        exposure = round(abs(net_qty) * ltp, 2)
+                        pnl_pct = round((pnl / (abs(net_qty) * avg_price)) * 100, 2) if avg_price > 0 else 0.0
+
+                        all_pos.append({
+                            "symbol": sym,
+                            "broker": "ZERODHA",
+                            "product": str(p.get("product", "CNC")).upper(),
+                            "qty": net_qty,
+                            "avg_price": round(avg_price, 2),
+                            "ltp": round(ltp, 2),
+                            "pnl": round(pnl, 2),
+                            "pnl_pct": pnl_pct,
+                            "exposure": exposure
+                        })
+        except Exception as e:
+            broker_status["zerodha"] = f"Error ({e})"
+    else:
+        broker_status["zerodha"] = "Not configured"
+
+    total_pnl = sum(p["pnl"] for p in all_pos)
+    total_exposure = sum(p["exposure"] for p in all_pos)
+
+    totals = {
+        "count": len(all_pos),
+        "total_pnl": round(total_pnl, 2),
+        "total_exposure": round(total_exposure, 2)
+    }
+
+    return all_pos, totals, broker_status
+
+
 if __name__ == "__main__":
     test_sym = sys.argv[1] if len(sys.argv) > 1 else "RELIANCE"
     b = sys.argv[2] if len(sys.argv) > 2 else get_default_broker()
