@@ -184,6 +184,7 @@ def register_telegram_commands():
         {"command": "buy", "description": "🛒 Place MTF/Equity Order (Upstox/Dhan/Zerodha)"},
         {"command": "positions", "description": "📊 Live multi-broker positions & open P&L"},
         {"command": "funds", "description": "💳 Multi-broker available cash & MTF margin"},
+        {"command": "candidates", "description": "🎯 Scan Nifty 500 swing breakout setups (candidates.txt)"},
         {"command": "trail", "description": "🎯 Trailing SL & Risk Breakeven recommendations"},
         {"command": "exit", "description": "🔴 Quick exit/square-off open positions"},
         {"command": "journal", "description": "📓 Reconcile broker trades into Journal.xlsx"},
@@ -578,6 +579,20 @@ def handle_watchlist_command():
     return "\n".join(lines)
 
 
+def handle_candidates_command():
+    """
+    Scans liquid Nifty 500 stocks for institutional swing thrust setups,
+    saving results to candidates.txt for manual vetting and returning an interactive review card.
+    """
+    try:
+        from candidate_scanner import scan_nifty500_candidates, format_candidates_telegram_card
+        res = scan_nifty500_candidates(top_n=15)
+        text, markup = format_candidates_telegram_card(res, max_display=10)
+        return text, markup
+    except Exception as e:
+        return f"⚠️ <b>Candidate Scanner Error:</b> {e}"
+
+
 def handle_token_status_command():
     """Handles /token, /tokens, or /status"""
     cfg = load_config()
@@ -738,7 +753,8 @@ def handle_help_command():
         "• <code>/exit &lt;SYM&gt; [50%|all]</code> — 1-Tap quick exit/square-off\n"
         "• <code>/journal</code> — Reconcile live broker fills into Journal.xlsx\n"
         "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
-        "📋 <b>Watchlist Commands:</b>\n"
+        "📋 <b>Watchlist & Screening:</b>\n"
+        "• <code>/candidates</code> or <code>/screen</code> — Scan Nifty 500 swing setups (saves to candidates.txt)\n"
         "• <code>/add &lt;SYMBOL...&gt;</code> — Add stock(s) to scanner watchlist\n"
         "• <code>/remove &lt;SYMBOL...&gt;</code> — Remove stock(s) from watchlist\n"
         "• <code>/watchlist</code> — Show full active watchlist & TV links\n\n"
@@ -1568,6 +1584,36 @@ def handle_callback_query(cq):
         text, markup = handle_funds_command()
         edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
 
+    elif cq_data.startswith("cand_add:"):
+        sym = cq_data.split(":")[1].upper()
+        curr_syms = read_watchlist_symbols()
+        if sym in curr_syms:
+            answer_callback_query(cq_id, f"{sym} is already in your watchlist!", show_alert=True)
+        else:
+            curr_syms.append(sym)
+            write_watchlist_symbols(curr_syms)
+            answer_callback_query(cq_id, f"✅ Added {sym} to live Watchlist!")
+            threading.Thread(target=trigger_immediate_rescan, daemon=True).start()
+            send_telegram_msg(
+                chat_id,
+                f"✅ <b>PROMOTED TO WATCHLIST: {sym}</b>\n"
+                f"• Added to <code>watchlist.txt</code> ({len(curr_syms)} total stocks)\n"
+                f"• Immediate 3m ORB rescan triggered!\n"
+                f"• 📊 <a href='https://sanincredible.github.io/Jarvis/'>View on Dashboard</a>"
+            )
+
+    elif cq_data == "cand_refresh":
+        answer_callback_query(cq_id, "Rescanning Nifty 500 candidates...")
+        from candidate_scanner import scan_nifty500_candidates, format_candidates_telegram_card
+        res = scan_nifty500_candidates(top_n=15)
+        text, markup = format_candidates_telegram_card(res, max_display=10)
+        edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
+
+    elif cq_data == "wl_show":
+        answer_callback_query(cq_id, "Opening watchlist...")
+        text = handle_watchlist_command()
+        send_telegram_msg(chat_id, text)
+
     elif cq_data.startswith("buy_prep:"):
         parts = cq_data.split(":")
         symbol = parts[1] if len(parts) > 1 else ""
@@ -1621,6 +1667,8 @@ def dispatch_command(msg_text, from_chat_id):
         return handle_remove_command(args)
     elif cmd in ("/watchlist", "/list", "/stocks"):
         return handle_watchlist_command()
+    elif cmd in ("/candidates", "/cand", "/screen", "/screener", "/eodscan"):
+        return handle_candidates_command()
     elif cmd in ("/positions", "/pos", "/portfolio", "/pnl", "/holdings"):
         return handle_positions_command()
     elif cmd in ("/trail", "/trailing", "/sl", "/trails"):
