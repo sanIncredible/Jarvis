@@ -565,6 +565,16 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
             })
             print(f"🎯 CLOSED Position: {sym} | Sold {exit_qty} @ ₹{sell_vwap:,.2f} | Net P&L: ₹{net_pnl:+,.2f} ({pnl_pct:+.1f}%)")
 
+            # Clean up any remaining duplicate ghost open entries for this symbol
+            if sym in existing_open and existing_open[sym]:
+                for extra_pos in existing_open[sym]:
+                    extra_row = extra_pos["row"]
+                    ws_tj.cell(row=extra_row, column=11, value="CLOSED")
+                    ws_tj.cell(row=extra_row, column=9, value=sell_vwap)
+                    ws_tj.cell(row=extra_row, column=10, value=today_dt)
+                    ws_tj.cell(row=extra_row, column=13, value=0.0)
+                existing_open[sym] = []
+
             # Partial exit remainder
             if orig_qty > sell_qty:
                 rem_qty = orig_qty - sell_qty
@@ -630,6 +640,14 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
                 "sl": sl_detected,
                 "risk_rs": risk_rs
             })
+            existing_open.setdefault(sym, []).append({
+                "row": next_row,
+                "date": today_dt,
+                "entry_price": buy_vwap,
+                "sl": sl_detected,
+                "target": tgt_detected,
+                "qty": net_buy
+            })
             print(f"🌟 NEW Position: {sym} | Bought {net_buy} @ ₹{buy_vwap:,.2f} | SL: ₹{sl_detected:,.2f} (Risk: ₹{risk_rs:,.2f})")
 
         # Case C: Intraday Roundtrip (Buy & Sell today)
@@ -682,6 +700,8 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
             prod = str(p.get("product", "MTF")).upper()
 
             if net_qty > 0 and buy_avg > 0 and p_sym:
+                if any(c["symbol"].upper() == p_sym for c in closed_today):
+                    continue  # Do not re-open a stock that was closed today!
                 if p_sym not in existing_open or not existing_open[p_sym]:
                     initial_sl = None
                     try:
@@ -741,12 +761,30 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
     print("\n--- Refreshing Open Positions Sheet & Real-Time LTP ---")
     active_open_trades = []
     seen_symbols = set()
+    closed_symbols_today = set(c["symbol"].upper() for c in closed_today)
+    live_open_symbols = set(str(p.get("symbol", "")).strip().upper() for p in live_positions if float(p.get("qty", 0) or 0) > 0) if live_positions is not None else None
+
     for r in range(2, ws_tj.max_row + 1):
         status = ws_tj.cell(row=r, column=11).value
         sym = ws_tj.cell(row=r, column=3).value
         if sym and status and "OPEN" in str(status).upper():
             sym_str = str(sym).strip().upper()
+
+            # Guard 1: If symbol was closed today, mark row CLOSED and skip!
+            if sym_str in closed_symbols_today:
+                print(f"🧹 Reconciled ghost row {r} for closed symbol {sym_str} -> Marking CLOSED.")
+                ws_tj.cell(row=r, column=11, value="CLOSED")
+                continue
+
+            # Guard 2: If live broker positions were queried and this symbol has 0 shares on all brokers, mark CLOSED!
+            if live_open_symbols is not None and sym_str not in live_open_symbols:
+                print(f"🧹 Reconciled ghost row {r} for {sym_str} (0 shares held on live brokers) -> Marking CLOSED.")
+                ws_tj.cell(row=r, column=11, value="CLOSED")
+                continue
+
             if sym_str in seen_symbols:
+                print(f"🧹 Reconciled duplicate open row {r} for {sym_str} -> Marking CLOSED.")
+                ws_tj.cell(row=r, column=11, value="CLOSED")
                 continue
             seen_symbols.add(sym_str)
             side = ws_tj.cell(row=r, column=4).value or "BUY"
@@ -838,7 +876,7 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
     # Clear all old data rows completely (rows 2 to 200)
     for r in range(2, max(ws_op.max_row + 1, 200)):
         for c in range(1, 20):
-            ws_op.cell(row=r, column=c, value=None)
+            ws_op.cell(row=r, column=c).value = None
 
     for idx, p in enumerate(active_open_trades, 2):
         rr_display = f"{p['current_rr']:+.2f}R" if p["current_rr"] is not None else "N/A"
@@ -978,6 +1016,10 @@ def send_telegram_eod_card(summary: Dict[str, Any], config: Dict[str, Any]):
     closed = summary.get("closed_today", [])
     opened = summary.get("opened_today", [])
     open_pos = summary.get("open_positions", [])
+
+    # Filter out any closed symbol from open positions to guarantee 0 contradictions
+    closed_sym_set = set(c["symbol"].upper() for c in closed)
+    open_pos = [p for p in open_pos if p["symbol"].upper() not in closed_sym_set]
 
     today_realized = sum(c["net_pnl"] for c in closed)
     tot_unrealized = sum(p["unrealized_pnl"] for p in open_pos)
