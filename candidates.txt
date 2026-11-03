@@ -1,26 +1,11 @@
-# JARVIS PRE-BREAKOUT SWING CANDIDATES (NIFTY 500) — 2026-11-03 11:57:05 IST
-# Setup: Narrow Range Coil (Range ≤ 1.85%, Sitting ≤ 0.65% from High, Min ₹5.0 Cr)
+# JARVIS PRE-BREAKOUT SWING CANDIDATES (NIFTY 500) — 2026-11-03 12:20:03 IST
+# Filters: Stage 2 Uptrend (LTP > 20 EMA > 50 EMA), 5D VCP <= 2.2x ATR, Dist to 20D Pivot <= 2.2%, Min ₹5.0 Cr
 # Strategy: Tomorrow's 3m ORB + PDH Breakout with Day Low SL (NOT Extended!)
 # Review on TradingView and tap button or use `/add <SYMBOL>` in Telegram to promote to watchlist.txt
 # ==========================================================================================
 
-MARUTI  # ₹11,774.00 | Range: 0.88% | Today: +0.9% | Pivot Dist: 0.03% | Close Top: 96% | ₹130.1 Cr | PRIME COIL | Equity
-TORNTPHARM  # ₹4,631.30 | Range: 1.25% | Today: +0.8% | Pivot Dist: 0.05% | Close Top: 96% | ₹28.1 Cr | NARROW CONSOLIDATION | Equity
-SBIN  # ₹996.90 | Range: 1.07% | Today: +1.0% | Pivot Dist: 0.28% | Close Top: 74% | ₹660.1 Cr | PRIME COIL | Equity
-APOLLOHOSP  # ₹8,412.50 | Range: 1.34% | Today: -0.6% | Pivot Dist: 0.15% | Close Top: 89% | ₹226.9 Cr | NARROW CONSOLIDATION | Equity
-RBLBANK  # ₹355.05 | Range: 1.04% | Today: +0.8% | Pivot Dist: 0.34% | Close Top: 67% | ₹26.2 Cr | PRIME COIL | Equity
-DLF  # ₹709.00 | Range: 1.50% | Today: +1.1% | Pivot Dist: 0.10% | Close Top: 93% | ₹62.9 Cr | NARROW CONSOLIDATION | Equity
-SBILIFE  # ₹1,675.30 | Range: 1.55% | Today: +0.9% | Pivot Dist: 0.15% | Close Top: 90% | ₹75.6 Cr | NARROW CONSOLIDATION | Equity
-LUPIN  # ₹2,007.90 | Range: 1.22% | Today: +0.6% | Pivot Dist: 0.35% | Close Top: 71% | ₹50.9 Cr | NARROW CONSOLIDATION | Equity
-CIPLA  # ₹1,384.80 | Range: 1.33% | Today: -0.2% | Pivot Dist: 0.30% | Close Top: 78% | ₹59.5 Cr | NARROW CONSOLIDATION | Equity
-KOTAKBANK  # ₹458.20 | Range: 1.05% | Today: -0.0% | Pivot Dist: 0.43% | Close Top: 57% | ₹345.7 Cr | PRIME COIL | Equity
-INDHOTEL  # ₹830.00 | Range: 1.14% | Today: +0.9% | Pivot Dist: 0.41% | Close Top: 64% | ₹135.1 Cr | PRIME COIL | Equity
-TATACAP  # ₹330.00 | Range: 1.38% | Today: +1.4% | Pivot Dist: 0.15% | Close Top: 89% | ₹13.8 Cr | NARROW CONSOLIDATION | Equity
-WIPRO  # ₹197.56 | Range: 1.27% | Today: +0.6% | Pivot Dist: 0.47% | Close Top: 62% | ₹72.2 Cr | NARROW CONSOLIDATION | Equity
-DRREDDY  # ₹1,352.70 | Range: 1.45% | Today: +0.8% | Pivot Dist: 0.38% | Close Top: 73% | ₹114.6 Cr | NARROW CONSOLIDATION | Equity
-BAJAJFINSV  # ₹1,717.30 | Range: 1.83% | Today: +1.5% | Pivot Dist: 0.15% | Close Top: 92% | ₹76.1 Cr | NARROW CONSOLIDATION | Equity
-HDBFS  # ₹507.85 | Range: 1.18% | Today: +0.7% | Pivot Dist: 0.22% | Close Top: 82% | ₹8.9 Cr | PRIME COIL | Equity
-GPIL  # ₹196.50 | Range: 1.09% | Today: +1.5% | Pivot Dist: 0.41% | Close Top: 62% | ₹15.5 Cr | PRIME COIL | Equity
-M&M  # ₹2,904.50 | Range: 1.74% | Today: +1.2% | Pivot Dist: 0.22% | Close Top: 87% | ₹308.0 Cr | NARROW CONSOLIDATION | Equity
-PREMIERENE  # ₹886.55 | Range: 1.40% | Today: +0.4% | Pivot Dist: 0.28% | Close Top: 80% | ₹17.8 Cr | NARROW CONSOLIDATION | Equity
-CHOLAHLDNG  # ₹1,407.00 | Range: 1.36% | Today: +0.4% | Pivot Dist: 0.15% | Close Top: 89% | ₹6.2 Cr | NARROW CONSOLIDATION | Equity
+INDHOTEL  # ₹828.85 | 5D VCP: 1.85x ATR | Range: 1.14% | Pivot Dist: +0.55% | 🧊 RVOL 0.73x (Dry Vol) | Today: +0.8% | ₹157.3 Cr | 🔥 PRIME VCP COIL | Equity
+DRREDDY  # ₹1,356.20 | 5D VCP: 2.09x ATR | Range: 1.45% | Pivot Dist: +0.64% | ⚪ RVOL 0.91x (Normal) | Today: +1.1% | ₹134.2 Cr | ⚡ STAGE-2 COIL | Equity
+ICICIBANK  # ₹1,416.10 | 5D VCP: 2.19x ATR | Range: 1.90% | Pivot Dist: +0.41% | 🔥 RVOL 1.31x (Surge) | Today: +2.1% | ₹1,107.4 Cr | ⚡ STAGE-2 COIL | Equity
+INDUSTOWER  # ₹387.95 | 5D VCP: 2.08x ATR | Range: 1.45% | Pivot Dist: +1.11% | 🔥 RVOL 1.44x (Surge) | Today: +1.3% | ₹123.2 Cr | ⚡ STAGE-2 COIL | Equity
+AUROPHARMA  # ₹1,679.00 | 5D VCP: 2.05x ATR | Range: 1.95% | Pivot Dist: +2.10% | ⚪ RVOL 0.83x (Normal) | Today: -0.3% | ₹54.1 Cr | ⚡ STAGE-2 COIL | Equity
