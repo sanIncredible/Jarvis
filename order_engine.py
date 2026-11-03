@@ -1845,6 +1845,157 @@ def get_open_trades_from_logs():
     return logged_trades
 
 
+_DAILY_EMA_ATR_CACHE = {}  # (symbol, date_str) -> dict
+
+
+def get_daily_emas_and_atr(symbol, token=None):
+    """
+    Fetches daily candle history from Upstox and computes:
+    - 10 EMA (Jeff Sun short-term momentum trailing guide)
+    - 20 EMA (Secondary trend baseline)
+    - 50 SMA (Institutional structural trend)
+    - ATR 14 (Average True Range daily volatility)
+    """
+    sym = (symbol or "").strip().upper()
+    today_iso = datetime.now().strftime("%Y-%m-%d")
+    cache_key = (sym, today_iso)
+    if cache_key in _DAILY_EMA_ATR_CACHE:
+        return _DAILY_EMA_ATR_CACHE[cache_key]
+
+    res = {
+        "ema10": None,
+        "ema20": None,
+        "sma50": None,
+        "atr14": None
+    }
+
+    try:
+        if not token:
+            cfg = load_config()
+            token = cfg.get("upstox", {}).get("access_token", "").strip()
+        if not token:
+            return res
+
+        from upstox_tablet_scanner import get_instrument_key
+        inst_key = get_instrument_key(sym)
+        if not inst_key or not (inst_key.startswith("NSE_EQ|") or inst_key.startswith("NSE_INDEX|")):
+            return res
+
+        encoded = urllib.parse.quote(inst_key)
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0"
+        }
+        from_str = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
+        url = f"https://api.upstox.com/v2/historical-candle/{encoded}/day/{today_iso}/{from_str}"
+
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            d = json.loads(resp.read().decode("utf-8"))
+
+        raw_candles = d.get("data", {}).get("candles", [])
+        if raw_candles:
+            chronological = list(reversed(raw_candles))
+            closes = [float(c[4]) for c in chronological]
+
+            def _calc_ema(vals, period):
+                if not vals:
+                    return None
+                if len(vals) < period:
+                    return vals[-1]
+                k = 2.0 / (period + 1.0)
+                e = sum(vals[:period]) / period
+                for v in vals[period:]:
+                    e = (v * k) + (e * (1.0 - k))
+                return e
+
+            ema10 = _calc_ema(closes, 10)
+            ema20 = _calc_ema(closes, 20)
+            sma50 = sum(closes[-50:]) / min(len(closes), 50) if closes else None
+
+            trs = []
+            for i in range(1, len(chronological)):
+                h = float(chronological[i][2])
+                l = float(chronological[i][3])
+                pc = float(chronological[i-1][4])
+                tr = max(h - l, abs(h - pc), abs(l - pc))
+                trs.append(tr)
+            atr14 = sum(trs[-14:]) / min(len(trs), 14) if trs else None
+
+            res["ema10"] = round(ema10, 2) if ema10 is not None else None
+            res["ema20"] = round(ema20, 2) if ema20 is not None else None
+            res["sma50"] = round(sma50, 2) if sma50 is not None else None
+            res["atr14"] = round(atr14, 2) if atr14 is not None else None
+
+            _DAILY_EMA_ATR_CACHE[cache_key] = res
+    except Exception:
+        pass
+
+    return res
+
+
+def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, product="MTF", instrument_key=None):
+    """
+    Jeff Sun Trailing Automation:
+    Ratchets the Stop-Loss up to Breakeven (+0.15% fee buffer) on the live broker.
+    1. Cancels any existing lower stop-loss order.
+    2. Submits new Stop-Loss limit order at breakeven price.
+    3. Logs update in orders_log.json.
+    """
+    sym = (symbol or "").strip().upper()
+    b = (broker or "").strip().lower()
+
+    # Calculate Breakeven SL with tick size ₹0.05
+    raw_be = entry_price * 1.0015
+    breakeven_sl = round(round(raw_be / 0.05) * 0.05, 2)
+
+    # 1. Cancel previous pending SL order
+    cancelled = cancel_symbol_stop_loss(sym, broker=broker)
+
+    # 2. Place new SL at Breakeven
+    ok, res = place_broker_stop_loss(
+        broker=broker,
+        symbol=sym,
+        quantity=quantity,
+        sl_price=breakeven_sl,
+        instrument_key=instrument_key,
+        product=product
+    )
+
+    # 3. Update orders_log.json
+    try:
+        log_f = SCRIPT_DIR / "orders_log.json"
+        if log_f.is_file():
+            with open(log_f, "r", encoding="utf-8") as f:
+                logs = json.load(f)
+            updated = False
+            for entry in reversed(logs):
+                if entry.get("symbol", "").upper() == sym:
+                    entry["breakeven_ratcheted"] = True
+                    entry["stop_loss"] = breakeven_sl
+                    entry["ratcheted_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    if ok and isinstance(res, dict) and res.get("order_id"):
+                        entry["sl_order_id"] = res["order_id"]
+                    updated = True
+                    break
+            if updated:
+                with open(log_f, "w", encoding="utf-8") as f:
+                    json.dump(logs, f, indent=2)
+    except Exception as e:
+        print(f"Notice updating orders_log: {e}")
+
+    return ok, {
+        "status": "success" if ok else "failed",
+        "symbol": sym,
+        "entry_price": entry_price,
+        "breakeven_sl": breakeven_sl,
+        "broker": broker,
+        "cancelled_orders": cancelled,
+        "details": res
+    }
+
+
 def get_all_open_positions_with_trailing_sl():
     """
     Consolidates ALL open positions across live brokers (Dhan, Zerodha, Upstox)
@@ -1939,6 +2090,42 @@ def get_all_open_positions_with_trailing_sl():
                 action_badge = "✅ HOLD — ON TRACK"
                 action_text = f"Position healthy. Keep stop at ₹{initial_sl:,.2f} (Target: ₹{target_p:,.2f})"
 
+        # Jeff Sun 10 EMA & 20 EMA Trailing Telemetry
+        ema_info = get_daily_emas_and_atr(sym)
+        ema10 = ema_info.get("ema10")
+        ema20 = ema_info.get("ema20")
+        sma50 = ema_info.get("sma50")
+        atr14 = ema_info.get("atr14")
+
+        dist_ema10_pct = round(((ltp - ema10) / ema10) * 100.0, 2) if ema10 and ltp else None
+        dist_ema20_pct = round(((ltp - ema20) / ema20) * 100.0, 2) if ema20 and ltp else None
+        atr_stretch = round((ltp - sma50) / atr14, 1) if sma50 and atr14 and atr14 > 0 and ltp else None
+
+        jeff_badge = action_badge
+        jeff_status = action_text
+
+        if not is_option and ema10 and ltp:
+            if ltp >= ema10:
+                jeff_badge = "🟢 RIDE 10 EMA"
+                jeff_status = f"Trending strong above 10 EMA (+{dist_ema10_pct:.1f}% buffer). Hold runner!"
+            elif ema20 and ltp >= ema20:
+                jeff_badge = "🟡 CAUTION — BELOW 10 EMA"
+                jeff_status = f"Below 10 EMA ({dist_ema10_pct:.1f}%). Holding 20 EMA — Watch next-day 5m ORL!"
+            else:
+                jeff_badge = "🔴 EXIT WARNING"
+                jeff_status = f"Trend broken below 10 & 20 EMA ({dist_ema10_pct:.1f}%). Prepare to exit on ORL undercut!"
+
+            if atr_stretch and atr_stretch >= 3.0:
+                jeff_status += f" | ⚠️ Extended (+{atr_stretch}x ATR from 50MA) — Tighten trail!"
+
+        raw_be = entry_p * 1.0015
+        breakeven_p = round(round(raw_be / 0.05) * 0.05, 2)
+        if not is_option and (r_multiple >= 1.5 or pnl_pct >= 2.5):
+            recommended_sl = max(recommended_sl, breakeven_p)
+            if "HOLD" in action_badge:
+                action_badge = "🟢 TRAIL TO BREAKEVEN"
+                action_text = f"Target milestone (+{r_multiple:.1f}R)! Move SL to Breakeven ₹{breakeven_p:,.2f} (Risk-Free!)"
+
         enriched.append({
             "symbol": sym,
             "broker": broker,
@@ -1952,10 +2139,20 @@ def get_all_open_positions_with_trailing_sl():
             "initial_sl": initial_sl,
             "target": target_p,
             "recommended_sl": recommended_sl,
+            "breakeven_sl": breakeven_p,
             "r_multiple": r_multiple,
             "dist_to_sl_pct": dist_to_sl_pct,
             "action_badge": action_badge,
-            "action_text": action_text
+            "action_text": action_text,
+            "ema10": ema10,
+            "ema20": ema20,
+            "sma50": sma50,
+            "atr14": atr14,
+            "dist_ema10_pct": dist_ema10_pct,
+            "dist_ema20_pct": dist_ema20_pct,
+            "atr_stretch": atr_stretch,
+            "jeff_badge": jeff_badge,
+            "jeff_status": jeff_status
         })
 
     # 2. Process any logged trades that are NOT already in live broker accounts
@@ -2008,6 +2205,41 @@ def get_all_open_positions_with_trailing_sl():
             action_badge = "✅ HOLD — ON TRACK"
             action_text = f"Position healthy. Keep stop at ₹{initial_sl:,.2f}"
 
+        ema_info = get_daily_emas_and_atr(sym)
+        ema10 = ema_info.get("ema10")
+        ema20 = ema_info.get("ema20")
+        sma50 = ema_info.get("sma50")
+        atr14 = ema_info.get("atr14")
+
+        dist_ema10_pct = round(((ltp - ema10) / ema10) * 100.0, 2) if ema10 and ltp else None
+        dist_ema20_pct = round(((ltp - ema20) / ema20) * 100.0, 2) if ema20 and ltp else None
+        atr_stretch = round((ltp - sma50) / atr14, 1) if sma50 and atr14 and atr14 > 0 and ltp else None
+
+        jeff_badge = action_badge
+        jeff_status = action_text
+
+        if ema10 and ltp:
+            if ltp >= ema10:
+                jeff_badge = "🟢 RIDE 10 EMA"
+                jeff_status = f"Trending strong above 10 EMA (+{dist_ema10_pct:.1f}% buffer). Hold runner!"
+            elif ema20 and ltp >= ema20:
+                jeff_badge = "🟡 CAUTION — BELOW 10 EMA"
+                jeff_status = f"Below 10 EMA ({dist_ema10_pct:.1f}%). Holding 20 EMA — Watch next-day 5m ORL!"
+            else:
+                jeff_badge = "🔴 EXIT WARNING"
+                jeff_status = f"Trend broken below 10 & 20 EMA ({dist_ema10_pct:.1f}%). Prepare to exit on ORL undercut!"
+
+            if atr_stretch and atr_stretch >= 3.0:
+                jeff_status += f" | ⚠️ Extended (+{atr_stretch}x ATR from 50MA) — Tighten trail!"
+
+        raw_be = entry_p * 1.0015
+        breakeven_p = round(round(raw_be / 0.05) * 0.05, 2)
+        if r_multiple >= 1.5 or pnl_pct >= 2.5:
+            recommended_sl = max(recommended_sl, breakeven_p)
+            if "HOLD" in action_badge:
+                action_badge = "🟢 TRAIL TO BREAKEVEN"
+                action_text = f"Target milestone (+{r_multiple:.1f}R)! Move SL to Breakeven ₹{breakeven_p:,.2f} (Risk-Free!)"
+
         enriched.append({
             "symbol": sym,
             "broker": log_item.get("broker", "LOGGED"),
@@ -2021,10 +2253,20 @@ def get_all_open_positions_with_trailing_sl():
             "initial_sl": initial_sl,
             "target": target_p,
             "recommended_sl": recommended_sl,
+            "breakeven_sl": breakeven_p,
             "r_multiple": r_multiple,
             "dist_to_sl_pct": dist_to_sl_pct,
             "action_badge": action_badge,
-            "action_text": action_text
+            "action_text": action_text,
+            "ema10": ema10,
+            "ema20": ema20,
+            "sma50": sma50,
+            "atr14": atr14,
+            "dist_ema10_pct": dist_ema10_pct,
+            "dist_ema20_pct": dist_ema20_pct,
+            "atr_stretch": atr_stretch,
+            "jeff_badge": jeff_badge,
+            "jeff_status": jeff_status
         })
 
     return enriched
