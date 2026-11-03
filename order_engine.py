@@ -886,6 +886,310 @@ def log_executed_order(order_record):
         print(f"Error logging order: {e}")
 
 
+def place_upstox_stop_loss_order(instrument_key, quantity, sl_price, product="MTF"):
+    """Submits a hard Stop-Loss Limit sell order directly to Upstox API v2."""
+    cfg = load_config()
+    token = cfg.get("upstox", {}).get("access_token", "").strip()
+    if not token:
+        return False, "Upstox access token missing in config_credentials.json"
+
+    url = "https://api.upstox.com/v2/order/place"
+    market_open = is_market_open()
+    trigger_p = round(float(sl_price), 2)
+    # 0.2% limit buffer below trigger for guaranteed execution without sweeping orderbook
+    limit_price = round(trigger_p * 0.998, 2)
+    if limit_price >= trigger_p:
+        limit_price = round(trigger_p - 0.05, 2)
+
+    payload = {
+        "quantity": int(quantity),
+        "product": product.upper(),
+        "validity": "DAY",
+        "price": float(limit_price),
+        "tag": "JARVIS_SL",
+        "instrument_token": instrument_key,
+        "order_type": "SL",
+        "transaction_type": "SELL",
+        "disclosed_quantity": 0,
+        "trigger_price": float(trigger_p),
+        "is_amo": not market_open
+    }
+
+    req_data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=req_data, method="POST", headers={
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "Jarvis-Order-Engine"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            if data.get("status") == "success":
+                oid = data.get("data", {}).get("order_id", "N/A")
+                return True, oid
+            errors = data.get("errors", [])
+            err_msg = errors[0].get("message") if errors else (data.get("message") or "Upstox SL placement failed")
+            return False, err_msg
+    except urllib.error.HTTPError as he:
+        try:
+            err_json = json.loads(he.read().decode())
+            errors = err_json.get("errors", [])
+            err_msg = errors[0].get("message") if errors else (err_json.get("message") or f"HTTP {he.code}")
+            return False, err_msg
+        except Exception:
+            return False, f"Upstox HTTP {he.code}: {he.reason}"
+    except Exception as e:
+        return False, f"Upstox SL error: {str(e)}"
+
+
+def place_dhan_stop_loss_order(symbol, quantity, sl_price, product="MTF"):
+    """Submits a hard Stop-Loss Limit sell order directly to DhanHQ API v2."""
+    cfg = load_config()
+    dhan = cfg.get("dhan", {})
+    client_id = dhan.get("client_id", "").strip()
+    token = dhan.get("access_token", "").strip()
+    if not client_id or not token:
+        return False, "Dhan credentials missing in config_credentials.json"
+
+    sec_id = resolve_dhan_security_id(symbol)
+    if not sec_id:
+        return False, f"Could not map securityId for {symbol} on Dhan"
+
+    market_open = is_market_open()
+    trigger_p = round(float(sl_price), 2)
+    limit_price = round(trigger_p * 0.998, 2)
+    if limit_price >= trigger_p:
+        limit_price = round(trigger_p - 0.05, 2)
+
+    url = "https://api.dhan.co/v2/orders"
+    payload = {
+        "dhanClientId": client_id,
+        "transactionType": "SELL",
+        "exchangeSegment": "NSE_EQ",
+        "productType": product.upper(),
+        "orderType": "STOP_LOSS",
+        "validity": "DAY",
+        "securityId": str(sec_id),
+        "quantity": int(quantity),
+        "price": float(limit_price),
+        "triggerPrice": float(trigger_p),
+        "afterMarketOrder": not market_open
+    }
+    if not market_open:
+        payload["amoTime"] = "OPEN"
+
+    req_data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=req_data, method="POST", headers={
+        "access-token": token,
+        "client-id": client_id,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "Jarvis-Order-Engine"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            order_id = data.get("orderId")
+            if order_id:
+                return True, str(order_id)
+            err_msg = data.get("errorMessage") or data.get("message") or "Dhan SL placement failed"
+            return False, err_msg
+    except Exception as e:
+        return False, f"Dhan SL error: {str(e)}"
+
+
+def place_zerodha_stop_loss_order(symbol, quantity, sl_price, product="CNC"):
+    """Submits a hard Stop-Loss Limit sell order directly to Zerodha Kite API."""
+    cfg = load_config()
+    kite = cfg.get("zerodha", {})
+    api_key = kite.get("api_key", "").strip()
+    token = kite.get("access_token", "").strip()
+    if not api_key or not token:
+        return False, "Zerodha credentials missing in config_credentials.json"
+
+    trigger_p = round(float(sl_price), 2)
+    limit_price = round(trigger_p * 0.998, 2)
+    if limit_price >= trigger_p:
+        limit_price = round(trigger_p - 0.05, 2)
+
+    url = "https://api.kite.trade/orders/regular"
+    payload = {
+        "tradingsymbol": symbol.upper(),
+        "exchange": "NSE",
+        "transaction_type": "SELL",
+        "order_type": "SL",
+        "quantity": int(quantity),
+        "product": product.upper(),
+        "validity": "DAY",
+        "price": float(limit_price),
+        "trigger_price": float(trigger_p),
+        "tag": "JARVIS_SL"
+    }
+    req_data = urllib.parse.urlencode(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=req_data, method="POST", headers={
+        "X-Kite-Version": "3",
+        "Authorization": f"token {api_key}:{token}",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Jarvis-Order-Engine"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            if data.get("status") == "success":
+                return True, data.get("data", {}).get("order_id", "N/A")
+            return False, data.get("message", "Zerodha SL placement failed")
+    except Exception as e:
+        return False, f"Zerodha SL error: {str(e)}"
+
+
+def place_broker_stop_loss(broker, symbol, quantity, sl_price, instrument_key=None, product="MTF"):
+    """Dispatches hard Stop-Loss Limit sell order to designated broker."""
+    b = (broker or "").strip().lower()
+    if b == "upstox":
+        inst_key = instrument_key or resolve_instrument_key(symbol)
+        if not inst_key:
+            return False, f"Could not resolve instrument key for {symbol}"
+        return place_upstox_stop_loss_order(inst_key, quantity, sl_price, product=product)
+    elif b == "dhan":
+        return place_dhan_stop_loss_order(symbol, quantity, sl_price, product=product)
+    elif b == "zerodha":
+        return place_zerodha_stop_loss_order(symbol, quantity, sl_price, product="CNC")
+    return False, f"Unsupported broker for Stop-Loss: {broker}"
+
+
+def cancel_broker_order(broker, order_id):
+    """Cancels a pending order on the designated broker."""
+    b = (broker or "").strip().lower()
+    cfg = load_config()
+    try:
+        if b == "upstox":
+            token = cfg.get("upstox", {}).get("access_token", "").strip()
+            if not token:
+                return False, "Upstox token missing"
+            url = f"https://api.upstox.com/v2/order/cancel?order_id={order_id}"
+            req = urllib.request.Request(url, method="DELETE", headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json"
+            })
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode())
+                return (data.get("status") == "success"), data.get("data", {}).get("order_id", order_id)
+
+        elif b == "dhan":
+            dhan = cfg.get("dhan", {})
+            cid = dhan.get("client_id", "").strip()
+            token = dhan.get("access_token", "").strip()
+            if not cid or not token:
+                return False, "Dhan credentials missing"
+            url = f"https://api.dhan.co/v2/orders/{order_id}"
+            req = urllib.request.Request(url, method="DELETE", headers={
+                "access-token": token,
+                "client-id": cid,
+                "Accept": "application/json"
+            })
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode())
+                return True, data.get("orderId", order_id)
+
+        elif b == "zerodha":
+            kite = cfg.get("zerodha", {})
+            ak = kite.get("api_key", "").strip()
+            token = kite.get("access_token", "").strip()
+            if not ak or not token:
+                return False, "Zerodha credentials missing"
+            url = f"https://api.kite.trade/orders/regular/{order_id}"
+            req = urllib.request.Request(url, method="DELETE", headers={
+                "X-Kite-Version": "3",
+                "Authorization": f"token {ak}:{token}"
+            })
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode())
+                return (data.get("status") == "success"), data.get("data", {}).get("order_id", order_id)
+    except Exception as e:
+        return False, str(e)
+    return False, f"Unsupported broker: {broker}"
+
+
+def cancel_symbol_stop_loss(symbol, broker=None):
+    """
+    Cancels any pending stop-loss orders for symbol to prevent dangling short exposure upon exit.
+    1. Checks orders_log.json for stored sl_order_id.
+    2. Queries broker orderbook and cancels any trigger-pending sell orders for this symbol.
+    """
+    sym_u = symbol.strip().upper()
+    cfg = load_config()
+    target_broker = (broker or get_default_broker()).strip().lower()
+    cancelled = []
+
+    # 1. Cancel recorded SL order ID from orders_log.json
+    if ORDERS_LOG_FILE.is_file():
+        try:
+            with open(ORDERS_LOG_FILE, "r", encoding="utf-8") as f:
+                orders = json.load(f)
+            updated = False
+            for o in orders:
+                if o.get("symbol") == sym_u and o.get("sl_order_id") and o.get("sl_status") == "PLACED":
+                    sl_oid = o["sl_order_id"]
+                    b_target = o.get("broker", target_broker).lower()
+                    ok, _ = cancel_broker_order(b_target, sl_oid)
+                    if ok:
+                        o["sl_status"] = "CANCELLED"
+                        cancelled.append(sl_oid)
+                        updated = True
+            if updated:
+                with open(ORDERS_LOG_FILE, "w", encoding="utf-8") as f:
+                    json.dump(orders, f, indent=2)
+        except Exception:
+            pass
+
+    # 2. Query broker orderbook to cancel any dangling trigger-pending sell orders
+    try:
+        if target_broker == "upstox":
+            token = cfg.get("upstox", {}).get("access_token", "").strip()
+            if token:
+                url = "https://api.upstox.com/v2/order/retrieve-all"
+                req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    d = json.loads(resp.read().decode())
+                    for ord_item in d.get("data", []):
+                        st = str(ord_item.get("status", "")).lower()
+                        tt = str(ord_item.get("transaction_type", "")).upper()
+                        oid = ord_item.get("order_id")
+                        if st in ("trigger pending", "open", "put order req received") and tt == "SELL":
+                            inst = ord_item.get("instrument_token", "")
+                            trad_sym = ord_item.get("trading_symbol", "")
+                            if sym_u in inst or sym_u in trad_sym:
+                                if oid and oid not in cancelled:
+                                    cancel_broker_order("upstox", oid)
+                                    cancelled.append(oid)
+        elif target_broker == "dhan":
+            dhan = cfg.get("dhan", {})
+            cid = dhan.get("client_id", "").strip()
+            token = dhan.get("access_token", "").strip()
+            sec_id = str(resolve_dhan_security_id(sym_u) or "")
+            if cid and token:
+                url = "https://api.dhan.co/v2/orders"
+                req = urllib.request.Request(url, headers={"access-token": token, "client-id": cid, "Accept": "application/json"})
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    d = json.loads(resp.read().decode())
+                    if isinstance(d, list):
+                        for ord_item in d:
+                            st = str(ord_item.get("orderStatus", "")).upper()
+                            tt = str(ord_item.get("transactionType", "")).upper()
+                            sid = str(ord_item.get("securityId", ""))
+                            oid = ord_item.get("orderId")
+                            if st in ("TRANSIT", "PENDING", "TRIGGER_PENDING") and tt == "SELL":
+                                if sec_id and sid == sec_id:
+                                    if oid and oid not in cancelled:
+                                        cancel_broker_order("dhan", oid)
+                                        cancelled.append(oid)
+    except Exception:
+        pass
+
+    return cancelled
+
+
 def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
     """
     Executes full pipeline across any requested broker:
@@ -931,6 +1235,31 @@ def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
 
     now_ist = get_ist_now().strftime("%Y-%m-%d %H:%M:%S IST")
 
+    # Hard Broker Stop-Loss Placement
+    sl_placed = False
+    sl_order_id = None
+    sl_error = None
+    if success and calc.get("stop_loss") and float(calc["stop_loss"]) > 0:
+        cfg = load_config()
+        if cfg.get("auto_place_broker_sl", True):
+            sl_ok, sl_res = place_broker_stop_loss(
+                broker=target_broker,
+                symbol=symbol,
+                quantity=calc["quantity"],
+                sl_price=calc["stop_loss"],
+                instrument_key=calc.get("instrument_key"),
+                product=product_label.split()[0]
+            )
+            sl_placed = sl_ok
+            if sl_ok:
+                sl_order_id = sl_res
+            else:
+                sl_error = sl_res
+
+    calc["sl_placed"] = sl_placed
+    calc["sl_order_id"] = sl_order_id
+    calc["sl_error"] = sl_error
+
     record = {
         "timestamp": now_ist,
         "symbol": symbol.upper(),
@@ -941,6 +1270,8 @@ def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
         "ltp": calc["ltp"],
         "exposure": calc["actual_exposure"],
         "stop_loss": calc["stop_loss"],
+        "sl_order_id": sl_order_id,
+        "sl_status": "PLACED" if sl_placed else ("FAILED" if sl_error else "SKIPPED"),
         "risk_pct": calc["risk_pct"],
         "total_risk_inr": calc["total_risk_inr"],
         "mode": calc["mode_label"],
@@ -1240,6 +1571,14 @@ def execute_broker_exit(symbol, broker=None, exit_qty=None, qty_ratio="all"):
                         "product": prod,
                         "trans_type": trans_type
                     }
+                    # Automatically cancel open stop-loss orders to eliminate dangling short exposure
+                    try:
+                        cancelled_sl = cancel_symbol_stop_loss(target_pos["symbol"], broker=target_pos["broker"])
+                        if cancelled_sl:
+                            res_dict["cancelled_sl_orders"] = cancelled_sl
+                    except Exception:
+                        pass
+
                     log_executed_order({
                         "timestamp": get_ist_now().strftime("%Y-%m-%d %H:%M:%S IST"),
                         "action": "EXIT",
@@ -1305,6 +1644,14 @@ def execute_broker_exit(symbol, broker=None, exit_qty=None, qty_ratio="all"):
                         "product": prod,
                         "trans_type": trans_type
                     }
+                    # Automatically cancel open stop-loss orders to eliminate dangling short exposure
+                    try:
+                        cancelled_sl = cancel_symbol_stop_loss(target_pos["symbol"], broker=target_pos["broker"])
+                        if cancelled_sl:
+                            res_dict["cancelled_sl_orders"] = cancelled_sl
+                    except Exception:
+                        pass
+
                     log_executed_order({
                         "timestamp": get_ist_now().strftime("%Y-%m-%d %H:%M:%S IST"),
                         "action": "EXIT",
@@ -1376,6 +1723,14 @@ def execute_broker_exit(symbol, broker=None, exit_qty=None, qty_ratio="all"):
                         "product": prod,
                         "trans_type": trans_type
                     }
+                    # Automatically cancel open stop-loss orders to eliminate dangling short exposure
+                    try:
+                        cancelled_sl = cancel_symbol_stop_loss(target_pos["symbol"], broker=target_pos["broker"])
+                        if cancelled_sl:
+                            res_dict["cancelled_sl_orders"] = cancelled_sl
+                    except Exception:
+                        pass
+
                     log_executed_order({
                         "timestamp": get_ist_now().strftime("%Y-%m-%d %H:%M:%S IST"),
                         "action": "EXIT",
