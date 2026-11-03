@@ -446,13 +446,21 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
     # Check regime state to protect against discipline leak / FOMO in RED markets
     is_defensive = False
     regime_label = ""
-    for r_f in ["market_regime.json", os.path.join(os.path.dirname(os.path.abspath(__file__)), "market_regime.json")]:
+    for r_f in [
+        "positional_market_regime.json",
+        "market_regime.json",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "positional_market_regime.json"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "market_regime.json")
+    ]:
         if os.path.isfile(r_f):
             try:
                 with open(r_f, "r", encoding="utf-8") as rf:
                     rdata = json.load(rf)
-                    is_defensive = (rdata.get("swing_allocation_pct", 100) == 0)
-                    regime_label = rdata.get("state_label", "")
+                    scode = str(rdata.get("state_code") or rdata.get("regime_code") or "").upper()
+                    alloc = rdata.get("swing_allocation_pct", 100)
+                    if alloc == 0 or scode in ("DEFENSIVE", "DEFENSIVE_WATERFALL", "CLIMAX", "WASHOUT", "CHOP"):
+                        is_defensive = True
+                    regime_label = rdata.get("state_label") or rdata.get("regime_badge") or scode
                 break
             except Exception:
                 pass
@@ -533,10 +541,16 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
     if new_breakouts:
         for b in new_breakouts[:3]:
             sym = b["sym"]
-            kb_buttons.append([
-                {"text": f"🛒 Buy {sym} (Mod ₹1.0L)", "callback_data": f"buy_prep:{sym}:mod:lod:default"},
-                {"text": f"🛒 Buy {sym} (50k)", "callback_data": f"buy_prep:{sym}:50k:lod:default"}
-            ])
+            if is_defensive:
+                kb_buttons.append([
+                    {"text": f"🛡️ Scalp {sym} (50k)", "callback_data": f"buy_prep:{sym}:50k:regime:default"},
+                    {"text": f"🛡️ Scalp {sym} (25k)", "callback_data": f"buy_prep:{sym}:25k:regime:default"}
+                ])
+            else:
+                kb_buttons.append([
+                    {"text": f"🛒 Buy {sym} (Mod ₹1.0L)", "callback_data": f"buy_prep:{sym}:mod:lod:default"},
+                    {"text": f"🛒 Buy {sym} (50k)", "callback_data": f"buy_prep:{sym}:50k:lod:default"}
+                ])
     reply_markup = {"inline_keyboard": kb_buttons} if kb_buttons else None
 
     full_msg = "\n".join(lines)
