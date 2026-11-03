@@ -1024,7 +1024,10 @@ def fetch_all_positions():
                             "ltp": round(ltp, 2),
                             "pnl": round(tot_pnl, 2),
                             "pnl_pct": pnl_pct,
-                            "exposure": exposure
+                            "exposure": exposure,
+                            "security_id": str(p.get("securityId", "")),
+                            "exchange": p.get("exchangeSegment", "NSE_EQ"),
+                            "position_type": p.get("positionType", "LONG")
                         })
         except Exception as e:
             broker_status["dhan"] = f"Error ({e})"
@@ -1067,7 +1070,9 @@ def fetch_all_positions():
                             "ltp": round(ltp, 2),
                             "pnl": round(pnl, 2),
                             "pnl_pct": pnl_pct,
-                            "exposure": exposure
+                            "exposure": exposure,
+                            "instrument_token": str(p.get("instrument_token", "")),
+                            "exchange": p.get("exchange", "NSE_EQ")
                         })
         except Exception as e:
             broker_status["upstox"] = f"Error ({e})"
@@ -1110,7 +1115,9 @@ def fetch_all_positions():
                             "ltp": round(ltp, 2),
                             "pnl": round(pnl, 2),
                             "pnl_pct": pnl_pct,
-                            "exposure": exposure
+                            "exposure": exposure,
+                            "exchange": p.get("exchange", "NSE"),
+                            "instrument_token": str(p.get("instrument_token", ""))
                         })
         except Exception as e:
             broker_status["zerodha"] = f"Error ({e})"
@@ -1127,6 +1134,269 @@ def fetch_all_positions():
     }
 
     return all_pos, totals, broker_status
+
+
+def execute_broker_exit(symbol, broker=None, exit_qty=None, qty_ratio="all"):
+    """
+    Executes a market exit order (SELL for long, BUY for short) for an open position across Dhan, Upstox, or Zerodha.
+    Args:
+        symbol: trading symbol (e.g. 'ABDL', 'MOTHERSON', 'NSE')
+        broker: optional broker filter ('DHAN', 'UPSTOX', 'ZERODHA')
+        exit_qty: explicit integer quantity to exit (optional)
+        qty_ratio: 'all' (100%), 'half' (50%), or int
+    Returns:
+        (success: bool, result: dict or str)
+    """
+    cfg = load_config()
+    all_pos, totals, _ = fetch_all_positions()
+
+    sym_clean = symbol.strip().upper()
+    target_pos = None
+
+    for p in all_pos:
+        p_sym = p["symbol"].upper()
+        if p_sym == sym_clean or p_sym.startswith(sym_clean) or sym_clean.startswith(p_sym):
+            if broker and p["broker"].upper() != broker.strip().upper():
+                continue
+            target_pos = p
+            break
+
+    if not target_pos:
+        b_str = f" on {broker}" if broker else ""
+        return False, f"No open position found for {symbol}{b_str}."
+
+    net_qty = target_pos["qty"]
+    if net_qty == 0:
+        return False, f"Position for {target_pos['symbol']} has 0 quantity."
+
+    trans_type = "SELL" if net_qty > 0 else "BUY"
+    abs_qty = abs(net_qty)
+
+    if exit_qty is not None and int(exit_qty) > 0:
+        actual_exit_qty = min(abs_qty, int(exit_qty))
+    elif str(qty_ratio).lower() in ("half", "50%", "50"):
+        actual_exit_qty = max(1, abs_qty // 2)
+    else:
+        actual_exit_qty = abs_qty
+
+    b = target_pos["broker"].upper()
+    prod = target_pos.get("product", "MTF")
+
+    # 1. Dhan Exit
+    if b == "DHAN":
+        dhan = cfg.get("dhan", {})
+        client_id = dhan.get("client_id", "").strip()
+        token = dhan.get("access_token", "").strip()
+        if not client_id or not token:
+            return False, "Dhan credentials missing in config_credentials.json"
+
+        sec_id = target_pos.get("security_id") or resolve_dhan_security_id(target_pos["symbol"])
+        if not sec_id:
+            return False, f"Could not find securityId for {target_pos['symbol']} on Dhan"
+
+        exch_seg = target_pos.get("exchange", "NSE_EQ")
+        if not exch_seg:
+            exch_seg = "NSE_EQ"
+
+        payload = {
+            "dhanClientId": client_id,
+            "transactionType": trans_type,
+            "exchangeSegment": exch_seg,
+            "productType": prod if prod in ("MTF", "CNC", "MARGIN", "INTRADAY") else "MTF",
+            "orderType": "MARKET",
+            "validity": "DAY",
+            "securityId": str(sec_id),
+            "quantity": int(actual_exit_qty),
+            "price": 0.0,
+            "triggerPrice": 0.0,
+            "afterMarketOrder": False
+        }
+
+        req = urllib.request.Request(
+            "https://api.dhan.co/v2/orders",
+            data=json.dumps(payload).encode("utf-8"),
+            method="POST",
+            headers={
+                "access-token": token,
+                "client-id": client_id,
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "Jarvis-Order-Engine"
+            }
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode())
+                order_id = data.get("orderId")
+                status = data.get("orderStatus", "SUBMITTED")
+                if order_id:
+                    res_dict = {
+                        "broker": "DHAN",
+                        "symbol": target_pos["symbol"],
+                        "order_id": order_id,
+                        "status": status,
+                        "quantity": actual_exit_qty,
+                        "remaining_qty": abs_qty - actual_exit_qty,
+                        "product": prod,
+                        "trans_type": trans_type
+                    }
+                    log_executed_order({
+                        "timestamp": get_ist_now().strftime("%Y-%m-%d %H:%M:%S IST"),
+                        "action": "EXIT",
+                        **res_dict
+                    })
+                    return True, res_dict
+                err = data.get("errorMessage") or data.get("message") or "Order failed"
+                return False, f"Dhan error: {err}"
+        except urllib.error.HTTPError as he:
+            try:
+                err_data = json.loads(he.read().decode())
+                msg = err_data.get("errorMessage") or err_data.get("message") or str(he)
+                return False, f"Dhan HTTP {he.code}: {msg}"
+            except Exception:
+                return False, f"Dhan HTTP {he.code}: {he.reason}"
+        except Exception as e:
+            return False, f"Dhan exit error: {str(e)}"
+
+    # 2. Zerodha Exit
+    elif b == "ZERODHA":
+        zerodha = cfg.get("zerodha", {})
+        api_key = zerodha.get("api_key", "").strip()
+        token = zerodha.get("access_token", "").strip()
+        if not api_key or not token:
+            return False, "Zerodha credentials missing in config_credentials.json"
+
+        exch = target_pos.get("exchange", "NSE")
+        payload = {
+            "tradingsymbol": target_pos["symbol"],
+            "exchange": exch,
+            "transaction_type": trans_type,
+            "order_type": "MARKET",
+            "quantity": int(actual_exit_qty),
+            "product": prod if prod in ("CNC", "MIS", "MTF", "NRML") else "CNC",
+            "validity": "DAY",
+            "tag": "JarvisExit"
+        }
+
+        req_data = urllib.parse.urlencode(payload).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.kite.trade/orders/regular",
+            data=req_data,
+            method="POST",
+            headers={
+                "X-Kite-Version": "3",
+                "Authorization": f"token {api_key}:{token}",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": "Jarvis-Order-Engine"
+            }
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode())
+                if data.get("status") == "success":
+                    order_id = data.get("data", {}).get("order_id", "N/A")
+                    res_dict = {
+                        "broker": "ZERODHA",
+                        "symbol": target_pos["symbol"],
+                        "order_id": order_id,
+                        "status": "SUBMITTED",
+                        "quantity": actual_exit_qty,
+                        "remaining_qty": abs_qty - actual_exit_qty,
+                        "product": prod,
+                        "trans_type": trans_type
+                    }
+                    log_executed_order({
+                        "timestamp": get_ist_now().strftime("%Y-%m-%d %H:%M:%S IST"),
+                        "action": "EXIT",
+                        **res_dict
+                    })
+                    return True, res_dict
+                return False, data.get("message", "Zerodha exit failed")
+        except urllib.error.HTTPError as he:
+            try:
+                err_data = json.loads(he.read().decode())
+                return False, err_data.get("message", f"Zerodha HTTP {he.code}: {he.reason}")
+            except Exception:
+                return False, f"Zerodha HTTP {he.code}: {he.reason}"
+        except Exception as e:
+            return False, f"Zerodha exit error: {str(e)}"
+
+    # 3. Upstox Exit
+    elif b == "UPSTOX":
+        upstox = cfg.get("upstox", {})
+        token = upstox.get("access_token", "").strip()
+        if not token:
+            return False, "Upstox token missing in config_credentials.json"
+
+        instrument_token = target_pos.get("instrument_token")
+        if not instrument_token:
+            instrument_token = resolve_instrument_key(target_pos["symbol"])
+            if not instrument_token:
+                return False, f"Could not map Upstox instrument key for {target_pos['symbol']}"
+
+        upstox_product = "MTF" if prod == "MTF" else ("D" if prod in ("CNC", "DELIVERY") else "I")
+
+        payload = {
+            "quantity": int(actual_exit_qty),
+            "product": upstox_product,
+            "validity": "DAY",
+            "price": 0.0,
+            "tag": "JarvisExit",
+            "instrument_token": instrument_token,
+            "order_type": "MARKET",
+            "transaction_type": trans_type,
+            "disclosed_quantity": 0,
+            "trigger_price": 0.0,
+            "is_amo": False
+        }
+
+        req = urllib.request.Request(
+            "https://api.upstox.com/v2/order/place",
+            data=json.dumps(payload).encode("utf-8"),
+            method="POST",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "Mozilla/5.0"
+            }
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode())
+                if data.get("status") == "success":
+                    order_id = data.get("data", {}).get("order_id", "N/A")
+                    res_dict = {
+                        "broker": "UPSTOX",
+                        "symbol": target_pos["symbol"],
+                        "order_id": order_id,
+                        "status": "SUBMITTED",
+                        "quantity": actual_exit_qty,
+                        "remaining_qty": abs_qty - actual_exit_qty,
+                        "product": prod,
+                        "trans_type": trans_type
+                    }
+                    log_executed_order({
+                        "timestamp": get_ist_now().strftime("%Y-%m-%d %H:%M:%S IST"),
+                        "action": "EXIT",
+                        **res_dict
+                    })
+                    return True, res_dict
+                errors = data.get("errors", [])
+                err = errors[0].get("message") if errors else (data.get("message") or "Exit failed")
+                return False, f"Upstox error: {err}"
+        except urllib.error.HTTPError as he:
+            try:
+                err_data = json.loads(he.read().decode())
+                errors = err_data.get("errors", [])
+                err = errors[0].get("message") if errors else (err_data.get("message") or str(he))
+                return False, f"Upstox HTTP {he.code}: {err}"
+            except Exception:
+                return False, f"Upstox HTTP {he.code}: {he.reason}"
+        except Exception as e:
+            return False, f"Upstox exit error: {str(e)}"
+
+    return False, f"Unsupported broker: {b}"
 
 
 if __name__ == "__main__":
