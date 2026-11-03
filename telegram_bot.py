@@ -1401,6 +1401,14 @@ def handle_buy_command(args, from_chat_id):
         if success:
             warn_count = len(res.get("checklist", {}).get("warnings", []))
             warn_str = f"⚠️ <b>Checklist:</b> <i>Executed with {warn_count} strategy warnings</i>\n" if warn_count > 0 else "⭐ <b>Checklist:</b> <i>A+ Setup - All Rules Passed</i>\n"
+            sl_broker_line = ""
+            if res.get("sl_placed") and res.get("sl_order_id"):
+                sl_broker_line = f"🛡️ <b>Broker Hard SL:</b> 🟢 Active @ ₹{res['stop_loss']} (ID: <code>{res['sl_order_id']}</code>)\n"
+            elif res.get("sl_error"):
+                sl_broker_line = f"⚠️ <b>Broker Hard SL:</b> <i>{res['sl_error']} (Tracked in software)</i>\n"
+
+            sl_footer = "🛡️ <i>Hard Stop-Loss order placed in broker orderbook. Fully protected on exchange!</i>" if res.get("sl_placed") else f"💡 <i>Recommendation: Set GTT / SL-M trigger at ₹{res['stop_loss']} in {res['broker']} app. Added to scanner watchlist.</i>"
+
             return (
                 f"🎉 <b>ORDER EXECUTED ON {res['broker']}!</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -1410,11 +1418,12 @@ def handle_buy_command(args, from_chat_id):
                 f"📈 <b>Quantity:</b> <b>{res['quantity']} shares</b> @ ₹{res['ltp']}\n"
                 f"💰 <b>Exposure:</b> ₹{res['actual_exposure']:,} ({res['mode_label']})\n"
                 f"🛑 <b>Stop Loss:</b> <b>₹{res['stop_loss']}</b> ({res['sl_mode']}: -{res['risk_pct']}%)\n"
+                f"{sl_broker_line}"
                 f"⚠️ <b>Risk at SL:</b> ₹{res['total_risk_inr']:,}\n"
                 f"🌐 <b>Regime:</b> {res['regime_label']}\n"
                 f"{warn_str}"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"💡 <i>Recommendation: Set GTT / SL-M trigger at ₹{res['stop_loss']} in {res['broker']} app. Added to scanner watchlist.</i>"
+                f"{sl_footer}"
             )
         else:
             return (
@@ -1457,6 +1466,14 @@ def handle_callback_query(cq):
         if success:
             warn_count = len(res.get("checklist", {}).get("warnings", []))
             warn_str = f"⚠️ <b>Checklist:</b> <i>Executed with {warn_count} strategy warnings</i>\n" if warn_count > 0 else "⭐ <b>Checklist:</b> <i>A+ Setup - All Rules Passed</i>\n"
+            sl_broker_line = ""
+            if res.get("sl_placed") and res.get("sl_order_id"):
+                sl_broker_line = f"🛡️ <b>Broker Hard SL:</b> 🟢 Active @ ₹{res['stop_loss']} (ID: <code>{res['sl_order_id']}</code>)\n"
+            elif res.get("sl_error"):
+                sl_broker_line = f"⚠️ <b>Broker Hard SL:</b> <i>{res['sl_error']} (Tracked in software)</i>\n"
+
+            sl_footer = "🛡️ <i>Hard Stop-Loss order placed in broker orderbook. Fully protected on exchange!</i>" if res.get("sl_placed") else f"💡 <i>Recommendation: Set GTT / SL-M trigger at ₹{res['stop_loss']} in {res['broker']} app. Added to scanner watchlist.</i>"
+
             receipt = (
                 f"🎉 <b>ORDER EXECUTED ON {res['broker']}!</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -1466,11 +1483,12 @@ def handle_callback_query(cq):
                 f"📈 <b>Quantity:</b> <b>{res['quantity']} shares</b> @ ₹{res['ltp']}\n"
                 f"💰 <b>Exposure:</b> ₹{res['actual_exposure']:,} ({res['mode_label']})\n"
                 f"🛑 <b>Stop Loss:</b> <b>₹{res['stop_loss']}</b> ({res['sl_mode']}: -{res['risk_pct']}%)\n"
+                f"{sl_broker_line}"
                 f"⚠️ <b>Risk at SL:</b> ₹{res['total_risk_inr']:,}\n"
                 f"🌐 <b>Regime:</b> {res['regime_label']}\n"
                 f"{warn_str}"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"💡 <i>Recommendation: Set GTT / SL-M trigger at ₹{res['stop_loss']} in {res['broker']} app. Added to scanner watchlist.</i>"
+                f"{sl_footer}"
             )
         else:
             receipt = (
@@ -1536,6 +1554,11 @@ def handle_callback_query(cq):
         if success:
             rem = res.get("remaining_qty", 0)
             rem_str = f"• <b>Remaining Qty:</b> {rem} shares\n" if rem > 0 else "• <b>Status:</b> Position Fully Closed (0 shares)\n"
+            sl_cancel_note = ""
+            if res.get("cancelled_sl_orders"):
+                c_str = ", ".join(res["cancelled_sl_orders"])
+                sl_cancel_note = f"🛡️ <b>Cancelled Broker SL Orders:</b> <code>{c_str}</code> (No dangling exposure)\n"
+
             receipt = (
                 f"🎉 <b>POSITION EXITED ON {res['broker']}!</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -1544,6 +1567,7 @@ def handle_callback_query(cq):
                 f"📦 <b>Sold Qty:</b> <b>{res['quantity']} shares</b> @ MARKET\n"
                 f"💼 <b>Product:</b> {res['product']}\n"
                 f"{rem_str}"
+                f"{sl_cancel_note}"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
                 "💡 <i>Market order submitted to exchange. Tap below to see live portfolio:</i>"
             )
