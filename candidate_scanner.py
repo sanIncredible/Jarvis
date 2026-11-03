@@ -38,10 +38,38 @@ if sys.platform == "win32":
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_FILE = BASE_DIR / "config_credentials.json"
 NIFTY500_FILE = BASE_DIR / "nifty500_constituents.json"
+PRE_MARKET_FILE = BASE_DIR / "pre_market_summary.json"
 CANDIDATES_FILE = BASE_DIR / "candidates.txt"
 CANDIDATES_JSON = BASE_DIR / "candidates.json"
 
 IST = timezone(timedelta(hours=5, minutes=30))
+
+INDUSTRY_TO_SECTOR = {
+    "Automobile and Auto Components": "Nifty Auto",
+    "Healthcare": "Nifty Pharma",
+    "Information Technology": "Nifty IT",
+    "Metals & Mining": "Nifty Metal",
+    "Realty": "Nifty Realty",
+    "Financial Services": "Nifty Bank",
+    "Power": "Nifty Energy",
+    "Oil Gas & Consumable Fuels": "Nifty Energy",
+    "Fast Moving Consumer Goods": "Nifty FMCG"
+}
+
+
+def load_sector_leaders():
+    """Loads sectoral performance ranking from pre_market_summary.json without penalizing unmapped sectors."""
+    if not PRE_MARKET_FILE.is_file():
+        return {}, set()
+    try:
+        with open(PRE_MARKET_FILE, "r", encoding="utf-8") as f:
+            d = json.load(f)
+            sector_perf = {s["name"]: float(s.get("change_pct", 0.0)) for s in d.get("sectorals", [])}
+            ranked = sorted(sector_perf.items(), key=lambda x: x[1], reverse=True)
+            top_3 = set(r[0] for r in ranked[:3] if r[1] > 0)
+            return sector_perf, top_3
+    except Exception:
+        return {}, set()
 
 
 def get_ist_now():
@@ -101,8 +129,11 @@ def scan_nifty500_candidates(
     if not constituents:
         return {"status": "error", "message": "nifty500_constituents.json not found"}
 
-    isin_to_meta = {f"NSE_EQ|{c['isin']}": c for c in constituents if c.get("isin")}
-    keys = list(isin_to_meta.keys())
+    sym_to_meta = {c["symbol"].upper(): c for c in constituents if c.get("symbol")}
+    isin_to_meta = {c["isin"].upper(): c for c in constituents if c.get("isin")}
+    keys = [f"NSE_EQ|{c['isin']}" for c in constituents if c.get("isin")]
+
+    sector_perf, top_3_sectors = load_sector_leaders()
 
     # --- STAGE 1: Bulk Snapshot from Upstox ---
     chunk_size = 100
@@ -164,10 +195,14 @@ def scan_nifty500_candidates(
         # 3. Sitting Near Today's High: dist_from_high_pct <= max_from_high_pct (<= 2.2%)
         # 4. Closing in Upper Half: close_loc >= 0.45
         if (-2.0 <= change_pct <= 3.5) and daily_range_pct <= max_range_pct and dist_from_high_pct <= max_from_high_pct and close_loc >= 0.45:
-            raw_sym = q.get("symbol", "").replace("NSE_EQ:", "").strip()
-            sym = isin_to_meta.get(key, {}).get("symbol", raw_sym)
-            name = isin_to_meta.get(key, {}).get("name", sym)
-            industry = isin_to_meta.get(key, {}).get("industry", "Equity")
+            raw_sym = q.get("symbol", "").replace("NSE_EQ:", "").replace("NSE_EQ|", "").strip().upper()
+            meta = sym_to_meta.get(raw_sym, {})
+            if not meta:
+                clean_key = key.replace("NSE_EQ:", "").replace("NSE_EQ|", "").strip().upper()
+                meta = isin_to_meta.get(clean_key, {})
+            sym = meta.get("symbol", raw_sym)
+            name = meta.get("name", sym)
+            industry = meta.get("industry", "Equity")
             stage1_shortlist.append({
                 "symbol": sym,
                 "name": name,
@@ -311,6 +346,27 @@ def scan_nifty500_candidates(
                 if item["turnover_cr"] >= 25.0:
                     score += 5.0
 
+                # CRITERION 6: Sector Tailwind Overlay (NEVER penalizes or removes unmapped stocks!)
+                ind = item.get("industry", "Equity")
+                mapped_sec = INDUSTRY_TO_SECTOR.get(ind)
+                sec_chg = sector_perf.get(mapped_sec)
+
+                if mapped_sec and mapped_sec in top_3_sectors:
+                    sector_tag = f"⭐ {mapped_sec.replace('Nifty ', '')} Leader ({sec_chg:+.1f}%)"
+                    sector_score = 10.0
+                elif mapped_sec and sec_chg is not None and sec_chg > 0:
+                    sector_tag = f"📈 {mapped_sec.replace('Nifty ', '')} ({sec_chg:+.1f}%)"
+                    sector_score = 5.0
+                elif mapped_sec and sec_chg is not None:
+                    sector_tag = f"⚪ {mapped_sec.replace('Nifty ', '')} ({sec_chg:+.1f}%)"
+                    sector_score = 2.0
+                else:
+                    # Non-sector / unmapped industry: keep industry name, award baseline score (NEVER DISQUALIFIED!)
+                    sector_tag = f"🏢 {ind}"
+                    sector_score = 3.0
+
+                score += sector_score
+
                 res_item = dict(item)
                 res_item.update({
                     "tier": tier_label,
@@ -326,6 +382,8 @@ def scan_nifty500_candidates(
                     "dist_pdh_pct": dist_pdh_pct,
                     "proj_rvol": proj_rvol,
                     "vol_tag": vol_tag,
+                    "sector_tag": sector_tag,
+                    "sector_score": sector_score,
                     "score": round(score, 1),
                     "coil_tag": coil_tag
                 })
@@ -353,7 +411,7 @@ def scan_nifty500_candidates(
     for c in top_candidates:
         lines.append(
             f"{c['symbol']}  # ₹{c['ltp']:,.2f} | [{c['tier']}] {c['coil_tag']} | 20D Dist: {c['dist_pivot_20d_pct']:+.2f}% ({c['dist_pivot_atr']}x ATR) | "
-            f"PDH Dist: {c['dist_pdh_pct']:+.2f}% | 5D VCP: {c['vcp_ratio_5d']}x ATR | Range: {c['daily_range_pct']:.2f}% | {c['vol_tag']} | Move: {c['change_pct']:+.1f}% | ₹{c['turnover_cr']:,.1f} Cr | {c['industry']}"
+            f"PDH Dist: {c['dist_pdh_pct']:+.2f}% | 5D VCP: {c['vcp_ratio_5d']}x ATR | Range: {c['daily_range_pct']:.2f}% | {c['vol_tag']} | {c.get('sector_tag', c.get('industry', 'Equity'))} | Move: {c['change_pct']:+.1f}% | ₹{c['turnover_cr']:,.1f} Cr"
         )
 
     with open(CANDIDATES_FILE, "w", encoding="utf-8") as f:
@@ -410,7 +468,8 @@ def format_candidates_telegram_card(res, max_display=10):
             lines.append(
                 f"<b>{i}.</b> {c['coil_tag'][:2]} {tv_link} (₹{c['ltp']:,.2f})\n"
                 f"   • Sits: <b>{c['dist_pivot_20d_pct']:+.2f}%</b> from 20D High | PDH: <b>{pdh_status}</b>\n"
-                f"   • 5D VCP: <b>{c['vcp_ratio_5d']}x ATR</b> | {c['vol_tag']} | Move: {c['change_pct']:+.1f}% (₹{c['turnover_cr']:,.1f} Cr)"
+                f"   • 5D VCP: <b>{c['vcp_ratio_5d']}x ATR</b> | {c['vol_tag']} | Move: {c['change_pct']:+.1f}% (₹{c['turnover_cr']:,.1f} Cr)\n"
+                f"   • Sector: <b>{c.get('sector_tag', c.get('industry', 'Equity'))}</b>"
             )
         lines.append("")
 
@@ -423,7 +482,8 @@ def format_candidates_telegram_card(res, max_display=10):
             lines.append(
                 f"<b>{i}.</b> 🚀 {tv_link} (₹{c['ltp']:,.2f})\n"
                 f"   • 20D Dist: <b>{c['dist_pivot_20d_pct']:+.2f}% ({c['dist_pivot_atr']}x ATR)</b> | PDH: <b>{pdh_status}</b>\n"
-                f"   • 5D VCP: <b>{c['vcp_ratio_5d']}x ATR</b> | {c['vol_tag']} | Move: {c['change_pct']:+.1f}% (₹{c['turnover_cr']:,.1f} Cr)"
+                f"   • 5D VCP: <b>{c['vcp_ratio_5d']}x ATR</b> | {c['vol_tag']} | Move: {c['change_pct']:+.1f}% (₹{c['turnover_cr']:,.1f} Cr)\n"
+                f"   • Sector: <b>{c.get('sector_tag', c.get('industry', 'Equity'))}</b>"
             )
         lines.append("")
 
