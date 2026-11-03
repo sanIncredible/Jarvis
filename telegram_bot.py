@@ -290,17 +290,29 @@ def write_watchlist_symbols(symbols):
         return False
 
 
-def push_watchlist_and_data_to_github():
-    """Pushes watchlist.txt and data.json to GitHub repository via REST API."""
+def push_watchlist_to_github():
+    """Pushes watchlist.txt immediately to GitHub repository via REST API."""
     try:
         from upstox_tablet_scanner import load_github_config, sync_file_to_github_api
         gh_cfg = load_github_config()
         if gh_cfg:
             syms = read_watchlist_symbols()
-            sync_file_to_github_api(gh_cfg, "watchlist.txt", f"Update watchlist via Telegram ({len(syms)} symbols)")
-            if (SCRIPT_DIR / "data.json").is_file():
-                sync_file_to_github_api(gh_cfg, "data.json", f"Sync data.json via Telegram ({len(syms)} symbols)")
-            return True
+            return sync_file_to_github_api(gh_cfg, "watchlist.txt", f"Update watchlist via Telegram ({len(syms)} symbols)")
+    except Exception as e:
+        print(f"GitHub Watchlist Push notice: {e}")
+    return False
+
+
+def push_watchlist_and_data_to_github():
+    """Pushes watchlist.txt and data.json to GitHub repository via REST API."""
+    try:
+        push_watchlist_to_github()
+        from upstox_tablet_scanner import load_github_config, sync_file_to_github_api
+        gh_cfg = load_github_config()
+        if gh_cfg and (SCRIPT_DIR / "data.json").is_file():
+            syms = read_watchlist_symbols()
+            sync_file_to_github_api(gh_cfg, "data.json", f"Sync data.json via Telegram ({len(syms)} symbols)")
+        return True
     except Exception as e:
         print(f"GitHub Push notice: {e}")
     return False
@@ -309,6 +321,8 @@ def push_watchlist_and_data_to_github():
 def trigger_immediate_rescan():
     """Runs a fresh scan and updates static html / data.json."""
     try:
+        # Guarantee GitHub has latest watchlist first so scanner pull never reverts it
+        push_watchlist_to_github()
         from upstox_tablet_scanner import scan_watchlist, export_static_html
         results = scan_watchlist()
         now_str = get_ist_now().strftime("%H:%M:%S IST")
@@ -498,7 +512,10 @@ def handle_add_command(args_text):
     # Write updated list
     write_watchlist_symbols(current_syms)
 
-    # Push to GitHub & Trigger Rescan in Background Thread
+    # Push watchlist to GitHub synchronously FIRST to guarantee persistence
+    push_watchlist_to_github()
+
+    # Trigger Rescan & Dashboard Sync in Background Thread
     threading.Thread(target=trigger_immediate_rescan, daemon=True).start()
 
     res = (
@@ -546,8 +563,7 @@ def handle_remove_command(args_text):
         return f"⚠️ Symbol(s) not found in watchlist: <b>{', '.join(not_found)}</b>"
 
     write_watchlist_symbols(current_syms)
-
-    # Push to GitHub & Trigger Rescan in Background Thread
+    push_watchlist_to_github()
     threading.Thread(target=trigger_immediate_rescan, daemon=True).start()
 
     res = (
@@ -1643,6 +1659,7 @@ def handle_callback_query(cq):
                     added.append(s_u)
             if added:
                 write_watchlist_symbols(curr_syms)
+                push_watchlist_to_github()
                 threading.Thread(target=trigger_immediate_rescan, daemon=True).start()
                 answer_callback_query(cq_id, f"✅ Added {len(added)} candidates to Watchlist!")
                 send_telegram_msg(
@@ -1664,6 +1681,7 @@ def handle_callback_query(cq):
         else:
             curr_syms.append(sym)
             write_watchlist_symbols(curr_syms)
+            push_watchlist_to_github()
             answer_callback_query(cq_id, f"✅ Added {sym} to live Watchlist!")
             threading.Thread(target=trigger_immediate_rescan, daemon=True).start()
             send_telegram_msg(
