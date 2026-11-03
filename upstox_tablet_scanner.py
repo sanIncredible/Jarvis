@@ -424,6 +424,9 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                 if day_low and ltp and float(ltp) > 0:
                     risk_pct = round(((float(ltp) - float(day_low)) / float(ltp)) * 100.0, 1)
 
+                is_gap_up = bool(m.get("is_gap_up") or d.get("is_gap_up"))
+                gap_pct = m.get("gap_pct") if m.get("gap_pct") is not None else d.get("gap_pct")
+
                 new_breakouts.append({
                     "sym": sym,
                     "ltp": float(ltp),
@@ -431,7 +434,9 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                     "day_low": float(day_low) if day_low else None,
                     "risk_pct": risk_pct,
                     "lod_dist": lod_dist,
-                    "stretch_pct": stretch_pct
+                    "stretch_pct": stretch_pct,
+                    "is_gap_up": is_gap_up,
+                    "gap_pct": gap_pct
                 })
 
     if not new_breakouts:
@@ -481,6 +486,9 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
         tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'><b>{sym}</b></a>"
         lines.append(f"{icon} {tv_link} (₹{ltp:,.2f})")
         lines.append(f"• Trigger : {b['trigger']}")
+        if b.get("is_gap_up") and b.get("gap_pct") is not None:
+            sign = "+" if b["gap_pct"] > 0 else ""
+            lines.append(f"• Opening : 🚀 Gap-Up ({sign}{b['gap_pct']}%)")
 
         # LoD Dist badge and guidance
         if lod_dist is not None:
@@ -594,6 +602,10 @@ def fetch_upstox_symbol_data(symbol, token):
 
     ltp = None
     prev_close = None
+    day_open = None
+    day_low = None
+    gap_pct = None
+    is_gap_up = False
     pdh = None
     pivot_point = None
     pivot_r1 = None
@@ -711,6 +723,12 @@ def fetch_upstox_symbol_data(symbol, token):
                 except Exception:
                     pass
 
+                if (day_open is None or day_open == 0) and parsed_candles:
+                    day_open = parsed_candles[0].get("o")
+                if day_open and prev_close and prev_close > 0:
+                    gap_pct = round(((float(day_open) - float(prev_close)) / float(prev_close)) * 100.0, 2)
+                    is_gap_up = bool(gap_pct >= 1.0 or (pdh and float(day_open) > float(pdh) * 1.002))
+
                 # Classic Floor Pivot Points: P = (H + L + C) / 3, R1 = 2*P - L, R2 = P + (H - L)
                 try:
                     yh = float(yesterday_candle[2])
@@ -806,7 +824,10 @@ def fetch_upstox_symbol_data(symbol, token):
         "symbol": symbol,
         "ltp": ltp,
         "prev_close": prev_close,
+        "day_open": day_open,
         "day_low": day_low,
+        "gap_pct": gap_pct,
+        "is_gap_up": is_gap_up,
         "pdh": pdh,
         "pivot": pivot_point,
         "r1": pivot_r1,
@@ -841,6 +862,10 @@ def fetch_fallback_data(symbol):
     headers = {"User-Agent": "Mozilla/5.0"}
     ltp = None
     prev_close = None
+    day_open = None
+    day_low = None
+    gap_pct = None
+    is_gap_up = False
     pdh = None
     rvol = None
     is_strong_start = False
@@ -923,8 +948,12 @@ def fetch_fallback_data(symbol):
                 pdh = highs[-2]
 
             if opens and lows and prev_close:
+                day_open = opens[-1]
+                day_low = lows[-1]
                 if opens[-1] > prev_close and lows[-1] >= (prev_close * 0.995):
                     is_strong_start = True
+                gap_pct = round(((float(day_open) - float(prev_close)) / float(prev_close)) * 100.0, 2)
+                is_gap_up = bool(gap_pct >= 1.0 or (pdh and float(day_open) > float(pdh) * 1.002))
 
             if len(vols) >= 21:
                 avg_vol = sum(vols[-21:-1]) / 20.0
@@ -1020,11 +1049,20 @@ def fetch_fallback_data(symbol):
 
     day_low = min(l_3m) if (parsed_candles and l_3m) else (anchor_low if anchor_low else None)
 
+    if (day_open is None or day_open == 0) and parsed_candles:
+        day_open = parsed_candles[0].get("o")
+        if day_open and prev_close and prev_close > 0:
+            gap_pct = round(((float(day_open) - float(prev_close)) / float(prev_close)) * 100.0, 2)
+            is_gap_up = bool(gap_pct >= 1.0 or (pdh and float(day_open) > float(pdh) * 1.002))
+
     return {
         "symbol": symbol,
         "ltp": ltp,
         "prev_close": prev_close,
+        "day_open": day_open,
         "day_low": day_low,
+        "gap_pct": gap_pct,
+        "is_gap_up": is_gap_up,
         "pdh": pdh,
         "rvol": rvol,
         "is_strong_start": is_strong_start,
@@ -1056,6 +1094,14 @@ def compute_metrics(d):
         chg_pct = (ltp - pc) / pc * 100.0
     else:
         chg_pct = 0.0
+
+    # Gap-Up Detection
+    gap_pct = d.get("gap_pct")
+    is_gap_up = bool(d.get("is_gap_up", False))
+    day_open = d.get("day_open")
+    if gap_pct is None and day_open and pc and pc > 0:
+        gap_pct = round(((float(day_open) - float(pc)) / float(pc)) * 100.0, 2)
+        is_gap_up = bool(gap_pct >= 1.0 or (pdh and float(day_open) > float(pdh) * 1.002))
 
     # 2. PDH Breakout (● Green if c > pdh, Red if c <= pdh)
     pdh_broken = bool(pdh and ltp > pdh)
@@ -1201,6 +1247,8 @@ def compute_metrics(d):
 
     return {
         "chg_pct": chg_pct,
+        "gap_pct": gap_pct,
+        "is_gap_up": is_gap_up,
         "pdh_broken": pdh_broken,
         "h_pct": h_pct,
         "l_pct": l_pct,
@@ -2430,6 +2478,9 @@ def export_static_html(results, now_str, port):
                 "symbol": d["symbol"],
                 "ltp": d.get("ltp"),
                 "prev_close": d.get("prev_close"),
+                "day_open": d.get("day_open"),
+                "gap_pct": m.get("gap_pct") if m.get("gap_pct") is not None else d.get("gap_pct"),
+                "is_gap_up": bool(m.get("is_gap_up") or d.get("is_gap_up")),
                 "chg_pct": round(m["chg_pct"], 2) if m.get("chg_pct") is not None else None,
                 "pdh": d.get("pdh"),
                 "pdh_broken": bool(m.get("pdh_broken", False)),
