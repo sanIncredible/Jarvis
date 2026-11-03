@@ -1950,8 +1950,22 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
     raw_be = entry_price * 1.0015
     breakeven_sl = round(round(raw_be / 0.05) * 0.05, 2)
 
+    # Pre-Flight Guard: Check Live Quote to ensure LTP > breakeven_sl
+    # (Mandatory Indian exchange rule: Sell Stop-Loss orders require Trigger Price < current LTP)
+    q, _ = fetch_live_quote(sym)
+    current_ltp = float(q.get("ltp", 0) or 0) if q else 0
+    if current_ltp > 0 and current_ltp <= breakeven_sl:
+        return False, {
+            "status": "failed",
+            "message": f"Cannot ratchet {sym} to Breakeven ₹{breakeven_sl:,.2f}: Current LTP (₹{current_ltp:,.2f}) is at or below Breakeven. Exchange rules require Trigger Price < LTP for Sell Stop-Loss orders.",
+            "breakeven_sl": breakeven_sl,
+            "current_ltp": current_ltp
+        }
+
     # 1. Cancel previous pending SL order
     cancelled = cancel_symbol_stop_loss(sym, broker=broker)
+    if cancelled:
+        time.sleep(0.6)  # Give broker RMS a brief window to confirm exchange cancellation and release quantity
 
     # 2. Place new SL at Breakeven
     ok, res = place_broker_stop_loss(
