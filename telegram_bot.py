@@ -903,6 +903,7 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
         alert_block = "\n⭐ <b>A+ SETUP: All Strategy Checklist Rules Satisfied!</b>\n"
 
     sig_line = f"🏷️ <b>Scanner Signal:</b> <code>{scanner_sig}</code>\n" if scanner_sig else ""
+    reg_note_line = f"🛡️ <b>Regime Policy:</b> {calc['regime_note']}\n" if calc.get("regime_note") else ""
 
     canonical_sym = quote_data["symbol"]
     sym_display = f"{canonical_sym} (<i>{symbol}</i>)" if symbol.upper() != canonical_sym else canonical_sym
@@ -918,6 +919,7 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
         f"💼 <b>Actual Exposure:</b> ₹{calc['actual_exposure']:,}\n"
         f"🛑 <b>Stop Loss:</b> <b>₹{calc['stop_loss']}</b> ({calc['sl_mode']}: -{calc['risk_pct']}%)\n"
         f"⚠️ <b>Total Risk ₹:</b> ₹{calc['total_risk_inr']:,}\n"
+        f"{reg_note_line}"
         f"{sig_line}"
         f"{margin_advisory}"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -1607,6 +1609,48 @@ def handle_callback_query(cq):
         answer_callback_query(cq_id, "Refreshing broker funds & margins...")
         text, markup = handle_funds_command()
         edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
+
+    elif cq_data == "cand_add_top5":
+        cand_file = SCRIPT_DIR / "candidates.json"
+        top5_syms = []
+        if cand_file.is_file():
+            try:
+                with open(cand_file, "r", encoding="utf-8") as f:
+                    cdata = json.load(f)
+                    cands = cdata.get("candidates", [])
+                    tier1 = [c["symbol"] for c in cands if c.get("tier") == "TIER 1"]
+                    tier2 = [c["symbol"] for c in cands if c.get("tier") == "TIER 2"]
+                    top5_syms = (tier1 + tier2)[:5]
+            except Exception as e:
+                pass
+
+        if not top5_syms:
+            answer_callback_query(cq_id, "No candidates found in candidates.json!", show_alert=True)
+        else:
+            curr_syms = read_watchlist_symbols()
+            added = []
+            already = []
+            for s in top5_syms:
+                s_u = s.upper().strip()
+                if s_u in curr_syms:
+                    already.append(s_u)
+                else:
+                    curr_syms.append(s_u)
+                    added.append(s_u)
+            if added:
+                write_watchlist_symbols(curr_syms)
+                threading.Thread(target=trigger_immediate_rescan, daemon=True).start()
+                answer_callback_query(cq_id, f"✅ Added {len(added)} candidates to Watchlist!")
+                send_telegram_msg(
+                    chat_id,
+                    f"✅ <b>PROMOTED TOP 5 CANDIDATES TO WATCHLIST</b>\n"
+                    f"• <b>Added ({len(added)}):</b> {', '.join(added)}\n"
+                    f"• <b>Total Watchlist Stocks:</b> {len(curr_syms)}\n"
+                    f"• Immediate 3m ORB rescan & GitHub Cloud sync triggered!\n"
+                    f"• 📊 <a href='https://sanincredible.github.io/Jarvis/'>View on Dashboard</a>"
+                )
+            else:
+                answer_callback_query(cq_id, "All top 5 candidates are already in your watchlist!", show_alert=True)
 
     elif cq_data.startswith("cand_add:"):
         sym = cq_data.split(":")[1].upper()
