@@ -26,10 +26,14 @@ import sys
 import json
 import time
 import base64
+import socket
 import threading
 import urllib.request
 import urllib.error
 from pathlib import Path
+
+# Ensure standard socket read timeout so cloud poller never hangs indefinitely
+socket.setdefaulttimeout(30)
 from datetime import datetime, timezone, timedelta
 
 # Ensure UTF-8 output on Windows consoles
@@ -1706,8 +1710,8 @@ def dispatch_command(msg_text, from_chat_id):
 
     # Security: strict chat_id validation
     if authorized_chat_id and str(from_chat_id) != str(authorized_chat_id):
-        print(f"⛔ Unauthorized access attempt from Chat ID: {from_chat_id}")
-        return "⛔ <b>Unauthorized:</b> Access restricted to the bot administrator."
+        print(f"⛔ Unauthorized access attempt: incoming chat_id={from_chat_id} vs authorized={authorized_chat_id}", flush=True)
+        return f"⛔ <b>Unauthorized:</b> Access restricted to bot administrator (Your Chat ID: <code>{from_chat_id}</code>)."
 
     text = msg_text.strip()
     if not text:
@@ -1727,28 +1731,27 @@ def dispatch_command(msg_text, from_chat_id):
     # Remove bot username suffix if present (e.g. /add@Sannin_100M_bot -> /add)
     cmd = raw_cmd.split("@")[0]
 
-    if cmd in ("/start", "/help"):
+    if cmd in ("/start", "/help", "start", "help"):
         return handle_help_command()
-    elif cmd in ("/add", "/addstock"):
+    elif cmd in ("/add", "/addstock", "add", "addstock"):
         return handle_add_command(args)
-    elif cmd in ("/remove", "/del", "/rm", "/delete"):
+    elif cmd in ("/remove", "/del", "/rm", "/delete", "remove", "del", "rm", "delete"):
         return handle_remove_command(args)
-    elif cmd in ("/watchlist", "/list", "/stocks"):
+    elif cmd in ("/watchlist", "/list", "/stocks", "watchlist", "list", "stocks"):
         return handle_watchlist_command()
-    elif cmd in ("/candidates", "/cand", "/screen", "/screener", "/eodscan"):
+    elif cmd in ("/candidates", "/cand", "/screen", "/screener", "/eodscan", "candidates", "cand", "screen"):
         return handle_candidates_command()
-    elif cmd in ("/positions", "/pos", "/portfolio", "/pnl", "/holdings"):
+    elif cmd in ("/positions", "/pos", "/portfolio", "/pnl", "/holdings", "positions", "pos", "pnl"):
         return handle_positions_command()
-    elif cmd in ("/trail", "/trailing", "/sl", "/trails"):
+    elif cmd in ("/trail", "/trailing", "/sl", "/trails", "trail", "trailing"):
         return handle_trailing_command()
-    elif cmd in ("/funds", "/fund", "/margin", "/margins", "/cash", "/bal", "/balance"):
+    elif cmd in ("/funds", "/fund", "/margin", "/margins", "/cash", "/bal", "/balance", "funds", "fund", "margin", "cash"):
         return handle_funds_command()
-    elif cmd in ("/exit", "/close", "/squareoff"):
+    elif cmd in ("/exit", "/close", "/squareoff", "exit", "close"):
         return handle_exit_command(args)
-    elif cmd in ("/journal", "/syncjournal", "/sync"):
+    elif cmd in ("/journal", "/syncjournal", "/sync", "journal", "sync"):
         return handle_journal_command()
-    elif cmd in ("/token", "/tokens", "/status", "/check"):
-        # Check if sub-command provided (e.g. /token upstox <token>)
+    elif cmd in ("/token", "/tokens", "/status", "/check", "token", "tokens", "status"):
         if args:
             sub_parts = args.split(maxsplit=1)
             sub_cmd = sub_parts[0].lower()
@@ -1756,19 +1759,19 @@ def dispatch_command(msg_text, from_chat_id):
             if sub_cmd in ("upstox", "dhan", "zerodha"):
                 return handle_update_token_command(sub_cmd, sub_tok)
         return handle_token_status_command()
-    elif cmd == "/upstox":
+    elif cmd in ("/upstox", "upstox"):
         return handle_update_token_command("upstox", args)
-    elif cmd == "/dhan":
+    elif cmd in ("/dhan", "dhan"):
         return handle_update_token_command("dhan", args)
-    elif cmd == "/zerodha":
+    elif cmd in ("/zerodha", "zerodha"):
         return handle_update_token_command("zerodha", args)
-    elif cmd in ("/buy", "/mtf", "/order"):
+    elif cmd in ("/buy", "/mtf", "/order", "buy", "order"):
         return handle_buy_command(args, from_chat_id)
-    elif cmd in ("/broker", "/brokers"):
+    elif cmd in ("/broker", "/brokers", "broker"):
         return handle_broker_command(args)
-    elif cmd in ("/scan", "/refresh"):
+    elif cmd in ("/scan", "/refresh", "scan", "refresh"):
         return handle_scan_command()
-    elif cmd == "/regime":
+    elif cmd in ("/regime", "regime"):
         return handle_regime_command()
     else:
         return (
@@ -1803,51 +1806,63 @@ def run_telegram_bot_loop(stop_event=None):
 
     while True:
         if stop_event and stop_event.is_set():
-            print("Telegram Bot listener received stop signal.")
+            print("Telegram Bot listener received stop signal.", flush=True)
             break
 
-        url = f"https://api.telegram.org/bot{bot_token}/getUpdates?timeout=20"
+        url = f"https://api.telegram.org/bot{bot_token}/getUpdates?timeout=15"
         if offset is not None:
             url += f"&offset={offset}"
 
         req = urllib.request.Request(url, headers={"User-Agent": "Jarvis-Bot-Poller"})
         try:
-            with urllib.request.urlopen(req, timeout=25) as resp:
+            with urllib.request.urlopen(req, timeout=20) as resp:
                 data = json.loads(resp.read().decode())
                 updates = data.get("result", [])
                 for u in updates:
                     offset = u["update_id"] + 1
 
-                    # Handle interactive inline keyboard clicks
-                    cq = u.get("callback_query")
-                    if cq:
-                        handle_callback_query(cq)
-                        continue
+                    try:
+                        # Handle interactive inline keyboard clicks
+                        cq = u.get("callback_query")
+                        if cq:
+                            handle_callback_query(cq)
+                            continue
 
-                    msg = u.get("message") or u.get("edited_message")
-                    if not msg or not msg.get("text"):
-                        continue
-                    chat = msg.get("chat", {})
-                    chat_id = chat.get("id")
-                    text = msg.get("text", "")
-                    sender = msg.get("from", {}).get("first_name", "User")
+                        msg = u.get("message") or u.get("edited_message")
+                        if not msg or not msg.get("text"):
+                            continue
+                        chat = msg.get("chat", {})
+                        chat_id = chat.get("id")
+                        text = msg.get("text", "")
+                        sender = msg.get("from", {}).get("first_name", "User")
 
-                    print(f"📩 [{get_ist_now().strftime('%H:%M:%S')}] Telegram from {sender} ({chat_id}): {text[:50]}")
+                        print(f"📩 [{get_ist_now().strftime('%H:%M:%S')}] Telegram from {sender} (ChatID: {chat_id}): {text[:50]}", flush=True)
 
-                    reply = dispatch_command(text, chat_id)
-                    if reply:
-                        if isinstance(reply, tuple):
-                            send_telegram_msg(chat_id, reply[0], reply_markup=reply[1])
-                        else:
-                            send_telegram_msg(chat_id, reply)
+                        reply = dispatch_command(text, chat_id)
+                        if reply:
+                            if isinstance(reply, tuple):
+                                ok, resp_data = send_telegram_msg(chat_id, reply[0], reply_markup=reply[1])
+                            else:
+                                ok, resp_data = send_telegram_msg(chat_id, reply)
+                            if not ok:
+                                print(f"⚠️ Failed to send Telegram reply to {chat_id}: {resp_data}", flush=True)
+                            else:
+                                print(f"✅ Replied to {chat_id} for command: {text[:30]}", flush=True)
+                    except Exception as item_ex:
+                        print(f"❌ Error processing update {u.get('update_id')}: {item_ex}", flush=True)
+                        import traceback
+                        traceback.print_exc()
 
         except urllib.error.HTTPError as he:
             if he.code == 409:
-                # Conflict: another instance of getUpdates is active
+                print("⚠️ Telegram 409 Conflict: another poller active. Sleeping 5s...", flush=True)
                 time.sleep(5)
             else:
+                print(f"⚠️ Telegram HTTPError {he.code}: {he}", flush=True)
                 time.sleep(2)
-        except Exception:
+        except Exception as e:
+            # Handle socket timeout or transient network hiccups
+            print(f"ℹ️ Telegram Poller notice: {type(e).__name__}: {e}", flush=True)
             time.sleep(2)
 
 
