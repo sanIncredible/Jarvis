@@ -590,7 +590,7 @@ def handle_candidates_command():
         text, markup = format_candidates_telegram_card(res, max_display=10)
         return text, markup
     except Exception as e:
-        return f"⚠️ <b>Candidate Scanner Error:</b> {e}"
+        return f"⚠️ <b>Candidate Scanner Error:</b> {e}", None
 
 
 def handle_token_status_command():
