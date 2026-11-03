@@ -422,6 +422,18 @@
   .badge-orb-l { background: #000000; color: #71717a; border: 1px solid #3f3f46; font-weight: 800; }
   .badge-orb-m { background: #18181b; color: #a1a1aa; border: 1px solid #27272a; }
   .badge-orb-rev { background: #27272a; color: #ffffff; border: 1px solid #ffffff; box-shadow: 0 0 8px rgba(255, 255, 255, 0.35); font-weight: 800; }
+  .badge-gap-up {
+    background: rgba(234, 88, 12, 0.2);
+    color: #fb923c;
+    border: 1px solid #ea580c;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
 
   .badge-reversal {
     background: #18181b;
@@ -1121,6 +1133,7 @@
     <div class="filter-chips">
       <span class="chip active" onclick="setFilter('all', this)">ALL (<span id="cnt-all">0</span>)</span>
       <span class="chip chip-sa" onclick="openSAModal()" title="09:14 AM Situational Awareness & Telegram Alert" style="border-color:#3b82f6; color:#60a5fa; background:rgba(37,99,235,0.18); font-weight:700;">⚡ 09:14 SA</span>
+      <span class="chip" onclick="setFilter('gap', this)" title="Filter stocks that opened with a Gap-Up (+1% or above PDH)"><span id="chip-lbl-gap">🚀 Gap-Up</span> (<span id="cnt-gap">0</span>)</span>
       <span class="chip" onclick="setFilter('prime', this)" title="Filter stocks coiling near 10 EMA (<0.45% stretch - Tight base, minimal downside risk)"><span id="chip-lbl-prime">🟢 Prime Base</span> (<span id="cnt-prime">0</span>)</span>
       <span class="chip" onclick="setFilter('rev', this)"><span id="chip-lbl-rev">🔄 Failover</span> (<span id="cnt-rev">0</span>)</span>
       <span class="chip" onclick="setFilter('ss', this)"><span id="chip-lbl-ss">★ Priority</span> (<span id="cnt-ss">0</span>)</span>
@@ -1309,6 +1322,7 @@
     const txtKpi4Sub = document.getElementById('txt-kpi-4-sub');
 
     // Filter chips
+    const chipGap = document.getElementById('chip-lbl-gap');
     const chipPrime = document.getElementById('chip-lbl-prime');
     const chipRev = document.getElementById('chip-lbl-rev');
     const chipSs = document.getElementById('chip-lbl-ss');
@@ -1368,6 +1382,7 @@
 
       if (pageFooter) pageFooter.innerText = 'Cluster Telemetry & Node Observer Daemon • Distributed Ingress Telemetry Pipeline • High-Throughput Stream • Press [?] for Diagnostics';
       const btnStyleVol = document.getElementById('style-btn-vol');
+      if (chipGap) chipGap.innerText = '🚀 Ingress Gap';
       const btnStyleStd = document.getElementById('style-btn-std');
       if (btnStyleVol) btnStyleVol.innerText = '📊 Vol Trace';
       if (btnStyleStd) btnStyleStd.innerText = '🕯 Baseline';
@@ -1395,6 +1410,7 @@
       if (txtKpi4Title) txtKpi4Title.innerText = 'ORB Action Triggers';
       if (txtKpi4Sub) txtKpi4Sub.innerText = 'Bull Breakouts & High Formations';
 
+      if (chipGap) chipGap.innerText = '🚀 Gap-Up';
       if (chipPrime) chipPrime.innerText = '🟢 Prime Base';
       if (chipRev) chipRev.innerText = '🔄 Reversals';
       if (chipSs) chipSs.innerText = '★ Strong Start';
@@ -1804,6 +1820,7 @@
     let orbCount = 0;
     let revCount = 0;
     let primeCount = 0;
+    let gapCount = 0;
     let topMover = null;
 
     RAW_STOCKS.forEach(stk => {
@@ -1827,6 +1844,20 @@
       stk.stretch_pct = (ema10 && ltpVal > 0) ? (((ltpVal - ema10) / ema10) * 100) : null;
       stk.is_prime = (stk.stretch_pct !== null && stk.stretch_pct >= 0 && stk.stretch_pct <= 0.45);
       if (stk.is_prime) primeCount++;
+
+      // Gap-Up Detection & Client Normalization
+      let isGapUp = Boolean(stk.is_gap_up);
+      let gapPct = (stk.gap_pct !== null && stk.gap_pct !== undefined) ? Number(stk.gap_pct) : 0;
+      if (!isGapUp && stk.prev_close && c_3m && c_3m.length > 0) {
+        const dayOpen = c_3m[0].o;
+        if (dayOpen && stk.prev_close > 0) {
+          gapPct = Number((((dayOpen - stk.prev_close) / stk.prev_close) * 100).toFixed(2));
+          if (gapPct >= 1.0 || (stk.pdh && dayOpen > stk.pdh * 1.002)) isGapUp = true;
+        }
+      }
+      stk.is_gap_up = isGapUp;
+      stk.gap_pct = gapPct;
+      if (stk.is_gap_up) gapCount++;
 
       // LoD Dist = (LTP - Day Low) / ATR14 * 100%
       let dayLow = (stk.day_low !== null && stk.day_low !== undefined) ? Number(stk.day_low) : null;
@@ -1918,6 +1949,8 @@
         reversal_desc: stk.reversal_desc,
         orb_low_break_time: stk.orb_low_break_time,
         orb_high_break_time: stk.orb_high_break_time,
+        is_gap_up: stk.is_gap_up,
+        gap_pct: stk.gap_pct,
         is_strong_start: stk.is_ss,
         rvol: stk.rvol,
         signal: stk.signal,
@@ -1964,6 +1997,8 @@
 
     // Filter counts
     document.getElementById('cnt-all').innerText = RAW_STOCKS.length;
+    const gapEl = document.getElementById('cnt-gap');
+    if (gapEl) gapEl.innerText = gapCount;
     const primeEl = document.getElementById('cnt-prime');
     if (primeEl) primeEl.innerText = primeCount;
     const revEl = document.getElementById('cnt-rev');
@@ -2019,6 +2054,7 @@
     const q = (searchInput.value || '').trim().toUpperCase();
 
     let filtered = RAW_STOCKS.filter(stk => {
+      if (activeFilter === 'gap' && !stk.is_gap_up) return false;
       if (activeFilter === 'prime' && !stk.is_prime) return false;
       if (activeFilter === 'rev' && !stk.is_reversal && stk.orb_status !== 'L➔H') return false;
       if (activeFilter === 'ss' && !stk.is_ss) return false;
@@ -2077,6 +2113,12 @@
         }
         lod_badge = `<span class="stretch-pill ${lodCls}" title="${lodTip}">${lod_dist}%</span>`;
       }
+
+      const gap_pct_val = (stk.gap_pct !== null && stk.gap_pct !== undefined) ? Number(stk.gap_pct) : 0;
+      const gap_sign = gap_pct_val >= 0 ? '+' : '';
+      const gap_badge = stk.is_gap_up
+        ? `<span class="pill-badge badge-gap-up" title="${isStealthMode ? 'Ingress Gap' : 'Opened with Gap-Up'} (${gap_sign}${gap_pct_val.toFixed(1)}%)">🚀 GAP ${gap_sign}${gap_pct_val.toFixed(1)}%</span>`
+        : '';
 
       const ss_html = stk.is_ss ? '<span class="star-badge">★</span>' : '<span style="color:var(--text-dim);">-</span>';
       const pdh_html = stk.pdh_broken
@@ -2137,6 +2179,7 @@
               <a href="${tv_url}" target="_blank" class="btn-tv-app" title="${nodeTitle}">
                 ${displaySym} ↗
               </a>
+              ${gap_badge}
               <button class="btn-preview-eye" onclick="showChartPopup(event, '${sym}', true)" title="${isStealthMode ? 'Inspect Trace' : 'Chart Preview'}">👁</button>
             </div>
           </td>
@@ -2234,6 +2277,13 @@
       const pdhCol = data.pdh_broken ? 'var(--accent-green)' : 'var(--accent-gold)';
       const pdhLabel = isStealthMode ? 'Peak Envelope: ' : 'PDH: ₹';
       bHtml += `<span class="pill-badge" style="border:1px solid var(--border-bright); color:#d4d4d8;">${pdhLabel}${Number(data.pdh).toFixed(1)} (<span style="color:${pdhCol}; font-weight:800;">${pdhStatus}</span>)</span>`;
+    }
+
+    if (data.is_gap_up) {
+      const gPct = (data.gap_pct !== null && data.gap_pct !== undefined) ? Number(data.gap_pct) : 0;
+      const gSign = gPct >= 0 ? '+' : '';
+      const gapText = isStealthMode ? `🚀 INGRESS GAP (${gSign}${gPct.toFixed(1)}%)` : `🚀 GAP UP (${gSign}${gPct.toFixed(1)}%)`;
+      bHtml += `<span class="pill-badge badge-gap-up" title="Opened with Gap-Up (${gSign}${gPct.toFixed(2)}%)">${gapText}</span>`;
     }
 
     if (data.is_reversal || data.orb_status === 'L➔H') {
