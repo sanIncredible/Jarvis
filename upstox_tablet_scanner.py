@@ -239,6 +239,13 @@ def sync_remote_files_from_github():
 
         # 1. Sync watchlist data from GitHub
         for filename in ["watchlist.txt"]:
+            # If local watchlist.txt was modified within the last 60 seconds (e.g. Telegram bot edit), don't overwrite!
+            if os.path.isfile(filename):
+                try:
+                    if (time.time() - os.path.getmtime(filename)) < 60:
+                        continue
+                except Exception:
+                    pass
             url = f"https://api.github.com/repos/{owner}/{repo}/contents/{filename}?ref={branch}"
             req = urllib.request.Request(url, headers={
                 "Authorization": f"Bearer {token}",
@@ -253,8 +260,19 @@ def sync_remote_files_from_github():
                         content_str = base64.b64decode(content_b64).decode("utf-8").strip()
                         if content_str:
                             norm_content = content_str.replace("\r\n", "\n").replace("\r", "\n").strip()
+                            remote_syms = [l.strip().upper() for l in norm_content.splitlines() if l.strip() and not l.startswith("#")]
+                            local_syms = []
+                            if os.path.isfile(filename):
+                                with open(filename, "r", encoding="utf-8") as lf:
+                                    local_syms = [l.strip().upper() for l in lf if l.strip() and not l.startswith("#")]
+                            merged_syms = list(dict.fromkeys(local_syms + remote_syms))
+                            lines_out = [
+                                "# Upstox 3m ORB Scanner Watchlist",
+                                "# Add or remove NSE stock tickers below (one per line, or space/comma separated)",
+                                ""
+                            ] + merged_syms
                             with open(filename, "w", encoding="utf-8") as f:
-                                f.write(norm_content + "\n")
+                                f.write("\n".join(lines_out) + "\n")
             except Exception:
                 pass
 
