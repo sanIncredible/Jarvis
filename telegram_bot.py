@@ -185,6 +185,7 @@ def register_telegram_commands():
         {"command": "positions", "description": "📊 Live multi-broker positions & open P&L"},
         {"command": "trail", "description": "🎯 Trailing SL & Risk Breakeven recommendations"},
         {"command": "exit", "description": "🔴 Quick exit/square-off open positions"},
+        {"command": "journal", "description": "📓 Reconcile broker trades into Journal.xlsx"},
         {"command": "broker", "description": "🏦 View or switch default broker (Upstox/Dhan/Zerodha)"},
         {"command": "watchlist", "description": "📋 View active watchlist & TV chart links"},
         {"command": "add", "description": "➕ Add stock ticker(s) to scanner watchlist"},
@@ -733,6 +734,7 @@ def handle_help_command():
         "• <code>/positions</code> or <code>/pos</code> — Live open positions & real-time P&L\n"
         "• <code>/trail</code> or <code>/sl</code> — Trailing SL & Risk Breakeven recommendations\n"
         "• <code>/exit &lt;SYM&gt; [50%|all]</code> — 1-Tap quick exit/square-off\n"
+        "• <code>/journal</code> — Reconcile live broker fills into Journal.xlsx\n"
         "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
         "📋 <b>Watchlist Commands:</b>\n"
         "• <code>/add &lt;SYMBOL...&gt;</code> — Add stock(s) to scanner watchlist\n"
@@ -1200,6 +1202,28 @@ def handle_trailing_command():
     return message_text, reply_markup
 
 
+def handle_journal_command():
+    """
+    Triggers manual sync of broker executions and live positions into Journal.xlsx,
+    recalculating all metrics, R-multiples, and open positions.
+    """
+    try:
+        from sync_journal import run_eod_sync
+        run_eod_sync()
+        return (
+            "✅ <b>TRADE JOURNAL RECONCILED & UPDATED!</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "• Synced live broker fills from Dhan & Zerodha Kite.\n"
+            "• Auto-reconciled all carried-forward live open positions.\n"
+            "• Updated 'Trade Journal' & 'Open Positions' sheets.\n"
+            "• Created timestamped backup in <code>backups/</code> folder.\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "💡 <i>Full executive report delivered above. Type <code>/positions</code> or <code>/trail</code> to view live cards.</i>"
+        )
+    except Exception as e:
+        return f"⚠️ <b>Journal Sync Notice:</b> {e}"
+
+
 def handle_buy_command(args, from_chat_id):
     """
     Handles /buy or /mtf command across Upstox, Dhan, or Zerodha.
@@ -1489,6 +1513,8 @@ def dispatch_command(msg_text, from_chat_id):
         return handle_trailing_command()
     elif cmd in ("/exit", "/close", "/squareoff"):
         return handle_exit_command(args)
+    elif cmd in ("/journal", "/syncjournal", "/sync"):
+        return handle_journal_command()
     elif cmd in ("/token", "/tokens", "/status", "/check"):
         # Check if sub-command provided (e.g. /token upstox <token>)
         if args:
