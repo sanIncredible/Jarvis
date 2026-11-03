@@ -104,21 +104,23 @@ def calc_ema(values, period):
 
 
 def scan_nifty500_candidates(
-    top_n=20,
-    max_range_pct=2.60,
+    top_n=25,
+    max_range_pct=2.85,
     max_from_high_pct=2.20,
     min_turnover_cr=5.0
 ):
     """
-    Two-Stage Dual-Tier Screener:
+    Multi-Tier Pre-Breakout & Pullback Screener (Nifty 500):
     - Stage 1: Fast bulk Upstox snapshot to eliminate illiquid, penny, or extended runners.
     - Stage 2: Concurrent multi-day historical candles via Yahoo Finance (25 threads) evaluating:
-      1. Stage 2 Trend (Price > 20 EMA > 50 EMA)
-      2. Volatility Contraction Pattern (5D VCP <= 2.5x ATR14)
-      3. Relative Volume (RVOL)
-      4. Dual-Tier Resistance Proximity:
-         - Tier 1 (🔥 Pivot Doorstep): <= 2.2% from 20D High or <= 1.0x ATR
+      1. Stage 2 Trend (Price >= 0.99*20 EMA, 20 EMA >= 0.985*50 EMA)
+      2. Dual-Timeframe VCP (5D VCP <= 2.50x OR 3D VCP <= 1.25x OR Inside Day)
+      3. Volume Dry-Up (VDU <= 0.60x) & Institutional Surge (RVOL >= 1.30x)
+      4. Multi-Tier Setups:
+         - Tier 1 (🔥 Pivot Doorstep): <= 2.2% from 20D High / <= 1.0x ATR with tight coil
          - Tier 2 (🚀 Base Launchpad): <= 5.0% from 20D High and <= 2.2% from PDH
+         - Tier 3 (🛡️ EMA Pullback Coil): Leaders resting at rising 10/20 EMA support
+      5. 52-Week / 3-Month High Blue Sky Proximity
     """
     cfg = load_config()
     token = cfg.get("upstox", {}).get("access_token", "").strip()
@@ -190,11 +192,12 @@ def scan_nifty500_candidates(
         close_loc = round((ltp - low) / bar_range, 2) if bar_range > 0 else 0.5
 
         # Stage 1 Pre-Filter (Discard extended & wide-range runners):
-        # 1. Non-Extended Move: -2.0% <= change_pct <= +3.5% (Not +8% chasing!)
-        # 2. Narrow Range Bar: daily_range_pct <= max_range_pct (<= 2.6%)
+        # 1. Non-Extended Move: -2.5% <= change_pct <= +3.5% (Not extended chasing!)
+        # 2. Narrow / Coiled Bar: daily_range_pct <= max_range_pct (<= 2.85%)
         # 3. Sitting Near Today's High: dist_from_high_pct <= max_from_high_pct (<= 2.2%)
-        # 4. Closing in Upper Half: close_loc >= 0.45
-        if (-2.0 <= change_pct <= 3.5) and daily_range_pct <= max_range_pct and dist_from_high_pct <= max_from_high_pct and close_loc >= 0.45:
+        # 4. Closing in Upper Half: close_loc >= 0.42 (or >= 0.35 if ultra-tight bar <= 1.5%)
+        min_loc = 0.35 if daily_range_pct <= 1.50 else 0.42
+        if (-2.5 <= change_pct <= 3.5) and daily_range_pct <= max_range_pct and dist_from_high_pct <= max_from_high_pct and close_loc >= min_loc:
             raw_sym = q.get("symbol", "").replace("NSE_EQ:", "").replace("NSE_EQ|", "").strip().upper()
             meta = sym_to_meta.get(raw_sym, {})
             if not meta:
@@ -277,38 +280,53 @@ def scan_nifty500_candidates(
                 range_3d = h_3d - l_3d
                 vcp_ratio_3d = round(range_3d / atr14, 2) if atr14 > 0 else 9.9
 
-                # VCP condition: 5-day range <= 2.50x ATR (or 3-day <= 1.40x ATR)
-                if vcp_ratio_5d > 2.50 and vcp_ratio_3d > 1.40:
-                    return None  # Disqualified: Wide swing / volatile
+                # Inside Day identification (high compression)
+                is_inside_day = len(h_list) >= 2 and h_list[-1] <= h_list[-2] and l_list[-1] >= l_list[-2]
 
-                # CRITERION 3 & 4: Dual-Tier Resistance Pivot Proximity (20D Pivot & PDH)
+                # CRITERION 3: Resistance Pivot & High Proximity
                 pivot_20d = max(h_list[-20:])
                 dist_pivot_20d_pct = round(((pivot_20d - ltp) / pivot_20d) * 100.0, 2)
                 dist_pivot_atr = round((pivot_20d - ltp) / atr14, 2) if atr14 > 0 else 9.9
                 pdh = h_list[-2] if len(h_list) >= 2 else h_list[-1]
                 dist_pdh_pct = round(((pdh - ltp) / pdh) * 100.0, 2)
 
+                # 52-Week / 3-Month High Blue Sky Proximity
+                high_3m = max(h_list)
+                dist_3m_high_pct = round(((high_3m - ltp) / high_3m) * 100.0, 2)
+                is_near_3m_high = dist_3m_high_pct <= 2.50
+
+                # 10/20 EMA Pullback Proximity
+                dist_ema10_pct = round(((ltp - calc_ema(c_list, 10)) / ltp) * 100.0, 2)
+                dist_ema20_pct = round(((ltp - ema20) / ltp) * 100.0, 2)
+
                 is_tier1 = False
                 is_tier2 = False
+                is_tier3 = False
                 tier_label = ""
                 coil_tag = ""
 
                 # TIER 1: 🔥 PIVOT DOORSTEP (Direct 20D Breakout Ignition)
-                # Sits within <= 2.2% of 20D High OR within <= 1.0x ATR, with 5D VCP <= 2.50x ATR
-                if (dist_pivot_20d_pct <= 2.20 or dist_pivot_atr <= 1.00) and vcp_ratio_5d <= 2.50:
+                # Allows tight 5D VCP (<=2.5x), OR tight 3D VCP (<=1.25x), OR Inside Day
+                if (dist_pivot_20d_pct <= 2.20 or dist_pivot_atr <= 1.00) and (vcp_ratio_5d <= 2.50 or vcp_ratio_3d <= 1.25 or is_inside_day):
                     is_tier1 = True
                     tier_label = "TIER 1"
-                    coil_tag = "🔥 PIVOT DOORSTEP" if vcp_ratio_5d <= 1.60 else "⚡ PIVOT IGNITION"
+                    coil_tag = "🔥 PIVOT DOORSTEP" if (vcp_ratio_5d <= 1.60 or vcp_ratio_3d <= 1.00) else "⚡ PIVOT IGNITION"
 
-                # TIER 2: 🚀 BASE LAUNCHPAD (10/20 EMA Pocket Coil — Early Asymmetrical R:R)
-                # Sits 2.2% to 5.0% from 20D High (or <= 1.5x ATR), sitting near PDH (<= 2.2%), with tight VCP (<= 2.40x ATR)
-                elif (dist_pivot_20d_pct <= 5.00 or dist_pivot_atr <= 1.50) and (abs(dist_pdh_pct) <= 2.20) and vcp_ratio_5d <= 2.40:
+                # TIER 2: 🚀 BASE LAUNCHPAD (10/20 EMA Pocket Coil)
+                # Sits 2.2% to 5.0% from 20D High, near PDH (<= 2.2%), with tight 5D/3D VCP
+                elif (dist_pivot_20d_pct <= 5.00 or dist_pivot_atr <= 1.50) and (abs(dist_pdh_pct) <= 2.20) and (vcp_ratio_5d <= 2.50 or vcp_ratio_3d <= 1.35):
                     is_tier2 = True
                     tier_label = "TIER 2"
                     coil_tag = "🚀 BASE LAUNCHPAD"
 
-                if not (is_tier1 or is_tier2):
-                    return None  # Disqualified: Too far from resistance or not coiled
+                # TIER 3: 🛡️ EMA PULLBACK COIL (Leader resting on rising 10/20 EMA Support)
+                elif (abs(dist_ema10_pct) <= 1.50 or abs(dist_ema20_pct) <= 1.50) and (vcp_ratio_3d <= 1.35 or is_inside_day):
+                    is_tier3 = True
+                    tier_label = "TIER 3"
+                    coil_tag = "🛡️ EMA PULLBACK COIL"
+
+                if not (is_tier1 or is_tier2 or is_tier3):
+                    return None  # Disqualified: Not at breakout doorstep, launchpad base, or EMA shelf
 
                 # CRITERION 5: Relative Volume (RVOL)
                 avg_vol_20 = sum(v_list[-20:]) / 20.0 if len(v_list) >= 20 else 1.0
@@ -316,24 +334,38 @@ def scan_nifty500_candidates(
                 proj_vol = live_vol * pacing_factor
                 proj_rvol = round(proj_vol / avg_vol_20, 2) if avg_vol_20 > 0 else 1.0
 
+                # VDU (Volume Dry-Up) Supply Exhaustion
+                is_vdu = proj_rvol <= 0.60
+
                 # Quantified Scoring:
                 score = 70.0
                 if is_tier1:
-                    score += 15.0  # Priority for immediate 20-day breakout
-                else:
-                    score += 10.0  # Pocket launchpad base bonus
+                    score += 15.0  # Immediate breakout doorstep priority
+                elif is_tier2:
+                    score += 10.0  # Launchpad base bonus
+                elif is_tier3:
+                    score += 8.0   # EMA pullback shelf bonus
 
-                # Tighter 5D VCP = higher score
-                score += max(0.0, (2.2 - vcp_ratio_5d) * 15.0)
+                if is_near_3m_high:
+                    score += 10.0  # Zero overhead resistance blue sky bonus
+                if is_vdu:
+                    score += 8.0   # Supply exhaustion bonus
+                if is_inside_day:
+                    score += 6.0   # Range contraction coil bonus
+
+                # Contraction scoring (uses tighter of 5D or 3D)
+                score += max(0.0, (2.2 - min(vcp_ratio_5d, vcp_ratio_3d * 1.8)) * 12.0)
                 # Tighter daily range = higher score
-                score += max(0.0, (2.0 - item["daily_range_pct"]) * 10.0)
+                score += max(0.0, (2.0 - item["daily_range_pct"]) * 8.0)
                 # Closeness to 20-day high = higher breakout ignition potential
                 score += max(0.0, (2.0 - dist_pivot_20d_pct) * 8.0)
                 # Closeness to PDH = immediate morning ORB trigger potential
                 score += max(0.0, (1.5 - abs(dist_pdh_pct)) * 8.0)
 
-                # Volume scoring: either volume expansion (>=1.3x) or supply dry-up (<=0.75x)
-                if proj_rvol >= 1.3:
+                # Volume tagging
+                if is_vdu:
+                    vol_tag = f"🧊 RVOL {proj_rvol}x (VDU Supply Dry-Up)"
+                elif proj_rvol >= 1.30:
                     score += min(15.0, (proj_rvol - 1.0) * 8.0)
                     vol_tag = f"🔥 RVOL {proj_rvol}x (Surge)"
                 elif proj_rvol <= 0.75:
@@ -367,6 +399,14 @@ def scan_nifty500_candidates(
 
                 score += sector_score
 
+                flags = []
+                if is_near_3m_high:
+                    flags.append("👑 52W High")
+                if is_vdu:
+                    flags.append("🧊 VDU")
+                if is_inside_day:
+                    flags.append("📦 Inside Day")
+
                 res_item = dict(item)
                 res_item.update({
                     "tier": tier_label,
@@ -375,6 +415,10 @@ def scan_nifty500_candidates(
                     "atr14": round(atr14, 2),
                     "vcp_ratio_5d": vcp_ratio_5d,
                     "vcp_ratio_3d": vcp_ratio_3d,
+                    "is_inside_day": is_inside_day,
+                    "is_vdu": is_vdu,
+                    "is_near_3m_high": is_near_3m_high,
+                    "flags": flags,
                     "pivot_20d": round(pivot_20d, 2),
                     "dist_pivot_20d_pct": dist_pivot_20d_pct,
                     "dist_pivot_atr": dist_pivot_atr,
@@ -401,17 +445,19 @@ def scan_nifty500_candidates(
     now_str = now_ist.strftime("%Y-%m-%d %H:%M:%S IST")
     lines = [
         f"# JARVIS PRE-BREAKOUT SWING CANDIDATES (NIFTY 500) — {now_str}",
-        "# Setup: Dual-Tier VCP Coils (Stage 2 Uptrend: Price > 20 EMA > 50 EMA, 5D VCP <= 2.5x ATR, Min ₹5.0 Cr)",
+        "# Setup: Multi-Tier Coils & Pullbacks (Stage 2 Uptrend: Price >= 20 EMA >= 50 EMA, Dual VCP, Min ₹5.0 Cr)",
         "# Strategy: Tomorrow's 3m ORB + PDH Breakout with Day Low SL (NOT Extended!)",
-        "# Tiers: [TIER 1 = 🔥 Pivot Doorstep (<=2.2% from 20D)] | [TIER 2 = 🚀 Base Launchpad (2.2%-5.0% from 20D & near PDH)]",
+        "# Tiers: [TIER 1 = 🔥 Pivot Doorstep (<=2.2% from 20D)] | [TIER 2 = 🚀 Base Launchpad] | [TIER 3 = 🛡️ EMA Pullback Coil]",
+        "# Badges: 👑 52W High Doorstep | 🧊 VDU Supply Dry-Up | 📦 Inside Day Compression",
         "# Review on TradingView and tap button or use `/add <SYMBOL>` in Telegram to promote to watchlist.txt",
         "# ==========================================================================================",
         ""
     ]
     for c in top_candidates:
+        flag_str = f" | {' '.join(c.get('flags', []))}" if c.get('flags') else ""
         lines.append(
-            f"{c['symbol']}  # ₹{c['ltp']:,.2f} | [{c['tier']}] {c['coil_tag']} | 20D Dist: {c['dist_pivot_20d_pct']:+.2f}% ({c['dist_pivot_atr']}x ATR) | "
-            f"PDH Dist: {c['dist_pdh_pct']:+.2f}% | 5D VCP: {c['vcp_ratio_5d']}x ATR | Range: {c['daily_range_pct']:.2f}% | {c['vol_tag']} | {c.get('sector_tag', c.get('industry', 'Equity'))} | Move: {c['change_pct']:+.1f}% | ₹{c['turnover_cr']:,.1f} Cr"
+            f"{c['symbol']}  # ₹{c['ltp']:,.2f} | [{c['tier']}] {c['coil_tag']}{flag_str} | 20D Dist: {c['dist_pivot_20d_pct']:+.2f}% ({c['dist_pivot_atr']}x ATR) | "
+            f"PDH Dist: {c['dist_pdh_pct']:+.2f}% | 5D/3D VCP: {c['vcp_ratio_5d']}x/{c.get('vcp_ratio_3d', 'N/A')}x ATR | Range: {c['daily_range_pct']:.2f}% | {c['vol_tag']} | {c.get('sector_tag', c.get('industry', 'Equity'))} | Move: {c['change_pct']:+.1f}% | ₹{c['turnover_cr']:,.1f} Cr"
         )
 
     with open(CANDIDATES_FILE, "w", encoding="utf-8") as f:
@@ -424,6 +470,7 @@ def scan_nifty500_candidates(
             "strategy": "Dual-Tier Stage 2 VCP Pre-Breakout Coil Engine",
             "tier1_count": sum(1 for c in top_candidates if c.get("tier") == "TIER 1"),
             "tier2_count": sum(1 for c in top_candidates if c.get("tier") == "TIER 2"),
+            "tier3_count": sum(1 for c in top_candidates if c.get("tier") == "TIER 3"),
             "candidates": top_candidates
         }, f, indent=2)
 
@@ -465,31 +512,49 @@ def format_candidates_telegram_card(res, max_display=10, is_morning=False):
 
     tier1 = [c for c in candidates if c.get("tier") == "TIER 1"]
     tier2 = [c for c in candidates if c.get("tier") == "TIER 2"]
+    tier3 = [c for c in candidates if c.get("tier") == "TIER 3"]
 
     if tier1:
-        lines.append("🔥 <b>TIER 1: PIVOT DOORSTEP (Direct 20D Breakout)</b>")
+        lines.append("🔥 <b>TIER 1: PIVOT DOORSTEP (Direct 20D Breakouts)</b>")
         for i, c in enumerate(tier1[:6], 1):
             sym = c["symbol"]
             tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'><b>{sym}</b></a>"
             pdh_status = "Cleared!" if c["dist_pdh_pct"] < 0 else f"{c['dist_pdh_pct']:+.2f}%"
+            badge_str = f" • {' '.join(c.get('flags', []))}" if c.get('flags') else ""
+            vcp_str = f"{c['vcp_ratio_5d']}x (5D) / {c.get('vcp_ratio_3d', 'N/A')}x (3D)"
             lines.append(
-                f"<b>{i}.</b> {c['coil_tag'][:2]} {tv_link} (₹{c['ltp']:,.2f})\n"
+                f"<b>{i}.</b> {c['coil_tag'][:2]} {tv_link} (₹{c['ltp']:,.2f}){badge_str}\n"
                 f"   • Sits: <b>{c['dist_pivot_20d_pct']:+.2f}%</b> from 20D High | PDH: <b>{pdh_status}</b>\n"
-                f"   • 5D VCP: <b>{c['vcp_ratio_5d']}x ATR</b> | {c['vol_tag']} | Move: {c['change_pct']:+.1f}% (₹{c['turnover_cr']:,.1f} Cr)\n"
-                f"   • Sector: <b>{c.get('sector_tag', c.get('industry', 'Equity'))}</b>"
+                f"   • VCP: <b>{vcp_str} ATR</b> | {c['vol_tag']}\n"
+                f"   • Move: <b>{c['change_pct']:+.1f}%</b> (₹{c['turnover_cr']:,.1f} Cr) | Sector: <b>{c.get('sector_tag', c.get('industry', 'Equity'))}</b>"
             )
         lines.append("")
 
     if tier2:
         lines.append("🚀 <b>TIER 2: BASE LAUNCHPAD (10/20 EMA Pocket Coils)</b>")
-        for i, c in enumerate(tier2[:4], 1):
+        for i, c in enumerate(tier2[:3], 1):
             sym = c["symbol"]
             tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'><b>{sym}</b></a>"
             pdh_status = "Cleared!" if c["dist_pdh_pct"] < 0 else f"{c['dist_pdh_pct']:+.2f}%"
+            badge_str = f" • {' '.join(c.get('flags', []))}" if c.get('flags') else ""
             lines.append(
-                f"<b>{i}.</b> 🚀 {tv_link} (₹{c['ltp']:,.2f})\n"
+                f"<b>{i}.</b> 🚀 {tv_link} (₹{c['ltp']:,.2f}){badge_str}\n"
                 f"   • 20D Dist: <b>{c['dist_pivot_20d_pct']:+.2f}% ({c['dist_pivot_atr']}x ATR)</b> | PDH: <b>{pdh_status}</b>\n"
-                f"   • 5D VCP: <b>{c['vcp_ratio_5d']}x ATR</b> | {c['vol_tag']} | Move: {c['change_pct']:+.1f}% (₹{c['turnover_cr']:,.1f} Cr)\n"
+                f"   • 5D VCP: <b>{c['vcp_ratio_5d']}x ATR</b> | {c['vol_tag']} | Move: <b>{c['change_pct']:+.1f}%</b>\n"
+                f"   • Sector: <b>{c.get('sector_tag', c.get('industry', 'Equity'))}</b>"
+            )
+        lines.append("")
+
+    if tier3:
+        lines.append("🛡️ <b>TIER 3: EMA PULLBACK COIL (10/20 EMA Support Shelf)</b>")
+        for i, c in enumerate(tier3[:3], 1):
+            sym = c["symbol"]
+            tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'><b>{sym}</b></a>"
+            badge_str = f" • {' '.join(c.get('flags', []))}" if c.get('flags') else ""
+            lines.append(
+                f"<b>{i}.</b> 🛡️ {tv_link} (₹{c['ltp']:,.2f}){badge_str}\n"
+                f"   • Shelf: <b>Held 10/20 EMA Support</b> | 20D Dist: <b>{c['dist_pivot_20d_pct']:+.2f}%</b>\n"
+                f"   • VCP: <b>{c.get('vcp_ratio_3d', 'N/A')}x (3D)</b> | {c['vol_tag']} | Move: <b>{c['change_pct']:+.1f}%</b>\n"
                 f"   • Sector: <b>{c.get('sector_tag', c.get('industry', 'Equity'))}</b>"
             )
         lines.append("")
@@ -498,7 +563,7 @@ def format_candidates_telegram_card(res, max_display=10, is_morning=False):
     lines.append("💡 <i>Tap below to add vetted candidates to the 3m scanner watchlist:</i>")
 
     kb_rows = []
-    display_candidates = (tier1[:6] + tier2[:4])[:max_display]
+    display_candidates = (tier1[:5] + tier2[:3] + tier3[:2])[:max_display]
     if display_candidates:
         kb_rows.append([{"text": "⚡ ➕ Add All Top 5 to Watchlist", "callback_data": "cand_add_top5"}])
 
