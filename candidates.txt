@@ -1,11 +1,24 @@
-# JARVIS PRE-BREAKOUT SWING CANDIDATES (NIFTY 500) — 2026-11-03 12:20:03 IST
-# Filters: Stage 2 Uptrend (LTP > 20 EMA > 50 EMA), 5D VCP <= 2.2x ATR, Dist to 20D Pivot <= 2.2%, Min ₹5.0 Cr
+# JARVIS PRE-BREAKOUT SWING CANDIDATES (NIFTY 500) — 2026-11-03 12:44:56 IST
+# Setup: Dual-Tier VCP Coils (Stage 2 Uptrend: Price > 20 EMA > 50 EMA, 5D VCP <= 2.5x ATR, Min ₹5.0 Cr)
 # Strategy: Tomorrow's 3m ORB + PDH Breakout with Day Low SL (NOT Extended!)
+# Tiers: [TIER 1 = 🔥 Pivot Doorstep (<=2.2% from 20D)] | [TIER 2 = 🚀 Base Launchpad (2.2%-5.0% from 20D & near PDH)]
 # Review on TradingView and tap button or use `/add <SYMBOL>` in Telegram to promote to watchlist.txt
 # ==========================================================================================
 
-INDHOTEL  # ₹828.85 | 5D VCP: 1.85x ATR | Range: 1.14% | Pivot Dist: +0.55% | 🧊 RVOL 0.73x (Dry Vol) | Today: +0.8% | ₹157.3 Cr | 🔥 PRIME VCP COIL | Equity
-DRREDDY  # ₹1,356.20 | 5D VCP: 2.09x ATR | Range: 1.45% | Pivot Dist: +0.64% | ⚪ RVOL 0.91x (Normal) | Today: +1.1% | ₹134.2 Cr | ⚡ STAGE-2 COIL | Equity
-ICICIBANK  # ₹1,416.10 | 5D VCP: 2.19x ATR | Range: 1.90% | Pivot Dist: +0.41% | 🔥 RVOL 1.31x (Surge) | Today: +2.1% | ₹1,107.4 Cr | ⚡ STAGE-2 COIL | Equity
-INDUSTOWER  # ₹387.95 | 5D VCP: 2.08x ATR | Range: 1.45% | Pivot Dist: +1.11% | 🔥 RVOL 1.44x (Surge) | Today: +1.3% | ₹123.2 Cr | ⚡ STAGE-2 COIL | Equity
-AUROPHARMA  # ₹1,679.00 | 5D VCP: 2.05x ATR | Range: 1.95% | Pivot Dist: +2.10% | ⚪ RVOL 0.83x (Normal) | Today: -0.3% | ₹54.1 Cr | ⚡ STAGE-2 COIL | Equity
+ANANDRATHI  # ₹2,290.50 | [TIER 1] 🔥 PIVOT DOORSTEP | 20D Dist: +0.36% (0.23x ATR) | PDH Dist: +0.28% | 5D VCP: 1.42x ATR | Range: 0.74% | 🧊 RVOL 0.28x (Dry Vol) | Move: +0.6% | ₹16.9 Cr | Equity
+PHOENIXLTD  # ₹2,036.90 | [TIER 1] ⚡ PIVOT IGNITION | 20D Dist: +0.10% (0.04x ATR) | PDH Dist: +0.07% | 5D VCP: 2.49x ATR | Range: 1.19% | 🧊 RVOL 0.56x (Dry Vol) | Move: +1.0% | ₹31.6 Cr | Equity
+ATHERENERG  # ₹1,790.00 | [TIER 1] ⚡ PIVOT IGNITION | 20D Dist: +0.50% (0.12x ATR) | PDH Dist: +0.00% | 5D VCP: 2.21x ATR | Range: 2.25% | 🧊 RVOL 0.65x (Dry Vol) | Move: +0.9% | ₹240.5 Cr | Equity
+ITCHOTELS  # ₹170.86 | [TIER 1] 🔥 PIVOT DOORSTEP | 20D Dist: +2.03% (0.56x ATR) | PDH Dist: +0.58% | 5D VCP: 1.5x ATR | Range: 1.31% | 🧊 RVOL 0.45x (Dry Vol) | Move: +0.2% | ₹17.4 Cr | Equity
+ETERNAL  # ₹348.30 | [TIER 1] ⚡ PIVOT IGNITION | 20D Dist: +0.54% (0.18x ATR) | PDH Dist: +0.01% | 5D VCP: 2.49x ATR | Range: 1.80% | ⚪ RVOL 0.8x (Normal) | Move: +1.2% | ₹418.8 Cr | Equity
+JSWSTEEL  # ₹1,315.50 | [TIER 1] ⚡ PIVOT IGNITION | 20D Dist: +0.51% (0.18x ATR) | PDH Dist: -0.35% | 5D VCP: 2.46x ATR | Range: 1.60% | ⚪ RVOL 1.02x (Normal) | Move: +0.4% | ₹151.5 Cr | Equity
+INDIANB  # ₹864.20 | [TIER 1] ⚡ PIVOT IGNITION | 20D Dist: +1.40% (0.56x ATR) | PDH Dist: +1.14% | 5D VCP: 1.99x ATR | Range: 1.50% | 🧊 RVOL 0.37x (Dry Vol) | Move: -0.1% | ₹25.8 Cr | Equity
+DRREDDY  # ₹1,355.50 | [TIER 1] ⚡ PIVOT IGNITION | 20D Dist: +0.69% (0.31x ATR) | PDH Dist: +0.69% | 5D VCP: 2.09x ATR | Range: 1.51% | ⚪ RVOL 0.87x (Normal) | Move: +1.0% | ₹145.0 Cr | Equity
+INDUSTOWER  # ₹388.75 | [TIER 1] ⚡ PIVOT IGNITION | 20D Dist: +0.90% (0.37x ATR) | PDH Dist: -1.41% | 5D VCP: 2.07x ATR | Range: 1.61% | 🔥 RVOL 1.34x (Surge) | Move: +1.5% | ₹130.1 Cr | Equity
+ICICIBANK  # ₹1,419.80 | [TIER 1] ⚡ PIVOT IGNITION | 20D Dist: +0.15% (0.08x ATR) | PDH Dist: -1.27% | 5D VCP: 2.19x ATR | Range: 1.90% | ⚪ RVOL 1.25x (Normal) | Move: +2.3% | ₹1,200.0 Cr | Equity
+SANSERA  # ₹4,206.00 | [TIER 1] ⚡ PIVOT IGNITION | 20D Dist: +3.69% (0.96x ATR) | PDH Dist: +1.39% | 5D VCP: 1.74x ATR | Range: 1.34% | 🧊 RVOL 0.55x (Dry Vol) | Move: +1.2% | ₹24.4 Cr | Equity
+AXISBANK  # ₹1,233.00 | [TIER 2] 🚀 BASE LAUNCHPAD | 20D Dist: +4.70% (2.35x ATR) | PDH Dist: -0.98% | 5D VCP: 1.35x ATR | Range: 1.86% | ⚪ RVOL 1.09x (Normal) | Move: +2.0% | ₹527.2 Cr | Equity
+AUROPHARMA  # ₹1,680.90 | [TIER 1] ⚡ PIVOT IGNITION | 20D Dist: +1.99% (0.76x ATR) | PDH Dist: +0.36% | 5D VCP: 2.05x ATR | Range: 1.95% | ⚪ RVOL 1.09x (Normal) | Move: -0.2% | ₹81.2 Cr | Equity
+EMCURE  # ₹1,913.70 | [TIER 1] 🔥 PIVOT DOORSTEP | 20D Dist: +2.11% (0.72x ATR) | PDH Dist: -0.73% | 5D VCP: 1.48x ATR | Range: 2.26% | ⚪ RVOL 1.02x (Normal) | Move: +1.6% | ₹10.9 Cr | Equity
+PNB  # ₹122.54 | [TIER 1] ⚡ PIVOT IGNITION | 20D Dist: +2.14% (0.82x ATR) | PDH Dist: +1.26% | 5D VCP: 1.74x ATR | Range: 2.16% | ⚪ RVOL 0.9x (Normal) | Move: -0.4% | ₹127.3 Cr | Equity
+LGEINDIA  # ₹1,702.90 | [TIER 2] 🚀 BASE LAUNCHPAD | 20D Dist: +4.87% (2.14x ATR) | PDH Dist: -0.92% | 5D VCP: 1.45x ATR | Range: 1.78% | ⚪ RVOL 0.84x (Normal) | Move: +1.2% | ₹23.2 Cr | Equity
+NAVINFLUOR  # ₹8,466.00 | [TIER 1] ⚡ PIVOT IGNITION | 20D Dist: +3.19% (0.91x ATR) | PDH Dist: +2.13% | 5D VCP: 1.7x ATR | Range: 2.09% | ⚪ RVOL 1.01x (Normal) | Move: +0.7% | ₹70.6 Cr | Equity
