@@ -2874,6 +2874,15 @@ def get_open_trades_from_logs():
         except Exception:
             pass
 
+    # 4. Filter out any ignored/blacklisted symbols
+    try:
+        cfg = load_config()
+        ignored_symbols = set(s.upper() for s in cfg.get("ignored_symbols", ["MOTHERSON"]))
+        for ig in ignored_symbols:
+            logged_trades.pop(ig, None)
+    except Exception:
+        pass
+
     return logged_trades
 
 
