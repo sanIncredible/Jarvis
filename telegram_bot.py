@@ -92,11 +92,48 @@ def get_telegram_config():
     return bot_token, chat_id
 
 
+def get_telegram_extended_config():
+    """Retrieves full Telegram configuration including group_id, authorized_chats, and topic mappings."""
+    cfg = load_config()
+    tg = cfg.get("telegram", {})
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip() or tg.get("bot_token", "").strip()
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip() or str(tg.get("chat_id", "")).strip()
+    group_id = str(tg.get("group_id", "")).strip()
+    authorized_chats = [str(c).strip() for c in tg.get("authorized_chats", [])]
+    if chat_id and chat_id not in authorized_chats:
+        authorized_chats.append(chat_id)
+    if group_id and group_id not in authorized_chats:
+        authorized_chats.append(group_id)
+    topics = tg.get("topics", {})
+    return {
+        "bot_token": bot_token,
+        "chat_id": chat_id,
+        "group_id": group_id,
+        "authorized_chats": authorized_chats,
+        "topics": topics
+    }
+
+
+def get_topic_target(topic_name):
+    """
+    Resolves the destination chat_id and message_thread_id for a given topic category.
+    Returns (target_chat_id, thread_id).
+    Falls back to (primary_chat_id, None) if group_id or topic is not configured.
+    """
+    ext = get_telegram_extended_config()
+    group_id = ext.get("group_id")
+    topics = ext.get("topics", {})
+    thread_id = topics.get(topic_name)
+    if group_id and thread_id is not None:
+        return group_id, int(thread_id)
+    return ext.get("chat_id"), None
+
+
 # ---------------------------------------------------------
 # Telegram Bot API Helpers
 # ---------------------------------------------------------
-def send_telegram_msg(chat_id, text, parse_mode="HTML", reply_markup=None):
-    """Sends a Telegram message to a specific chat, falling back to plain text if markup parsing fails."""
+def send_telegram_msg(chat_id, text, parse_mode="HTML", reply_markup=None, thread_id=None):
+    """Sends a Telegram message to a specific chat and thread, falling back to plain text if markup parsing fails."""
     bot_token, _ = get_telegram_config()
     if not bot_token or not chat_id:
         return False, "Missing bot_token or chat_id"
@@ -108,6 +145,8 @@ def send_telegram_msg(chat_id, text, parse_mode="HTML", reply_markup=None):
         "parse_mode": parse_mode,
         "disable_web_page_preview": True
     }
+    if thread_id is not None:
+        payload["message_thread_id"] = int(thread_id)
     if reply_markup:
         payload["reply_markup"] = reply_markup
 
@@ -137,6 +176,19 @@ def send_telegram_msg(chat_id, text, parse_mode="HTML", reply_markup=None):
         return False, f"{he}: {err_body}"
     except Exception as e:
         return False, str(e)
+
+
+def send_topic_alert(topic_name, text, parse_mode="HTML", reply_markup=None):
+    """Sends an alert directly to the designated Telegram forum topic thread."""
+    chat_id, thread_id = get_topic_target(topic_name)
+    return send_telegram_msg(chat_id, text, parse_mode=parse_mode, reply_markup=reply_markup, thread_id=thread_id)
+
+
+def send_topic_alert_async(topic_name, text, parse_mode="HTML", reply_markup=None):
+    """Sends an alert directly to designated Telegram forum topic thread asynchronously."""
+    def _worker():
+        send_topic_alert(topic_name, text, parse_mode=parse_mode, reply_markup=reply_markup)
+    threading.Thread(target=_worker, daemon=True).start()
 
 
 def edit_telegram_msg(chat_id, message_id, text, parse_mode="HTML", reply_markup=None):
@@ -1100,11 +1152,27 @@ def handle_positions_command():
             pct_sign = "+" if pnl_pct > 0 else ""
             qty_sign = "+" if qty > 0 else ""
 
+            sl_p = float(p.get("stop_loss", 0) or 0)
+            var_val = float(p.get("value_at_risk", 0) or 0)
+            var_pct = float(p.get("var_pct", 0) or 0)
+
+            if sl_p >= avg_p and avg_p > 0:
+                var_str = "🟢 <b>₹0.00 (Risk-Free / Breakeven)</b>"
+            elif var_val <= 0 and sl_p > 0:
+                var_str = "🟢 <b>₹0.00 (Risk-Free)</b>"
+            elif sl_p > 0:
+                var_str = f"⚠️ <b>-₹{var_val:,.2f}</b> ({var_pct:.2f}%)"
+            else:
+                var_str = "<i>No SL set</i>"
+
+            sl_str = f"₹{sl_p:,.2f}" if sl_p > 0 else "<i>Not set</i>"
+
             card = (
                 f"{pnl_icon} <b>{sym}</b> [<code>{broker} • {prod}</code>]\n"
                 f"  • <b>Qty:</b> {qty_sign}{qty} @ ₹{avg_p:,.2f} | <b>LTP:</b> ₹{ltp:,.2f}\n"
                 f"  • <b>P&L:</b> {pnl_icon} <b>{pnl_str}</b> ({pct_sign}{pnl_pct:.2f}%)\n"
-                f"  • <b>Exposure:</b> ₹{exposure:,.2f}"
+                f"  • <b>Exposure:</b> ₹{exposure:,.2f}\n"
+                f"  • <b>Stop-Loss:</b> {sl_str} | <b>Value at Risk:</b> {var_str}"
             )
             lines.append(card)
 
@@ -1113,10 +1181,15 @@ def handle_positions_command():
     tot_pnl_icon = "🟢" if tot_pnl >= 0 else "🔴"
     tot_pnl_str = f"+₹{tot_pnl:,.2f}" if tot_pnl > 0 else (f"-₹{abs(tot_pnl):,.2f}" if tot_pnl < 0 else "₹0.00")
 
+    tot_var = float(totals.get("total_var", 0.0) or 0.0)
+    tot_var_pct = float(totals.get("total_var_pct", 0.0) or 0.0)
+    var_icon = "🟢" if tot_var <= 0 else "🛡️"
+
     lines.append("💼 <b>PORTFOLIO TOTALS:</b>")
     lines.append(f"• <b>Open Positions:</b> {totals['count']}")
     lines.append(f"• <b>Total Net P&L:</b> {tot_pnl_icon} <b>{tot_pnl_str}</b>")
     lines.append(f"• <b>Total Exposure:</b> ₹{totals['total_exposure']:,.2f}")
+    lines.append(f"• <b>Total Value at Risk (VaR):</b> {var_icon} <b>₹{tot_var:,.2f}</b> ({tot_var_pct:.2f}% of exposure)")
     lines.append(f"• <b>Brokers Synced:</b> {status_str}")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append(f"🕒 <i>Updated: {now_str}</i>")
@@ -1338,13 +1411,43 @@ def handle_trailing_command():
             j_badge = p.get("jeff_badge", badge)
             j_status = p.get("jeff_status", action_desc)
 
+            var_val = float(p.get("value_at_risk", 0.0) or 0.0)
+            var_pct = float(p.get("var_pct", 0.0) or 0.0)
+            if init_sl >= entry_p and entry_p > 0:
+                var_str = "🟢 <b>₹0.00 (Risk-Free / Breakeven)</b>"
+            elif var_val <= 0 and init_sl > 0:
+                var_str = "🟢 <b>₹0.00 (Risk-Free)</b>"
+            elif init_sl > 0:
+                var_str = f"⚠️ <b>-₹{var_val:,.2f}</b> ({var_pct:.2f}%)"
+            else:
+                var_str = "<i>N/A</i>"
+
+            rec_var_val = float(p.get("rec_value_at_risk", 0.0) or 0.0)
+            rec_var_pct = float(p.get("rec_var_pct", 0.0) or 0.0)
+            if rec_sl >= entry_p and entry_p > 0:
+                rec_var_str = "🟢 ₹0.00 (Free Roll)"
+            elif rec_var_val <= 0 and rec_sl > 0:
+                rec_var_str = "🟢 ₹0.00"
+            else:
+                rec_var_str = f"⚠️ -₹{rec_var_val:,.2f} ({rec_var_pct:.2f}%)"
+
             lines.append(
                 f"<b>{sym}</b> [<code>{broker} • {prod}</code>]{src_tag}\n"
                 f"  • <b>Entry:</b> ₹{entry_p:,.2f} | <b>LTP:</b> ₹{ltp:,.2f} ({pct_sign}{pnl_pct:.2f}% | {r_sign}{r_mult:.1f}R)\n"
                 f"  • <b>Stop-Loss:</b> ₹{init_sl:,.2f} ➔ <b>Rec Trail:</b> <b>₹{rec_sl:,.2f}</b>\n"
+                f"  • <b>Value at Risk:</b> {var_str} (➔ Rec: {rec_var_str})\n"
                 f"  • <b>Jeff Sun Trail:</b> <b>{j_badge}</b>\n"
                 f"    <i>{j_status}</i>{ema_str}"
             )
+
+    if positions:
+        tot_var = sum(float(p.get("value_at_risk", 0.0) or 0.0) for p in positions)
+        tot_exp = sum(float(p.get("exposure", 0.0) or (p.get("entry_price", 0.0) * p.get("qty", 0))) for p in positions)
+        tot_var_pct = round((tot_var / tot_exp) * 100, 2) if tot_exp > 0 else 0.0
+        var_icon = "🟢" if tot_var <= 0 else "🛡️"
+
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append(f"🛡️ <b>Portfolio Total Value at Risk:</b> {var_icon} <b>₹{tot_var:,.2f}</b> ({tot_var_pct:.2f}% of exposure)")
 
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("💡 <b>Jeff Sun Momentum Trailing Framework:</b>")
@@ -1509,13 +1612,27 @@ def handle_callback_query(cq):
     bot_token, authorized_chat_id = get_telegram_config()
     cq_id = cq.get("id")
     cq_data = cq.get("data", "")
+    cq_from = cq.get("from", {})
+    user_id = cq_from.get("id")
     cq_msg = cq.get("message", {})
     chat_id = cq_msg.get("chat", {}).get("id")
+    thread_id = cq_msg.get("message_thread_id")
     msg_id = cq_msg.get("message_id")
 
-    if authorized_chat_id and str(chat_id) != str(authorized_chat_id):
-        answer_callback_query(cq_id, "Unauthorized", show_alert=True)
-        return
+    ext = get_telegram_extended_config()
+    auth_chats = ext.get("authorized_chats", [])
+    primary_user_id = ext.get("chat_id")
+
+    # Security check: in a group, only primary bot admin can execute interactive buttons
+    is_group = str(chat_id).startswith("-")
+    if is_group:
+        if primary_user_id and str(user_id) != str(primary_user_id):
+            answer_callback_query(cq_id, "⛔ Unauthorized: Only bot administrator can execute actions.", show_alert=True)
+            return
+    else:
+        if primary_user_id and str(chat_id) != str(primary_user_id) and str(chat_id) not in auth_chats:
+            answer_callback_query(cq_id, "Unauthorized", show_alert=True)
+            return
 
     if cq_data.startswith("buy_exec:"):
         parts = cq_data.split(":")
@@ -1567,6 +1684,10 @@ def handle_callback_query(cq):
             )
 
         edit_telegram_msg(chat_id, msg_id, receipt, reply_markup={"inline_keyboard": []})
+        # Ensure executed order receipt is mirrored to dedicated 'orders' topic if not already in orders topic
+        orders_chat, orders_thread = get_topic_target("orders")
+        if str(chat_id) != str(orders_chat) or (thread_id and thread_id != orders_thread):
+            send_topic_alert("orders", receipt)
 
     elif cq_data.startswith("buy_switch:"):
         parts = cq_data.split(":")
@@ -1643,6 +1764,10 @@ def handle_callback_query(cq):
                 ]
             }
             edit_telegram_msg(chat_id, msg_id, receipt, reply_markup=markup)
+            # Mirror exit receipt to orders topic
+            orders_chat, orders_thread = get_topic_target("orders")
+            if str(chat_id) != str(orders_chat) or (thread_id and thread_id != orders_thread):
+                send_topic_alert("orders", receipt)
         else:
             receipt = (
                 f"❌ <b>EXIT ORDER FAILED</b>\n"
@@ -1712,7 +1837,8 @@ def handle_callback_query(cq):
                     f"• <b>Added ({len(added)}):</b> {', '.join(added)}\n"
                     f"• <b>Total Watchlist Stocks:</b> {len(curr_syms)}\n"
                     f"• Immediate 3m ORB rescan & GitHub Cloud sync triggered!\n"
-                    f"• 📊 <a href='https://sanincredible.github.io/Jarvis/'>View on Dashboard</a>"
+                    f"• 📊 <a href='https://sanincredible.github.io/Jarvis/'>View on Dashboard</a>",
+                    thread_id=thread_id
                 )
             else:
                 answer_callback_query(cq_id, "All top 5 candidates are already in your watchlist!", show_alert=True)
@@ -1733,7 +1859,8 @@ def handle_callback_query(cq):
                 f"✅ <b>PROMOTED TO WATCHLIST: {sym}</b>\n"
                 f"• Added to <code>watchlist.txt</code> ({len(curr_syms)} total stocks)\n"
                 f"• Immediate 3m ORB rescan triggered!\n"
-                f"• 📊 <a href='https://sanincredible.github.io/Jarvis/'>View on Dashboard</a>"
+                f"• 📊 <a href='https://sanincredible.github.io/Jarvis/'>View on Dashboard</a>",
+                thread_id=thread_id
             )
 
     elif cq_data == "cand_refresh":
@@ -1746,7 +1873,7 @@ def handle_callback_query(cq):
     elif cq_data == "wl_show":
         answer_callback_query(cq_id, "Opening watchlist...")
         text = handle_watchlist_command()
-        send_telegram_msg(chat_id, text)
+        send_telegram_msg(chat_id, text, thread_id=thread_id)
 
     elif cq_data.startswith("trail_be:"):
         parts = cq_data.split(":")
@@ -1777,7 +1904,8 @@ def handle_callback_query(cq):
                     f"• <b>New Hard SL:</b> <b>₹{be_sl:,.2f}</b> (Entry + 0.15% brokerage buffer)\n"
                     f"• <b>Risk Status:</b> 🟢 <b>100% Risk-Free (Free Roll!)</b>\n"
                     f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                    f"💡 <i>Remaining shares are now riding the 10 EMA (₹{target_pos.get('ema10', 'N/A')}).</i>"
+                    f"💡 <i>Remaining shares are now riding the 10 EMA (₹{target_pos.get('ema10', 'N/A')}).</i>",
+                    thread_id=thread_id
                 )
             else:
                 err_msg = res.get("message") or res.get("details") or "Broker error"
@@ -1797,7 +1925,7 @@ def handle_callback_query(cq):
 
         answer_callback_query(cq_id, f"Opening order preview for {symbol}...")
         preview_text, markup = build_buy_preview(symbol, mode, sl_mode, broker)
-        ok, res = send_telegram_msg(chat_id, preview_text, reply_markup=markup)
+        ok, res = send_telegram_msg(chat_id, preview_text, reply_markup=markup, thread_id=thread_id)
         if not ok:
             print(f"⚠️ Failed to send order preview for {symbol}: {res}", flush=True)
 
@@ -1805,14 +1933,22 @@ def handle_callback_query(cq):
 # ---------------------------------------------------------
 # Core Message Dispatcher
 # ---------------------------------------------------------
-def dispatch_command(msg_text, from_chat_id):
+def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
     """Processes incoming Telegram message and returns response text."""
-    bot_token, authorized_chat_id = get_telegram_config()
+    ext = get_telegram_extended_config()
+    auth_chats = ext.get("authorized_chats", [])
+    primary_user_id = ext.get("chat_id")
 
-    # Security: strict chat_id validation
-    if authorized_chat_id and str(from_chat_id) != str(authorized_chat_id):
-        print(f"⛔ Unauthorized access attempt: incoming chat_id={from_chat_id} vs authorized={authorized_chat_id}", flush=True)
-        return f"⛔ <b>Unauthorized:</b> Access restricted to bot administrator (Your Chat ID: <code>{from_chat_id}</code>)."
+    # Security: strict chat/user validation
+    is_group = str(from_chat_id).startswith("-")
+    if is_group:
+        if primary_user_id and str(user_id) != str(primary_user_id):
+            print(f"⛔ Unauthorized user in group: incoming user_id={user_id} vs admin={primary_user_id}", flush=True)
+            return f"⛔ <b>Unauthorized:</b> Access restricted to bot administrator."
+    else:
+        if primary_user_id and str(from_chat_id) != str(primary_user_id) and str(from_chat_id) not in auth_chats:
+            print(f"⛔ Unauthorized access attempt: incoming chat_id={from_chat_id} vs primary={primary_user_id}", flush=True)
+            return f"⛔ <b>Unauthorized:</b> Access restricted to bot administrator (Your Chat ID: <code>{from_chat_id}</code>)."
 
     text = msg_text.strip()
     if not text:
@@ -1874,6 +2010,40 @@ def dispatch_command(msg_text, from_chat_id):
         return handle_scan_command()
     elif cmd in ("/regime", "regime"):
         return handle_regime_command()
+    elif cmd in ("/topics", "/topic", "/id"):
+        group_id = ext.get("group_id", "Not configured")
+        topics = ext.get("topics", {})
+        topic_lines = "\n".join([f"• <b>{k}:</b> Topic ID <code>{v}</code>" for k, v in topics.items()])
+        return (
+            f"ℹ️ <b>TELEGRAM TOPIC CONFIGURATION</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"• <b>Current Chat ID:</b> <code>{from_chat_id}</code>\n"
+            f"• <b>Current Topic Thread:</b> <code>{thread_id or 'General / DM'}</code>\n"
+            f"• <b>Sender User ID:</b> <code>{user_id}</code>\n"
+            f"• <b>Supergroup ID:</b> <code>{group_id}</code>\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"<b>Topic Mappings:</b>\n{topic_lines}\n\n"
+            "<i>Commands & alerts automatically route to their dedicated topic threads!</i>"
+        )
+    elif cmd == "/settopic":
+        if not args or len(args.split()) < 2:
+            return "<b>Usage:</b> <code>/settopic &lt;topic_name&gt; &lt;thread_id&gt;</code>\n<i>e.g. /settopic orb_signals 8</i>"
+        parts = args.split()
+        t_name = parts[0].lower()
+        try:
+            t_id = int(parts[1])
+        except ValueError:
+            return "❌ Thread ID must be an integer."
+        cfg = load_config()
+        if "telegram" not in cfg:
+            cfg["telegram"] = {}
+        if "topics" not in cfg["telegram"]:
+            cfg["telegram"]["topics"] = {}
+        cfg["telegram"]["topics"][t_name] = t_id
+        if save_config(cfg):
+            return f"✅ Topic <code>{t_name}</code> mapped to Thread ID <code>{t_id}</code>."
+        else:
+            return "❌ Failed to save config_credentials.json."
     else:
         return (
             f"❓ Unknown command: <code>{cmd}</code>\n"
@@ -1934,21 +2104,24 @@ def run_telegram_bot_loop(stop_event=None):
                             continue
                         chat = msg.get("chat", {})
                         chat_id = chat.get("id")
+                        thread_id = msg.get("message_thread_id")
+                        from_user = msg.get("from", {})
+                        user_id = from_user.get("id")
                         text = msg.get("text", "")
-                        sender = msg.get("from", {}).get("first_name", "User")
+                        sender = from_user.get("first_name", "User")
 
-                        print(f"📩 [{get_ist_now().strftime('%H:%M:%S')}] Telegram from {sender} (ChatID: {chat_id}): {text[:50]}", flush=True)
+                        print(f"📩 [{get_ist_now().strftime('%H:%M:%S')}] Telegram from {sender} (ChatID: {chat_id}, Thread: {thread_id}): {text[:50]}", flush=True)
 
-                        reply = dispatch_command(text, chat_id)
+                        reply = dispatch_command(text, chat_id, user_id=user_id, thread_id=thread_id)
                         if reply:
                             if isinstance(reply, tuple):
-                                ok, resp_data = send_telegram_msg(chat_id, reply[0], reply_markup=reply[1])
+                                ok, resp_data = send_telegram_msg(chat_id, reply[0], reply_markup=reply[1], thread_id=thread_id)
                             else:
-                                ok, resp_data = send_telegram_msg(chat_id, reply)
+                                ok, resp_data = send_telegram_msg(chat_id, reply, thread_id=thread_id)
                             if not ok:
-                                print(f"⚠️ Failed to send Telegram reply to {chat_id}: {resp_data}", flush=True)
+                                print(f"⚠️ Failed to send Telegram reply to {chat_id} (thread {thread_id}): {resp_data}", flush=True)
                             else:
-                                print(f"✅ Replied to {chat_id} for command: {text[:30]}", flush=True)
+                                print(f"✅ Replied to {chat_id} (thread {thread_id}) for command: {text[:30]}", flush=True)
                     except Exception as item_ex:
                         print(f"❌ Error processing update {u.get('update_id')}: {item_ex}", flush=True)
                         import traceback
@@ -2015,13 +2188,15 @@ def run_trailing_surveillance_worker():
                                 is_hit = ltp <= sl
                                 title = f"🔴 <b>STOP-LOSS BREACHED: {sym}!</b>" if is_hit else f"🚨 <b>RISK DANGER: {sym} NEAR SL!</b>"
                                 status_desc = f"<b>CRITICAL:</b> LTP ₹{ltp:,.2f} is below Stop-Loss ₹{sl:,.2f}!" if is_hit else f"Price is only <b>{dist_sl:.2f}%</b> (₹{abs(ltp-sl):,.2f}) away from Stop-Loss ₹{sl:,.2f}."
+                                var_inr = float(p.get("value_at_risk", 0.0) or 0.0)
+                                var_str = "🟢 ₹0.00 (Risk-Free)" if var_inr <= 0 else f"⚠️ -₹{var_inr:,.2f}"
 
                                 alert_msg = (
                                     f"{title}\n"
                                     "━━━━━━━━━━━━━━━━━━━━━━\n"
                                     f"📌 <b>Symbol:</b> {sym} ({broker} • {prod})\n"
                                     f"📈 <b>LTP:</b> ₹{ltp:,.2f} | <b>Stop-Loss:</b> ₹{sl:,.2f}\n"
-                                    f"⚠️ <b>Buffer:</b> {dist_sl:.2f}%\n"
+                                    f"⚠️ <b>Buffer:</b> {dist_sl:.2f}% | <b>Value at Risk:</b> {var_str}\n"
                                     f"💼 <b>Open Qty:</b> {qty} shs | <b>P&L:</b> ₹{pnl:+,.2f} ({pnl_pct:+.1f}%)\n"
                                     f"🎯 <b>Action:</b> <b>{badge}</b>\n"
                                     "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -2032,11 +2207,28 @@ def run_trailing_surveillance_worker():
                                     [{"text": f"🔴 Exit {sym} Now", "callback_data": f"ex_p:{b_code}:{sym}"}],
                                     [{"text": "🎯 Trailing Cockpit", "callback_data": "trail_refresh"}]
                                 ]
-                                send_telegram_msg(chat_id, alert_msg, reply_markup={"inline_keyboard": kb})
+                                send_topic_alert("risk_trailing", alert_msg, reply_markup={"inline_keyboard": kb})
                                 _sent_trailing_alerts[alert_key] = now_ts
 
-                        # 2. Super Winner (+3R or +6% gain) -> Book 50%
+                        # 2. Super Winner (+3R or +6% gain) -> Book 50% AND ensure Breakeven Ratchet is applied
                         elif (r_mult >= 3.0 or pnl_pct >= 6.0) and r_mult > 0:
+                            # Autonomous check: ensure SL is at least at Breakeven
+                            raw_be = entry_p * 1.0015
+                            from order_engine import round_to_tick
+                            breakeven_sl = round_to_tick(raw_be)
+                            if sl < breakeven_sl and entry_p > 0 and sl > 0:
+                                ratchet_key = (sym, "AUTO_BREAKEVEN")
+                                if now_ts - _sent_trailing_alerts.get(ratchet_key, 0) > 1800:
+                                    _sent_trailing_alerts[ratchet_key] = now_ts
+                                    from order_engine import ratchet_stop_loss_to_breakeven
+                                    ratchet_stop_loss_to_breakeven(
+                                        broker=broker,
+                                        symbol=sym,
+                                        quantity=qty,
+                                        entry_price=entry_p,
+                                        product=prod
+                                    )
+
                             alert_key = (sym, "BOOK_3R")
                             last_sent = _sent_trailing_alerts.get(alert_key, 0)
                             if now_ts - last_sent > 3600:  # 1 hour cooldown
@@ -2056,7 +2248,7 @@ def run_trailing_surveillance_worker():
                                     [{"text": f"🟡 Book 50% ({half_qty} shs)", "callback_data": f"ex_x:{b_code}:{sym}:half"}],
                                     [{"text": "🎯 Trailing Cockpit", "callback_data": "trail_refresh"}, {"text": f"🔴 Exit 100%", "callback_data": f"ex_p:{b_code}:{sym}"}]
                                 ]
-                                send_telegram_msg(chat_id, alert_msg, reply_markup={"inline_keyboard": kb})
+                                send_topic_alert("risk_trailing", alert_msg, reply_markup={"inline_keyboard": kb})
                                 _sent_trailing_alerts[alert_key] = now_ts
 
                         # 3. JEFF SUN AUTOMATED BREAKEVEN RATCHET (+1.5R or +2.5% Gain)
@@ -2064,10 +2256,12 @@ def run_trailing_surveillance_worker():
                             ratchet_key = (sym, "AUTO_BREAKEVEN")
                             last_sent = _sent_trailing_alerts.get(ratchet_key, 0)
                             if (now_ts - last_sent > 1800) and sl > 0:
+                                from order_engine import round_to_tick, ratchet_stop_loss_to_breakeven
                                 raw_be = entry_p * 1.0015
-                                breakeven_sl = round(round(raw_be / 0.05) * 0.05, 2)
+                                breakeven_sl = round_to_tick(raw_be)
                                 if sl < breakeven_sl:
-                                    from order_engine import ratchet_stop_loss_to_breakeven
+                                    # Set cooldown immediately so we NEVER hammer broker in a loop on failure!
+                                    _sent_trailing_alerts[ratchet_key] = now_ts
                                     r_ok, r_res = ratchet_stop_loss_to_breakeven(
                                         broker=broker,
                                         symbol=sym,
@@ -2076,7 +2270,6 @@ def run_trailing_surveillance_worker():
                                         product=prod
                                     )
                                     if r_ok:
-                                        _sent_trailing_alerts[ratchet_key] = now_ts
                                         ema10_val = p.get("ema10", "N/A")
                                         alert_msg = (
                                             f"🛡️ <b>JEFF SUN AUTO-TRAIL: {sym} RATCHETED TO BREAKEVEN!</b>\n"
@@ -2095,7 +2288,17 @@ def run_trailing_surveillance_worker():
                                             [{"text": f"🟡 Book 50% ({max(1, qty//2)} shs)", "callback_data": f"ex_x:{b_code}:{sym}:half"}],
                                             [{"text": "🎯 Trailing Cockpit", "callback_data": "trail_refresh"}, {"text": f"🔴 Exit {sym}", "callback_data": f"ex_p:{b_code}:{sym}"}]
                                         ]
-                                        send_telegram_msg(chat_id, alert_msg, reply_markup={"inline_keyboard": kb})
+                                        send_topic_alert("risk_trailing", alert_msg, reply_markup={"inline_keyboard": kb})
+                                    else:
+                                        err_details = r_res.get("details") or r_res.get("message") or "Broker SL rejection"
+                                        send_topic_alert(
+                                            "risk_trailing",
+                                            f"⚠️ <b>AUTO-TRAIL NOTICE: {sym} Breakeven Ratchet Failed</b>\n"
+                                            f"• <b>Symbol:</b> {sym} ({broker} • {prod})\n"
+                                            f"• <b>Target SL:</b> ₹{breakeven_sl:,.2f}\n"
+                                            f"• <b>Broker Feedback:</b> <code>{err_details}</code>\n"
+                                            "<i>Cooldown active (30 mins). Will not retry immediately to prevent repeated broker orders.</i>"
+                                        )
         except Exception:
             pass
 
