@@ -1062,26 +1062,51 @@ def send_telegram_eod_card(summary: Dict[str, Any], config: Dict[str, Any]):
 
     # Active Open Positions
     lines.append(f"📈 <b>Active Open Positions ({len(open_pos)}):</b>")
+    tot_var = 0.0
     for p in open_pos:
         u_icon = "🟢" if p["unrealized_pnl"] >= 0 else "🔴"
         u_sign = "+" if p["unrealized_pnl"] >= 0 else ""
         rr_str = f" | {p['current_rr']:+.1f}R" if p.get("current_rr") is not None else ""
-        lines.append(f"• <b>{p['symbol']}</b>: {u_icon} {u_sign}₹{p['unrealized_pnl']:,.2f} ({p['pnl_pct']:+.1f}%{rr_str}) — {p['action_signal']}")
+        sl = float(p.get("sl", 0) or 0)
+        entry_p = float(p.get("entry_p", 0) or 0)
+        qty = float(p.get("qty", 0) or 0)
+        if sl >= entry_p and entry_p > 0:
+            var_str = "🟢 VaR: ₹0.00 (Risk-Free)"
+        elif sl > 0 and entry_p > 0:
+            var_inr = round((entry_p - sl) * qty, 2)
+            tot_var += var_inr
+            var_str = f"⚠️ VaR: -₹{var_inr:,.2f}"
+        else:
+            var_str = ""
+
+        var_suffix = f" [{var_str}]" if var_str else ""
+        lines.append(f"• <b>{p['symbol']}</b>: {u_icon} {u_sign}₹{p['unrealized_pnl']:,.2f} ({p['pnl_pct']:+.1f}%{rr_str}){var_suffix} — {p['action_signal']}")
 
     lines.append(f"\n💼 <b>Total Unrealized P&L:</b> ₹{tot_unrealized:+,.2f}")
+    if tot_var > 0:
+        lines.append(f"🛡️ <b>Total Value at Risk:</b> ⚠️ ₹{tot_var:,.2f}")
+    else:
+        lines.append("🛡️ <b>Total Value at Risk:</b> 🟢 ₹0.00 (Risk-Free Portfolio)")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append(f"🏆 <b>Overall Win Rate:</b> {summary.get('win_rate', 0)*100:.1f}% | <b>Profit Factor:</b> {summary.get('profit_factor', 0):.2f}")
     lines.append(f"📁 <i>Updated Journal saved to Journal.xlsx</i>")
 
     msg = "\n".join(lines)
     try:
+        tg_group_id = tg_cfg.get("group_id", "").strip()
+        topics = tg_cfg.get("topics", {})
+        thread_id = topics.get("reports") if tg_group_id else None
+        target_chat = tg_group_id if (tg_group_id and thread_id) else chat_id
+
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         payload = {
-            "chat_id": chat_id,
+            "chat_id": target_chat,
             "text": msg,
             "parse_mode": "HTML",
             "disable_web_page_preview": True
         }
+        if thread_id:
+            payload["message_thread_id"] = int(thread_id)
         r = requests.post(url, json=payload, timeout=6)
         if r.status_code == 200:
             print("📱 EOD Telegram Summary Report delivered successfully!")
