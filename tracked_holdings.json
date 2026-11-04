@@ -1,0 +1,26 @@
+{
+  "BHARTIHEXA": {
+    "broker": "DHAN",
+    "sl": 1653.50,
+    "target": 1850.00,
+    "notes": "Dhan CNC Holding | Breakeven Trailed (Order 221261104657003)"
+  },
+  "TATACONSUM": {
+    "broker": "DHAN",
+    "sl": 1004.00,
+    "target": 1120.00,
+    "notes": "Dhan MTF Holding | Breakeven Trailed (Order 221261104666203)"
+  },
+  "NSE": {
+    "broker": "ZERODHA",
+    "sl": 1746.00,
+    "target": 1880.00,
+    "notes": "Zerodha CNC Holding | Structural SL"
+  },
+  "KROSS": {
+    "broker": "ZERODHA",
+    "sl": 265.40,
+    "target": 326.00,
+    "notes": "Zerodha CNC Holding | 5D Low SL"
+  }
+}
