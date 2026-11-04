@@ -709,6 +709,106 @@ def send_morning_candidate_card():
         return False
 
 
+def sync_candidates_to_github():
+    """Pushes candidates.json and candidates.txt to GitHub via REST API and purges jsDelivr CDN."""
+    cfg = load_config()
+    gh_cfg = cfg.get("github", {})
+    token = gh_cfg.get("token", "").strip()
+    if not token:
+        return False
+    owner = gh_cfg.get("username", "sanIncredible").strip()
+    repo = gh_cfg.get("repo", "Jarvis").strip()
+    branch = gh_cfg.get("branch", "main").strip()
+
+    import base64
+    for file_path in [CANDIDATES_JSON, CANDIDATES_FILE]:
+        if not file_path.is_file():
+            continue
+        fname = file_path.name
+        try:
+            with open(file_path, "rb") as f:
+                content_b64 = base64.b64encode(f.read()).decode("ascii")
+            url = f"https://api.github.com/repos/{owner}/{repo}/contents/{fname}"
+            headers = {
+                "Authorization": f"token {token}",
+                "Accept": "application/vnd.github.v3+json",
+                "User-Agent": "Jarvis-Candidate-Scanner"
+            }
+            req = urllib.request.Request(f"{url}?ref={branch}", headers=headers)
+            sha = None
+            try:
+                with urllib.request.urlopen(req, timeout=8) as r:
+                    d = json.loads(r.read().decode("utf-8"))
+                    sha = d.get("sha")
+            except Exception:
+                pass
+
+            payload = {
+                "message": f"Auto EOD Candidate Scan ({fname})",
+                "content": content_b64,
+                "branch": branch
+            }
+            if sha:
+                payload["sha"] = sha
+            data = json.dumps(payload).encode("utf-8")
+            put_req = urllib.request.Request(url, data=data, headers=headers, method="PUT")
+            with urllib.request.urlopen(put_req, timeout=10) as r:
+                if r.status in (200, 201):
+                    print(f"   ✅ GitHub synced: {fname}")
+        except Exception as e:
+            print(f"   ⚠️ GitHub sync notice for {fname}: {e}")
+
+    try:
+        purge_url = "https://purge.jsdelivr.net/gh/sanIncredible/Jarvis@main/candidates.json"
+        p_req = urllib.request.Request(purge_url, headers={"User-Agent": "Jarvis-Purge"})
+        with urllib.request.urlopen(p_req, timeout=4):
+            pass
+        print("   ⚡ jsDelivr CDN cache purged for candidates.json!")
+    except Exception:
+        pass
+    return True
+
+
+def send_eod_candidate_card(res=None):
+    """Dispatches the EOD Candidates Review card to Telegram with 1-tap watchlist add buttons."""
+    cfg = load_config()
+    tg_token = cfg.get("telegram", {}).get("bot_token")
+    tg_chat_id = cfg.get("telegram", {}).get("chat_id")
+    if not tg_token or not tg_chat_id:
+        return False
+
+    if not res:
+        if CANDIDATES_JSON.is_file():
+            try:
+                with open(CANDIDATES_JSON, "r", encoding="utf-8") as f:
+                    cdata = json.load(f)
+                    res = {"status": "success", "candidates": cdata.get("candidates", [])}
+            except Exception:
+                pass
+    if not res or not res.get("candidates"):
+        return False
+
+    text, reply_markup = format_candidates_telegram_card(res, max_display=10, is_morning=False)
+    url = f"https://api.telegram.org/bot{tg_token}/sendMessage"
+    payload = {
+        "chat_id": tg_chat_id,
+        "text": text,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
+        "reply_markup": reply_markup
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            if resp.status == 200:
+                print("✅ EOD Candidate Review Card dispatched successfully to Telegram!")
+                return True
+    except Exception as e:
+        print(f"⚠️ Telegram EOD card dispatch notice: {e}")
+    return False
+
+
 if __name__ == "__main__":
     if "--morning-card" in sys.argv:
         print("=" * 85)
@@ -721,8 +821,15 @@ if __name__ == "__main__":
         print("=" * 85)
         res = scan_nifty500_candidates()
         if res.get("status") == "success":
-            print(f"✅ Filtered {res['count']} Setups from {res['total_scanned']} stocks (Tier 1: {res['tier1_count']} | Tier 2: {res['tier2_count']})!")
+            print(f"✅ Filtered {res['count']} Setups from {res['total_scanned']} stocks (Sectoral: {res.get('sectoral_count', 0)} | Tier 1A: {res.get('tier1a_count', 0)} | Tier 1B: {res.get('tier1b_count', 0)} | Tier 1C: {res.get('tier1c_count', 0)} | Tier 2: {res.get('tier2_count', 0)} | Tier 3: {res.get('tier3_count', 0)})!")
             print(f"📁 Saved to: {CANDIDATES_FILE.name}")
+            
+            # Auto-sync to GitHub Cloud Repo & purge CDN
+            sync_candidates_to_github()
+
+            # Auto-dispatch EOD Telegram card if market closed or notified
+            send_eod_candidate_card(res)
+
             for i, c in enumerate(res["candidates"], 1):
                 print(
                     f"{i:<2}. {c['symbol']:<12} ₹{c['ltp']:<9.2f} | [{c['tier']}] {c['coil_tag']:<18} | 20D Dist: {c['dist_pivot_20d_pct']:>+5.2f}% ({c['dist_pivot_atr']}x ATR) | "
