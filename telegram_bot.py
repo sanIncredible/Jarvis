@@ -853,7 +853,7 @@ def handle_help_command():
         "• <code>/positions</code> or <code>/pos</code> — Live open positions & real-time P&L\n"
         "• <code>/funds</code> or <code>/margin</code> — Live multi-broker available cash & MTF margin\n"
         "• <code>/trail</code> or <code>/sl</code> — Trailing SL & Risk Breakeven recommendations\n"
-        "• <code>/rearm</code> — Overnight Stop-Loss auto-rearm & protection audit\n"
+        "• <code>/gtt</code> or <code>/rearm</code> — Permanent 1-Year GTT Stop-Loss audit & protection\n"
         "• <code>/exit &lt;SYM&gt; [50%|all]</code> — 1-Tap quick exit/square-off\n"
         "• <code>/journal</code> — Reconcile live broker fills into Journal.xlsx\n"
         "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
@@ -2002,7 +2002,7 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_positions_command()
     elif cmd in ("/trail", "/trailing", "/sl", "/trails", "trail", "trailing"):
         return handle_trailing_command()
-    elif cmd in ("/rearm", "/armsl", "rearm", "armsl"):
+    elif cmd in ("/gtt", "/forever", "/rearm", "/armsl", "gtt", "forever", "rearm", "armsl"):
         from order_engine import rearm_overnight_stop_losses
         force_mode = "force" in args.lower()
         res = rearm_overnight_stop_losses(notify=False, force=force_mode)
