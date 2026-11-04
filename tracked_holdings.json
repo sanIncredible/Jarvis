@@ -1,26 +1,37 @@
 {
   "BHARTIHEXA": {
     "broker": "DHAN",
-    "sl": 1653.50,
-    "target": 1850.00,
-    "notes": "Dhan CNC Holding | Breakeven Trailed (Order 221261104657003)"
+    "sl": 1653.5,
+    "target": 1850.0,
+    "gtt_id": "34132611041794",
+    "notes": "Dhan CNC Holding | Dhan Forever GTT (Order 34132611041794)"
   },
   "TATACONSUM": {
     "broker": "DHAN",
-    "sl": 1004.00,
-    "target": 1120.00,
-    "notes": "Dhan MTF Holding | Breakeven Trailed (Order 221261104666203)"
+    "sl": 1004.0,
+    "target": 1120.0,
+    "gtt_id": "22132611042738",
+    "notes": "Dhan MTF Holding | Dhan Forever GTT (Order 22132611042738)"
+  },
+  "ENTERO": {
+    "broker": "ZERODHA",
+    "sl": 1589.0,
+    "target": 1780.0,
+    "gtt_id": "343183987",
+    "notes": "Zerodha MTF Holding | Zerodha GTT (Trigger 343183987)"
   },
   "NSE": {
     "broker": "ZERODHA",
-    "sl": 1746.00,
-    "target": 1880.00,
-    "notes": "Zerodha CNC Holding | Structural SL"
+    "sl": 1769.0,
+    "target": 1880.0,
+    "gtt_id": "342986108",
+    "notes": "Zerodha CNC Holding | Zerodha GTT (Trigger 342986108)"
   },
   "KROSS": {
     "broker": "ZERODHA",
-    "sl": 265.40,
-    "target": 326.00,
-    "notes": "Zerodha CNC Holding | 5D Low SL"
+    "sl": 265.4,
+    "target": 326.0,
+    "gtt_id": "343330719",
+    "notes": "Zerodha CNC Holding | Zerodha GTT (Trigger 343330719)"
   }
 }
