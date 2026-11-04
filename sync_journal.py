@@ -449,7 +449,7 @@ def get_next_available_row(ws) -> int:
     return ws.max_row + 1
 
 
-def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[Dict[str, Any]], live_positions: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[Dict[str, Any]], live_positions: Optional[List[Dict[str, Any]]] = None, broker_status: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     """
     Reconciles aggregated fills with Journal.xlsx:
     1. Matches SELL fills against currently OPEN trades -> stamps exit price, exit date, computes P&L.
@@ -462,7 +462,9 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
     if live_positions is None:
         try:
             from order_engine import fetch_all_positions
-            live_positions, _, _ = fetch_all_positions()
+            live_positions, _, b_stat_internal = fetch_all_positions()
+            if broker_status is None:
+                broker_status = b_stat_internal
         except Exception:
             live_positions = []
     if not JOURNAL_FILE.is_file():
@@ -699,10 +701,15 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
     # =========================================================================
     # AUTO-RECONCILE CARRIED-FORWARD LIVE POSITIONS MISSING IN JOURNAL
     # =========================================================================
+    cfg_j = load_config()
+    ignored_symbols = set(s.upper() for s in cfg_j.get("ignored_symbols", ["MOTHERSON"]))
+
     if live_positions:
         print("\n--- Auto-Reconciling Live Open Positions from Brokers ---")
         for p in live_positions:
             p_sym = str(p.get("symbol", "")).strip().upper()
+            if not p_sym or p_sym in ignored_symbols:
+                continue
             net_qty = float(p.get("qty", 0) or 0)
             buy_avg = float(p.get("avg_price", 0) or 0)
             broker = str(p.get("broker", "UNKNOWN")).upper()
@@ -773,11 +780,26 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
     closed_symbols_today = set(c["symbol"].upper() for c in closed_today)
     live_open_symbols = set(str(p.get("symbol", "")).strip().upper() for p in live_positions if float(p.get("qty", 0) or 0) > 0) if live_positions is not None else None
 
+    tracked_meta = {}
+    try:
+        th_file = BASE_DIR / "tracked_holdings.json"
+        if th_file.is_file():
+            with open(th_file, "r", encoding="utf-8") as f:
+                tracked_meta = json.load(f)
+    except Exception:
+        pass
+
     for r in range(2, ws_tj.max_row + 1):
         status = ws_tj.cell(row=r, column=11).value
         sym = ws_tj.cell(row=r, column=3).value
         if sym and status and "OPEN" in str(status).upper():
             sym_str = str(sym).strip().upper()
+
+            # Guard 0: If symbol is explicitly ignored/blacklisted (e.g. MOTHERSON), mark row CLOSED!
+            if sym_str in ignored_symbols:
+                print(f"🧹 Reconciled blacklisted symbol {sym_str} in row {r} -> Marking CLOSED.")
+                ws_tj.cell(row=r, column=11, value="CLOSED")
+                continue
 
             # Guard 1: If symbol was closed today, mark row CLOSED and skip!
             if sym_str in closed_symbols_today:
@@ -786,10 +808,25 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
                 continue
 
             # Guard 2: If live broker positions were queried and this symbol has 0 shares on all brokers, mark CLOSED!
+            # SAFETY GUARD: Only mark closed if the symbol's designated broker was queried successfully!
+            # If a broker API returned an error (e.g. Dhan 401 token expired), do NOT wipe out its positions!
             if live_open_symbols is not None and sym_str not in live_open_symbols:
-                print(f"🧹 Reconciled ghost row {r} for {sym_str} (0 shares held on live brokers) -> Marking CLOSED.")
-                ws_tj.cell(row=r, column=11, value="CLOSED")
-                continue
+                sym_broker = None
+                if sym_str in tracked_meta:
+                    sym_broker = str(tracked_meta[sym_str].get("broker", "")).strip().lower()
+                if not sym_broker:
+                    col22_val = str(ws_tj.cell(row=r, column=22).value or "").lower()
+                    for b in ("dhan", "zerodha", "upstox"):
+                        if b in col22_val:
+                            sym_broker = b
+                            break
+
+                if broker_status and sym_broker and "OK" not in broker_status.get(sym_broker, ""):
+                    print(f"⚠️ Preserving {sym_str} (broker {sym_broker.upper()} API status: {broker_status.get(sym_broker)})")
+                else:
+                    print(f"🧹 Reconciled ghost row {r} for {sym_str} (0 shares held on live brokers) -> Marking CLOSED.")
+                    ws_tj.cell(row=r, column=11, value="CLOSED")
+                    continue
 
             if sym_str in seen_symbols:
                 print(f"🧹 Reconciled duplicate open row {r} for {sym_str} -> Marking CLOSED.")
@@ -1025,6 +1062,9 @@ def send_telegram_eod_card(summary: Dict[str, Any], config: Dict[str, Any]):
     closed = summary.get("closed_today", [])
     opened = summary.get("opened_today", [])
     open_pos = summary.get("open_positions", [])
+    cfg_report = load_config()
+    ignored_syms = set(s.upper() for s in cfg_report.get("ignored_symbols", ["MOTHERSON"]))
+    open_pos = [p for p in open_pos if p.get("symbol", "").upper() not in ignored_syms]
 
     # Filter out any closed symbol from open positions to guarantee 0 contradictions
     closed_sym_set = set(c["symbol"].upper() for c in closed)
@@ -1176,7 +1216,7 @@ def run_eod_sync():
     # 4. Aggregate & Reconcile
     print(f"\n[4/4] Reconciling fills and live positions with Journal.xlsx...")
     fills_by_sym = aggregate_fills_by_symbol(all_fills)
-    summary = reconcile_journal(fills_by_sym, all_orders, live_positions=live_pos)
+    summary = reconcile_journal(fills_by_sym, all_orders, live_positions=live_pos, broker_status=b_stat)
 
     # 5. Send Telegram Report
     if summary.get("status") == "success":
