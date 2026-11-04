@@ -126,6 +126,7 @@ def scan_nifty500_candidates(
       5. 52-Week / 3-Month High Blue Sky Proximity
     """
     cfg = load_config()
+    ignored_symbols = set(s.upper() for s in cfg.get("ignored_symbols", ["MOTHERSON"]))
     token = cfg.get("upstox", {}).get("access_token", "").strip()
     if not token:
         return {"status": "error", "message": "Upstox access token missing in config_credentials.json"}
@@ -207,6 +208,8 @@ def scan_nifty500_candidates(
                 clean_key = key.replace("NSE_EQ:", "").replace("NSE_EQ|", "").strip().upper()
                 meta = isin_to_meta.get(clean_key, {})
             sym = meta.get("symbol", raw_sym)
+            if sym.upper() in ignored_symbols:
+                continue
             name = meta.get("name", sym)
             industry = meta.get("industry", "Equity")
             stage1_shortlist.append({
