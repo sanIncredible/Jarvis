@@ -2166,7 +2166,8 @@ def fetch_all_positions():
         broker_status: dict indicating which brokers were queried successfully
     """
     cfg = load_config()
-    tracked_holdings = set(s.upper() for s in cfg.get("tracked_swing_holdings", ["KROSS", "NSE", "BHARTIHEXA", "TATACONSUM"]))
+    tracked_holdings = set(s.upper() for s in cfg.get("tracked_swing_holdings", ["KROSS", "NSE", "BHARTIHEXA", "TATACONSUM", "ENTERO"]))
+    ignored_symbols = set(s.upper() for s in cfg.get("ignored_symbols", ["MOTHERSON"]))
     all_pos = []
     broker_status = {}
 
@@ -2189,8 +2190,13 @@ def fetch_all_positions():
                 broker_status["dhan"] = f"OK ({len(d_pos)})"
                 for p in d_pos:
                     net_qty = int(p.get("netQty", 0))
+                    sym = p.get("tradingSymbol", "UNKNOWN").strip().upper()
+                    if not sym or sym in ignored_symbols:
+                        continue
+                    prod_type = str(p.get("productType", "MTF")).upper()
+                    if prod_type in ("CNC", "MTF") and net_qty < 0:
+                        continue
                     if net_qty != 0:
-                        sym = p.get("tradingSymbol", "UNKNOWN")
                         buy_avg = float(p.get("buyAvg", 0) or p.get("costPrice", 0) or 0)
                         realized = float(p.get("realizedProfit", 0) or 0)
                         unrealized = float(p.get("unrealizedProfit", 0) or 0)
@@ -2231,6 +2237,8 @@ def fetch_all_positions():
                             if isinstance(d_holdings, list):
                                 for h in d_holdings:
                                     sym = str(h.get("tradingSymbol", "")).strip().upper()
+                                    if not sym or sym in ignored_symbols:
+                                        continue
                                     if sym in tracked_holdings and not any(p["symbol"].upper() == sym and p["broker"] == "DHAN" for p in all_pos):
                                         qty = int(h.get("totalQty", 0))
                                         if qty > 0:
@@ -2281,8 +2289,13 @@ def fetch_all_positions():
                 broker_status["upstox"] = f"OK ({len(u_pos)})"
                 for p in u_pos:
                     net_qty = int(p.get("quantity", 0))
+                    sym = p.get("trading_symbol", "UNKNOWN").strip().upper()
+                    if not sym or sym in ignored_symbols:
+                        continue
+                    prod_type = str(p.get("product", "MTF")).upper()
+                    if prod_type in ("CNC", "MTF") and net_qty < 0:
+                        continue
                     if net_qty != 0:
-                        sym = p.get("trading_symbol", "UNKNOWN")
                         avg_price = float(p.get("average_price", 0) or 0)
                         pnl = float(p.get("pnl", 0) or 0)
                         ltp = float(p.get("last_price", 0) or avg_price)
@@ -2326,8 +2339,17 @@ def fetch_all_positions():
                 broker_status["zerodha"] = f"OK ({len(z_pos)})"
                 for p in z_pos:
                     net_qty = int(p.get("quantity", 0))
+                    sym = p.get("tradingsymbol", "UNKNOWN").strip().upper()
+                    if not sym or sym in ignored_symbols:
+                        continue
+                    prod_type = str(p.get("product", "CNC")).upper()
+                    seg = str(p.get("segment", "CASH")).upper()
+                    # In Indian cash equity, retail swing positions are strictly LONG.
+                    # Negative quantity in CNC/MTF represents an intraday sale/exit of a holding
+                    # awaiting EOD settlement (e.g. MOTHERSON GTT triggered -> quantity: -501).
+                    if (prod_type in ("CNC", "MTF") or seg == "CASH") and net_qty < 0:
+                        continue
                     if net_qty != 0:
-                        sym = p.get("tradingsymbol", "UNKNOWN")
                         avg_price = float(p.get("average_price", 0) or 0)
                         pnl = float(p.get("pnl", 0) or 0)
                         ltp = float(p.get("last_price", 0) or avg_price)
@@ -2363,6 +2385,8 @@ def fetch_all_positions():
                             z_holdings = z_hdata.get("data", [])
                             for h in z_holdings:
                                 sym = str(h.get("tradingsymbol", "")).strip().upper()
+                                if not sym or sym in ignored_symbols:
+                                    continue
                                 if sym in tracked_holdings and not any(p["symbol"].upper() == sym and p["broker"] == "ZERODHA" for p in all_pos):
                                     qty = int(h.get("quantity", 0)) + int(h.get("t1_quantity", 0))
                                     if qty > 0:
@@ -3126,8 +3150,12 @@ def rearm_overnight_stop_losses(notify=True, force=False):
 
     now_str = get_ist_now().strftime("%d %b %Y, %H:%M:%S IST")
 
+    cfg_rearm = load_config()
+    ignored_symbols_rearm = set(s.upper() for s in cfg_rearm.get("ignored_symbols", ["MOTHERSON"]))
     for p in all_pos:
         sym = p["symbol"].upper()
+        if sym in ignored_symbols_rearm:
+            continue
         broker = p.get("broker", "DHAN").upper()
         qty = int(p.get("qty", 0))
         if qty == 0:
