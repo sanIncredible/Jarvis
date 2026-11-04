@@ -1109,6 +1109,18 @@
     font-weight: 800;
   }
 
+  .tier-sectoral-border {
+    border-left: 4px solid #06b6d4;
+  }
+  .tier-sectoral-title {
+    color: #22d3ee;
+  }
+  .tier-sectoral-pill {
+    background: rgba(6, 182, 212, 0.15);
+    color: #22d3ee;
+    border: 1px solid #06b6d4;
+  }
+
   .tier-1a-border {
     border-left: 4px solid var(--accent-gold);
   }
@@ -1414,6 +1426,20 @@
   <!-- VIEW 2: EOD Pre-Breakout Swing Candidates View (Tier-Wise Clickable TradingView Links) -->
   <div id="view-candidates" style="display:none;" class="cand-view-container">
 
+    <!-- SECTORAL PICKS: Leading Sector Base Coils -->
+    <div class="tier-card tier-sectoral-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-sectoral-title">🌟 <span id="txt-sectoral-title">SECTORAL PICKS: 🎯 LEADING SECTOR BASE COILS</span></span>
+          <span id="cand-cnt-sectoral" class="tier-badge-pill tier-sectoral-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-sectoral-sub">Institutional Outperformers (IT &bull; Pharma &bull; Infra &bull; Auto &bull; Realty &bull; Media) coiled &le;4.5% from 20 EMA base</div>
+      </div>
+      <div id="cand-grid-sectoral" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
     <!-- TIER 1A: Base-Anchored Doorstep -->
     <div class="tier-card tier-1a-border">
       <div class="tier-header">
@@ -1603,30 +1629,34 @@
   }
 
   function renderCandidatesView() {
-    const t1a = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('TIER 1A') || c.tier === '1A');
-    const t1b = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('TIER 1B') || c.tier === '1B');
-    const t1c = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('TIER 1C') || c.tier === '1C');
+    const secPicks = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('SECTORAL') || c.tier === 'SECTORAL' || c.is_sectoral_pick);
+    const t1a = RAW_CANDIDATES.filter(c => ((c.tier || '').toUpperCase().includes('TIER 1A') || c.tier === '1A') && !secPicks.includes(c));
+    const t1b = RAW_CANDIDATES.filter(c => ((c.tier || '').toUpperCase().includes('TIER 1B') || c.tier === '1B') && !secPicks.includes(c));
+    const t1c = RAW_CANDIDATES.filter(c => ((c.tier || '').toUpperCase().includes('TIER 1C') || c.tier === '1C') && !secPicks.includes(c));
     // Fallback if legacy TIER 1 without sub-tier
-    const t1_legacy = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase() === 'TIER 1' || c.tier === '1');
+    const t1_legacy = RAW_CANDIDATES.filter(c => ((c.tier || '').toUpperCase() === 'TIER 1' || c.tier === '1') && !secPicks.includes(c));
     if (t1_legacy.length && !t1a.length && !t1b.length && !t1c.length) {
       t1a.push(...t1_legacy.slice(0, 7));
       t1b.push(...t1_legacy.slice(7, 14));
       t1c.push(...t1_legacy.slice(14));
     }
 
-    const t2 = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('TIER 2') || c.tier === '2');
-    const t3 = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('TIER 3') || c.tier === '3');
+    const t2 = RAW_CANDIDATES.filter(c => ((c.tier || '').toUpperCase().includes('TIER 2') || c.tier === '2') && !secPicks.includes(c));
+    const t3 = RAW_CANDIDATES.filter(c => ((c.tier || '').toUpperCase().includes('TIER 3') || c.tier === '3') && !secPicks.includes(c));
 
     const badge = document.getElementById('tab-badge-cand');
     if (badge) badge.innerText = RAW_CANDIDATES.length;
 
     let r = 1;
+    renderTierGrid('cand-grid-sectoral', secPicks, r); r += secPicks.length;
     renderTierGrid('cand-grid-tier1a', t1a, r); r += t1a.length;
     renderTierGrid('cand-grid-tier1b', t1b, r); r += t1b.length;
     renderTierGrid('cand-grid-tier1c', t1c, r); r += t1c.length;
     renderTierGrid('cand-grid-tier2', t2, r); r += t2.length;
     renderTierGrid('cand-grid-tier3', t3, r);
 
+    const cSec = document.getElementById('cand-cnt-sectoral');
+    if (cSec) cSec.innerText = `${secPicks.length} Setups`;
     const c1a = document.getElementById('cand-cnt-tier1a');
     if (c1a) c1a.innerText = `${t1a.length} Setups`;
     const c1b = document.getElementById('cand-cnt-tier1b');
