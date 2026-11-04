@@ -1,55 +1,33 @@
-# JARVIS PRE-BREAKOUT SWING CANDIDATES (NIFTY 500) — 2026-11-04 11:26:32 IST
-# Setup: Multi-Tier Coils, Pullbacks & Leading Sector Base Picks (Price >= 20 EMA, Dual VCP, Min ₹5 Cr)
+# JARVIS PRE-BREAKOUT SWING CANDIDATES (NIFTY 500) — 2026-11-04 15:35:02 IST
+# Setup: Multi-Tier Coils, Pullbacks & Sectoral Rotation Picks (Price >= 20 EMA, Dual VCP, Min ₹5.0 Cr)
 # Strategy: Tomorrow's 3m ORB + PDH Breakout with Day Low SL (NOT Extended!)
-# Tiers: [🌟 SECTORAL PICKS] | [🔥 TIER 1A: ⚓ Base-Anchored] | [⚡ TIER 1B: ⏳ Mid-Base] | [🚩 TIER 1C: ⚠️ Extended] | [🚀 TIER 2: Launchpad] | [🛡️ TIER 3: EMA Shelf]
-# Badges: 👑 52W High | 🧊 VDU Supply Dry-Up | 📦 Inside Day | 🎯 Sector Leader
+# Tiers: [🌟 SECTORAL PICKS] | [🔥 TIER 1A: Base-Anchored] | [⚡ TIER 1B: Mid-Base] | [🚩 TIER 1C: Extended] | [🚀 TIER 2] | [🛡️ TIER 3]
+# Badges: 👑 52W High Doorstep | 🧊 VDU Supply Dry-Up | 📦 Inside Day Compression | 🎯 Sector Leader
 # Review on TradingView and tap button or use `/add <SYMBOL>` in Telegram to promote to watchlist.txt
 # ==========================================================================================
 
-# 🌟 SECTORAL PICKS: LEADING SECTOR BASE COILS (IT • Pharma • Infra • Auto • Realty • Media)
-# ------------------------------------------------------------------------------------------
-AUROPHARMA  # ₹1,694.50 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 20D Dist: +1.20% | PDH Dist: -0.33% | 5D VCP: 1.99x ATR | ⭐ Pharma Leader (Stage 2 Uptrend)
-TECHM  # ₹1,789.10 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 🧊 VDU | 20D Dist: +3.03% | PDH Dist: +0.81% | 5D VCP: 1.36x ATR | ⭐ IT Leader (Stage 2 Uptrend)
-MPHASIS  # ₹2,499.70 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 🎯 Sector Leader 🧊 VDU | 20D Dist: +4.53% | PDH Dist: +0.50% | 5D VCP: 1.11x ATR | ⭐ IT Leader (Stage 2 Uptrend)
-SANSERA  # ₹4,228.00 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 20D Dist: +3.19% | PDH Dist: -0.71% | 5D VCP: 2.09x ATR | 📈 Auto Leader (Stage 1 Reclaim)
-M&M  # ₹2,907.00 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 🎯 Sector Leader 🧊 VDU | 20D Dist: +1.08% | PDH Dist: +0.50% | 5D VCP: 1.55x ATR | 📈 Auto Leader (Stage 1 Reclaim)
-APLAPOLLO  # ₹2,170.10 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 🎯 Sector Leader 🧊 VDU | 20D Dist: +3.08% | PDH Dist: +0.50% | 5D VCP: 1.84x ATR | 🚀 Infra/CapGoods Leader (Stage 1 Breakout)
-OBEROIRLTY  # ₹1,702.70 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 🎯 Sector Leader 🧊 VDU | 20D Dist: +3.50% | PDH Dist: +0.50% | 5D VCP: 2.53x ATR | 🚀 Realty Leader (Stage 1 Turnaround)
-NAZARA  # ₹400.55 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 🎯 Sector Leader 🧊 VDU | 20D Dist: +4.61% | PDH Dist: +0.50% | 5D VCP: 1.28x ATR | 🎯 Media Leader (Base Turnaround)
-ONESOURCE  # ₹1,568.70 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 🧊 VDU | 20D Dist: +4.52% | PDH Dist: +2.05% | 5D VCP: 1.65x ATR | ⭐ Pharma Leader (Stage 2 Uptrend)
-ACMESOLAR  # ₹416.70 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 🧊 VDU 📦 Inside Day | 20D Dist: +8.15% | PDH Dist: +1.38% | 5D VCP: 1.53x ATR | ⭐ Power/Infra (EMA Shelf Pullback)
-
-# 🔥 TIER 1A: ⚓ BASE-ANCHORED DOORSTEP (≤4.5% from 20 EMA)
-# ------------------------------------------------------------------------------------------
-ANANDRATHI  # ₹2,288.00 | [TIER 1A] 🔥 PIVOT DOORSTEP | 20D Dist: +0.47% | 5D VCP: 1.42x ATR | 🏢 Financial Services
-NYKAA  # ₹353.90 | [TIER 1A] 🔥 PIVOT DOORSTEP | 20D Dist: +0.73% | 5D VCP: 2.12x ATR | 🏢 Consumer Services
-ONGC  # ₹232.17 | [TIER 1A] ⚡ PIVOT IGNITION | 20D Dist: +1.13% | 5D VCP: 2.72x ATR | ⭐ Energy Leader (+1.5%)
-ICICIBANK  # ₹1,424.50 | [TIER 1A] ⚡ PIVOT IGNITION | 20D Dist: +0.47% | 5D VCP: 2.47x ATR | 🏢 Financial Services
-
-# ⚡ TIER 1B: ⏳ MID-BASE CONSOLIDATION (4.5% - 5.5% from 20 EMA)
-# ------------------------------------------------------------------------------------------
-PERSISTENT  # ₹6,097.00 | [TIER 1B] ⚡ PIVOT IGNITION | 20D Dist: +0.62% | 5D VCP: 2.42x ATR | 📈 IT (+0.9%)
-KOTAKBANK  # ₹464.65 | [TIER 1B] ⚡ PIVOT IGNITION | 20D Dist: +0.28% | 5D VCP: 2.74x ATR | 🏢 Financial Services
-ITCHOTELS  # ₹171.03 | [TIER 1B] 🔥 PIVOT DOORSTEP | 20D Dist: +1.93% | 5D VCP: 1.5x ATR | 🏢 Consumer Services
-TVSMOTOR  # ₹4,303.20 | [TIER 1B] ⚡ PIVOT IGNITION | 20D Dist: +0.24% | 5D VCP: 2.02x ATR | 📈 Auto (+0.4%)
-TRENT  # ₹3,036.50 | [TIER 1B] 🔥 PIVOT DOORSTEP | 20D Dist: +0.87% | 5D VCP: 3.16x ATR | 🏢 Consumer Services
-GLENMARK  # ₹2,408.00 | [TIER 1B] ⚡ PIVOT IGNITION | 20D Dist: +0.50% | 5D VCP: 2.41x ATR | ⭐ Pharma Leader (+1.8%)
-HCLTECH  # ₹1,439.10 | [TIER 1B] ⚡ PIVOT IGNITION | 20D Dist: +1.94% | 5D VCP: 2.38x ATR | 📈 IT (+0.9%)
-
-# 🚩 TIER 1C: ⚠️ EXTENDED FLAGPOLE (>5.5% from 20 EMA)
-# ------------------------------------------------------------------------------------------
-DRREDDY  # ₹1,368.30 | [TIER 1C] ⚡ PIVOT IGNITION | 20D Dist: +0.00% | 5D VCP: 2.15x ATR | ⭐ Pharma Leader (+1.8%)
-INDHOTEL  # ₹836.05 | [TIER 1C] 🔥 PIVOT DOORSTEP | 20D Dist: +0.00% | 5D VCP: 1.5x ATR | 🏢 Consumer Services
-ETERNAL  # ₹349.45 | [TIER 1C] ⚡ PIVOT IGNITION | 20D Dist: +0.21% | 5D VCP: 2.49x ATR | 🏢 Consumer Services
-WIPRO  # ₹198.00 | [TIER 1C] ⚡ PIVOT IGNITION | 20D Dist: +1.05% | 5D VCP: 3.02x ATR | 📈 IT (+0.9%)
-JSWSTEEL  # ₹1,320.00 | [TIER 1C] ⚡ PIVOT IGNITION | 20D Dist: +0.17% | 5D VCP: 2.46x ATR | ⭐ Metal Leader (+2.2%)
-ATHERENERG  # ₹1,795.00 | [TIER 1C] ⚡ PIVOT IGNITION | 20D Dist: +0.80% | 5D VCP: 2.33x ATR | 📈 Auto (+0.4%)
-SONACOMS  # ₹900.00 | [TIER 1C] ⚡ PIVOT IGNITION | 20D Dist: +1.23% | 5D VCP: 1.98x ATR | 📈 Auto (+0.4%)
-
-# 🚀 TIER 2: BASE LAUNCHPAD (2.2% - 5.0% from 20D High)
-# ------------------------------------------------------------------------------------------
-TATACOMM  # ₹1,766.00 | [TIER 2] 🚀 BASE LAUNCHPAD | 20D Dist: +5.36% | 5D VCP: 1.79x ATR | 🏢 Telecommunication
-
-# 🛡️ TIER 3: EMA PULLBACK COIL (Held 10/20 EMA Support Shelf)
-# ------------------------------------------------------------------------------------------
-HDFCLIFE  # ₹525.50 | [TIER 3] 🛡️ EMA PULLBACK COIL | 20D Dist: +7.13% | 5D VCP: 1.53x ATR | 🏢 Financial Services
+ANANDRATHI  # ₹2,296.00 | [TIER 1A] ⚡ PIVOT IGNITION | 👑 52W High | 20D Dist: +0.56% (0.37x ATR) | PDH Dist: +0.12% | 5D/3D VCP: 1.74x/1.59x ATR | Range: 1.05% | 🧊 RVOL 0.62x (Dry Vol) | 🏢 Financial Services | Move: +0.3% | ₹68.0 Cr
+DRREDDY  # ₹1,374.00 | [TIER 1C] 🔥 PIVOT DOORSTEP | 👑 52W High | 20D Dist: +0.20% (0.09x ATR) | PDH Dist: -0.42% | 5D/3D VCP: 1.34x/1.32x ATR | Range: 1.24% | ⚪ RVOL 0.81x (Normal) | 📈 Pharma (+0.2%) | Move: +0.4% | ₹251.2 Cr
+DIVISLAB  # ₹10,037.50 | [TIER 1B] 🔥 PIVOT DOORSTEP | 👑 52W High | 20D Dist: +0.29% (0.12x ATR) | PDH Dist: +0.26% | 5D/3D VCP: 2.19x/0.84x ATR | Range: 1.20% | ⚪ RVOL 0.83x (Normal) | 📈 Pharma (+0.2%) | Move: -0.3% | ₹536.9 Cr
+TRENT  # ₹3,060.00 | [TIER 1B] 🔥 PIVOT DOORSTEP | 20D Dist: +0.11% (0.04x ATR) | PDH Dist: +0.11% | 5D/3D VCP: 2.75x/0.86x ATR | Range: 1.63% | 🧊 RVOL 0.61x (Dry Vol) | 🏢 Consumer Services | Move: +0.8% | ₹193.7 Cr
+TVSMOTOR  # ₹4,331.20 | [TIER 1B] ⚡ PIVOT IGNITION | 20D Dist: +0.43% (0.16x ATR) | PDH Dist: -0.65% | 5D/3D VCP: 1.88x/1.5x ATR | Range: 1.20% | 🧊 RVOL 0.71x (Dry Vol) | ⭐ Auto Leader (+1.8%) | Move: +0.7% | ₹228.0 Cr
+AUROPHARMA  # ₹1,705.00 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 🎯 Sector Leader 👑 52W High | 20D Dist: +1.14% (0.44x ATR) | PDH Dist: -0.45% | 5D/3D VCP: 2.02x/1.54x ATR | Range: 1.98% | 🔥 RVOL 2.42x (Surge) | ⭐ Pharma Leader (Stage 2 Uptrend) | Move: +0.6% | ₹364.6 Cr
+BHARTIARTL  # ₹2,067.60 | [TIER 1C] ⚡ PIVOT IGNITION | 👑 52W High 📦 Inside Day | 20D Dist: +0.65% (0.26x ATR) | PDH Dist: +0.65% | 5D/3D VCP: 2.7x/2.02x ATR | Range: 1.24% | ⚪ RVOL 1.14x (Normal) | 🏢 Telecommunication | Move: +0.1% | ₹2,330.3 Cr
+MANKIND  # ₹2,537.90 | [TIER 1B] 🔥 PIVOT DOORSTEP | 👑 52W High | 20D Dist: +0.44% (0.14x ATR) | PDH Dist: -1.52% | 5D/3D VCP: 1.04x/1.03x ATR | Range: 2.59% | ⚪ RVOL 0.87x (Normal) | 📈 Pharma (+0.2%) | Move: +2.5% | ₹166.3 Cr
+CIPLA  # ₹1,402.00 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 🎯 Sector Leader | 20D Dist: +0.00% (0.0x ATR) | PDH Dist: -0.37% | 5D/3D VCP: 1.94x/1.32x ATR | Range: 1.15% | ⚪ RVOL 1.07x (Normal) | ⭐ Pharma Leader (Stage 2 Uptrend) | Move: +0.4% | ₹185.4 Cr
+ITCHOTELS  # ₹173.37 | [TIER 1B] ⚡ PIVOT IGNITION | 👑 52W High | 20D Dist: +0.59% (0.16x ATR) | PDH Dist: -0.80% | 5D/3D VCP: 1.61x/1.06x ATR | Range: 2.53% | ⚪ RVOL 0.76x (Normal) | 🏢 Consumer Services | Move: +1.4% | ₹54.8 Cr
+PERSISTENT  # ₹6,065.00 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 🎯 Sector Leader 👑 52W High 🧊 VDU | 20D Dist: +1.14% (0.36x ATR) | PDH Dist: +1.14% | 5D/3D VCP: 1.71x/0.93x ATR | Range: 2.26% | 🧊 RVOL 0.51x (VDU Supply Dry-Up) | ⭐ IT Leader (Stage 2 Uptrend) | Move: -0.5% | ₹248.2 Cr
+IPCALAB  # ₹1,972.50 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 🎯 Sector Leader | 20D Dist: +1.13% (0.32x ATR) | PDH Dist: +0.60% | 5D/3D VCP: 1.21x/0.88x ATR | Range: 2.05% | 🔥 RVOL 1.58x (Surge) | ⭐ Pharma Leader (Stage 2 Uptrend) | Move: +1.1% | ₹79.5 Cr
+ICICIBANK  # ₹1,424.10 | [TIER 1A] ⚡ PIVOT IGNITION | 👑 52W High | 20D Dist: +0.98% (0.49x ATR) | PDH Dist: +0.50% | 5D/3D VCP: 2.48x/2.21x ATR | Range: 1.83% | ⚪ RVOL 0.85x (Normal) | 🏢 Financial Services | Move: -0.0% | ₹1,509.4 Cr
+MOTHERSON  # ₹159.49 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 🎯 Sector Leader 📦 Inside Day | 20D Dist: +2.02% (0.73x ATR) | PDH Dist: +2.01% | 5D/3D VCP: 1.68x/1.68x ATR | Range: 1.76% | 🔥 RVOL 1.74x (Surge) | 📈 Auto Leader (Stage 1 Reclaim) | Move: -0.3% | ₹294.4 Cr
+AXISBANK  # ₹1,232.00 | [TIER 2] 🚀 BASE LAUNCHPAD | 🧊 VDU 📦 Inside Day | 20D Dist: +4.78% (2.37x ATR) | PDH Dist: +0.72% | 5D/3D VCP: 1.52x/1.52x ATR | Range: 1.59% | 🧊 RVOL 0.59x (VDU Supply Dry-Up) | 🏢 Financial Services | Move: -0.1% | ₹511.5 Cr
+LEMONTREE  # ₹115.69 | [TIER 1A] ⚡ PIVOT IGNITION | 👑 52W High | 20D Dist: +1.87% (0.54x ATR) | PDH Dist: -0.78% | 5D/3D VCP: 2.31x/1.62x ATR | Range: 2.79% | 🧊 RVOL 0.71x (Dry Vol) | 🏢 Consumer Services | Move: +1.2% | ₹29.2 Cr
+PNB  # ₹122.42 | [TIER 1A] ⚡ PIVOT IGNITION | 👑 52W High | 20D Dist: +2.24% (0.86x ATR) | PDH Dist: +1.03% | 5D/3D VCP: 1.68x/1.23x ATR | Range: 2.52% | ⚪ RVOL 0.87x (Normal) | 🏢 Financial Services | Move: +1.2% | ₹228.5 Cr
+ETERNAL  # ₹344.50 | [TIER 1A] 🔥 PIVOT DOORSTEP | 👑 52W High | 20D Dist: +1.63% (0.53x ATR) | PDH Dist: +1.63% | 5D/3D VCP: 2.38x/0.94x ATR | Range: 2.56% | ⚪ RVOL 0.83x (Normal) | 🏢 Consumer Services | Move: -1.4% | ₹776.7 Cr
+KARURVYSYA  # ₹343.90 | [TIER 3] 🛡️ EMA PULLBACK COIL | 🧊 VDU 📦 Inside Day | 20D Dist: +12.00% (2.82x ATR) | PDH Dist: +1.15% | 5D/3D VCP: 1.44x/1.06x ATR | Range: 2.65% | 🧊 RVOL 0.46x (VDU Supply Dry-Up) | 🏢 Financial Services | Move: +2.3% | ₹74.6 Cr
+TECHM  # ₹1,783.00 | [SECTORAL PICKS] 🎯 SECTORAL BASE | 🎯 Sector Leader 🧊 VDU | 20D Dist: +3.36% (1.06x ATR) | PDH Dist: +1.39% | 5D/3D VCP: 0.9x/0.8x ATR | Range: 2.38% | 🧊 RVOL 0.48x (VDU Supply Dry-Up) | ⭐ IT Leader (Stage 2 Uptrend) | Move: -0.3% | ₹356.1 Cr
+ANGELONE  # ₹312.10 | [TIER 1B] ⚡ PIVOT IGNITION | 🧊 VDU 📦 Inside Day | 20D Dist: +3.04% (0.82x ATR) | PDH Dist: +1.19% | 5D/3D VCP: 2.8x/2.62x ATR | Range: 1.77% | 🧊 RVOL 0.49x (VDU Supply Dry-Up) | 🏢 Financial Services | Move: +0.6% | ₹102.3 Cr
+FEDERALBNK  # ₹335.20 | [TIER 3] 🛡️ EMA PULLBACK COIL | 🧊 VDU 📦 Inside Day | 20D Dist: +5.71% (1.95x ATR) | PDH Dist: +0.86% | 5D/3D VCP: 2.05x/1.18x ATR | Range: 1.65% | 🧊 RVOL 0.49x (VDU Supply Dry-Up) | 🏢 Financial Services | Move: +0.4% | ₹142.5 Cr
+BHARTIHEXA  # ₹1,725.00 | [TIER 1C] ⚡ PIVOT IGNITION | 👑 52W High 📦 Inside Day | 20D Dist: +1.93% (0.59x ATR) | PDH Dist: +1.93% | 5D/3D VCP: 2.39x/2.13x ATR | Range: 2.46% | ⚪ RVOL 1.12x (Normal) | 🏢 Telecommunication | Move: +1.2% | ₹47.1 Cr
+PAYTM  # ₹1,732.40 | [TIER 1A] ⚡ PIVOT IGNITION | 🧊 VDU | 20D Dist: +2.34% (0.74x ATR) | PDH Dist: -0.72% | 5D/3D VCP: 2.1x/2.03x ATR | Range: 2.72% | 🧊 RVOL 0.57x (VDU Supply Dry-Up) | 🏢 Financial Services | Move: +0.7% | ₹393.9 Cr
+INDIANB  # ₹854.00 | [TIER 2] 🚀 BASE LAUNCHPAD | 📦 Inside Day | 20D Dist: +2.57% (1.01x ATR) | PDH Dist: +1.83% | 5D/3D VCP: 1.81x/1.33x ATR | Range: 1.63% | 🔥 RVOL 1.62x (Surge) | 🏢 Financial Services | Move: +0.5% | ₹219.2 Cr
