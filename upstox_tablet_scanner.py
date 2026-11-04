@@ -2356,6 +2356,23 @@ class ScannerHttpHandler(http.server.BaseHTTPRequestHandler):
                     except Exception:
                         pass
 
+        if self.path.startswith('/candidates.json'):
+            for cf in ["candidates.json", os.path.join(script_dir, "candidates.json")]:
+                if os.path.isfile(cf):
+                    try:
+                        with open(cf, "rb") as f:
+                            cand_bytes = f.read()
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/json; charset=utf-8')
+                        self.send_header('Access-Control-Allow-Origin', '*')
+                        self.send_header('Content-Length', str(len(cand_bytes)))
+                        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                        self.end_headers()
+                        self.wfile.write(cand_bytes)
+                        return
+                    except Exception:
+                        pass
+
         # Always serve SOTA index.html on root / or /index.html
         if self.path in ('/', '/index.html') or self.path.startswith('/index.html'):
             for idx_f in ["index.html", os.path.join(script_dir, "index.html")]:
@@ -2629,12 +2646,29 @@ def export_static_html(results, now_str, port):
                 except Exception:
                     pass
 
+        # Load candidates if available (ultra-light: only symbol and tier to keep git/network transfer light)
+        candidates_payload = []
+        for c_path in ["candidates.json", os.path.join(script_dir, "candidates.json")]:
+            if os.path.isfile(c_path):
+                try:
+                    with open(c_path, "r", encoding="utf-8") as cf:
+                        c_data = json.load(cf)
+                        for c in c_data.get("candidates", []):
+                            candidates_payload.append({
+                                "symbol": c.get("symbol"),
+                                "tier": c.get("tier", "TIER 1")
+                            })
+                    break
+                except Exception:
+                    pass
+
         payload = {
             "updated_at": now_str,
             "updated_ts": int(time.time()),
             "source": source_label,
             "market_regime": regime_data,
             "pre_market_summary": sa_summary_data,
+            "candidates": candidates_payload,
             "stocks": stocks_payload
         }
 
