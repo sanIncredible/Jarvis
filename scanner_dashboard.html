@@ -994,6 +994,205 @@
     }
   }
 
+
+  /* Main View Navigation Tabs */
+  .main-tabs-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 6px 10px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+
+  .main-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: var(--font-sans);
+  }
+
+  .main-tab-btn:hover {
+    color: var(--text-main);
+    background: var(--bg-card-hover);
+    border-color: var(--border-subtle);
+  }
+
+  .main-tab-btn.active {
+    color: #ffffff;
+    background: rgba(41, 98, 255, 0.16);
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 12px rgba(41, 98, 255, 0.3);
+  }
+
+  .tab-badge {
+    background: var(--bg-input);
+    border: 1px solid var(--border-bright);
+    color: var(--text-main);
+    padding: 2px 7px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 800;
+  }
+
+  .main-tab-btn.active .tab-badge {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+    color: #ffffff;
+  }
+
+  /* Candidate Tier-wise Section Styling */
+  .cand-view-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .tier-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  }
+
+  .tier-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tier-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .tier-title {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tier-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .tier-badge-pill {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 800;
+  }
+
+  .tier-1-border {
+    border-left: 4px solid var(--accent-gold);
+  }
+  .tier-1-title {
+    color: var(--accent-gold);
+  }
+  .tier-1-pill {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid #f59e0b;
+  }
+
+  .tier-2-border {
+    border-left: 4px solid var(--accent-blue);
+  }
+  .tier-2-title {
+    color: #60a5fa;
+  }
+  .tier-2-pill {
+    background: rgba(37, 99, 235, 0.15);
+    color: #60a5fa;
+    border: 1px solid #3b82f6;
+  }
+
+  .tier-3-border {
+    border-left: 4px solid var(--accent-green);
+  }
+  .tier-3-title {
+    color: var(--accent-green);
+  }
+  .tier-3-pill {
+    background: rgba(0, 192, 135, 0.15);
+    color: #00c087;
+    border: 1px solid #00c087;
+  }
+
+  .cand-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 10px;
+  }
+
+  .cand-link-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text-main);
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 0.18s ease;
+  }
+
+  .cand-link-btn:hover {
+    background: rgba(41, 98, 255, 0.18);
+    border-color: var(--accent-blue);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(41, 98, 255, 0.35);
+    transform: translateY(-2px);
+  }
+
+  .cand-rank {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .cand-tv-icon {
+    font-size: 11px;
+    color: var(--accent-blue);
+    margin-left: 4px;
+    transition: transform 0.15s ease;
+  }
+
+  .cand-link-btn:hover .cand-tv-icon {
+    transform: translate(2px, -2px);
+    color: #ffffff;
+  }
+
 </style>
 </head>
 <body>
@@ -1045,6 +1244,20 @@
     </div>
   </div>
 
+  <!-- Main View Navigation Tabs -->
+  <div class="main-tabs-bar">
+    <button id="tab-btn-orb" class="main-tab-btn active" onclick="switchMainView('orb')" title="View Live 3m Dynamic ORB Scanner & Signals">
+      <span class="tab-icon">⚡</span> <span id="txt-tab-orb">3m ORB Triggers</span> 
+      <span id="tab-badge-orb" class="tab-badge">0</span>
+    </button>
+    <button id="tab-btn-cand" class="main-tab-btn" onclick="switchMainView('candidates')" title="View EOD Swing Candidates by Tier">
+      <span class="tab-icon">🎯</span> <span id="txt-tab-cand">EOD Candidates</span> 
+      <span id="tab-badge-cand" class="tab-badge">25</span>
+    </button>
+  </div>
+
+  <!-- VIEW 1: 3m ORB Live Scanner View -->
+  <div id="view-orb">
   <!-- Discipline Shield & Bonde Market Regime Banner -->
   <div id="regime-banner" style="display:flex; margin-bottom:12px; border-radius:10px; padding:12px 18px; border:1px solid #f43f5e; background:rgba(244,63,94,0.12); align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; box-shadow:0 4px 18px rgba(0,0,0,0.6);">
     <div style="display:flex; align-items:center; gap:12px; min-width:280px;">
@@ -1172,6 +1385,56 @@
     </table>
   </div>
 
+  </div> <!-- /#view-orb -->
+
+  <!-- VIEW 2: EOD Pre-Breakout Swing Candidates View (Tier-Wise Clickable TradingView Links) -->
+  <div id="view-candidates" style="display:none;" class="cand-view-container">
+
+    <!-- TIER 1 -->
+    <div class="tier-card tier-1-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1-title">🔥 <span id="txt-t1-title">TIER 1: PIVOT DOORSTEP &amp; IGNITION</span></span>
+          <span id="cand-cnt-tier1" class="tier-badge-pill tier-1-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-t1-sub">&le;2.2% from 20D Pivot High &bull; Stage 2 Uptrend &bull; Multi-Day VCP Compression</div>
+      </div>
+      <div id="cand-grid-tier1" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 2 -->
+    <div class="tier-card tier-2-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-2-title">🚀 <span id="txt-t2-title">TIER 2: BASE LAUNCHPAD</span></span>
+          <span id="cand-cnt-tier2" class="tier-badge-pill tier-2-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-t2-sub">2.2% &ndash; 5.0% from 20D High &bull; 10/20 EMA Pocket Coils</div>
+      </div>
+      <div id="cand-grid-tier2" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 3 -->
+    <div class="tier-card tier-3-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-3-title">🛡️ <span id="txt-t3-title">TIER 3: EMA PULLBACK COIL</span></span>
+          <span id="cand-cnt-tier3" class="tier-badge-pill tier-3-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-t3-sub">Stage-2 Uptrend Leaders Resting on Rising 10/20 EMA Support Shelf</div>
+      </div>
+      <div id="cand-grid-tier3" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+  </div> <!-- /#view-candidates -->
+
+
   <div id="page-footer" class="footer">
     Cluster Telemetry &amp; Node Observer Daemon • Distributed Ingress Telemetry Pipeline • High-Throughput Stream • Press [?] for Diagnostics
   </div>
@@ -1262,6 +1525,98 @@
 
 
 <script>
+
+  let currentMainView = 'orb';
+  let RAW_CANDIDATES = [];
+
+  function switchMainView(viewName) {
+    currentMainView = viewName;
+    const btnOrb = document.getElementById('tab-btn-orb');
+    const btnCand = document.getElementById('tab-btn-cand');
+    const viewOrb = document.getElementById('view-orb');
+    const viewCand = document.getElementById('view-candidates');
+
+    if (viewName === 'candidates') {
+      if (btnOrb) btnOrb.classList.remove('active');
+      if (btnCand) btnCand.classList.add('active');
+      if (viewOrb) viewOrb.style.display = 'none';
+      if (viewCand) viewCand.style.display = 'flex';
+      renderCandidatesView();
+    } else {
+      if (btnCand) btnCand.classList.remove('active');
+      if (btnOrb) btnOrb.classList.add('active');
+      if (viewCand) viewCand.style.display = 'none';
+      if (viewOrb) viewOrb.style.display = 'block';
+    }
+  }
+
+  function renderCandidatesView() {
+    const t1 = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('TIER 1') || c.tier === '1');
+    const t2 = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('TIER 2') || c.tier === '2');
+    const t3 = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('TIER 3') || c.tier === '3');
+
+    const badge = document.getElementById('tab-badge-cand');
+    if (badge) badge.innerText = RAW_CANDIDATES.length;
+
+    renderTierGrid('cand-grid-tier1', t1, 1);
+    renderTierGrid('cand-grid-tier2', t2, t1.length + 1);
+    renderTierGrid('cand-grid-tier3', t3, t1.length + t2.length + 1);
+
+    const c1 = document.getElementById('cand-cnt-tier1');
+    if (c1) c1.innerText = `${t1.length} Setups`;
+    const c2 = document.getElementById('cand-cnt-tier2');
+    if (c2) c2.innerText = `${t2.length} Setups`;
+    const c3 = document.getElementById('cand-cnt-tier3');
+    if (c3) c3.innerText = `${t3.length} Setups`;
+  }
+
+  function renderTierGrid(containerId, list, startRank) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!list || !list.length) {
+      container.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:10px;">No setups in this tier.</div>';
+      return;
+    }
+    let html = '';
+    list.forEach((c, idx) => {
+      const sym = c.symbol;
+      const rank = startRank + idx;
+      const tvUrl = `https://in.tradingview.com/chart/?symbol=NSE:${sym}`;
+      const displaySym = isStealthMode ? formatNodeName(sym) : sym;
+      html += `
+        <a href="${tvUrl}" target="_blank" class="cand-link-btn" title="Open ${sym} chart on TradingView">
+          <span class="cand-rank">#${rank}</span>
+          <span class="cand-sym">📈 ${displaySym}</span>
+          <span class="cand-tv-icon">↗</span>
+        </a>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
+  async function fetchCandidatesFallback() {
+    const endpoints = [
+      'candidates.json',
+      'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/candidates.json',
+      'https://raw.githubusercontent.com/sanIncredible/Jarvis/main/candidates.json'
+    ];
+    for (const url of endpoints) {
+      try {
+        const res = await fetchWithTimeout(url, { cache: 'no-store' }, 3000);
+        if (!res.ok) continue;
+        const d = await res.json();
+        const list = d.candidates || d;
+        if (Array.isArray(list) && list.length) {
+          RAW_CANDIDATES = list;
+          renderCandidatesView();
+          break;
+        }
+      } catch (e) {
+        // Continue to next endpoint
+      }
+    }
+  }
+
   let RAW_STOCKS = [];
   let CHARTS_DATA = {};
   let activeSym = '';
@@ -1305,6 +1660,13 @@
   }
 
   function applyStealthModeUI() {
+
+    const txtTabCand = document.getElementById('txt-tab-cand');
+    if (txtTabCand) txtTabCand.innerText = isStealthMode ? 'Ingress Shortlist' : 'EOD Candidates';
+    const txtTabOrb = document.getElementById('txt-tab-orb');
+    if (txtTabOrb) txtTabOrb.innerText = isStealthMode ? 'Telemetry Nodes' : '3m ORB Triggers';
+    if (currentMainView === 'candidates') renderCandidatesView();
+
     const pageTitle = document.getElementById('page-title');
     const txtBrandTitle = document.getElementById('txt-brand-title');
     const txtBrandTag = document.getElementById('txt-brand-tag');
@@ -1810,6 +2172,16 @@
     if (data.pre_market_summary && Object.keys(data.pre_market_summary).length > 0) {
       window.PRE_MARKET_SUMMARY = data.pre_market_summary;
     }
+
+    
+    if (data.candidates && Array.isArray(data.candidates) && data.candidates.length) {
+      RAW_CANDIDATES = data.candidates;
+      renderCandidatesView();
+    } else if (!RAW_CANDIDATES.length) {
+      fetchCandidatesFallback();
+    }
+    const tabBadgeOrb = document.getElementById('tab-badge-orb');
+    if (tabBadgeOrb && data.stocks) tabBadgeOrb.innerText = data.stocks.length;
 
     RAW_STOCKS = data.stocks || [];
     CHARTS_DATA = {};
