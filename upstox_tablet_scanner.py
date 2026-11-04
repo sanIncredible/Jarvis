@@ -313,43 +313,66 @@ sent_alerts = set()  # Tracks (symbol, alert_type, date_str) to prevent repetiti
 
 
 def load_telegram_config():
-    """Loads Telegram Bot token and Chat ID from environment or config file."""
+    """Loads Telegram Bot token, Chat ID, Group ID, and Topic Mappings from environment or config file."""
     token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
-    if token and chat_id:
-        return {"enabled": True, "bot_token": token, "chat_id": chat_id}
+    group_id = os.getenv("TELEGRAM_GROUP_ID", "").strip()
 
+    cfg_data = None
     for cfg_f in [CONFIG_FILE, os.path.join(SCRIPT_DIR, "config_credentials.json"), os.path.join(SCRIPT_DIR, "credentials.json"), "config_credentials.json", "credentials.json"]:
         if os.path.isfile(cfg_f):
             try:
                 with open(cfg_f, "r", encoding="utf-8") as f:
-                    cfg = json.load(f)
-                    tg = cfg.get("telegram")
-                    if tg and tg.get("bot_token") and tg.get("chat_id"):
-                        return tg
+                    cfg_data = json.load(f)
+                    break
             except Exception:
                 pass
+
+    if cfg_data and cfg_data.get("telegram"):
+        tg = dict(cfg_data["telegram"])
+        if token:
+            tg["bot_token"] = token
+        if chat_id:
+            tg["chat_id"] = chat_id
+        if group_id:
+            tg["group_id"] = group_id
+        return tg
+
+    if token and chat_id:
+        return {"enabled": True, "bot_token": token, "chat_id": chat_id, "group_id": group_id, "topics": {}}
+
     return None
 
 
-def send_telegram_alert(message, parse_mode="HTML", reply_markup=None):
-    """Sends a Telegram alert via HTTPS (Port 443). Returns (success, response_or_error)."""
+def send_telegram_alert(message, parse_mode="HTML", reply_markup=None, topic_name="orb_signals"):
+    """Sends a Telegram alert via HTTPS (Port 443) to designated topic or chat. Returns (success, response_or_error)."""
     tg_cfg = load_telegram_config()
     if not tg_cfg or not tg_cfg.get("enabled", True):
         return False, "Telegram alerts disabled or not configured"
 
     bot_token = tg_cfg.get("bot_token", "").strip()
     chat_id = str(tg_cfg.get("chat_id", "")).strip()
-    if not bot_token or not chat_id:
-        return False, "Missing bot_token or chat_id"
+    group_id = str(tg_cfg.get("group_id", "")).strip()
+    topics = tg_cfg.get("topics", {})
+
+    target_chat = chat_id
+    thread_id = None
+    if group_id and topic_name and topic_name in topics:
+        target_chat = group_id
+        thread_id = topics[topic_name]
+
+    if not bot_token or not target_chat:
+        return False, "Missing bot_token or target chat_id"
 
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {
-        "chat_id": chat_id,
+        "chat_id": target_chat,
         "text": message,
         "parse_mode": parse_mode,
         "disable_web_page_preview": True
     }
+    if thread_id is not None:
+        payload["message_thread_id"] = int(thread_id)
     if reply_markup:
         payload["reply_markup"] = reply_markup
 
@@ -366,10 +389,10 @@ def send_telegram_alert(message, parse_mode="HTML", reply_markup=None):
         return False, str(e)
 
 
-def send_telegram_alert_async(message, parse_mode="HTML", reply_markup=None):
+def send_telegram_alert_async(message, parse_mode="HTML", reply_markup=None, topic_name="orb_signals"):
     """Dispatches Telegram alert asynchronously without blocking scanner loop."""
     def _worker():
-        send_telegram_alert(message, parse_mode=parse_mode, reply_markup=reply_markup)
+        send_telegram_alert(message, parse_mode=parse_mode, reply_markup=reply_markup, topic_name=topic_name)
     threading.Thread(target=_worker, daemon=True).start()
 
 
