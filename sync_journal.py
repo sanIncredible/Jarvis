@@ -18,6 +18,7 @@ import json
 import shutil
 import glob
 import csv
+import time
 from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
@@ -73,6 +74,14 @@ def create_backup() -> Optional[Path]:
     try:
         shutil.copy2(JOURNAL_FILE, backup_path)
         print(f"🔒 Backup created: {backup_path.name}")
+        # Automatically prune backups older than 14 days
+        cutoff = time.time() - (14 * 86400)
+        for old in BACKUP_DIR.glob("Journal_backup_*.xlsx"):
+            if old.stat().st_mtime < cutoff:
+                try:
+                    old.unlink()
+                except Exception:
+                    pass
         return backup_path
     except Exception as e:
         print(f"⚠️ Backup creation failed: {e}")
