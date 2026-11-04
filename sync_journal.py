@@ -1070,14 +1070,25 @@ def send_telegram_eod_card(summary: Dict[str, Any], config: Dict[str, Any]):
         sl = float(p.get("sl", 0) or 0)
         entry_p = float(p.get("entry_p", 0) or 0)
         qty = float(p.get("qty", 0) or 0)
-        if sl >= entry_p and entry_p > 0:
-            var_str = "🟢 VaR: ₹0.00 (Risk-Free)"
-        elif sl > 0 and entry_p > 0:
-            var_inr = round((entry_p - sl) * qty, 2)
-            tot_var += var_inr
-            var_str = f"⚠️ VaR: -₹{var_inr:,.2f}"
+        is_short = qty < 0
+        if is_short:
+            if sl <= entry_p and sl > 0:
+                var_str = "🟢 VaR: ₹0.00 (Risk-Free)"
+            elif sl > 0 and entry_p > 0:
+                var_inr = max(0.0, round((sl - entry_p) * abs(qty), 2))
+                tot_var += var_inr
+                var_str = f"⚠️ VaR: -₹{var_inr:,.2f}"
+            else:
+                var_str = ""
         else:
-            var_str = ""
+            if sl >= entry_p and entry_p > 0:
+                var_str = "🟢 VaR: ₹0.00 (Risk-Free)"
+            elif sl > 0 and entry_p > 0:
+                var_inr = max(0.0, round((entry_p - sl) * qty, 2))
+                tot_var += var_inr
+                var_str = f"⚠️ VaR: -₹{var_inr:,.2f}"
+            else:
+                var_str = ""
 
         var_suffix = f" [{var_str}]" if var_str else ""
         lines.append(f"• <b>{p['symbol']}</b>: {u_icon} {u_sign}₹{p['unrealized_pnl']:,.2f} ({p['pnl_pct']:+.1f}%{rr_str}){var_suffix} — {p['action_signal']}")
