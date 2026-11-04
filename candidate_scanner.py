@@ -53,7 +53,10 @@ INDUSTRY_TO_SECTOR = {
     "Financial Services": "Nifty Bank",
     "Power": "Nifty Energy",
     "Oil Gas & Consumable Fuels": "Nifty Energy",
-    "Fast Moving Consumer Goods": "Nifty FMCG"
+    "Fast Moving Consumer Goods": "Nifty FMCG",
+    "Capital Goods": "Nifty Infra",
+    "Construction": "Nifty Infra",
+    "Media": "Nifty Media"
 }
 
 
@@ -442,13 +445,60 @@ def scan_nifty500_candidates(
     qualified.sort(key=lambda x: x["score"], reverse=True)
     top_candidates = qualified[:top_n]
 
+    # Leading Sector Definitions from Market Breadth & Tape Analysis
+    LEADING_SECTOR_MAP = {
+        "Information Technology": "⭐ IT Leader (Stage 2 Uptrend)",
+        "Healthcare": "⭐ Pharma Leader (Stage 2 Uptrend)",
+        "Automobile and Auto Components": "📈 Auto Leader (Stage 1 Reclaim)",
+        "Realty": "🚀 Realty Leader (Stage 1 Turnaround)",
+        "Fast Moving Consumer Goods": "🚀 FMCG Leader (Thrust Rebound)",
+        "Capital Goods": "🚀 Infra/CapGoods Leader (Stage 1 Breakout)",
+        "Construction": "🚀 Infra Leader (Stage 1 Breakout)",
+        "Media": "🎯 Media Leader (Base Turnaround)"
+    }
+
+    # Apply Base-Anchored / Stretch & Sectoral Picks Partitioning
+    for c in top_candidates:
+        ltp = c.get("ltp", 0.0)
+        ema20 = c.get("ema20", ltp)
+        dist_ema20_pct = round(((ltp - ema20) / ltp) * 100.0, 2) if ltp > 0 else 0.0
+        c["dist_ema20_pct"] = dist_ema20_pct
+        ind = c.get("industry", "")
+        sec_leader_tag = LEADING_SECTOR_MAP.get(ind)
+
+        # Base-Anchored vs Extended sub-tiering
+        tier_base = c.get("tier", "TIER 1")
+        if tier_base == "TIER 1":
+            if dist_ema20_pct <= 4.50:
+                c["tier"] = "TIER 1A"
+                c["tier_label"] = "Tier 1A: Base-Anchored Doorstep"
+                c["stretch_status"] = "LOW_STRETCH"
+            elif dist_ema20_pct <= 5.50:
+                c["tier"] = "TIER 1B"
+                c["tier_label"] = "Tier 1B: Mid-Base Consolidation"
+                c["stretch_status"] = "MID_STRETCH"
+            else:
+                c["tier"] = "TIER 1C"
+                c["tier_label"] = "Tier 1C: Extended Flagpole"
+                c["stretch_status"] = "HIGH_STRETCH"
+
+        # Sectoral Picks Classification: Leading Sector + Base-Anchored (dist_ema20 <= 4.5% or Tier 2/3)
+        if sec_leader_tag and (dist_ema20_pct <= 4.50 or c.get("tier") in ("TIER 2", "TIER 3", "TIER 1A")):
+            c["is_sectoral_pick"] = True
+            c["tier"] = "SECTORAL PICKS"
+            c["tier_label"] = f"Sectoral Picks: {sec_leader_tag.split('(')[0].strip()}"
+            c["coil_tag"] = "🎯 SECTORAL BASE"
+            c["sector_tag"] = sec_leader_tag
+            if "🎯 Sector Leader" not in c.get("flags", []):
+                c.setdefault("flags", []).insert(0, "🎯 Sector Leader")
+
     now_str = now_ist.strftime("%Y-%m-%d %H:%M:%S IST")
     lines = [
         f"# JARVIS PRE-BREAKOUT SWING CANDIDATES (NIFTY 500) — {now_str}",
-        "# Setup: Multi-Tier Coils & Pullbacks (Stage 2 Uptrend: Price >= 20 EMA >= 50 EMA, Dual VCP, Min ₹5.0 Cr)",
+        "# Setup: Multi-Tier Coils, Pullbacks & Sectoral Rotation Picks (Price >= 20 EMA, Dual VCP, Min ₹5.0 Cr)",
         "# Strategy: Tomorrow's 3m ORB + PDH Breakout with Day Low SL (NOT Extended!)",
-        "# Tiers: [TIER 1 = 🔥 Pivot Doorstep (<=2.2% from 20D)] | [TIER 2 = 🚀 Base Launchpad] | [TIER 3 = 🛡️ EMA Pullback Coil]",
-        "# Badges: 👑 52W High Doorstep | 🧊 VDU Supply Dry-Up | 📦 Inside Day Compression",
+        "# Tiers: [🌟 SECTORAL PICKS] | [🔥 TIER 1A: Base-Anchored] | [⚡ TIER 1B: Mid-Base] | [🚩 TIER 1C: Extended] | [🚀 TIER 2] | [🛡️ TIER 3]",
+        "# Badges: 👑 52W High Doorstep | 🧊 VDU Supply Dry-Up | 📦 Inside Day Compression | 🎯 Sector Leader",
         "# Review on TradingView and tap button or use `/add <SYMBOL>` in Telegram to promote to watchlist.txt",
         "# ==========================================================================================",
         ""
@@ -467,8 +517,11 @@ def scan_nifty500_candidates(
         json.dump({
             "updated_at": now_str,
             "count": len(top_candidates),
-            "strategy": "Dual-Tier Stage 2 VCP Pre-Breakout Coil Engine",
-            "tier1_count": sum(1 for c in top_candidates if c.get("tier") == "TIER 1"),
+            "strategy": "Multi-Tier Stage 2 VCP Pre-Breakout & Sectoral Base Engine",
+            "sectoral_count": sum(1 for c in top_candidates if c.get("tier") == "SECTORAL PICKS"),
+            "tier1a_count": sum(1 for c in top_candidates if c.get("tier") == "TIER 1A"),
+            "tier1b_count": sum(1 for c in top_candidates if c.get("tier") == "TIER 1B"),
+            "tier1c_count": sum(1 for c in top_candidates if c.get("tier") == "TIER 1C"),
             "tier2_count": sum(1 for c in top_candidates if c.get("tier") == "TIER 2"),
             "tier3_count": sum(1 for c in top_candidates if c.get("tier") == "TIER 3"),
             "candidates": top_candidates
@@ -510,9 +563,24 @@ def format_candidates_telegram_card(res, max_display=10, is_morning=False):
             "<i>Stage 2 VCP Coils poised for tomorrow's 3m ORB + PDH breakout</i>\n"
         ]
 
-    tier1 = [c for c in candidates if c.get("tier") == "TIER 1"]
-    tier2 = [c for c in candidates if c.get("tier") == "TIER 2"]
-    tier3 = [c for c in candidates if c.get("tier") == "TIER 3"]
+    sectoral = [c for c in candidates if c.get("tier") == "SECTORAL PICKS" or c.get("is_sectoral_pick")]
+    tier1 = [c for c in candidates if "TIER 1" in (c.get("tier") or "") and not c.get("is_sectoral_pick")]
+    tier2 = [c for c in candidates if "TIER 2" in (c.get("tier") or "") and not c.get("is_sectoral_pick")]
+    tier3 = [c for c in candidates if "TIER 3" in (c.get("tier") or "") and not c.get("is_sectoral_pick")]
+
+    if sectoral:
+        lines.append("🌟 <b>SECTORAL PICKS: LEADING SECTOR BASES (≤4.5% 20 EMA)</b>")
+        for i, c in enumerate(sectoral[:5], 1):
+            sym = c["symbol"]
+            tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'><b>{sym}</b></a>"
+            pdh_status = "Cleared!" if c["dist_pdh_pct"] < 0 else f"{c['dist_pdh_pct']:+.2f}%"
+            badge_str = f" • {' '.join(c.get('flags', []))}" if c.get('flags') else ""
+            lines.append(
+                f"<b>{i}.</b> 🎯 {tv_link} (₹{c['ltp']:,.2f}){badge_str}\n"
+                f"   • Sits: <b>{c['dist_pivot_20d_pct']:+.2f}%</b> from 20D | 20 EMA: <b>{c.get('dist_ema20_pct', 0.0):+.2f}%</b>\n"
+                f"   • VCP: <b>{c['vcp_ratio_5d']}x ATR</b> | {c.get('sector_tag', c.get('industry'))}"
+            )
+        lines.append("")
 
     if tier1:
         lines.append("🔥 <b>TIER 1: PIVOT DOORSTEP (Direct 20D Breakouts)</b>")
@@ -563,7 +631,7 @@ def format_candidates_telegram_card(res, max_display=10, is_morning=False):
     lines.append("💡 <i>Tap below to add vetted candidates to the 3m scanner watchlist:</i>")
 
     kb_rows = []
-    display_candidates = (tier1[:5] + tier2[:3] + tier3[:2])[:max_display]
+    display_candidates = (sectoral[:4] + tier1[:3] + tier2[:2] + tier3[:1])[:max_display]
     if display_candidates:
         kb_rows.append([{"text": "⚡ ➕ Add All Top 5 to Watchlist", "callback_data": "cand_add_top5"}])
 
