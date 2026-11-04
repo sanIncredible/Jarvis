@@ -1323,6 +1323,7 @@ def fetch_all_positions():
         broker_status: dict indicating which brokers were queried successfully
     """
     cfg = load_config()
+    tracked_holdings = set(s.upper() for s in cfg.get("tracked_swing_holdings", ["KROSS", "NSE", "BHARTIHEXA", "TATACONSUM"]))
     all_pos = []
     broker_status = {}
 
@@ -1370,6 +1371,47 @@ def fetch_all_positions():
                             "exchange": p.get("exchangeSegment", "NSE_EQ"),
                             "position_type": p.get("positionType", "LONG")
                         })
+
+                # Check Dhan holdings for designated swing positions
+                if tracked_holdings:
+                    try:
+                        req_h = urllib.request.Request(
+                            "https://api.dhan.co/v2/holdings",
+                            headers={
+                                "access-token": d_token,
+                                "client-id": d_client,
+                                "Accept": "application/json"
+                            }
+                        )
+                        with urllib.request.urlopen(req_h, timeout=6) as resp_h:
+                            d_holdings = json.loads(resp_h.read().decode())
+                            if isinstance(d_holdings, list):
+                                for h in d_holdings:
+                                    sym = str(h.get("tradingSymbol", "")).strip().upper()
+                                    if sym in tracked_holdings and not any(p["symbol"].upper() == sym and p["broker"] == "DHAN" for p in all_pos):
+                                        qty = int(h.get("totalQty", 0))
+                                        if qty > 0:
+                                            buy_avg = float(h.get("avgCostPrice", 0.0) or 0.0)
+                                            ltp = float(h.get("lastTradedPrice", buy_avg) or buy_avg)
+                                            tot_pnl = round((ltp - buy_avg) * qty, 2)
+                                            pnl_pct = round(((ltp - buy_avg) / buy_avg) * 100, 2) if buy_avg > 0 else 0.0
+                                            exposure = round(qty * ltp, 2)
+                                            all_pos.append({
+                                                "symbol": sym,
+                                                "broker": "DHAN",
+                                                "product": "CNC",
+                                                "qty": qty,
+                                                "avg_price": round(buy_avg, 2),
+                                                "ltp": round(ltp, 2),
+                                                "pnl": round(tot_pnl, 2),
+                                                "pnl_pct": pnl_pct,
+                                                "exposure": exposure,
+                                                "security_id": str(h.get("securityId", "")),
+                                                "exchange": "NSE_EQ",
+                                                "position_type": "LONG"
+                                            })
+                    except Exception:
+                        pass
         except Exception as e:
             broker_status["dhan"] = f"Error ({e})"
     else:
@@ -1460,6 +1502,46 @@ def fetch_all_positions():
                             "exchange": p.get("exchange", "NSE"),
                             "instrument_token": str(p.get("instrument_token", ""))
                         })
+
+                # Check Zerodha holdings for designated swing positions
+                if tracked_holdings:
+                    try:
+                        req_h = urllib.request.Request(
+                            "https://api.kite.trade/portfolio/holdings",
+                            headers={
+                                "X-Kite-Version": "3",
+                                "Authorization": f"token {z_key}:{z_token}"
+                            }
+                        )
+                        with urllib.request.urlopen(req_h, timeout=6) as resp_h:
+                            z_hdata = json.loads(resp_h.read().decode())
+                            z_holdings = z_hdata.get("data", [])
+                            for h in z_holdings:
+                                sym = str(h.get("tradingsymbol", "")).strip().upper()
+                                if sym in tracked_holdings and not any(p["symbol"].upper() == sym and p["broker"] == "ZERODHA" for p in all_pos):
+                                    qty = int(h.get("quantity", 0)) + int(h.get("t1_quantity", 0))
+                                    if qty > 0:
+                                        avg_price = float(h.get("average_price", 0.0) or 0.0)
+                                        ltp = float(h.get("last_price", avg_price) or avg_price)
+                                        tot_pnl = float(h.get("pnl", 0.0) or round((ltp - avg_price) * qty, 2))
+                                        pnl_pct = round((tot_pnl / (qty * avg_price)) * 100, 2) if avg_price > 0 else 0.0
+                                        exposure = round(qty * ltp, 2)
+                                        all_pos.append({
+                                            "symbol": sym,
+                                            "broker": "ZERODHA",
+                                            "product": "CNC",
+                                            "qty": qty,
+                                            "avg_price": round(avg_price, 2),
+                                            "ltp": round(ltp, 2),
+                                            "pnl": round(tot_pnl, 2),
+                                            "pnl_pct": pnl_pct,
+                                            "exposure": exposure,
+                                            "exchange": h.get("exchange", "NSE"),
+                                            "instrument_token": str(h.get("instrument_token", "")),
+                                            "position_type": "LONG"
+                                        })
+                    except Exception:
+                        pass
         except Exception as e:
             broker_status["zerodha"] = f"Error ({e})"
     else:
