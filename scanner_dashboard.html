@@ -1109,16 +1109,40 @@
     font-weight: 800;
   }
 
-  .tier-1-border {
+  .tier-1a-border {
     border-left: 4px solid var(--accent-gold);
   }
-  .tier-1-title {
+  .tier-1a-title {
     color: var(--accent-gold);
   }
-  .tier-1-pill {
+  .tier-1a-pill {
     background: rgba(245, 158, 11, 0.15);
     color: #f59e0b;
     border: 1px solid #f59e0b;
+  }
+
+  .tier-1b-border {
+    border-left: 4px solid #38bdf8;
+  }
+  .tier-1b-title {
+    color: #38bdf8;
+  }
+  .tier-1b-pill {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid #38bdf8;
+  }
+
+  .tier-1c-border {
+    border-left: 4px solid #f43f5e;
+  }
+  .tier-1c-title {
+    color: #f43f5e;
+  }
+  .tier-1c-pill {
+    background: rgba(244, 63, 94, 0.15);
+    color: #f43f5e;
+    border: 1px solid #f43f5e;
   }
 
   .tier-2-border {
@@ -1390,16 +1414,44 @@
   <!-- VIEW 2: EOD Pre-Breakout Swing Candidates View (Tier-Wise Clickable TradingView Links) -->
   <div id="view-candidates" style="display:none;" class="cand-view-container">
 
-    <!-- TIER 1 -->
-    <div class="tier-card tier-1-border">
+    <!-- TIER 1A: Base-Anchored Doorstep -->
+    <div class="tier-card tier-1a-border">
       <div class="tier-header">
         <div class="tier-title-group">
-          <span class="tier-title tier-1-title">🔥 <span id="txt-t1-title">TIER 1: PIVOT DOORSTEP &amp; IGNITION</span></span>
-          <span id="cand-cnt-tier1" class="tier-badge-pill tier-1-pill">-- Setups</span>
+          <span class="tier-title tier-1a-title">🔥 <span id="txt-t1a-title">TIER 1A: ⚓ BASE-ANCHORED DOORSTEP (&le;4.5% from 20 EMA)</span></span>
+          <span id="cand-cnt-tier1a" class="tier-badge-pill tier-1a-pill">-- Setups</span>
         </div>
-        <div class="tier-subtitle" id="txt-t1-sub">&le;2.2% from 20D Pivot High &bull; Stage 2 Uptrend &bull; Multi-Day VCP Compression</div>
+        <div class="tier-subtitle" id="txt-t1a-sub">Direct 20D Breakout Doorstep resting firmly on primary base support cushion &bull; Low downside extension</div>
       </div>
-      <div id="cand-grid-tier1" class="cand-grid">
+      <div id="cand-grid-tier1a" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 1B: Developing Base Coil -->
+    <div class="tier-card tier-1b-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1b-title">⚡ <span id="txt-t1b-title">TIER 1B: ⏳ MID-BASE CONSOLIDATION (4.5% &ndash; 5.5% from 20 EMA)</span></span>
+          <span id="cand-cnt-tier1b" class="tier-badge-pill tier-1b-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-t1b-sub">Standard multi-day base coil right near 20D pivot &bull; Moderate extension</div>
+      </div>
+      <div id="cand-grid-tier1b" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 1C: Extended Flagpole Caution -->
+    <div class="tier-card tier-1c-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1c-title">🚩 <span id="txt-t1c-title">TIER 1C: ⚠️ EXTENDED FLAGPOLE (&gt;5.5% from 20 EMA)</span></span>
+          <span id="cand-cnt-tier1c" class="tier-badge-pill tier-1c-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-t1c-sub">Doorstep breakout after multi-day vertical run &bull; Stretched from moving averages &bull; High trap / pullback risk</div>
+      </div>
+      <div id="cand-grid-tier1c" class="cand-grid">
         <!-- Rendered dynamically -->
       </div>
     </div>
@@ -1551,19 +1603,36 @@
   }
 
   function renderCandidatesView() {
-    const t1 = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('TIER 1') || c.tier === '1');
+    const t1a = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('TIER 1A') || c.tier === '1A');
+    const t1b = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('TIER 1B') || c.tier === '1B');
+    const t1c = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('TIER 1C') || c.tier === '1C');
+    // Fallback if legacy TIER 1 without sub-tier
+    const t1_legacy = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase() === 'TIER 1' || c.tier === '1');
+    if (t1_legacy.length && !t1a.length && !t1b.length && !t1c.length) {
+      t1a.push(...t1_legacy.slice(0, 7));
+      t1b.push(...t1_legacy.slice(7, 14));
+      t1c.push(...t1_legacy.slice(14));
+    }
+
     const t2 = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('TIER 2') || c.tier === '2');
     const t3 = RAW_CANDIDATES.filter(c => (c.tier || '').toUpperCase().includes('TIER 3') || c.tier === '3');
 
     const badge = document.getElementById('tab-badge-cand');
     if (badge) badge.innerText = RAW_CANDIDATES.length;
 
-    renderTierGrid('cand-grid-tier1', t1, 1);
-    renderTierGrid('cand-grid-tier2', t2, t1.length + 1);
-    renderTierGrid('cand-grid-tier3', t3, t1.length + t2.length + 1);
+    let r = 1;
+    renderTierGrid('cand-grid-tier1a', t1a, r); r += t1a.length;
+    renderTierGrid('cand-grid-tier1b', t1b, r); r += t1b.length;
+    renderTierGrid('cand-grid-tier1c', t1c, r); r += t1c.length;
+    renderTierGrid('cand-grid-tier2', t2, r); r += t2.length;
+    renderTierGrid('cand-grid-tier3', t3, r);
 
-    const c1 = document.getElementById('cand-cnt-tier1');
-    if (c1) c1.innerText = `${t1.length} Setups`;
+    const c1a = document.getElementById('cand-cnt-tier1a');
+    if (c1a) c1a.innerText = `${t1a.length} Setups`;
+    const c1b = document.getElementById('cand-cnt-tier1b');
+    if (c1b) c1b.innerText = `${t1b.length} Setups`;
+    const c1c = document.getElementById('cand-cnt-tier1c');
+    if (c1c) c1c.innerText = `${t1c.length} Setups`;
     const c2 = document.getElementById('cand-cnt-tier2');
     if (c2) c2.innerText = `${t2.length} Setups`;
     const c3 = document.getElementById('cand-cnt-tier3');
