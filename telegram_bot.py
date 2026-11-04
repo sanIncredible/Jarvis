@@ -853,6 +853,7 @@ def handle_help_command():
         "• <code>/positions</code> or <code>/pos</code> — Live open positions & real-time P&L\n"
         "• <code>/funds</code> or <code>/margin</code> — Live multi-broker available cash & MTF margin\n"
         "• <code>/trail</code> or <code>/sl</code> — Trailing SL & Risk Breakeven recommendations\n"
+        "• <code>/rearm</code> — Overnight Stop-Loss auto-rearm & protection audit\n"
         "• <code>/exit &lt;SYM&gt; [50%|all]</code> — 1-Tap quick exit/square-off\n"
         "• <code>/journal</code> — Reconcile live broker fills into Journal.xlsx\n"
         "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
@@ -1413,23 +1414,42 @@ def handle_trailing_command():
 
             var_val = float(p.get("value_at_risk", 0.0) or 0.0)
             var_pct = float(p.get("var_pct", 0.0) or 0.0)
-            if init_sl >= entry_p and entry_p > 0:
-                var_str = "🟢 <b>₹0.00 (Risk-Free / Breakeven)</b>"
-            elif var_val <= 0 and init_sl > 0:
-                var_str = "🟢 <b>₹0.00 (Risk-Free)</b>"
-            elif init_sl > 0:
-                var_str = f"⚠️ <b>-₹{var_val:,.2f}</b> ({var_pct:.2f}%)"
+            is_pos_short = p.get("qty", 0) < 0 or p.get("position_type") == "SHORT"
+            if is_pos_short:
+                if init_sl <= entry_p and init_sl > 0:
+                    var_str = "🟢 <b>₹0.00 (Risk-Free / Breakeven)</b>"
+                elif var_val <= 0 and init_sl > 0:
+                    var_str = "🟢 <b>₹0.00 (Risk-Free)</b>"
+                elif init_sl > 0:
+                    var_str = f"⚠️ <b>-₹{var_val:,.2f}</b> ({var_pct:.2f}%)"
+                else:
+                    var_str = "<i>N/A</i>"
             else:
-                var_str = "<i>N/A</i>"
+                if init_sl >= entry_p and entry_p > 0:
+                    var_str = "🟢 <b>₹0.00 (Risk-Free / Breakeven)</b>"
+                elif var_val <= 0 and init_sl > 0:
+                    var_str = "🟢 <b>₹0.00 (Risk-Free)</b>"
+                elif init_sl > 0:
+                    var_str = f"⚠️ <b>-₹{var_val:,.2f}</b> ({var_pct:.2f}%)"
+                else:
+                    var_str = "<i>N/A</i>"
 
             rec_var_val = float(p.get("rec_value_at_risk", 0.0) or 0.0)
             rec_var_pct = float(p.get("rec_var_pct", 0.0) or 0.0)
-            if rec_sl >= entry_p and entry_p > 0:
-                rec_var_str = "🟢 ₹0.00 (Free Roll)"
-            elif rec_var_val <= 0 and rec_sl > 0:
-                rec_var_str = "🟢 ₹0.00"
+            if is_pos_short:
+                if rec_sl <= entry_p and rec_sl > 0:
+                    rec_var_str = "🟢 ₹0.00 (Free Roll)"
+                elif rec_var_val <= 0 and rec_sl > 0:
+                    rec_var_str = "🟢 ₹0.00"
+                else:
+                    rec_var_str = f"⚠️ -₹{rec_var_val:,.2f} ({rec_var_pct:.2f}%)"
             else:
-                rec_var_str = f"⚠️ -₹{rec_var_val:,.2f} ({rec_var_pct:.2f}%)"
+                if rec_sl >= entry_p and entry_p > 0:
+                    rec_var_str = "🟢 ₹0.00 (Free Roll)"
+                elif rec_var_val <= 0 and rec_sl > 0:
+                    rec_var_str = "🟢 ₹0.00"
+                else:
+                    rec_var_str = f"⚠️ -₹{rec_var_val:,.2f} ({rec_var_pct:.2f}%)"
 
             lines.append(
                 f"<b>{sym}</b> [<code>{broker} • {prod}</code>]{src_tag}\n"
@@ -1982,6 +2002,11 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_positions_command()
     elif cmd in ("/trail", "/trailing", "/sl", "/trails", "trail", "trailing"):
         return handle_trailing_command()
+    elif cmd in ("/rearm", "/armsl", "rearm", "armsl"):
+        from order_engine import rearm_overnight_stop_losses
+        force_mode = "force" in args.lower()
+        res = rearm_overnight_stop_losses(notify=False, force=force_mode)
+        return res.get("report_text")
     elif cmd in ("/funds", "/fund", "/margin", "/margins", "/cash", "/bal", "/balance", "funds", "fund", "margin", "cash"):
         return handle_funds_command()
     elif cmd in ("/exit", "/close", "/squareoff", "exit", "close"):
