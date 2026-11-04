@@ -50,6 +50,17 @@ SERVER_IP = "80.225.210.222"
 IST = timezone(timedelta(hours=5, minutes=30))
 
 
+def round_to_tick(price, tick=0.05):
+    """Rounds price strictly to a valid Indian exchange tick size multiple (default ₹0.05)."""
+    if price is None:
+        return 0.0
+    try:
+        p = float(price)
+        return round(round(p / tick) * tick, 2)
+    except Exception:
+        return 0.0
+
+
 def is_market_open():
     """Returns True if current time is within normal market hours (09:15 - 15:30 IST, Mon-Fri)."""
     now = get_ist_now()
@@ -905,11 +916,11 @@ def place_upstox_stop_loss_order(instrument_key, quantity, sl_price, product="MT
 
     url = "https://api.upstox.com/v2/order/place"
     market_open = is_market_open()
-    trigger_p = round(float(sl_price), 2)
-    # 0.2% limit buffer below trigger for guaranteed execution without sweeping orderbook
-    limit_price = round(trigger_p * 0.998, 2)
+    trigger_p = round_to_tick(sl_price)
+    # 0.2% limit buffer below trigger strictly rounded to 0.05 tick size
+    limit_price = round_to_tick(trigger_p * 0.998)
     if limit_price >= trigger_p:
-        limit_price = round(trigger_p - 0.05, 2)
+        limit_price = round_to_tick(trigger_p - 0.05)
 
     payload = {
         "quantity": int(quantity),
@@ -967,10 +978,10 @@ def place_dhan_stop_loss_order(symbol, quantity, sl_price, product="MTF"):
         return False, f"Could not map securityId for {symbol} on Dhan"
 
     market_open = is_market_open()
-    trigger_p = round(float(sl_price), 2)
-    limit_price = round(trigger_p * 0.998, 2)
+    trigger_p = round_to_tick(sl_price)
+    limit_price = round_to_tick(trigger_p * 0.998)
     if limit_price >= trigger_p:
-        limit_price = round(trigger_p - 0.05, 2)
+        limit_price = round_to_tick(trigger_p - 0.05)
 
     url = "https://api.dhan.co/v2/orders"
     payload = {
@@ -1018,10 +1029,10 @@ def place_zerodha_stop_loss_order(symbol, quantity, sl_price, product="CNC"):
     if not api_key or not token:
         return False, "Zerodha credentials missing in config_credentials.json"
 
-    trigger_p = round(float(sl_price), 2)
-    limit_price = round(trigger_p * 0.998, 2)
+    trigger_p = round_to_tick(sl_price)
+    limit_price = round_to_tick(trigger_p * 0.998)
     if limit_price >= trigger_p:
-        limit_price = round(trigger_p - 0.05, 2)
+        limit_price = round_to_tick(trigger_p - 0.05)
 
     url = "https://api.kite.trade/orders/regular"
     payload = {
@@ -1396,10 +1407,12 @@ def fetch_all_positions():
                                             tot_pnl = round((ltp - buy_avg) * qty, 2)
                                             pnl_pct = round(((ltp - buy_avg) / buy_avg) * 100, 2) if buy_avg > 0 else 0.0
                                             exposure = round(qty * ltp, 2)
+                                            mtf_q = int(h.get("mtf_qty", 0) or 0)
+                                            prod_type = "MTF" if mtf_q > 0 else "CNC"
                                             all_pos.append({
                                                 "symbol": sym,
                                                 "broker": "DHAN",
-                                                "product": "CNC",
+                                                "product": prod_type,
                                                 "qty": qty,
                                                 "avg_price": round(buy_avg, 2),
                                                 "ltp": round(ltp, 2),
@@ -1547,13 +1560,47 @@ def fetch_all_positions():
     else:
         broker_status["zerodha"] = "Not configured"
 
+    # 4. Enrich positions with active Stop-Loss & Value at Risk (VaR)
+    logged_trades = get_open_trades_from_logs()
+    total_var = 0.0
+
+    for p in all_pos:
+        sym_u = p["symbol"].upper()
+        buy_avg = float(p.get("avg_price", 0) or 0)
+        qty = int(p.get("qty", 0) or 0)
+        log_meta = logged_trades.get(sym_u, {})
+        sl = float(log_meta.get("stop_loss", 0) or 0)
+
+        # Fallback structural SL if not logged
+        if sl <= 0 and buy_avg > 0:
+            if "CE" in sym_u or "PE" in sym_u or "NIFTY" in sym_u:
+                sl = round(buy_avg * 0.70, 2)
+            else:
+                sl = round(buy_avg * 0.975, 2)
+
+        if sl >= buy_avg:
+            var_inr = 0.0
+            var_pct = 0.0
+        else:
+            var_inr = round((buy_avg - sl) * qty, 2)
+            var_pct = round(((buy_avg - sl) / buy_avg) * 100, 2) if buy_avg > 0 else 0.0
+
+        p["stop_loss"] = sl
+        p["value_at_risk"] = var_inr
+        p["var_pct"] = var_pct
+        p["is_risk_free"] = bool(var_inr <= 0)
+        total_var += var_inr
+
     total_pnl = sum(p["pnl"] for p in all_pos)
     total_exposure = sum(p["exposure"] for p in all_pos)
+    total_var_pct = round((total_var / total_exposure) * 100, 2) if total_exposure > 0 else 0.0
 
     totals = {
         "count": len(all_pos),
         "total_pnl": round(total_pnl, 2),
-        "total_exposure": round(total_exposure, 2)
+        "total_exposure": round(total_exposure, 2),
+        "total_var": round(total_var, 2),
+        "total_var_pct": total_var_pct
     }
 
     return all_pos, totals, broker_status
@@ -1924,6 +1971,32 @@ def get_open_trades_from_logs():
         except Exception:
             pass
 
+    # 3. Check tracked_holdings.json
+    tracked_file = SCRIPT_DIR / "tracked_holdings.json"
+    if tracked_file.is_file():
+        try:
+            with open(tracked_file, "r", encoding="utf-8") as f:
+                th_data = json.load(f)
+            for sym, meta in th_data.items():
+                sym_u = sym.strip().upper()
+                if sym_u not in logged_trades:
+                    logged_trades[sym_u] = {
+                        "source": "tracked_holdings.json",
+                        "symbol": sym_u,
+                        "broker": meta.get("broker", "UNKNOWN"),
+                        "product": "CNC",
+                        "stop_loss": float(meta.get("sl", 0) or 0),
+                        "target": float(meta.get("target", 0) or 0),
+                        "notes": meta.get("notes", "")
+                    }
+                else:
+                    if not logged_trades[sym_u].get("stop_loss") and meta.get("sl"):
+                        logged_trades[sym_u]["stop_loss"] = float(meta["sl"])
+                    if not logged_trades[sym_u].get("target") and meta.get("target"):
+                        logged_trades[sym_u]["target"] = float(meta["target"])
+        except Exception:
+            pass
+
     return logged_trades
 
 
@@ -2081,6 +2154,21 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
     except Exception as e:
         print(f"Notice updating orders_log: {e}")
 
+    # 4. Update tracked_holdings.json if position is tracked
+    if ok:
+        try:
+            th_f = SCRIPT_DIR / "tracked_holdings.json"
+            if th_f.is_file():
+                with open(th_f, "r", encoding="utf-8") as f:
+                    th = json.load(f)
+                if sym in th:
+                    th[sym]["sl"] = breakeven_sl
+                    th[sym]["notes"] = f"{th[sym].get('notes', '')} | Breakeven Ratcheted ({datetime.now().strftime('%Y-%m-%d %H:%M')})"
+                    with open(th_f, "w", encoding="utf-8") as f:
+                        json.dump(th, f, indent=2)
+        except Exception as e:
+            print(f"Notice updating tracked_holdings: {e}")
+
     return ok, {
         "status": "success" if ok else "failed",
         "symbol": sym,
@@ -2222,6 +2310,21 @@ def get_all_open_positions_with_trailing_sl():
                 action_badge = "🟢 TRAIL TO BREAKEVEN"
                 action_text = f"Target milestone (+{r_multiple:.1f}R)! Move SL to Breakeven ₹{breakeven_p:,.2f} (Risk-Free!)"
 
+        # Value at Risk (Current SL vs Recommended SL)
+        if initial_sl >= entry_p:
+            var_inr = 0.0
+            var_pct = 0.0
+        else:
+            var_inr = round((entry_p - initial_sl) * qty, 2)
+            var_pct = round(((entry_p - initial_sl) / entry_p) * 100, 2) if entry_p > 0 else 0.0
+
+        if recommended_sl >= entry_p:
+            rec_var_inr = 0.0
+            rec_var_pct = 0.0
+        else:
+            rec_var_inr = round((entry_p - recommended_sl) * qty, 2)
+            rec_var_pct = round(((entry_p - recommended_sl) / entry_p) * 100, 2) if entry_p > 0 else 0.0
+
         enriched.append({
             "symbol": sym,
             "broker": broker,
@@ -2236,6 +2339,11 @@ def get_all_open_positions_with_trailing_sl():
             "target": target_p,
             "recommended_sl": recommended_sl,
             "breakeven_sl": breakeven_p,
+            "value_at_risk": var_inr,
+            "var_pct": var_pct,
+            "rec_value_at_risk": rec_var_inr,
+            "rec_var_pct": rec_var_pct,
+            "is_risk_free": bool(var_inr <= 0),
             "r_multiple": r_multiple,
             "dist_to_sl_pct": dist_to_sl_pct,
             "action_badge": action_badge,
@@ -2336,6 +2444,21 @@ def get_all_open_positions_with_trailing_sl():
                 action_badge = "🟢 TRAIL TO BREAKEVEN"
                 action_text = f"Target milestone (+{r_multiple:.1f}R)! Move SL to Breakeven ₹{breakeven_p:,.2f} (Risk-Free!)"
 
+        # Value at Risk (Current SL vs Recommended SL)
+        if initial_sl >= entry_p:
+            var_inr = 0.0
+            var_pct = 0.0
+        else:
+            var_inr = round((entry_p - initial_sl) * qty, 2)
+            var_pct = round(((entry_p - initial_sl) / entry_p) * 100, 2) if entry_p > 0 else 0.0
+
+        if recommended_sl >= entry_p:
+            rec_var_inr = 0.0
+            rec_var_pct = 0.0
+        else:
+            rec_var_inr = round((entry_p - recommended_sl) * qty, 2)
+            rec_var_pct = round(((entry_p - recommended_sl) / entry_p) * 100, 2) if entry_p > 0 else 0.0
+
         enriched.append({
             "symbol": sym,
             "broker": log_item.get("broker", "LOGGED"),
@@ -2350,6 +2473,11 @@ def get_all_open_positions_with_trailing_sl():
             "target": target_p,
             "recommended_sl": recommended_sl,
             "breakeven_sl": breakeven_p,
+            "value_at_risk": var_inr,
+            "var_pct": var_pct,
+            "rec_value_at_risk": rec_var_inr,
+            "rec_var_pct": rec_var_pct,
+            "is_risk_free": bool(var_inr <= 0),
             "r_multiple": r_multiple,
             "dist_to_sl_pct": dist_to_sl_pct,
             "action_badge": action_badge,
