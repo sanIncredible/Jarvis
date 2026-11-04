@@ -812,16 +812,23 @@ def send_telegram_alert(msg_html: str, cfg: Dict[str, Any]) -> Tuple[bool, str]:
 
     token = tg.get("bot_token")
     chat_id = tg.get("chat_id")
-    if not token or not chat_id:
+    group_id = tg.get("group_id")
+    topics = tg.get("topics", {})
+    thread_id = topics.get("reports") if group_id else None
+    target_chat = group_id if (group_id and thread_id) else chat_id
+
+    if not token or not target_chat:
         return False, "Missing bot_token or chat_id"
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {
-        "chat_id": chat_id,
+        "chat_id": target_chat,
         "text": msg_html,
         "parse_mode": "HTML",
         "disable_web_page_preview": True
     }
+    if thread_id:
+        payload["message_thread_id"] = int(thread_id)
     try:
         req = urllib.request.Request(
             url,
