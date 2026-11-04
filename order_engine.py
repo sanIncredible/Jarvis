@@ -1247,13 +1247,561 @@ def modify_broker_stop_loss(broker, order_id, quantity, new_sl_price, transactio
     return False, f"Unsupported broker for modify SL: {broker}"
 
 
-def get_pending_stop_loss_order(symbol, broker=None):
+
+# ---------------------------------------------------------
+# Good-Till-Triggered (GTT / Forever Orders) Engine
+# Permanent 1-Year Stop-Loss Protection (Zero Daily Expiry)
+# ---------------------------------------------------------
+def place_zerodha_gtt_stop_loss(symbol, quantity, sl_price, exchange="NSE", product="CNC", transaction_type="SELL"):
+    """Submits a permanent 1-year GTT Stop-Loss trigger directly to Zerodha Kite API."""
+    cfg = load_config()
+    kite = cfg.get("zerodha", {})
+    ak = kite.get("api_key", "").strip()
+    tok = kite.get("access_token", "").strip()
+    if not (ak and tok):
+        return False, "Zerodha credentials missing in config_credentials.json"
+
+    sym_u = (symbol or "").strip().upper()
+    trigger_p = round_to_tick(sl_price)
+    tt = transaction_type.upper()
+    if tt == "SELL":
+        limit_p = round_to_tick(trigger_p * 0.998)
+        if limit_p >= trigger_p:
+            limit_p = round_to_tick(trigger_p - 0.05)
+    else:
+        limit_p = round_to_tick(trigger_p * 1.002)
+        if limit_p <= trigger_p:
+            limit_p = round_to_tick(trigger_p + 0.05)
+
+    q, _ = fetch_live_quote(sym_u)
+    ltp = float(q.get("ltp", 0) or trigger_p) if q else trigger_p
+
+    condition = {
+        "exchange": exchange.upper(),
+        "tradingsymbol": sym_u,
+        "trigger_values": [float(trigger_p)],
+        "last_price": float(ltp)
+    }
+    orders = [{
+        "exchange": exchange.upper(),
+        "tradingsymbol": sym_u,
+        "transaction_type": tt,
+        "quantity": int(quantity),
+        "order_type": "LIMIT",
+        "product": product.upper(),
+        "price": float(limit_p)
+    }]
+
+    payload = {
+        "type": "single",
+        "condition": json.dumps(condition),
+        "orders": json.dumps(orders)
+    }
+
+    req_data = urllib.parse.urlencode(payload).encode("utf-8")
+    req = urllib.request.Request("https://api.kite.trade/gtt/triggers", data=req_data, method="POST", headers={
+        "X-Kite-Version": "3",
+        "Authorization": f"token {ak}:{tok}",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Jarvis-Order-Engine"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            if data.get("status") == "success":
+                trig_id = str(data.get("data", {}).get("trigger_id", "N/A"))
+                return True, trig_id
+            return False, data.get("message", "Zerodha GTT placement failed")
+    except urllib.error.HTTPError as he:
+        try:
+            err_json = json.loads(he.read().decode())
+            return False, err_json.get("message", f"HTTP {he.code}")
+        except Exception:
+            return False, f"Zerodha HTTP {he.code}: {he.reason}"
+    except Exception as e:
+        return False, f"Zerodha GTT error: {str(e)}"
+
+
+def modify_zerodha_gtt_stop_loss(trigger_id, symbol, quantity, new_sl_price, exchange="NSE", product="CNC", transaction_type="SELL"):
+    """Atomically modifies an existing GTT Stop-Loss trigger on Zerodha Kite API."""
+    cfg = load_config()
+    kite = cfg.get("zerodha", {})
+    ak = kite.get("api_key", "").strip()
+    tok = kite.get("access_token", "").strip()
+    if not (ak and tok):
+        return False, "Zerodha credentials missing"
+
+    sym_u = (symbol or "").strip().upper()
+    trigger_p = round_to_tick(new_sl_price)
+    tt = transaction_type.upper()
+    if tt == "SELL":
+        limit_p = round_to_tick(trigger_p * 0.998)
+        if limit_p >= trigger_p:
+            limit_p = round_to_tick(trigger_p - 0.05)
+    else:
+        limit_p = round_to_tick(trigger_p * 1.002)
+        if limit_p <= trigger_p:
+            limit_p = round_to_tick(trigger_p + 0.05)
+
+    q, _ = fetch_live_quote(sym_u)
+    ltp = float(q.get("ltp", 0) or trigger_p) if q else trigger_p
+
+    condition = {
+        "exchange": exchange.upper(),
+        "tradingsymbol": sym_u,
+        "trigger_values": [float(trigger_p)],
+        "last_price": float(ltp)
+    }
+    orders = [{
+        "exchange": exchange.upper(),
+        "tradingsymbol": sym_u,
+        "transaction_type": tt,
+        "quantity": int(quantity),
+        "order_type": "LIMIT",
+        "product": product.upper(),
+        "price": float(limit_p)
+    }]
+
+    payload = {
+        "type": "single",
+        "condition": json.dumps(condition),
+        "orders": json.dumps(orders)
+    }
+
+    req_data = urllib.parse.urlencode(payload).encode("utf-8")
+    req = urllib.request.Request(f"https://api.kite.trade/gtt/triggers/{trigger_id}", data=req_data, method="PUT", headers={
+        "X-Kite-Version": "3",
+        "Authorization": f"token {ak}:{tok}",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Jarvis-Order-Engine"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            if data.get("status") == "success":
+                ret_id = str(data.get("data", {}).get("trigger_id", trigger_id))
+                return True, ret_id
+            return False, data.get("message", "Zerodha GTT modify failed")
+    except urllib.error.HTTPError as he:
+        try:
+            err_json = json.loads(he.read().decode())
+            return False, err_json.get("message", f"HTTP {he.code}")
+        except Exception:
+            return False, f"Zerodha HTTP {he.code}: {he.reason}"
+    except Exception as e:
+        return False, f"Zerodha GTT modify error: {str(e)}"
+
+
+def cancel_zerodha_gtt_order(trigger_id):
+    """Cancels an active GTT trigger on Zerodha Kite API."""
+    cfg = load_config()
+    kite = cfg.get("zerodha", {})
+    ak = kite.get("api_key", "").strip()
+    tok = kite.get("access_token", "").strip()
+    if not (ak and tok):
+        return False, "Zerodha credentials missing"
+
+    req = urllib.request.Request(f"https://api.kite.trade/gtt/triggers/{trigger_id}", method="DELETE", headers={
+        "X-Kite-Version": "3",
+        "Authorization": f"token {ak}:{tok}",
+        "User-Agent": "Jarvis-Order-Engine"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode())
+            return (data.get("status") == "success"), str(trigger_id)
+    except Exception as e:
+        return False, str(e)
+
+
+def place_dhan_forever_stop_loss(symbol, quantity, sl_price, product="MTF", transaction_type="SELL"):
+    """Submits a permanent 1-year Forever Order (GTT) Stop-Loss directly to DhanHQ API v2."""
+    cfg = load_config()
+    dhan = cfg.get("dhan", {})
+    cid = dhan.get("client_id", "").strip()
+    tok = dhan.get("access_token", "").strip()
+    if not (cid and tok):
+        return False, "Dhan credentials missing in config_credentials.json"
+
+    sym_u = (symbol or "").strip().upper()
+    sec_id = resolve_dhan_security_id(sym_u)
+    if not sec_id:
+        return False, f"Could not map securityId for {sym_u} on Dhan"
+
+    trigger_p = round_to_tick(sl_price)
+    tt = transaction_type.upper()
+    if tt == "SELL":
+        limit_p = round_to_tick(trigger_p * 0.998)
+        if limit_p >= trigger_p:
+            limit_p = round_to_tick(trigger_p - 0.05)
+    else:
+        limit_p = round_to_tick(trigger_p * 1.002)
+        if limit_p <= trigger_p:
+            limit_p = round_to_tick(trigger_p + 0.05)
+
+    payload = {
+        "dhanClientId": cid,
+        "orderFlag": "SINGLE",
+        "transactionType": tt,
+        "exchangeSegment": "NSE_EQ",
+        "productType": product.upper(),
+        "orderType": "LIMIT",
+        "validity": "DAY",
+        "securityId": str(sec_id),
+        "quantity": int(quantity),
+        "price": float(limit_p),
+        "triggerPrice": float(trigger_p)
+    }
+
+    req_data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request("https://api.dhan.co/v2/forever/orders", data=req_data, method="POST", headers={
+        "access-token": tok,
+        "client-id": cid,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "Jarvis-Order-Engine"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            oid = data.get("orderId")
+            if oid and data.get("orderStatus") in ("PENDING", "TRANSIT", "CONFIRMED", "ACTIVE"):
+                return True, str(oid)
+            err = data.get("errorMessage") or data.get("message") or "Dhan Forever Order failed"
+            return False, err
+    except urllib.error.HTTPError as he:
+        try:
+            err_json = json.loads(he.read().decode())
+            return False, err_json.get("errorMessage") or err_json.get("message") or f"HTTP {he.code}"
+        except Exception:
+            return False, f"Dhan HTTP {he.code}: {he.reason}"
+    except Exception as e:
+        return False, f"Dhan Forever order error: {str(e)}"
+
+
+def modify_dhan_forever_stop_loss(order_id, quantity, new_sl_price, transaction_type="SELL"):
+    """Atomically modifies an existing Forever Order (GTT) on DhanHQ API v2."""
+    cfg = load_config()
+    dhan = cfg.get("dhan", {})
+    cid = dhan.get("client_id", "").strip()
+    tok = dhan.get("access_token", "").strip()
+    if not (cid and tok):
+        return False, "Dhan credentials missing"
+
+    trigger_p = round_to_tick(new_sl_price)
+    tt = transaction_type.upper()
+    if tt == "SELL":
+        limit_p = round_to_tick(trigger_p * 0.998)
+        if limit_p >= trigger_p:
+            limit_p = round_to_tick(trigger_p - 0.05)
+    else:
+        limit_p = round_to_tick(trigger_p * 1.002)
+        if limit_p <= trigger_p:
+            limit_p = round_to_tick(trigger_p + 0.05)
+
+    payload = {
+        "dhanClientId": cid,
+        "orderId": str(order_id),
+        "orderFlag": "SINGLE",
+        "legName": "STOP_LOSS_LEG",
+        "orderType": "LIMIT",
+        "transactionType": tt,
+        "quantity": int(quantity),
+        "price": float(limit_p),
+        "triggerPrice": float(trigger_p),
+        "disclosedQuantity": 0,
+        "validity": "DAY"
+    }
+
+    req_data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(f"https://api.dhan.co/v2/forever/orders/{order_id}", data=req_data, method="PUT", headers={
+        "access-token": tok,
+        "client-id": cid,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "Jarvis-Order-Engine"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            oid = data.get("orderId") or order_id
+            if oid and data.get("orderStatus") in ("PENDING", "TRANSIT", "CONFIRMED", "ACTIVE", None):
+                return True, str(oid)
+            err = data.get("errorMessage") or data.get("message") or "Dhan Forever modify failed"
+            return False, err
+    except urllib.error.HTTPError as he:
+        try:
+            err_json = json.loads(he.read().decode())
+            return False, err_json.get("errorMessage") or err_json.get("message") or f"HTTP {he.code}"
+        except Exception:
+            return False, f"Dhan HTTP {he.code}: {he.reason}"
+    except Exception as e:
+        return False, f"Dhan Forever modify error: {str(e)}"
+
+
+def cancel_dhan_forever_order(order_id):
+    """Cancels an active Forever Order (GTT) on DhanHQ API v2."""
+    cfg = load_config()
+    dhan = cfg.get("dhan", {})
+    cid = dhan.get("client_id", "").strip()
+    tok = dhan.get("access_token", "").strip()
+    if not (cid and tok):
+        return False, "Dhan credentials missing"
+
+    req = urllib.request.Request(f"https://api.dhan.co/v2/forever/orders/{order_id}", method="DELETE", headers={
+        "access-token": tok,
+        "client-id": cid,
+        "Accept": "application/json",
+        "User-Agent": "Jarvis-Order-Engine"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode())
+            return True, str(order_id)
+    except Exception as e:
+        return False, str(e)
+
+
+def place_upstox_gtt_stop_loss(instrument_key, quantity, sl_price, product="MTF", transaction_type="SELL"):
+    """Submits a permanent 1-year GTT Stop-Loss directly to Upstox API v3."""
+    cfg = load_config()
+    tok = cfg.get("upstox", {}).get("access_token", "").strip()
+    if not tok:
+        return False, "Upstox access token missing"
+
+    trigger_p = round_to_tick(sl_price)
+    tt = transaction_type.upper()
+    trig_type = "BELOW" if tt == "SELL" else "ABOVE"
+    prod_code = "D" if product.upper() in ("CNC", "DELIVERY", "D") else "MTF"
+
+    payload = {
+        "type": "SINGLE",
+        "quantity": int(quantity),
+        "product": prod_code,
+        "rules": [
+            {
+                "strategy": "ENTRY",
+                "trigger_type": trig_type,
+                "trigger_price": float(trigger_p)
+            }
+        ],
+        "instrument_token": instrument_key,
+        "transaction_type": tt
+    }
+
+    req_data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request("https://api.upstox.com/v3/order/gtt/place", data=req_data, method="POST", headers={
+        "Authorization": f"Bearer {tok}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "Jarvis-Order-Engine"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            if data.get("status") == "success":
+                gtt_id = data.get("data", {}).get("gtt_order_id", "N/A")
+                return True, str(gtt_id)
+            errors = data.get("errors", [])
+            err_msg = errors[0].get("message") if errors else (data.get("message") or "Upstox GTT placement failed")
+            return False, err_msg
+    except Exception as e:
+        return False, f"Upstox GTT error: {str(e)}"
+
+
+def cancel_upstox_gtt_order(gtt_id):
+    """Cancels an active GTT order on Upstox API v3."""
+    cfg = load_config()
+    tok = cfg.get("upstox", {}).get("access_token", "").strip()
+    if not tok:
+        return False, "Upstox token missing"
+
+    req = urllib.request.Request(f"https://api.upstox.com/v3/order/gtt/cancel/{gtt_id}", method="DELETE", headers={
+        "Authorization": f"Bearer {tok}",
+        "Accept": "application/json",
+        "User-Agent": "Jarvis-Order-Engine"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode())
+            return (data.get("status") == "success"), str(gtt_id)
+    except Exception as e:
+        return False, str(e)
+
+
+def place_broker_gtt_stop_loss(broker, symbol, quantity, sl_price, instrument_key=None, product="MTF", transaction_type="SELL", exchange="NSE"):
+    """Unified dispatcher: submits a permanent 1-year GTT Stop-Loss to designated broker."""
+    b = (broker or "").strip().lower()
+    if b == "zerodha":
+        return place_zerodha_gtt_stop_loss(symbol, quantity, sl_price, exchange=exchange, product="CNC" if product.upper() in ("CNC", "DELIVERY") else "MTF", transaction_type=transaction_type)
+    elif b == "dhan":
+        return place_dhan_forever_stop_loss(symbol, quantity, sl_price, product=product, transaction_type=transaction_type)
+    elif b == "upstox":
+        inst_k = instrument_key or resolve_instrument_key(symbol)
+        if not inst_k:
+            return False, f"Could not resolve instrument key for {symbol}"
+        return place_upstox_gtt_stop_loss(inst_k, quantity, sl_price, product=product, transaction_type=transaction_type)
+    return False, f"Unsupported broker for GTT: {broker}"
+
+
+def modify_broker_gtt_stop_loss(broker, order_id, quantity, new_sl_price, symbol=None, transaction_type="SELL", exchange="NSE", product="CNC"):
+    """Unified dispatcher: atomically modifies an existing GTT Stop-Loss on designated broker."""
+    b = (broker or "").strip().lower()
+    if b == "zerodha":
+        return modify_zerodha_gtt_stop_loss(order_id, symbol or "", quantity, new_sl_price, exchange=exchange, product=product, transaction_type=transaction_type)
+    elif b == "dhan":
+        return modify_dhan_forever_stop_loss(order_id, quantity, new_sl_price, transaction_type=transaction_type)
+    elif b == "upstox":
+        return False, "Upstox GTT modify not yet implemented"
+    return False, f"Unsupported broker for modify GTT: {broker}"
+
+
+def cancel_broker_gtt_order(broker, order_id):
+    """Unified dispatcher: cancels an active GTT order on designated broker."""
+    b = (broker or "").strip().lower()
+    if b == "zerodha":
+        return cancel_zerodha_gtt_order(order_id)
+    elif b == "dhan":
+        return cancel_dhan_forever_order(order_id)
+    elif b == "upstox":
+        return cancel_upstox_gtt_order(order_id)
+    return False, f"Unsupported broker: {broker}"
+
+
+def get_pending_gtt_order(symbol, broker=None):
     """
-    Inspects live broker orderbooks for an active/pending Stop-Loss order for the given symbol.
+    Inspects live broker GTT triggers (Zerodha GTT, Dhan Forever Orders, Upstox v3 GTT)
+    for an active Stop-Loss for the given symbol.
     Returns:
-        dict: {"order_id": ..., "broker": ..., "trigger_price": ..., "price": ..., "quantity": ..., "transaction_type": ..., "status": ...} or None
+        dict: {"order_id": ..., "broker": ..., "quantity": ..., "trigger_price": ..., "price": ..., "transaction_type": ..., "status": ..., "is_gtt": True} or None
     """
     sym_u = (symbol or "").strip().upper()
+    cfg = load_config()
+    brokers_to_check = [broker.lower()] if broker else ["zerodha", "dhan", "upstox"]
+
+    for b in brokers_to_check:
+        try:
+            if b == "zerodha":
+                kite = cfg.get("zerodha", {})
+                ak = kite.get("api_key", "").strip()
+                tok = kite.get("access_token", "").strip()
+                if not (ak and tok):
+                    continue
+                url = "https://api.kite.trade/gtt/triggers"
+                req = urllib.request.Request(url, headers={
+                    "X-Kite-Version": "3",
+                    "Authorization": f"token {ak}:{tok}",
+                    "Accept": "application/json"
+                })
+                with urllib.request.urlopen(req, timeout=6) as resp:
+                    d = json.loads(resp.read().decode())
+                    for trig in d.get("data", []):
+                        if str(trig.get("status", "")).lower() == "active":
+                            cond = trig.get("condition", {})
+                            ts = str(cond.get("tradingsymbol", "")).upper()
+                            if sym_u and (ts == sym_u or sym_u in ts):
+                                trig_vals = cond.get("trigger_values", [])
+                                trig_p = trig_vals[0] if trig_vals else 0.0
+                                ords = trig.get("orders", [])
+                                qty = ords[0].get("quantity", 0) if ords else 0
+                                lim_p = ords[0].get("price", 0.0) if ords else 0.0
+                                tx_type = ords[0].get("transaction_type", "SELL") if ords else "SELL"
+                                return {
+                                    "order_id": str(trig.get("id")),
+                                    "broker": "ZERODHA",
+                                    "quantity": int(qty),
+                                    "trigger_price": float(trig_p),
+                                    "price": float(lim_p),
+                                    "transaction_type": str(tx_type).upper(),
+                                    "status": "ACTIVE_GTT",
+                                    "order_type": "GTT",
+                                    "is_gtt": True
+                                }
+
+            elif b == "dhan":
+                dhan = cfg.get("dhan", {})
+                cid = dhan.get("client_id", "").strip()
+                tok = dhan.get("access_token", "").strip()
+                sec_id = str(resolve_dhan_security_id(sym_u) or "")
+                if not (cid and tok):
+                    continue
+                url = "https://api.dhan.co/v2/forever/orders"
+                req = urllib.request.Request(url, headers={
+                    "access-token": tok,
+                    "client-id": cid,
+                    "Accept": "application/json"
+                })
+                with urllib.request.urlopen(req, timeout=6) as resp:
+                    d = json.loads(resp.read().decode())
+                    if isinstance(d, list):
+                        for ord_item in d:
+                            st = str(ord_item.get("orderStatus", "")).upper()
+                            sid = str(ord_item.get("securityId", ""))
+                            trad_sym = str(ord_item.get("tradingSymbol", "")).upper()
+                            if st in ("TRANSIT", "PENDING", "ACTIVE", "CONFIRMED"):
+                                if (sec_id and sid == sec_id) or (sym_u and sym_u in trad_sym):
+                                    return {
+                                        "order_id": str(ord_item.get("orderId")),
+                                        "broker": "DHAN",
+                                        "quantity": int(ord_item.get("quantity", 0)),
+                                        "trigger_price": float(ord_item.get("triggerPrice", 0) or 0),
+                                        "price": float(ord_item.get("price", 0) or 0),
+                                        "transaction_type": str(ord_item.get("transactionType", "SELL")).upper(),
+                                        "status": "ACTIVE_GTT",
+                                        "order_type": "FOREVER_GTT",
+                                        "is_gtt": True
+                                    }
+
+            elif b == "upstox":
+                upstox = cfg.get("upstox", {})
+                tok = upstox.get("access_token", "").strip()
+                if not tok:
+                    continue
+                url = "https://api.upstox.com/v3/order/gtt"
+                req = urllib.request.Request(url, headers={
+                    "Authorization": f"Bearer {tok}",
+                    "Accept": "application/json",
+                    "User-Agent": "Jarvis-Order-Engine"
+                })
+                with urllib.request.urlopen(req, timeout=6) as resp:
+                    d = json.loads(resp.read().decode())
+                    for ord_item in d.get("data", []):
+                        st = str(ord_item.get("status", "")).upper()
+                        if st in ("ACTIVE", "OPEN", "TRIGGER_PENDING"):
+                            inst = str(ord_item.get("instrument_token", "")).upper()
+                            trad_sym = str(ord_item.get("trading_symbol", "")).upper()
+                            if sym_u in inst or sym_u in trad_sym:
+                                rules = ord_item.get("rules", [])
+                                trig_p = rules[0].get("trigger_price", 0.0) if rules else 0.0
+                                return {
+                                    "order_id": str(ord_item.get("gtt_order_id", ord_item.get("order_id", ""))),
+                                    "broker": "UPSTOX",
+                                    "quantity": int(ord_item.get("quantity", 0)),
+                                    "trigger_price": float(trig_p),
+                                    "price": float(ord_item.get("price", trig_p)),
+                                    "transaction_type": str(ord_item.get("transaction_type", "SELL")).upper(),
+                                    "status": "ACTIVE_GTT",
+                                    "order_type": "GTT",
+                                    "is_gtt": True
+                                }
+        except Exception:
+            pass
+    return None
+
+def get_pending_stop_loss_order(symbol, broker=None):
+    """
+    Inspects live broker stop-loss protection for the given symbol.
+    Checks permanent GTT triggers FIRST (Zerodha GTT, Dhan Forever Orders, Upstox GTT).
+    Falls back to regular exchange DAY orders if no GTT trigger is found.
+    """
+    sym_u = (symbol or "").strip().upper()
+
+    # 1. Check GTT first (permanent 1-year broker-level stop loss)
+    gtt = get_pending_gtt_order(sym_u, broker=broker)
+    if gtt:
+        return gtt
+
+    # 2. Fall back to regular exchange DAY orderbook
     cfg = load_config()
     brokers_to_check = [broker.lower()] if broker else ["upstox", "dhan", "zerodha"]
 
@@ -1406,14 +1954,26 @@ def cancel_broker_order(broker, order_id):
 
 def cancel_symbol_stop_loss(symbol, broker=None):
     """
-    Cancels any pending stop-loss orders for symbol to prevent dangling short exposure upon exit.
-    1. Checks orders_log.json for stored sl_order_id.
-    2. Queries broker orderbook and cancels any trigger-pending sell orders for this symbol.
+    Cancels any pending stop-loss orders (both GTT triggers and DAY orders) for symbol upon exit.
+    1. Cancels active GTT trigger via cancel_broker_gtt_order.
+    2. Checks orders_log.json for stored sl_order_id.
+    3. Queries broker orderbook and cancels any trigger-pending sell orders.
     """
     sym_u = symbol.strip().upper()
     cfg = load_config()
     target_broker = (broker or get_default_broker()).strip().lower()
     cancelled = []
+
+    # 0. Cancel active GTT trigger if present
+    try:
+        active_gtt = get_pending_gtt_order(sym_u, broker=target_broker)
+        if active_gtt and active_gtt.get("order_id"):
+            gtt_b = active_gtt.get("broker", target_broker).lower()
+            ok_gtt, gtt_oid = cancel_broker_gtt_order(gtt_b, active_gtt["order_id"])
+            if ok_gtt:
+                cancelled.append(f"GTT:{gtt_oid}")
+    except Exception:
+        pass
 
     # 1. Cancel recorded SL order ID from orders_log.json
     if ORDERS_LOG_FILE.is_file():
@@ -2410,7 +2970,7 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
             "current_ltp": current_ltp
         }
 
-    # Step 1: Query live pending SL order on broker
+    # Step 1: Query live pending SL order on broker (GTT or regular)
     existing_sl = get_pending_stop_loss_order(sym, broker=b)
     ok = False
     res = None
@@ -2418,20 +2978,36 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
 
     if existing_sl:
         old_oid = existing_sl["order_id"]
-        # Try atomic modify first (zero race window)
-        mod_ok, mod_res = modify_broker_stop_loss(b, old_oid, quantity, breakeven_sl, transaction_type="SELL")
-        if mod_ok:
-            ok = True
-            atomic_success = True
-            res = {"status": "success", "mode": "ATOMIC_MODIFY", "order_id": old_oid, "sl_price": breakeven_sl}
+        is_gtt = existing_sl.get("is_gtt", False)
+        if is_gtt:
+            # Atomically modify existing permanent GTT trigger directly
+            mod_ok, mod_res = modify_broker_gtt_stop_loss(
+                broker=b,
+                order_id=old_oid,
+                quantity=quantity,
+                new_sl_price=breakeven_sl,
+                symbol=sym,
+                transaction_type="SELL",
+                product=product
+            )
+            if mod_ok:
+                ok = True
+                atomic_success = True
+                res = {"status": "success", "mode": "ATOMIC_GTT_MODIFY", "order_id": old_oid, "sl_price": breakeven_sl}
         else:
-            # Modify rejected (e.g. order in transition or rejected by broker), fallback to cancel + place
-            cancel_broker_order(b, old_oid)
-            time.sleep(0.6)
+            # Modify regular exchange order
+            mod_ok, mod_res = modify_broker_stop_loss(b, old_oid, quantity, breakeven_sl, transaction_type="SELL")
+            if mod_ok:
+                ok = True
+                atomic_success = True
+                res = {"status": "success", "mode": "ATOMIC_MODIFY", "order_id": old_oid, "sl_price": breakeven_sl}
+            else:
+                cancel_broker_order(b, old_oid)
+                time.sleep(0.6)
 
     if not ok:
-        # Step 2: Fresh placement if no existing SL was found or atomic modify failed
-        place_ok, place_res = place_broker_stop_loss(
+        # Step 2: Fresh GTT placement (preferred permanent 1-year stop-loss)
+        place_ok, place_res = place_broker_gtt_stop_loss(
             broker=b,
             symbol=sym,
             quantity=quantity,
@@ -2440,8 +3016,19 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
             product=product,
             transaction_type="SELL"
         )
+        if not place_ok:
+            # Fall back to regular DAY stop-loss order if GTT placement is rejected
+            place_ok, place_res = place_broker_stop_loss(
+                broker=b,
+                symbol=sym,
+                quantity=quantity,
+                sl_price=breakeven_sl,
+                instrument_key=instrument_key,
+                product=product,
+                transaction_type="SELL"
+            )
         ok = place_ok
-        res = {"status": "success" if place_ok else "failed", "mode": "FRESH_PLACE", "order_id": place_res if place_ok else None, "error": place_res if not place_ok else None, "sl_price": breakeven_sl}
+        res = {"status": "success" if place_ok else "failed", "mode": "GTT_PLACE", "order_id": place_res if place_ok else None, "error": place_res if not place_ok else None, "sl_price": breakeven_sl}
 
     # Step 3: Update orders_log.json
     try:
@@ -2498,12 +3085,13 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
 
 def rearm_overnight_stop_losses(notify=True, force=False):
     """
-    P0 Overnight SL Auto-Rearm Engine:
-    NSE/BSE automatically cancels all pending DAY orders at 15:30 IST.
-    This function reconciles all open positional trades against live broker orderbooks.
-    If an open position lacks an active stop-loss order on the broker, it calculates
-    the target SL (from tracked_holdings, orders_log, or fallback) and submits
-    a fresh Stop-Loss Limit order on the exchange.
+    P0 GTT Permanent Stop-Loss Protection Engine:
+    Reconciles all open positional trades against permanent 1-year GTT triggers
+    (Zerodha GTT, Dhan Forever Orders, Upstox v3 GTT).
+    GTT orders do NOT expire at 15:30 IST and remain active 24/7/365.
+    If any open position lacks an active GTT order, automatically submits
+    a fresh GTT Stop-Loss directly to the broker (can be done anytime, even when market is closed!).
+    Eliminates frantic pre-market and market-open order placement activity!
 
     If market is closed and force=False, performs an audit report without submitting live orders
     (since Indian exchanges reject STOP_LOSS orders as AMO).
@@ -2607,21 +3195,9 @@ def rearm_overnight_stop_losses(notify=True, force=False):
             })
             continue
 
-        # If market closed and force=False: cannot place AMO SL on Indian exchanges
-        if not market_open and not force:
-            audit_only.append({
-                "symbol": sym,
-                "broker": broker,
-                "qty": abs_qty,
-                "target_sl": target_sl,
-                "source": source_desc,
-                "product": prod,
-                "tx_type": tx_type
-            })
-            continue
-
-        # Place fresh SL order on broker
-        ok, res = place_broker_stop_loss(
+        # GTT Advantage: GTT/Forever orders can be submitted 24/7 even when market is closed!
+        # Place fresh GTT Stop-Loss directly on broker (valid for 1 year)
+        ok, res = place_broker_gtt_stop_loss(
             broker=broker,
             symbol=sym,
             quantity=abs_qty,
@@ -2629,6 +3205,16 @@ def rearm_overnight_stop_losses(notify=True, force=False):
             product=prod,
             transaction_type=tx_type
         )
+        if not ok and market_open:
+            # Fallback to regular SL order only during market hours
+            ok, res = place_broker_stop_loss(
+                broker=broker,
+                symbol=sym,
+                quantity=abs_qty,
+                sl_price=target_sl,
+                product=prod,
+                transaction_type=tx_type
+            )
 
         if ok:
             new_oid = str(res)
@@ -2695,31 +3281,23 @@ def rearm_overnight_stop_losses(notify=True, force=False):
 
     # Build report card
     lines = [
-        "🛡️ <b>JARVIS OVERNIGHT SL RE-ARM ENGINE</b>",
+        "🛡️ <b>JARVIS GTT STOP-LOSS PROTECTION AUDIT</b>",
         f"📅 <i>{now_str}</i>",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "⚡ <b>Architecture: Permanent 1-Year GTT / Forever Orders</b>",
+        "<i>Orders remain active 24/7 on broker cloud servers. Zero daily 15:30 expiration!</i>\n"
     ]
 
-    if not market_open and not force:
-        lines.append("🌙 <b>Market Status: CLOSED</b>")
-        lines.append("<i>Indian stock exchanges (NSE/BSE) reject STOP_LOSS orders as AMO. Engine is armed to submit live orders at 09:15:05 AM IST market open.</i>\n")
-
     if rearmed:
-        lines.append(f"🔄 <b>Successfully Re-Armed ({len(rearmed)}):</b>")
+        lines.append(f"🔄 <b>Newly Placed Permanent GTT Orders ({len(rearmed)}):</b>")
         for r in rearmed:
-            lines.append(f"• <b>{r['symbol']}</b> ({r['broker']}): Qty {r['qty']} @ SL ₹{r['sl']:,.2f} | Order ID <code>{r['order_id']}</code> (<i>{r['source']}</i>)")
-        lines.append("")
-
-    if audit_only:
-        lines.append(f"📋 <b>Armed For Market Open Rearm ({len(audit_only)}):</b>")
-        for a in audit_only:
-            lines.append(f"• <b>{a['symbol']}</b> ({a['broker']}): Qty {a['qty']} | Target SL ₹{a['target_sl']:,.2f} (<i>{a['source']}</i>)")
+            lines.append(f"• <b>{r['symbol']}</b> ({r['broker']}): Qty {r['qty']} @ SL ₹{r['sl']:,.2f} | GTT ID <code>{r['order_id']}</code> (<i>{r['source']}</i>)")
         lines.append("")
 
     if already_protected:
-        lines.append(f"✅ <b>Already Protected On Exchange ({len(already_protected)}):</b>")
+        lines.append(f"✅ <b>Already Protected (1-Year GTT Active) ({len(already_protected)}):</b>")
         for ap in already_protected:
-            lines.append(f"• <b>{ap['symbol']}</b> ({ap['broker']}): Qty {ap['qty']} @ SL ₹{ap['sl']:,.2f} (Order <code>{ap['order_id']}</code>)")
+            lines.append(f"• <b>{ap['symbol']}</b> ({ap['broker']}): Qty {ap['qty']} @ SL ₹{ap['sl']:,.2f} | GTT ID <code>{ap['order_id']}</code> (<i>Active 1-Year GTT</i>)")
         lines.append("")
 
     if critical_alerts:
