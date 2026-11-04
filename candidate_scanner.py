@@ -686,14 +686,21 @@ def send_morning_candidate_card():
 
     text, reply_markup = format_candidates_telegram_card(res, max_display=10, is_morning=True)
 
+    tg_group_id = cfg.get("telegram", {}).get("group_id")
+    topics = cfg.get("telegram", {}).get("topics", {})
+    thread_id = topics.get("reports") if tg_group_id else None
+    target_chat = tg_group_id if (tg_group_id and thread_id) else tg_chat_id
+
     url = f"https://api.telegram.org/bot{tg_token}/sendMessage"
     payload = {
-        "chat_id": tg_chat_id,
+        "chat_id": target_chat,
         "text": text,
         "parse_mode": "HTML",
         "disable_web_page_preview": True,
         "reply_markup": reply_markup
     }
+    if thread_id:
+        payload["message_thread_id"] = int(thread_id)
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
     try:
@@ -789,14 +796,22 @@ def send_eod_candidate_card(res=None):
         return False
 
     text, reply_markup = format_candidates_telegram_card(res, max_display=10, is_morning=False)
+
+    tg_group_id = cfg.get("telegram", {}).get("group_id")
+    topics = cfg.get("telegram", {}).get("topics", {})
+    thread_id = topics.get("reports") if tg_group_id else None
+    target_chat = tg_group_id if (tg_group_id and thread_id) else tg_chat_id
+
     url = f"https://api.telegram.org/bot{tg_token}/sendMessage"
     payload = {
-        "chat_id": tg_chat_id,
+        "chat_id": target_chat,
         "text": text,
         "parse_mode": "HTML",
         "disable_web_page_preview": True,
         "reply_markup": reply_markup
     }
+    if thread_id:
+        payload["message_thread_id"] = int(thread_id)
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
     try:
