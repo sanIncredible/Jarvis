@@ -907,8 +907,8 @@ def log_executed_order(order_record):
         print(f"Error logging order: {e}")
 
 
-def place_upstox_stop_loss_order(instrument_key, quantity, sl_price, product="MTF"):
-    """Submits a hard Stop-Loss Limit sell order directly to Upstox API v2."""
+def place_upstox_stop_loss_order(instrument_key, quantity, sl_price, product="MTF", transaction_type="SELL"):
+    """Submits a hard Stop-Loss Limit order (SELL for long, BUY for short) directly to Upstox API v2."""
     cfg = load_config()
     token = cfg.get("upstox", {}).get("access_token", "").strip()
     if not token:
@@ -917,10 +917,17 @@ def place_upstox_stop_loss_order(instrument_key, quantity, sl_price, product="MT
     url = "https://api.upstox.com/v2/order/place"
     market_open = is_market_open()
     trigger_p = round_to_tick(sl_price)
-    # 0.2% limit buffer below trigger strictly rounded to 0.05 tick size
-    limit_price = round_to_tick(trigger_p * 0.998)
-    if limit_price >= trigger_p:
-        limit_price = round_to_tick(trigger_p - 0.05)
+    tt = transaction_type.upper()
+    if tt == "SELL":
+        # 0.2% limit buffer below trigger strictly rounded to 0.05 tick size
+        limit_price = round_to_tick(trigger_p * 0.998)
+        if limit_price >= trigger_p:
+            limit_price = round_to_tick(trigger_p - 0.05)
+    else:
+        # BUY SL (for short positions): limit buffer above trigger
+        limit_price = round_to_tick(trigger_p * 1.002)
+        if limit_price <= trigger_p:
+            limit_price = round_to_tick(trigger_p + 0.05)
 
     payload = {
         "quantity": int(quantity),
@@ -930,7 +937,7 @@ def place_upstox_stop_loss_order(instrument_key, quantity, sl_price, product="MT
         "tag": "JARVIS_SL",
         "instrument_token": instrument_key,
         "order_type": "SL",
-        "transaction_type": "SELL",
+        "transaction_type": tt,
         "disclosed_quantity": 0,
         "trigger_price": float(trigger_p),
         "is_amo": not market_open
@@ -964,8 +971,8 @@ def place_upstox_stop_loss_order(instrument_key, quantity, sl_price, product="MT
         return False, f"Upstox SL error: {str(e)}"
 
 
-def place_dhan_stop_loss_order(symbol, quantity, sl_price, product="MTF"):
-    """Submits a hard Stop-Loss Limit sell order directly to DhanHQ API v2."""
+def place_dhan_stop_loss_order(symbol, quantity, sl_price, product="MTF", transaction_type="SELL"):
+    """Submits a hard Stop-Loss Limit order directly to DhanHQ API v2."""
     cfg = load_config()
     dhan = cfg.get("dhan", {})
     client_id = dhan.get("client_id", "").strip()
@@ -979,14 +986,20 @@ def place_dhan_stop_loss_order(symbol, quantity, sl_price, product="MTF"):
 
     market_open = is_market_open()
     trigger_p = round_to_tick(sl_price)
-    limit_price = round_to_tick(trigger_p * 0.998)
-    if limit_price >= trigger_p:
-        limit_price = round_to_tick(trigger_p - 0.05)
+    tt = transaction_type.upper()
+    if tt == "SELL":
+        limit_price = round_to_tick(trigger_p * 0.998)
+        if limit_price >= trigger_p:
+            limit_price = round_to_tick(trigger_p - 0.05)
+    else:
+        limit_price = round_to_tick(trigger_p * 1.002)
+        if limit_price <= trigger_p:
+            limit_price = round_to_tick(trigger_p + 0.05)
 
     url = "https://api.dhan.co/v2/orders"
     payload = {
         "dhanClientId": client_id,
-        "transactionType": "SELL",
+        "transactionType": tt,
         "exchangeSegment": "NSE_EQ",
         "productType": product.upper(),
         "orderType": "STOP_LOSS",
@@ -1020,8 +1033,8 @@ def place_dhan_stop_loss_order(symbol, quantity, sl_price, product="MTF"):
         return False, f"Dhan SL error: {str(e)}"
 
 
-def place_zerodha_stop_loss_order(symbol, quantity, sl_price, product="CNC"):
-    """Submits a hard Stop-Loss Limit sell order directly to Zerodha Kite API."""
+def place_zerodha_stop_loss_order(symbol, quantity, sl_price, product="CNC", transaction_type="SELL"):
+    """Submits a hard Stop-Loss Limit order directly to Zerodha Kite API."""
     cfg = load_config()
     kite = cfg.get("zerodha", {})
     api_key = kite.get("api_key", "").strip()
@@ -1030,15 +1043,21 @@ def place_zerodha_stop_loss_order(symbol, quantity, sl_price, product="CNC"):
         return False, "Zerodha credentials missing in config_credentials.json"
 
     trigger_p = round_to_tick(sl_price)
-    limit_price = round_to_tick(trigger_p * 0.998)
-    if limit_price >= trigger_p:
-        limit_price = round_to_tick(trigger_p - 0.05)
+    tt = transaction_type.upper()
+    if tt == "SELL":
+        limit_price = round_to_tick(trigger_p * 0.998)
+        if limit_price >= trigger_p:
+            limit_price = round_to_tick(trigger_p - 0.05)
+    else:
+        limit_price = round_to_tick(trigger_p * 1.002)
+        if limit_price <= trigger_p:
+            limit_price = round_to_tick(trigger_p + 0.05)
 
     url = "https://api.kite.trade/orders/regular"
     payload = {
         "tradingsymbol": symbol.upper(),
         "exchange": "NSE",
-        "transaction_type": "SELL",
+        "transaction_type": tt,
         "order_type": "SL",
         "quantity": int(quantity),
         "product": product.upper(),
@@ -1064,19 +1083,272 @@ def place_zerodha_stop_loss_order(symbol, quantity, sl_price, product="CNC"):
         return False, f"Zerodha SL error: {str(e)}"
 
 
-def place_broker_stop_loss(broker, symbol, quantity, sl_price, instrument_key=None, product="MTF"):
-    """Dispatches hard Stop-Loss Limit sell order to designated broker."""
+def place_broker_stop_loss(broker, symbol, quantity, sl_price, instrument_key=None, product="MTF", transaction_type="SELL"):
+    """Dispatches hard Stop-Loss Limit order (SELL for long, BUY for short) to designated broker."""
     b = (broker or "").strip().lower()
     if b == "upstox":
         inst_key = instrument_key or resolve_instrument_key(symbol)
         if not inst_key:
             return False, f"Could not resolve instrument key for {symbol}"
-        return place_upstox_stop_loss_order(inst_key, quantity, sl_price, product=product)
+        return place_upstox_stop_loss_order(inst_key, quantity, sl_price, product=product, transaction_type=transaction_type)
     elif b == "dhan":
-        return place_dhan_stop_loss_order(symbol, quantity, sl_price, product=product)
+        return place_dhan_stop_loss_order(symbol, quantity, sl_price, product=product, transaction_type=transaction_type)
     elif b == "zerodha":
-        return place_zerodha_stop_loss_order(symbol, quantity, sl_price, product="CNC")
+        return place_zerodha_stop_loss_order(symbol, quantity, sl_price, product="CNC", transaction_type=transaction_type)
     return False, f"Unsupported broker for Stop-Loss: {broker}"
+
+
+# ---------------------------------------------------------
+# Atomic Order Modification & Pending Order Queries (P1)
+# ---------------------------------------------------------
+def modify_upstox_stop_loss_order(order_id, quantity, trigger_price, limit_price):
+    """Atomically modifies an existing pending Stop-Loss order on Upstox API v2."""
+    cfg = load_config()
+    token = cfg.get("upstox", {}).get("access_token", "").strip()
+    if not token:
+        return False, "Upstox access token missing"
+
+    url = "https://api.upstox.com/v2/order/modify"
+    payload = {
+        "order_id": str(order_id),
+        "quantity": int(quantity),
+        "validity": "DAY",
+        "price": float(limit_price),
+        "order_type": "SL",
+        "disclosed_quantity": 0,
+        "trigger_price": float(trigger_price)
+    }
+
+    req_data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=req_data, method="PUT", headers={
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "Jarvis-Order-Engine"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            if data.get("status") == "success":
+                oid = data.get("data", {}).get("order_id", order_id)
+                return True, oid
+            errors = data.get("errors", [])
+            err_msg = errors[0].get("message") if errors else (data.get("message") or "Upstox SL modification failed")
+            return False, err_msg
+    except urllib.error.HTTPError as he:
+        try:
+            err_json = json.loads(he.read().decode())
+            errors = err_json.get("errors", [])
+            err_msg = errors[0].get("message") if errors else (err_json.get("message") or f"HTTP {he.code}")
+            return False, err_msg
+        except Exception:
+            return False, f"Upstox HTTP {he.code}: {he.reason}"
+    except Exception as e:
+        return False, f"Upstox modify SL error: {str(e)}"
+
+
+def modify_dhan_stop_loss_order(order_id, quantity, trigger_price, limit_price):
+    """Atomically modifies an existing pending Stop-Loss order on DhanHQ API v2."""
+    cfg = load_config()
+    dhan = cfg.get("dhan", {})
+    client_id = dhan.get("client_id", "").strip()
+    token = dhan.get("access_token", "").strip()
+    if not client_id or not token:
+        return False, "Dhan credentials missing"
+
+    url = f"https://api.dhan.co/v2/orders/{order_id}"
+    payload = {
+        "orderId": str(order_id),
+        "orderType": "STOP_LOSS",
+        "legName": "ENTRY_LEG",
+        "quantity": int(quantity),
+        "price": float(limit_price),
+        "triggerPrice": float(trigger_price),
+        "disclosedQuantity": 0,
+        "validity": "DAY"
+    }
+
+    req_data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=req_data, method="PUT", headers={
+        "access-token": token,
+        "client-id": client_id,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "Jarvis-Order-Engine"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            ret_oid = data.get("orderId") or order_id
+            if ret_oid and data.get("orderStatus") in ("TRANSIT", "PENDING", None):
+                return True, str(ret_oid)
+            err_msg = data.get("errorMessage") or data.get("remarks") or data.get("message") or "Dhan SL modify failed"
+            return False, err_msg
+    except Exception as e:
+        return False, f"Dhan modify SL error: {str(e)}"
+
+
+def modify_zerodha_stop_loss_order(order_id, quantity, trigger_price, limit_price):
+    """Atomically modifies an existing pending Stop-Loss order on Zerodha Kite API."""
+    cfg = load_config()
+    kite = cfg.get("zerodha", {})
+    api_key = kite.get("api_key", "").strip()
+    token = kite.get("access_token", "").strip()
+    if not api_key or not token:
+        return False, "Zerodha credentials missing"
+
+    url = f"https://api.kite.trade/orders/regular/{order_id}"
+    payload = {
+        "order_id": str(order_id),
+        "quantity": int(quantity),
+        "price": float(limit_price),
+        "trigger_price": float(trigger_price),
+        "order_type": "SL",
+        "validity": "DAY"
+    }
+    req_data = urllib.parse.urlencode(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=req_data, method="PUT", headers={
+        "X-Kite-Version": "3",
+        "Authorization": f"token {api_key}:{token}",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Jarvis-Order-Engine"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            if data.get("status") == "success":
+                ret_oid = data.get("data", {}).get("order_id", order_id)
+                return True, ret_oid
+            return False, data.get("message", "Zerodha SL modify failed")
+    except Exception as e:
+        return False, f"Zerodha modify SL error: {str(e)}"
+
+
+def modify_broker_stop_loss(broker, order_id, quantity, new_sl_price, transaction_type="SELL"):
+    """Atomically modifies a pending Stop-Loss order on designated broker."""
+    b = (broker or "").strip().lower()
+    trigger_p = round_to_tick(new_sl_price)
+    tt = transaction_type.upper()
+    if tt == "SELL":
+        limit_price = round_to_tick(trigger_p * 0.998)
+        if limit_price >= trigger_p:
+            limit_price = round_to_tick(trigger_p - 0.05)
+    else:
+        limit_price = round_to_tick(trigger_p * 1.002)
+        if limit_price <= trigger_p:
+            limit_price = round_to_tick(trigger_p + 0.05)
+
+    if b == "upstox":
+        return modify_upstox_stop_loss_order(order_id, quantity, trigger_p, limit_price)
+    elif b == "dhan":
+        return modify_dhan_stop_loss_order(order_id, quantity, trigger_p, limit_price)
+    elif b == "zerodha":
+        return modify_zerodha_stop_loss_order(order_id, quantity, trigger_p, limit_price)
+    return False, f"Unsupported broker for modify SL: {broker}"
+
+
+def get_pending_stop_loss_order(symbol, broker=None):
+    """
+    Inspects live broker orderbooks for an active/pending Stop-Loss order for the given symbol.
+    Returns:
+        dict: {"order_id": ..., "broker": ..., "trigger_price": ..., "price": ..., "quantity": ..., "transaction_type": ..., "status": ...} or None
+    """
+    sym_u = (symbol or "").strip().upper()
+    cfg = load_config()
+    brokers_to_check = [broker.lower()] if broker else ["upstox", "dhan", "zerodha"]
+
+    for b in brokers_to_check:
+        try:
+            if b == "upstox":
+                token = cfg.get("upstox", {}).get("access_token", "").strip()
+                if not token:
+                    continue
+                url = "https://api.upstox.com/v2/order/retrieve-all"
+                req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    d = json.loads(resp.read().decode())
+                    for ord_item in d.get("data", []):
+                        st = str(ord_item.get("status", "")).lower()
+                        ot = str(ord_item.get("order_type", "")).upper()
+                        if st in ("trigger pending", "open", "put order req received") and ot in ("SL", "SL-M"):
+                            inst = str(ord_item.get("instrument_token", "")).upper()
+                            trad_sym = str(ord_item.get("trading_symbol", "")).upper()
+                            if sym_u in inst or sym_u in trad_sym:
+                                return {
+                                    "order_id": str(ord_item.get("order_id")),
+                                    "broker": "UPSTOX",
+                                    "quantity": int(ord_item.get("quantity", 0)),
+                                    "trigger_price": float(ord_item.get("trigger_price", 0) or 0),
+                                    "price": float(ord_item.get("price", 0) or 0),
+                                    "order_type": ot,
+                                    "transaction_type": str(ord_item.get("transaction_type", "SELL")).upper(),
+                                    "status": st
+                                }
+
+            elif b == "dhan":
+                dhan = cfg.get("dhan", {})
+                cid = dhan.get("client_id", "").strip()
+                token = dhan.get("access_token", "").strip()
+                sec_id = str(resolve_dhan_security_id(sym_u) or "")
+                if not (cid and token):
+                    continue
+                url = "https://api.dhan.co/v2/orders"
+                req = urllib.request.Request(url, headers={"access-token": token, "client-id": cid, "Accept": "application/json"})
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    d = json.loads(resp.read().decode())
+                    if isinstance(d, list):
+                        for ord_item in d:
+                            st = str(ord_item.get("orderStatus", "")).upper()
+                            ot = str(ord_item.get("orderType", "")).upper()
+                            sid = str(ord_item.get("securityId", ""))
+                            trad_sym = str(ord_item.get("tradingSymbol", "")).upper()
+                            if st in ("TRANSIT", "PENDING", "TRIGGER_PENDING") and ot in ("STOP_LOSS", "SL", "STOP_LOSS_MARKET"):
+                                if (sec_id and sid == sec_id) or (sym_u and sym_u in trad_sym):
+                                    return {
+                                        "order_id": str(ord_item.get("orderId")),
+                                        "broker": "DHAN",
+                                        "quantity": int(ord_item.get("quantity", 0)),
+                                        "trigger_price": float(ord_item.get("triggerPrice", 0) or 0),
+                                        "price": float(ord_item.get("price", 0) or 0),
+                                        "order_type": ot,
+                                        "transaction_type": str(ord_item.get("transactionType", "SELL")).upper(),
+                                        "status": st
+                                    }
+
+            elif b == "zerodha":
+                kite = cfg.get("zerodha", {})
+                ak = kite.get("api_key", "").strip()
+                token = kite.get("access_token", "").strip()
+                if not (ak and token):
+                    continue
+                url = "https://api.kite.trade/orders"
+                req = urllib.request.Request(url, headers={
+                    "X-Kite-Version": "3",
+                    "Authorization": f"token {ak}:{token}",
+                    "Accept": "application/json"
+                })
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    d = json.loads(resp.read().decode())
+                    orders = d.get("data", [])
+                    for ord_item in orders:
+                        st = str(ord_item.get("status", "")).upper()
+                        ot = str(ord_item.get("order_type", "")).upper()
+                        ts = str(ord_item.get("tradingsymbol", "")).upper()
+                        if st in ("TRIGGER PENDING", "OPEN") and ot in ("SL", "SL-M"):
+                            if sym_u and (ts == sym_u or sym_u in ts):
+                                return {
+                                    "order_id": str(ord_item.get("order_id")),
+                                    "broker": "ZERODHA",
+                                    "quantity": int(ord_item.get("quantity", 0)),
+                                    "trigger_price": float(ord_item.get("trigger_price", 0) or 0),
+                                    "price": float(ord_item.get("price", 0) or 0),
+                                    "order_type": ot,
+                                    "transaction_type": str(ord_item.get("transaction_type", "SELL")).upper(),
+                                    "status": st
+                                }
+        except Exception:
+            pass
+    return None
 
 
 def cancel_broker_order(broker, order_id):
@@ -1568,27 +1840,48 @@ def fetch_all_positions():
         sym_u = p["symbol"].upper()
         buy_avg = float(p.get("avg_price", 0) or 0)
         qty = int(p.get("qty", 0) or 0)
+        is_short = qty < 0
         log_meta = logged_trades.get(sym_u, {})
         sl = float(log_meta.get("stop_loss", 0) or 0)
 
         # Fallback structural SL if not logged
         if sl <= 0 and buy_avg > 0:
-            if "CE" in sym_u or "PE" in sym_u or "NIFTY" in sym_u:
-                sl = round(buy_avg * 0.70, 2)
+            if is_short:
+                if "CE" in sym_u or "PE" in sym_u or "NIFTY" in sym_u:
+                    sl = round(buy_avg * 1.30, 2)
+                else:
+                    sl = round(buy_avg * 1.025, 2)
             else:
-                sl = round(buy_avg * 0.975, 2)
+                if "CE" in sym_u or "PE" in sym_u or "NIFTY" in sym_u:
+                    sl = round(buy_avg * 0.70, 2)
+                else:
+                    sl = round(buy_avg * 0.975, 2)
 
-        if sl >= buy_avg:
-            var_inr = 0.0
-            var_pct = 0.0
+        if is_short:
+            # For short positions: SL is above entry. Risk is (sl - buy_avg) * abs(qty).
+            # Breakeven / risk-free is reached when SL has been trailed to <= entry.
+            if sl <= buy_avg and sl > 0:
+                var_inr = 0.0
+                var_pct = 0.0
+            else:
+                var_inr = max(0.0, round((sl - buy_avg) * abs(qty), 2)) if buy_avg > 0 else 0.0
+                var_pct = round(((sl - buy_avg) / buy_avg) * 100, 2) if buy_avg > 0 else 0.0
         else:
-            var_inr = round((buy_avg - sl) * qty, 2)
-            var_pct = round(((buy_avg - sl) / buy_avg) * 100, 2) if buy_avg > 0 else 0.0
+            # For long positions: SL is below entry. Risk is (buy_avg - sl) * qty.
+            # Breakeven / risk-free is reached when SL has been trailed to >= entry.
+            if sl >= buy_avg and buy_avg > 0:
+                var_inr = 0.0
+                var_pct = 0.0
+            else:
+                var_inr = max(0.0, round((buy_avg - sl) * qty, 2)) if buy_avg > 0 else 0.0
+                var_pct = round(((buy_avg - sl) / buy_avg) * 100, 2) if buy_avg > 0 else 0.0
 
         p["stop_loss"] = sl
         p["value_at_risk"] = var_inr
         p["var_pct"] = var_pct
         p["is_risk_free"] = bool(var_inr <= 0)
+        p["is_short"] = is_short
+        p["position_type"] = "SHORT" if is_short else "LONG"
         total_var += var_inr
 
     total_pnl = sum(p["pnl"] for p in all_pos)
@@ -2117,22 +2410,40 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
             "current_ltp": current_ltp
         }
 
-    # 1. Cancel previous pending SL order
-    cancelled = cancel_symbol_stop_loss(sym, broker=broker)
-    if cancelled:
-        time.sleep(0.6)  # Give broker RMS a brief window to confirm exchange cancellation and release quantity
+    # Step 1: Query live pending SL order on broker
+    existing_sl = get_pending_stop_loss_order(sym, broker=b)
+    ok = False
+    res = None
+    atomic_success = False
 
-    # 2. Place new SL at Breakeven
-    ok, res = place_broker_stop_loss(
-        broker=broker,
-        symbol=sym,
-        quantity=quantity,
-        sl_price=breakeven_sl,
-        instrument_key=instrument_key,
-        product=product
-    )
+    if existing_sl:
+        old_oid = existing_sl["order_id"]
+        # Try atomic modify first (zero race window)
+        mod_ok, mod_res = modify_broker_stop_loss(b, old_oid, quantity, breakeven_sl, transaction_type="SELL")
+        if mod_ok:
+            ok = True
+            atomic_success = True
+            res = {"status": "success", "mode": "ATOMIC_MODIFY", "order_id": old_oid, "sl_price": breakeven_sl}
+        else:
+            # Modify rejected (e.g. order in transition or rejected by broker), fallback to cancel + place
+            cancel_broker_order(b, old_oid)
+            time.sleep(0.6)
 
-    # 3. Update orders_log.json
+    if not ok:
+        # Step 2: Fresh placement if no existing SL was found or atomic modify failed
+        place_ok, place_res = place_broker_stop_loss(
+            broker=b,
+            symbol=sym,
+            quantity=quantity,
+            sl_price=breakeven_sl,
+            instrument_key=instrument_key,
+            product=product,
+            transaction_type="SELL"
+        )
+        ok = place_ok
+        res = {"status": "success" if place_ok else "failed", "mode": "FRESH_PLACE", "order_id": place_res if place_ok else None, "error": place_res if not place_ok else None, "sl_price": breakeven_sl}
+
+    # Step 3: Update orders_log.json
     try:
         log_f = SCRIPT_DIR / "orders_log.json"
         if log_f.is_file():
@@ -2144,8 +2455,11 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
                     entry["breakeven_ratcheted"] = True
                     entry["stop_loss"] = breakeven_sl
                     entry["ratcheted_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    if ok and isinstance(res, dict) and res.get("order_id"):
-                        entry["sl_order_id"] = res["order_id"]
+                    if ok:
+                        oid = res.get("order_id") if isinstance(res, dict) else str(res)
+                        if oid:
+                            entry["sl_order_id"] = oid
+                            entry["sl_status"] = "PENDING"
                     updated = True
                     break
             if updated:
@@ -2154,7 +2468,7 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
     except Exception as e:
         print(f"Notice updating orders_log: {e}")
 
-    # 4. Update tracked_holdings.json if position is tracked
+    # Step 4: Update tracked_holdings.json if position is tracked
     if ok:
         try:
             th_f = SCRIPT_DIR / "tracked_holdings.json"
@@ -2163,7 +2477,9 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
                     th = json.load(f)
                 if sym in th:
                     th[sym]["sl"] = breakeven_sl
-                    th[sym]["notes"] = f"{th[sym].get('notes', '')} | Breakeven Ratcheted ({datetime.now().strftime('%Y-%m-%d %H:%M')})"
+                    mode_str = "Atomic Modify" if atomic_success else "Fresh SL"
+                    oid_str = res.get("order_id", "N/A") if isinstance(res, dict) else str(res)
+                    th[sym]["notes"] = f"{th[sym].get('broker', b.upper())} Holding | Breakeven Trailed ({mode_str} {oid_str})"
                     with open(th_f, "w", encoding="utf-8") as f:
                         json.dump(th, f, indent=2)
         except Exception as e:
@@ -2175,8 +2491,275 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
         "entry_price": entry_price,
         "breakeven_sl": breakeven_sl,
         "broker": broker,
-        "cancelled_orders": cancelled,
+        "mode": "ATOMIC_MODIFY" if atomic_success else "FRESH_PLACE",
         "details": res
+    }
+
+
+def rearm_overnight_stop_losses(notify=True, force=False):
+    """
+    P0 Overnight SL Auto-Rearm Engine:
+    NSE/BSE automatically cancels all pending DAY orders at 15:30 IST.
+    This function reconciles all open positional trades against live broker orderbooks.
+    If an open position lacks an active stop-loss order on the broker, it calculates
+    the target SL (from tracked_holdings, orders_log, or fallback) and submits
+    a fresh Stop-Loss Limit order on the exchange.
+
+    If market is closed and force=False, performs an audit report without submitting live orders
+    (since Indian exchanges reject STOP_LOSS orders as AMO).
+    Sends formatted notification card to Telegram Topics 'orders' and 'risk_trailing'.
+    """
+    market_open = is_market_open()
+    all_pos, totals, broker_status = fetch_all_positions()
+
+    tracked_holdings = {}
+    try:
+        th_f = SCRIPT_DIR / "tracked_holdings.json"
+        if th_f.is_file():
+            with open(th_f, "r", encoding="utf-8") as f:
+                tracked_holdings = json.load(f)
+    except Exception:
+        pass
+
+    orders_log = []
+    try:
+        ol_f = SCRIPT_DIR / "orders_log.json"
+        if ol_f.is_file():
+            with open(ol_f, "r", encoding="utf-8") as f:
+                orders_log = json.load(f)
+    except Exception:
+        pass
+
+    rearmed = []
+    already_protected = []
+    critical_alerts = []
+    failed = []
+    audit_only = []
+
+    now_str = get_ist_now().strftime("%d %b %Y, %H:%M:%S IST")
+
+    for p in all_pos:
+        sym = p["symbol"].upper()
+        broker = p.get("broker", "DHAN").upper()
+        qty = int(p.get("qty", 0))
+        if qty == 0:
+            continue
+        is_short = qty < 0
+        abs_qty = abs(qty)
+        avg_p = float(p.get("avg_price", 0) or 0)
+        ltp = float(p.get("ltp", avg_p) or avg_p)
+        prod = p.get("product", "CNC" if broker == "ZERODHA" else "MTF")
+        tx_type = "SELL" if not is_short else "BUY"
+
+        # Check if already has an active pending Stop-Loss order on broker
+        pending_sl = get_pending_stop_loss_order(sym, broker=broker)
+        if pending_sl:
+            already_protected.append({
+                "symbol": sym,
+                "broker": broker,
+                "qty": pending_sl.get("quantity", abs_qty),
+                "sl": pending_sl.get("trigger_price", 0.0),
+                "order_id": pending_sl.get("order_id", "N/A"),
+                "status": pending_sl.get("status", "PENDING")
+            })
+            continue
+
+        # Determine target SL
+        target_sl = 0.0
+        source_desc = "Structural"
+        if sym in tracked_holdings and tracked_holdings[sym].get("sl"):
+            target_sl = float(tracked_holdings[sym]["sl"])
+            source_desc = "Tracked Holdings"
+        if target_sl <= 0:
+            for o in reversed(orders_log):
+                if o.get("symbol", "").upper() == sym and float(o.get("stop_loss", 0) or 0) > 0:
+                    target_sl = float(o["stop_loss"])
+                    source_desc = "Orders Log"
+                    break
+        if target_sl <= 0 and avg_p > 0:
+            if is_short:
+                target_sl = round(avg_p * 1.025, 2)
+            else:
+                target_sl = round(avg_p * 0.975, 2)
+            source_desc = "Default 2.5% SL"
+
+        target_sl = round_to_tick(target_sl)
+
+        # Pre-flight exchange rule validation against current LTP:
+        if not is_short and ltp > 0 and ltp <= target_sl:
+            critical_alerts.append({
+                "symbol": sym,
+                "broker": broker,
+                "qty": abs_qty,
+                "ltp": ltp,
+                "target_sl": target_sl,
+                "reason": f"LTP (₹{ltp:,.2f}) <= SL Trigger (₹{target_sl:,.2f}). Position is underwater past Stop-Loss!"
+            })
+            continue
+        elif is_short and ltp > 0 and ltp >= target_sl:
+            critical_alerts.append({
+                "symbol": sym,
+                "broker": broker,
+                "qty": abs_qty,
+                "ltp": ltp,
+                "target_sl": target_sl,
+                "reason": f"LTP (₹{ltp:,.2f}) >= SL Trigger (₹{target_sl:,.2f}). Short position is underwater past Stop-Loss!"
+            })
+            continue
+
+        # If market closed and force=False: cannot place AMO SL on Indian exchanges
+        if not market_open and not force:
+            audit_only.append({
+                "symbol": sym,
+                "broker": broker,
+                "qty": abs_qty,
+                "target_sl": target_sl,
+                "source": source_desc,
+                "product": prod,
+                "tx_type": tx_type
+            })
+            continue
+
+        # Place fresh SL order on broker
+        ok, res = place_broker_stop_loss(
+            broker=broker,
+            symbol=sym,
+            quantity=abs_qty,
+            sl_price=target_sl,
+            product=prod,
+            transaction_type=tx_type
+        )
+
+        if ok:
+            new_oid = str(res)
+            rearmed.append({
+                "symbol": sym,
+                "broker": broker,
+                "qty": abs_qty,
+                "sl": target_sl,
+                "order_id": new_oid,
+                "source": source_desc
+            })
+            # Update orders_log.json
+            try:
+                ol_f = SCRIPT_DIR / "orders_log.json"
+                if ol_f.is_file():
+                    with open(ol_f, "r", encoding="utf-8") as f:
+                        logs = json.load(f)
+                else:
+                    logs = []
+                logs.append({
+                    "timestamp": get_ist_now().strftime("%Y-%m-%d %H:%M:%S IST"),
+                    "symbol": sym,
+                    "broker": broker,
+                    "product": prod,
+                    "action": tx_type,
+                    "quantity": abs_qty,
+                    "ltp": ltp,
+                    "exposure": round(abs_qty * ltp, 2),
+                    "stop_loss": target_sl,
+                    "sl_order_id": new_oid,
+                    "sl_status": "PENDING",
+                    "status": "REARMED",
+                    "notes": f"Overnight Auto-Rearm ({source_desc})"
+                })
+                with open(ol_f, "w", encoding="utf-8") as f:
+                    json.dump(logs, f, indent=2)
+            except Exception as e:
+                print(f"Notice updating orders_log on rearm: {e}")
+
+            # Update tracked_holdings.json
+            try:
+                th_f = SCRIPT_DIR / "tracked_holdings.json"
+                if th_f.is_file():
+                    with open(th_f, "r", encoding="utf-8") as f:
+                        th_data = json.load(f)
+                else:
+                    th_data = {}
+                if sym not in th_data:
+                    th_data[sym] = {"broker": broker}
+                th_data[sym]["sl"] = target_sl
+                th_data[sym]["notes"] = f"{broker} Holding | Rearmed Overnight SL (Order {new_oid})"
+                with open(th_f, "w", encoding="utf-8") as f:
+                    json.dump(th_data, f, indent=2)
+            except Exception as e:
+                print(f"Notice updating tracked_holdings on rearm: {e}")
+        else:
+            failed.append({
+                "symbol": sym,
+                "broker": broker,
+                "qty": abs_qty,
+                "target_sl": target_sl,
+                "error": str(res)
+            })
+
+    # Build report card
+    lines = [
+        "🛡️ <b>JARVIS OVERNIGHT SL RE-ARM ENGINE</b>",
+        f"📅 <i>{now_str}</i>",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    ]
+
+    if not market_open and not force:
+        lines.append("🌙 <b>Market Status: CLOSED</b>")
+        lines.append("<i>Indian stock exchanges (NSE/BSE) reject STOP_LOSS orders as AMO. Engine is armed to submit live orders at 09:15:05 AM IST market open.</i>\n")
+
+    if rearmed:
+        lines.append(f"🔄 <b>Successfully Re-Armed ({len(rearmed)}):</b>")
+        for r in rearmed:
+            lines.append(f"• <b>{r['symbol']}</b> ({r['broker']}): Qty {r['qty']} @ SL ₹{r['sl']:,.2f} | Order ID <code>{r['order_id']}</code> (<i>{r['source']}</i>)")
+        lines.append("")
+
+    if audit_only:
+        lines.append(f"📋 <b>Armed For Market Open Rearm ({len(audit_only)}):</b>")
+        for a in audit_only:
+            lines.append(f"• <b>{a['symbol']}</b> ({a['broker']}): Qty {a['qty']} | Target SL ₹{a['target_sl']:,.2f} (<i>{a['source']}</i>)")
+        lines.append("")
+
+    if already_protected:
+        lines.append(f"✅ <b>Already Protected On Exchange ({len(already_protected)}):</b>")
+        for ap in already_protected:
+            lines.append(f"• <b>{ap['symbol']}</b> ({ap['broker']}): Qty {ap['qty']} @ SL ₹{ap['sl']:,.2f} (Order <code>{ap['order_id']}</code>)")
+        lines.append("")
+
+    if critical_alerts:
+        lines.append(f"🚨 <b>CRITICAL ALERTS — UNDERWATER ({len(critical_alerts)}):</b>")
+        for ca in critical_alerts:
+            lines.append(f"• <b>{ca['symbol']}</b> ({ca['broker']}): {ca['reason']}")
+        lines.append("")
+
+    if failed:
+        lines.append(f"❌ <b>Placement Failed ({len(failed)}):</b>")
+        for fld in failed:
+            lines.append(f"• <b>{fld['symbol']}</b> ({fld['broker']}): ⚠️ {fld['error']}")
+        lines.append("")
+
+    if not rearmed and not audit_only and not already_protected and not failed and not critical_alerts:
+        lines.append("💤 <b>No open swing positions detected across all configured brokers.</b>")
+    else:
+        tot_protected = len(rearmed) + len(already_protected)
+        tot_positions = len(all_pos)
+        lines.append(f"💼 <b>Total Positions:</b> {tot_positions} | <b>Protected:</b> {tot_protected} | <b>Pending Open:</b> {len(audit_only)}")
+
+    report_text = "\n".join(lines)
+
+    if notify:
+        try:
+            from telegram_bot import send_topic_alert
+            send_topic_alert("orders", report_text)
+            send_topic_alert("risk_trailing", report_text)
+        except Exception as e:
+            print(f"Notice: Failed to dispatch rearm card to Telegram: {e}")
+
+    return {
+        "status": "success",
+        "market_open": market_open,
+        "rearmed": rearmed,
+        "audit_only": audit_only,
+        "already_protected": already_protected,
+        "critical_alerts": critical_alerts,
+        "failed": failed,
+        "report_text": report_text
     }
 
 
@@ -2302,28 +2885,47 @@ def get_all_open_positions_with_trailing_sl():
             if atr_stretch and atr_stretch >= 3.0:
                 jeff_status += f" | ⚠️ Extended (+{atr_stretch}x ATR from 50MA) — Tighten trail!"
 
-        raw_be = entry_p * 1.0015
+        is_short = qty < 0
+        raw_be = entry_p * (0.9985 if is_short else 1.0015)
         breakeven_p = round(round(raw_be / 0.05) * 0.05, 2)
         if not is_option and (r_multiple >= 1.5 or pnl_pct >= 2.5):
-            recommended_sl = max(recommended_sl, breakeven_p)
+            if is_short:
+                recommended_sl = min(recommended_sl, breakeven_p) if recommended_sl > 0 else breakeven_p
+            else:
+                recommended_sl = max(recommended_sl, breakeven_p)
             if "HOLD" in action_badge:
                 action_badge = "🟢 TRAIL TO BREAKEVEN"
                 action_text = f"Target milestone (+{r_multiple:.1f}R)! Move SL to Breakeven ₹{breakeven_p:,.2f} (Risk-Free!)"
 
         # Value at Risk (Current SL vs Recommended SL)
-        if initial_sl >= entry_p:
-            var_inr = 0.0
-            var_pct = 0.0
-        else:
-            var_inr = round((entry_p - initial_sl) * qty, 2)
-            var_pct = round(((entry_p - initial_sl) / entry_p) * 100, 2) if entry_p > 0 else 0.0
+        if is_short:
+            if initial_sl <= entry_p and initial_sl > 0:
+                var_inr = 0.0
+                var_pct = 0.0
+            else:
+                var_inr = max(0.0, round((initial_sl - entry_p) * abs(qty), 2)) if entry_p > 0 else 0.0
+                var_pct = round(((initial_sl - entry_p) / entry_p) * 100, 2) if entry_p > 0 else 0.0
 
-        if recommended_sl >= entry_p:
-            rec_var_inr = 0.0
-            rec_var_pct = 0.0
+            if recommended_sl <= entry_p and recommended_sl > 0:
+                rec_var_inr = 0.0
+                rec_var_pct = 0.0
+            else:
+                rec_var_inr = max(0.0, round((recommended_sl - entry_p) * abs(qty), 2)) if entry_p > 0 else 0.0
+                rec_var_pct = round(((recommended_sl - entry_p) / entry_p) * 100, 2) if entry_p > 0 else 0.0
         else:
-            rec_var_inr = round((entry_p - recommended_sl) * qty, 2)
-            rec_var_pct = round(((entry_p - recommended_sl) / entry_p) * 100, 2) if entry_p > 0 else 0.0
+            if initial_sl >= entry_p and entry_p > 0:
+                var_inr = 0.0
+                var_pct = 0.0
+            else:
+                var_inr = max(0.0, round((entry_p - initial_sl) * qty, 2)) if entry_p > 0 else 0.0
+                var_pct = round(((entry_p - initial_sl) / entry_p) * 100, 2) if entry_p > 0 else 0.0
+
+            if recommended_sl >= entry_p and entry_p > 0:
+                rec_var_inr = 0.0
+                rec_var_pct = 0.0
+            else:
+                rec_var_inr = max(0.0, round((entry_p - recommended_sl) * qty, 2)) if entry_p > 0 else 0.0
+                rec_var_pct = round(((entry_p - recommended_sl) / entry_p) * 100, 2) if entry_p > 0 else 0.0
 
         enriched.append({
             "symbol": sym,
