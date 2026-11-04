@@ -21,7 +21,7 @@
       "day_low": 2282.0,
       "day_open": 2297.0,
       "prev_close": 2276.9,
-      "tier": "TIER 1",
+      "tier": "TIER 1A",
       "ema20": 2213.05,
       "ema50": 2188.99,
       "atr14": 36.44,
@@ -44,7 +44,9 @@
       "sector_tag": "\ud83c\udfe2 Financial Services",
       "sector_score": 3.0,
       "score": 151.6,
-      "coil_tag": "\ud83d\udd25 PIVOT DOORSTEP"
+      "coil_tag": "\ud83d\udd25 PIVOT DOORSTEP",
+      "tier_label": "Tier 1A: Base-Anchored Doorstep",
+      "stretch_status": "LOW_STRETCH"
     },
     {
       "symbol": "DRREDDY",
@@ -61,7 +63,7 @@
       "day_low": 1338.5,
       "day_open": 1355.0,
       "prev_close": 1342.0,
-      "tier": "TIER 1",
+      "tier": "TIER 1C",
       "ema20": 1280.2,
       "ema50": 1231.21,
       "atr14": 31.29,
@@ -83,7 +85,9 @@
       "sector_tag": "\u2b50 Pharma Leader (+1.8%)",
       "sector_score": 10.0,
       "score": 140.6,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1C: Extended Flagpole",
+      "stretch_status": "HIGH_STRETCH"
     },
     {
       "symbol": "PERSISTENT",
@@ -100,7 +104,7 @@
       "day_low": 6055.0,
       "day_open": 6089.0,
       "prev_close": 6051.0,
-      "tier": "TIER 1",
+      "tier": "TIER 1B",
       "ema20": 5813.47,
       "ema50": 5680.56,
       "atr14": 200.32,
@@ -123,7 +127,9 @@
       "sector_tag": "\ud83d\udcc8 IT (+0.9%)",
       "sector_score": 5.0,
       "score": 140.5,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1B: Standard Consolidation",
+      "stretch_status": "MODERATE_STRETCH"
     },
     {
       "symbol": "INDHOTEL",
@@ -140,7 +146,7 @@
       "day_low": 824.05,
       "day_open": 829.0,
       "prev_close": 822.5,
-      "tier": "TIER 1",
+      "tier": "TIER 1C",
       "ema20": 779.55,
       "ema50": 753.8,
       "atr14": 23.1,
@@ -162,7 +168,9 @@
       "sector_tag": "\ud83c\udfe2 Consumer Services",
       "sector_score": 3.0,
       "score": 138.7,
-      "coil_tag": "\ud83d\udd25 PIVOT DOORSTEP"
+      "coil_tag": "\ud83d\udd25 PIVOT DOORSTEP",
+      "tier_label": "Tier 1C: Extended Flagpole",
+      "stretch_status": "HIGH_STRETCH"
     },
     {
       "symbol": "KOTAKBANK",
@@ -179,7 +187,7 @@
       "day_low": 455.4,
       "day_open": 460.0,
       "prev_close": 458.35,
-      "tier": "TIER 1",
+      "tier": "TIER 1B",
       "ema20": 443.03,
       "ema50": 426.91,
       "atr14": 10.1,
@@ -201,7 +209,9 @@
       "sector_tag": "\ud83c\udfe2 Financial Services",
       "sector_score": 3.0,
       "score": 138.5,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1B: Standard Consolidation",
+      "stretch_status": "MODERATE_STRETCH"
     },
     {
       "symbol": "ETERNAL",
@@ -218,7 +228,7 @@
       "day_low": 344.0,
       "day_open": 345.4,
       "prev_close": 344.0,
-      "tier": "TIER 1",
+      "tier": "TIER 1C",
       "ema20": 329.51,
       "ema50": 325.51,
       "atr14": 10.62,
@@ -240,7 +250,9 @@
       "sector_tag": "\ud83c\udfe2 Consumer Services",
       "sector_score": 3.0,
       "score": 136.4,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1C: Extended Flagpole",
+      "stretch_status": "HIGH_STRETCH"
     },
     {
       "symbol": "WIPRO",
@@ -257,7 +269,7 @@
       "day_low": 196.01,
       "day_open": 198.0,
       "prev_close": 196.4,
-      "tier": "TIER 1",
+      "tier": "TIER 1C",
       "ema20": 183.67,
       "ema50": 179.76,
       "atr14": 5.92,
@@ -281,7 +293,9 @@
       "sector_tag": "\ud83d\udcc8 IT (+0.9%)",
       "sector_score": 5.0,
       "score": 136.0,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1C: Extended Flagpole",
+      "stretch_status": "HIGH_STRETCH"
     },
     {
       "symbol": "JSWSTEEL",
@@ -298,7 +312,7 @@
       "day_low": 1301.4,
       "day_open": 1309.9,
       "prev_close": 1309.9,
-      "tier": "TIER 1",
+      "tier": "TIER 1C",
       "ema20": 1248.13,
       "ema50": 1263.45,
       "atr14": 37.05,
@@ -320,7 +334,9 @@
       "sector_tag": "\u2b50 Metal Leader (+2.2%)",
       "sector_score": 10.0,
       "score": 134.3,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1C: Extended Flagpole",
+      "stretch_status": "HIGH_STRETCH"
     },
     {
       "symbol": "NYKAA",
@@ -337,7 +353,7 @@
       "day_low": 348.3,
       "day_open": 354.4,
       "prev_close": 353.65,
-      "tier": "TIER 1",
+      "tier": "TIER 1A",
       "ema20": 340.31,
       "ema50": 336.74,
       "atr14": 10.37,
@@ -360,7 +376,9 @@
       "sector_tag": "\ud83c\udfe2 Consumer Services",
       "sector_score": 3.0,
       "score": 134.2,
-      "coil_tag": "\ud83d\udd25 PIVOT DOORSTEP"
+      "coil_tag": "\ud83d\udd25 PIVOT DOORSTEP",
+      "tier_label": "Tier 1A: Base-Anchored Doorstep",
+      "stretch_status": "LOW_STRETCH"
     },
     {
       "symbol": "ITCHOTELS",
@@ -377,7 +395,7 @@
       "day_low": 169.76,
       "day_open": 170.55,
       "prev_close": 170.48,
-      "tier": "TIER 1",
+      "tier": "TIER 1B",
       "ema20": 163.27,
       "ema50": 162.43,
       "atr14": 6.31,
@@ -400,7 +418,9 @@
       "sector_tag": "\ud83c\udfe2 Consumer Services",
       "sector_score": 3.0,
       "score": 133.6,
-      "coil_tag": "\ud83d\udd25 PIVOT DOORSTEP"
+      "coil_tag": "\ud83d\udd25 PIVOT DOORSTEP",
+      "tier_label": "Tier 1B: Standard Consolidation",
+      "stretch_status": "MODERATE_STRETCH"
     },
     {
       "symbol": "ATHERENERG",
@@ -417,7 +437,7 @@
       "day_low": 1759.0,
       "day_open": 1774.6,
       "prev_close": 1774.6,
-      "tier": "TIER 1",
+      "tier": "TIER 1C",
       "ema20": 1587.81,
       "ema50": 1547.98,
       "atr14": 75.76,
@@ -439,7 +459,9 @@
       "sector_tag": "\ud83d\udcc8 Auto (+0.4%)",
       "sector_score": 5.0,
       "score": 132.4,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1C: Extended Flagpole",
+      "stretch_status": "HIGH_STRETCH"
     },
     {
       "symbol": "TVSMOTOR",
@@ -456,7 +478,7 @@
       "day_low": 4205.0,
       "day_open": 4216.9,
       "prev_close": 4213.0,
-      "tier": "TIER 1",
+      "tier": "TIER 1B",
       "ema20": 4115.07,
       "ema50": 4169.26,
       "atr14": 120.46,
@@ -476,7 +498,9 @@
       "sector_tag": "\ud83d\udcc8 Auto (+0.4%)",
       "sector_score": 5.0,
       "score": 131.2,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1B: Standard Consolidation",
+      "stretch_status": "MODERATE_STRETCH"
     },
     {
       "symbol": "SONACOMS",
@@ -493,7 +517,7 @@
       "day_low": 890.1,
       "day_open": 909.7,
       "prev_close": 905.95,
-      "tier": "TIER 1",
+      "tier": "TIER 1C",
       "ema20": 833.91,
       "ema50": 816.63,
       "atr14": 30.74,
@@ -516,7 +540,9 @@
       "sector_tag": "\ud83d\udcc8 Auto (+0.4%)",
       "sector_score": 5.0,
       "score": 130.0,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1C: Extended Flagpole",
+      "stretch_status": "HIGH_STRETCH"
     },
     {
       "symbol": "TRENT",
@@ -533,7 +559,7 @@
       "day_low": 3013.4,
       "day_open": 3043.0,
       "prev_close": 3046.4,
-      "tier": "TIER 1",
+      "tier": "TIER 1B",
       "ema20": 2887.97,
       "ema50": 2881.33,
       "atr14": 86.16,
@@ -553,7 +579,9 @@
       "sector_tag": "\ud83c\udfe2 Consumer Services",
       "sector_score": 3.0,
       "score": 127.5,
-      "coil_tag": "\ud83d\udd25 PIVOT DOORSTEP"
+      "coil_tag": "\ud83d\udd25 PIVOT DOORSTEP",
+      "tier_label": "Tier 1B: Standard Consolidation",
+      "stretch_status": "MODERATE_STRETCH"
     },
     {
       "symbol": "GLENMARK",
@@ -570,7 +598,7 @@
       "day_low": 2360.1,
       "day_open": 2393.8,
       "prev_close": 2382.0,
-      "tier": "TIER 1",
+      "tier": "TIER 1B",
       "ema20": 2299.63,
       "ema50": 2324.85,
       "atr14": 65.6,
@@ -590,7 +618,9 @@
       "sector_tag": "\u2b50 Pharma Leader (+1.8%)",
       "sector_score": 10.0,
       "score": 125.8,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1B: Standard Consolidation",
+      "stretch_status": "MODERATE_STRETCH"
     },
     {
       "symbol": "HCLTECH",
@@ -607,7 +637,7 @@
       "day_low": 1428.0,
       "day_open": 1449.8,
       "prev_close": 1434.0,
-      "tier": "TIER 1",
+      "tier": "TIER 1B",
       "ema20": 1371.08,
       "ema50": 1338.56,
       "atr14": 39.09,
@@ -631,7 +661,9 @@
       "sector_tag": "\ud83d\udcc8 IT (+0.9%)",
       "sector_score": 5.0,
       "score": 124.5,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1B: Standard Consolidation",
+      "stretch_status": "MODERATE_STRETCH"
     },
     {
       "symbol": "AUROPHARMA",
@@ -648,7 +680,7 @@
       "day_low": 1656.2,
       "day_open": 1689.0,
       "prev_close": 1683.8,
-      "tier": "TIER 1",
+      "tier": "TIER 1A",
       "ema20": 1656.49,
       "ema50": 1653.51,
       "atr14": 44.36,
@@ -668,7 +700,9 @@
       "sector_tag": "\u2b50 Pharma Leader (+1.8%)",
       "sector_score": 10.0,
       "score": 123.1,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1A: Base-Anchored Doorstep",
+      "stretch_status": "LOW_STRETCH"
     },
     {
       "symbol": "ONGC",
@@ -685,7 +719,7 @@
       "day_low": 229.54,
       "day_open": 233.66,
       "prev_close": 234.83,
-      "tier": "TIER 1",
+      "tier": "TIER 1A",
       "ema20": 227.7,
       "ema50": 230.97,
       "atr14": 4.33,
@@ -707,7 +741,9 @@
       "sector_tag": "\u2b50 Energy Leader (+1.5%)",
       "sector_score": 10.0,
       "score": 120.9,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1A: Base-Anchored Doorstep",
+      "stretch_status": "LOW_STRETCH"
     },
     {
       "symbol": "TECHM",
@@ -724,7 +760,7 @@
       "day_low": 1770.6,
       "day_open": 1800.0,
       "prev_close": 1786.9,
-      "tier": "TIER 1",
+      "tier": "TIER 1A",
       "ema20": 1718.43,
       "ema50": 1660.76,
       "atr14": 58.77,
@@ -746,7 +782,9 @@
       "sector_tag": "\ud83d\udcc8 IT (+0.9%)",
       "sector_score": 5.0,
       "score": 119.2,
-      "coil_tag": "\ud83d\udd25 PIVOT DOORSTEP"
+      "coil_tag": "\ud83d\udd25 PIVOT DOORSTEP",
+      "tier_label": "Tier 1A: Base-Anchored Doorstep",
+      "stretch_status": "LOW_STRETCH"
     },
     {
       "symbol": "ICICIBANK",
@@ -763,7 +801,7 @@
       "day_low": 1395.5,
       "day_open": 1403.0,
       "prev_close": 1387.4,
-      "tier": "TIER 1",
+      "tier": "TIER 1A",
       "ema20": 1382.11,
       "ema50": 1389.71,
       "atr14": 28.29,
@@ -785,7 +823,9 @@
       "sector_tag": "\ud83c\udfe2 Financial Services",
       "sector_score": 3.0,
       "score": 118.4,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1A: Base-Anchored Doorstep",
+      "stretch_status": "LOW_STRETCH"
     },
     {
       "symbol": "TATACOMM",
@@ -959,7 +999,7 @@
       "day_low": 4153.0,
       "day_open": 4167.0,
       "prev_close": 4157.4,
-      "tier": "TIER 1",
+      "tier": "TIER 1A",
       "ema20": 4178.48,
       "ema50": 4084.98,
       "atr14": 172.57,
@@ -979,7 +1019,9 @@
       "sector_tag": "\ud83d\udcc8 Auto (+0.4%)",
       "sector_score": 5.0,
       "score": 102.6,
-      "coil_tag": "\u26a1 PIVOT IGNITION"
+      "coil_tag": "\u26a1 PIVOT IGNITION",
+      "tier_label": "Tier 1A: Base-Anchored Doorstep",
+      "stretch_status": "LOW_STRETCH"
     }
   ]
 }
