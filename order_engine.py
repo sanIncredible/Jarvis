@@ -50,15 +50,31 @@ SERVER_IP = "80.225.210.222"
 IST = timezone(timedelta(hours=5, minutes=30))
 
 
-def round_to_tick(price, tick=0.05):
-    """Rounds price strictly to a valid Indian exchange tick size multiple (default ₹0.05)."""
+def round_to_clean_int(price):
+    """Rounds price strictly to a whole integer (no decimal part) for Sell GTT, Limit, or Trail SL."""
     if price is None:
-        return 0.0
+        return 0
     try:
         p = float(price)
+        return int(round(p))
+    except Exception:
+        return 0
+
+
+def round_to_tick(price, tick=1.0):
+    """
+    Rounds price strictly to a valid round number / integer (no decimal part)
+    per user strategy preference for all GTT, Limit, and Trail orders.
+    """
+    if price is None:
+        return 0
+    try:
+        p = float(price)
+        if tick >= 1.0:
+            return int(round(p))
         return round(round(p / tick) * tick, 2)
     except Exception:
-        return 0.0
+        return 0
 
 
 def is_market_open():
@@ -668,17 +684,17 @@ def calculate_order_sizing(quote_data, mode_arg="mod", sl_mode="lod"):
 
     actual_exposure = round(quantity * ltp, 2)
 
-    buffer = max(0.10, round(day_low * 0.0005, 2))
-    sl_price = round(day_low - buffer, 2)
+    buffer = max(1.0, round(day_low * 0.0005))
+    sl_price = round_to_clean_int(day_low - buffer)
 
     if sl_price >= ltp:
-        sl_price = round(ltp * 0.985, 2)
+        sl_price = round_to_clean_int(ltp * 0.985)
 
     risk_per_share = round(ltp - sl_price, 2)
     risk_pct = round((risk_per_share / ltp) * 100, 2)
 
     if risk_pct > 4.0 and sl_mode.lower() in ("regime", "reg"):
-        sl_price = round(ltp * 0.975, 2)
+        sl_price = round_to_clean_int(ltp * 0.975)
         risk_per_share = round(ltp - sl_price, 2)
         risk_pct = round((risk_per_share / ltp) * 100, 2)
         regime_note += " (SL capped at 2.5% to protect capital)"
@@ -728,7 +744,7 @@ def place_upstox_mtf_order(instrument_key, quantity, order_type="MARKET", price=
         "quantity": int(quantity),
         "product": "MTF",
         "validity": "DAY",
-        "price": float(price) if order_type.upper() == "LIMIT" else 0.0,
+        "price": int(round_to_clean_int(price)) if order_type.upper() == "LIMIT" else 0,
         "tag": "JARVIS_MTF",
         "instrument_token": instrument_key,
         "order_type": order_type.upper(),
@@ -793,7 +809,7 @@ def place_dhan_mtf_order(symbol, quantity, order_type="MARKET", price=0.0):
         "validity": "DAY",
         "securityId": str(sec_id),
         "quantity": int(quantity),
-        "price": float(price) if order_type.upper() == "LIMIT" else 0.0,
+        "price": int(round_to_clean_int(price)) if order_type.upper() == "LIMIT" else 0,
         "triggerPrice": 0.0,
         "afterMarketOrder": not market_open
     }
@@ -859,7 +875,7 @@ def place_zerodha_order(symbol, quantity, order_type="MARKET", product="CNC", pr
         "quantity": int(quantity),
         "product": product.upper(),
         "validity": "DAY",
-        "price": float(price) if order_type.upper() == "LIMIT" else 0.0,
+        "price": int(round_to_clean_int(price)) if order_type.upper() == "LIMIT" else 0,
         "tag": "JARVIS"
     }
 
@@ -916,30 +932,30 @@ def place_upstox_stop_loss_order(instrument_key, quantity, sl_price, product="MT
 
     url = "https://api.upstox.com/v2/order/place"
     market_open = is_market_open()
-    trigger_p = round_to_tick(sl_price)
+    trigger_p = round_to_clean_int(sl_price)
     tt = transaction_type.upper()
     if tt == "SELL":
-        # 0.2% limit buffer below trigger strictly rounded to 0.05 tick size
-        limit_price = round_to_tick(trigger_p * 0.998)
+        # Limit buffer strictly rounded to integer below trigger
+        limit_price = round_to_clean_int(trigger_p * 0.998)
         if limit_price >= trigger_p:
-            limit_price = round_to_tick(trigger_p - 0.05)
+            limit_price = max(1, trigger_p - 1)
     else:
         # BUY SL (for short positions): limit buffer above trigger
-        limit_price = round_to_tick(trigger_p * 1.002)
+        limit_price = round_to_clean_int(trigger_p * 1.002)
         if limit_price <= trigger_p:
-            limit_price = round_to_tick(trigger_p + 0.05)
+            limit_price = trigger_p + 1
 
     payload = {
         "quantity": int(quantity),
         "product": product.upper(),
         "validity": "DAY",
-        "price": float(limit_price),
+        "price": int(limit_price),
         "tag": "JARVIS_SL",
         "instrument_token": instrument_key,
         "order_type": "SL",
         "transaction_type": tt,
         "disclosed_quantity": 0,
-        "trigger_price": float(trigger_p),
+        "trigger_price": int(trigger_p),
         "is_amo": not market_open
     }
 
@@ -985,16 +1001,16 @@ def place_dhan_stop_loss_order(symbol, quantity, sl_price, product="MTF", transa
         return False, f"Could not map securityId for {symbol} on Dhan"
 
     market_open = is_market_open()
-    trigger_p = round_to_tick(sl_price)
+    trigger_p = round_to_clean_int(sl_price)
     tt = transaction_type.upper()
     if tt == "SELL":
-        limit_price = round_to_tick(trigger_p * 0.998)
+        limit_price = round_to_clean_int(trigger_p * 0.998)
         if limit_price >= trigger_p:
-            limit_price = round_to_tick(trigger_p - 0.05)
+            limit_price = max(1, trigger_p - 1)
     else:
-        limit_price = round_to_tick(trigger_p * 1.002)
+        limit_price = round_to_clean_int(trigger_p * 1.002)
         if limit_price <= trigger_p:
-            limit_price = round_to_tick(trigger_p + 0.05)
+            limit_price = trigger_p + 1
 
     url = "https://api.dhan.co/v2/orders"
     payload = {
@@ -1006,8 +1022,8 @@ def place_dhan_stop_loss_order(symbol, quantity, sl_price, product="MTF", transa
         "validity": "DAY",
         "securityId": str(sec_id),
         "quantity": int(quantity),
-        "price": float(limit_price),
-        "triggerPrice": float(trigger_p),
+        "price": int(limit_price),
+        "triggerPrice": int(trigger_p),
         "afterMarketOrder": not market_open
     }
     if not market_open:
@@ -1042,16 +1058,16 @@ def place_zerodha_stop_loss_order(symbol, quantity, sl_price, product="CNC", tra
     if not api_key or not token:
         return False, "Zerodha credentials missing in config_credentials.json"
 
-    trigger_p = round_to_tick(sl_price)
+    trigger_p = round_to_clean_int(sl_price)
     tt = transaction_type.upper()
     if tt == "SELL":
-        limit_price = round_to_tick(trigger_p * 0.998)
+        limit_price = round_to_clean_int(trigger_p * 0.998)
         if limit_price >= trigger_p:
-            limit_price = round_to_tick(trigger_p - 0.05)
+            limit_price = max(1, trigger_p - 1)
     else:
-        limit_price = round_to_tick(trigger_p * 1.002)
+        limit_price = round_to_clean_int(trigger_p * 1.002)
         if limit_price <= trigger_p:
-            limit_price = round_to_tick(trigger_p + 0.05)
+            limit_price = trigger_p + 1
 
     url = "https://api.kite.trade/orders/regular"
     payload = {
@@ -1062,8 +1078,8 @@ def place_zerodha_stop_loss_order(symbol, quantity, sl_price, product="CNC", tra
         "quantity": int(quantity),
         "product": product.upper(),
         "validity": "DAY",
-        "price": float(limit_price),
-        "trigger_price": float(trigger_p),
+        "price": int(limit_price),
+        "trigger_price": int(trigger_p),
         "tag": "JARVIS_SL"
     }
     req_data = urllib.parse.urlencode(payload).encode("utf-8")
@@ -1086,15 +1102,16 @@ def place_zerodha_stop_loss_order(symbol, quantity, sl_price, product="CNC", tra
 def place_broker_stop_loss(broker, symbol, quantity, sl_price, instrument_key=None, product="MTF", transaction_type="SELL"):
     """Dispatches hard Stop-Loss Limit order (SELL for long, BUY for short) to designated broker."""
     b = (broker or "").strip().lower()
+    clean_sl = round_to_clean_int(sl_price)
     if b == "upstox":
         inst_key = instrument_key or resolve_instrument_key(symbol)
         if not inst_key:
             return False, f"Could not resolve instrument key for {symbol}"
-        return place_upstox_stop_loss_order(inst_key, quantity, sl_price, product=product, transaction_type=transaction_type)
+        return place_upstox_stop_loss_order(inst_key, quantity, clean_sl, product=product, transaction_type=transaction_type)
     elif b == "dhan":
-        return place_dhan_stop_loss_order(symbol, quantity, sl_price, product=product, transaction_type=transaction_type)
+        return place_dhan_stop_loss_order(symbol, quantity, clean_sl, product=product, transaction_type=transaction_type)
     elif b == "zerodha":
-        return place_zerodha_stop_loss_order(symbol, quantity, sl_price, product="CNC", transaction_type=transaction_type)
+        return place_zerodha_stop_loss_order(symbol, quantity, clean_sl, product="CNC", transaction_type=transaction_type)
     return False, f"Unsupported broker for Stop-Loss: {broker}"
 
 
@@ -1113,10 +1130,10 @@ def modify_upstox_stop_loss_order(order_id, quantity, trigger_price, limit_price
         "order_id": str(order_id),
         "quantity": int(quantity),
         "validity": "DAY",
-        "price": float(limit_price),
+        "price": int(round_to_clean_int(limit_price)),
         "order_type": "SL",
         "disclosed_quantity": 0,
-        "trigger_price": float(trigger_price)
+        "trigger_price": int(round_to_clean_int(trigger_price))
     }
 
     req_data = json.dumps(payload).encode("utf-8")
@@ -1162,8 +1179,8 @@ def modify_dhan_stop_loss_order(order_id, quantity, trigger_price, limit_price):
         "orderType": "STOP_LOSS",
         "legName": "ENTRY_LEG",
         "quantity": int(quantity),
-        "price": float(limit_price),
-        "triggerPrice": float(trigger_price),
+        "price": int(round_to_clean_int(limit_price)),
+        "triggerPrice": int(round_to_clean_int(trigger_price)),
         "disclosedQuantity": 0,
         "validity": "DAY"
     }
@@ -1201,8 +1218,8 @@ def modify_zerodha_stop_loss_order(order_id, quantity, trigger_price, limit_pric
     payload = {
         "order_id": str(order_id),
         "quantity": int(quantity),
-        "price": float(limit_price),
-        "trigger_price": float(trigger_price),
+        "price": int(round_to_clean_int(limit_price)),
+        "trigger_price": int(round_to_clean_int(trigger_price)),
         "order_type": "SL",
         "validity": "DAY"
     }
@@ -1227,16 +1244,16 @@ def modify_zerodha_stop_loss_order(order_id, quantity, trigger_price, limit_pric
 def modify_broker_stop_loss(broker, order_id, quantity, new_sl_price, transaction_type="SELL"):
     """Atomically modifies a pending Stop-Loss order on designated broker."""
     b = (broker or "").strip().lower()
-    trigger_p = round_to_tick(new_sl_price)
+    trigger_p = round_to_clean_int(new_sl_price)
     tt = transaction_type.upper()
     if tt == "SELL":
-        limit_price = round_to_tick(trigger_p * 0.998)
+        limit_price = round_to_clean_int(trigger_p * 0.998)
         if limit_price >= trigger_p:
-            limit_price = round_to_tick(trigger_p - 0.05)
+            limit_price = max(1, trigger_p - 1)
     else:
-        limit_price = round_to_tick(trigger_p * 1.002)
+        limit_price = round_to_clean_int(trigger_p * 1.002)
         if limit_price <= trigger_p:
-            limit_price = round_to_tick(trigger_p + 0.05)
+            limit_price = trigger_p + 1
 
     if b == "upstox":
         return modify_upstox_stop_loss_order(order_id, quantity, trigger_p, limit_price)
@@ -1252,7 +1269,22 @@ def modify_broker_stop_loss(broker, order_id, quantity, new_sl_price, transactio
 # Good-Till-Triggered (GTT / Forever Orders) Engine
 # Permanent 1-Year Stop-Loss Protection (Zero Daily Expiry)
 # ---------------------------------------------------------
-def place_zerodha_gtt_stop_loss(symbol, quantity, sl_price, exchange="NSE", product="CNC", transaction_type="SELL"):
+def resolve_symbol_exchange(symbol, explicit_exchange=None):
+    """
+    Intelligently determines the primary trading exchange (NSE or BSE).
+    1. Respects explicit exchange if passed (e.g. 'BSE' from live holding/position).
+    2. Identifies securities exclusively traded on BSE (e.g. 'NSE' ticker).
+    3. Defaults to 'NSE'.
+    """
+    if explicit_exchange and str(explicit_exchange).strip().upper() in ("BSE", "NSE"):
+        return str(explicit_exchange).strip().upper()
+    sym_u = (symbol or "").strip().upper()
+    if sym_u in ("NSE", "BSE"):
+        return "BSE"
+    return "NSE"
+
+
+def place_zerodha_gtt_stop_loss(symbol, quantity, sl_price, exchange=None, product="CNC", transaction_type="SELL"):
     """Submits a permanent 1-year GTT Stop-Loss trigger directly to Zerodha Kite API."""
     cfg = load_config()
     kite = cfg.get("zerodha", {})
@@ -1262,34 +1294,67 @@ def place_zerodha_gtt_stop_loss(symbol, quantity, sl_price, exchange="NSE", prod
         return False, "Zerodha credentials missing in config_credentials.json"
 
     sym_u = (symbol or "").strip().upper()
-    trigger_p = round_to_tick(sl_price)
+    resolved_ex = resolve_symbol_exchange(sym_u, exchange)
+    trigger_p = round_to_clean_int(sl_price)
     tt = transaction_type.upper()
+
+    # Guard: prevent duplicate GTT triggers for the same scrip on Zerodha
+    existing_gtt = get_pending_gtt_order(sym_u, broker="zerodha")
+    if existing_gtt and existing_gtt.get("order_id"):
+        old_trig = float(existing_gtt.get("trigger_price") or 0)
+        if tt == "SELL" and old_trig >= trigger_p:
+            return True, f"Active GTT {existing_gtt['order_id']} already protects {sym_u} at ₹{old_trig:,.0f} (duplicate prevented)"
+        ok, m_res = modify_zerodha_gtt_stop_loss(
+            existing_gtt["order_id"],
+            sym_u,
+            quantity,
+            trigger_p,
+            exchange=resolved_ex,
+            product=product,
+            transaction_type=tt
+        )
+        if ok:
+            return True, f"Modified existing GTT {existing_gtt['order_id']} for {sym_u} (duplicate prevented)"
+        return False, f"Existing GTT {existing_gtt['order_id']} modify failed: {m_res}"
+
     if tt == "SELL":
-        limit_p = round_to_tick(trigger_p * 0.998)
+        limit_p = round_to_clean_int(trigger_p * 0.998)
         if limit_p >= trigger_p:
-            limit_p = round_to_tick(trigger_p - 0.05)
+            limit_p = max(1, trigger_p - 1)
     else:
-        limit_p = round_to_tick(trigger_p * 1.002)
+        limit_p = round_to_clean_int(trigger_p * 1.002)
         if limit_p <= trigger_p:
-            limit_p = round_to_tick(trigger_p + 0.05)
+            limit_p = trigger_p + 1
 
     q, _ = fetch_live_quote(sym_u)
-    ltp = float(q.get("ltp", 0) or trigger_p) if q else trigger_p
+    ltp = float(q.get("ltp", 0) or 0) if q else 0.0
+    if ltp <= trigger_p:
+        try:
+            req_h = urllib.request.Request("https://api.kite.trade/portfolio/holdings", headers={"X-Kite-Version": "3", "Authorization": f"token {ak}:{tok}"})
+            with urllib.request.urlopen(req_h, timeout=5) as r:
+                for h in json.loads(r.read().decode()).get("data", []):
+                    if h.get("tradingsymbol") == sym_u and float(h.get("last_price", 0) or 0) > 0:
+                        ltp = float(h["last_price"])
+                        break
+        except Exception:
+            pass
+    if ltp <= trigger_p:
+        ltp = round(float(trigger_p) * 1.02, 2)
 
     condition = {
-        "exchange": exchange.upper(),
+        "exchange": resolved_ex,
         "tradingsymbol": sym_u,
-        "trigger_values": [float(trigger_p)],
+        "trigger_values": [int(trigger_p)],
         "last_price": float(ltp)
     }
     orders = [{
-        "exchange": exchange.upper(),
+        "exchange": resolved_ex,
         "tradingsymbol": sym_u,
         "transaction_type": tt,
         "quantity": int(quantity),
         "order_type": "LIMIT",
         "product": product.upper(),
-        "price": float(limit_p)
+        "price": int(limit_p)
     }]
 
     payload = {
@@ -1322,7 +1387,7 @@ def place_zerodha_gtt_stop_loss(symbol, quantity, sl_price, exchange="NSE", prod
         return False, f"Zerodha GTT error: {str(e)}"
 
 
-def modify_zerodha_gtt_stop_loss(trigger_id, symbol, quantity, new_sl_price, exchange="NSE", product="CNC", transaction_type="SELL"):
+def modify_zerodha_gtt_stop_loss(trigger_id, symbol, quantity, new_sl_price, exchange=None, product="CNC", transaction_type="SELL"):
     """Atomically modifies an existing GTT Stop-Loss trigger on Zerodha Kite API."""
     cfg = load_config()
     kite = cfg.get("zerodha", {})
@@ -1332,34 +1397,47 @@ def modify_zerodha_gtt_stop_loss(trigger_id, symbol, quantity, new_sl_price, exc
         return False, "Zerodha credentials missing"
 
     sym_u = (symbol or "").strip().upper()
-    trigger_p = round_to_tick(new_sl_price)
+    resolved_ex = resolve_symbol_exchange(sym_u, exchange)
+    trigger_p = round_to_clean_int(new_sl_price)
     tt = transaction_type.upper()
     if tt == "SELL":
-        limit_p = round_to_tick(trigger_p * 0.998)
+        limit_p = round_to_clean_int(trigger_p * 0.998)
         if limit_p >= trigger_p:
-            limit_p = round_to_tick(trigger_p - 0.05)
+            limit_p = max(1, trigger_p - 1)
     else:
-        limit_p = round_to_tick(trigger_p * 1.002)
+        limit_p = round_to_clean_int(trigger_p * 1.002)
         if limit_p <= trigger_p:
-            limit_p = round_to_tick(trigger_p + 0.05)
+            limit_p = trigger_p + 1
 
     q, _ = fetch_live_quote(sym_u)
-    ltp = float(q.get("ltp", 0) or trigger_p) if q else trigger_p
+    ltp = float(q.get("ltp", 0) or 0) if q else 0.0
+    if ltp <= trigger_p:
+        try:
+            req_h = urllib.request.Request("https://api.kite.trade/portfolio/holdings", headers={"X-Kite-Version": "3", "Authorization": f"token {ak}:{tok}"})
+            with urllib.request.urlopen(req_h, timeout=5) as r:
+                for h in json.loads(r.read().decode()).get("data", []):
+                    if h.get("tradingsymbol") == sym_u and float(h.get("last_price", 0) or 0) > 0:
+                        ltp = float(h["last_price"])
+                        break
+        except Exception:
+            pass
+    if ltp <= trigger_p:
+        ltp = round(float(trigger_p) * 1.02, 2)
 
     condition = {
-        "exchange": exchange.upper(),
+        "exchange": resolved_ex,
         "tradingsymbol": sym_u,
-        "trigger_values": [float(trigger_p)],
+        "trigger_values": [int(trigger_p)],
         "last_price": float(ltp)
     }
     orders = [{
-        "exchange": exchange.upper(),
+        "exchange": resolved_ex,
         "tradingsymbol": sym_u,
         "transaction_type": tt,
         "quantity": int(quantity),
         "order_type": "LIMIT",
         "product": product.upper(),
-        "price": float(limit_p)
+        "price": int(limit_p)
     }]
 
     payload = {
@@ -1385,7 +1463,10 @@ def modify_zerodha_gtt_stop_loss(trigger_id, symbol, quantity, new_sl_price, exc
     except urllib.error.HTTPError as he:
         try:
             err_json = json.loads(he.read().decode())
-            return False, err_json.get("message", f"HTTP {he.code}")
+            msg = err_json.get("message", f"HTTP {he.code}")
+            if "no changes detected" in str(msg).lower():
+                return True, str(trigger_id)
+            return False, msg
         except Exception:
             return False, f"Zerodha HTTP {he.code}: {he.reason}"
     except Exception as e:
@@ -1428,16 +1509,33 @@ def place_dhan_forever_stop_loss(symbol, quantity, sl_price, product="MTF", tran
     if not sec_id:
         return False, f"Could not map securityId for {sym_u} on Dhan"
 
-    trigger_p = round_to_tick(sl_price)
+    trigger_p = round_to_clean_int(sl_price)
     tt = transaction_type.upper()
+
+    # Guard: prevent duplicate Forever Orders for the same scrip on Dhan
+    existing_gtt = get_pending_gtt_order(sym_u, broker="dhan")
+    if existing_gtt and existing_gtt.get("order_id"):
+        old_trig = float(existing_gtt.get("trigger_price") or 0)
+        if tt == "SELL" and old_trig >= trigger_p:
+            return True, f"Active Dhan Forever order {existing_gtt['order_id']} already protects {sym_u} at ₹{old_trig:,.0f} (duplicate prevented)"
+        ok, m_res = modify_dhan_forever_stop_loss(
+            existing_gtt["order_id"],
+            quantity,
+            trigger_p,
+            transaction_type=tt
+        )
+        if ok:
+            return True, f"Modified existing Dhan Forever Order {existing_gtt['order_id']} for {sym_u} (duplicate prevented)"
+        return False, f"Existing Dhan Forever order {existing_gtt['order_id']} modify failed: {m_res}"
+
     if tt == "SELL":
-        limit_p = round_to_tick(trigger_p * 0.998)
+        limit_p = round_to_clean_int(trigger_p * 0.998)
         if limit_p >= trigger_p:
-            limit_p = round_to_tick(trigger_p - 0.05)
+            limit_p = max(1, trigger_p - 1)
     else:
-        limit_p = round_to_tick(trigger_p * 1.002)
+        limit_p = round_to_clean_int(trigger_p * 1.002)
         if limit_p <= trigger_p:
-            limit_p = round_to_tick(trigger_p + 0.05)
+            limit_p = trigger_p + 1
 
     payload = {
         "dhanClientId": cid,
@@ -1449,8 +1547,8 @@ def place_dhan_forever_stop_loss(symbol, quantity, sl_price, product="MTF", tran
         "validity": "DAY",
         "securityId": str(sec_id),
         "quantity": int(quantity),
-        "price": float(limit_p),
-        "triggerPrice": float(trigger_p)
+        "price": int(limit_p),
+        "triggerPrice": int(trigger_p)
     }
 
     req_data = json.dumps(payload).encode("utf-8")
@@ -1488,16 +1586,16 @@ def modify_dhan_forever_stop_loss(order_id, quantity, new_sl_price, transaction_
     if not (cid and tok):
         return False, "Dhan credentials missing"
 
-    trigger_p = round_to_tick(new_sl_price)
+    trigger_p = round_to_clean_int(new_sl_price)
     tt = transaction_type.upper()
     if tt == "SELL":
-        limit_p = round_to_tick(trigger_p * 0.998)
+        limit_p = round_to_clean_int(trigger_p * 0.998)
         if limit_p >= trigger_p:
-            limit_p = round_to_tick(trigger_p - 0.05)
+            limit_p = max(1, trigger_p - 1)
     else:
-        limit_p = round_to_tick(trigger_p * 1.002)
+        limit_p = round_to_clean_int(trigger_p * 1.002)
         if limit_p <= trigger_p:
-            limit_p = round_to_tick(trigger_p + 0.05)
+            limit_p = trigger_p + 1
 
     payload = {
         "dhanClientId": cid,
@@ -1507,8 +1605,8 @@ def modify_dhan_forever_stop_loss(order_id, quantity, new_sl_price, transaction_
         "orderType": "LIMIT",
         "transactionType": tt,
         "quantity": int(quantity),
-        "price": float(limit_p),
-        "triggerPrice": float(trigger_p),
+        "price": int(limit_p),
+        "triggerPrice": int(trigger_p),
         "disclosedQuantity": 0,
         "validity": "DAY"
     }
@@ -1569,7 +1667,7 @@ def place_upstox_gtt_stop_loss(instrument_key, quantity, sl_price, product="MTF"
     if not tok:
         return False, "Upstox access token missing"
 
-    trigger_p = round_to_tick(sl_price)
+    trigger_p = round_to_clean_int(sl_price)
     tt = transaction_type.upper()
     trig_type = "BELOW" if tt == "SELL" else "ABOVE"
     prod_code = "D" if product.upper() in ("CNC", "DELIVERY", "D") else "MTF"
@@ -1582,7 +1680,7 @@ def place_upstox_gtt_stop_loss(instrument_key, quantity, sl_price, product="MTF"
             {
                 "strategy": "ENTRY",
                 "trigger_type": trig_type,
-                "trigger_price": float(trigger_p)
+                "trigger_price": int(trigger_p)
             }
         ],
         "instrument_token": instrument_key,
@@ -1632,25 +1730,27 @@ def cancel_upstox_gtt_order(gtt_id):
 def place_broker_gtt_stop_loss(broker, symbol, quantity, sl_price, instrument_key=None, product="MTF", transaction_type="SELL", exchange="NSE"):
     """Unified dispatcher: submits a permanent 1-year GTT Stop-Loss to designated broker."""
     b = (broker or "").strip().lower()
+    clean_sl = round_to_clean_int(sl_price)
     if b == "zerodha":
-        return place_zerodha_gtt_stop_loss(symbol, quantity, sl_price, exchange=exchange, product="CNC" if product.upper() in ("CNC", "DELIVERY") else "MTF", transaction_type=transaction_type)
+        return place_zerodha_gtt_stop_loss(symbol, quantity, clean_sl, exchange=exchange, product="CNC" if product.upper() in ("CNC", "DELIVERY") else "MTF", transaction_type=transaction_type)
     elif b == "dhan":
-        return place_dhan_forever_stop_loss(symbol, quantity, sl_price, product=product, transaction_type=transaction_type)
+        return place_dhan_forever_stop_loss(symbol, quantity, clean_sl, product=product, transaction_type=transaction_type)
     elif b == "upstox":
         inst_k = instrument_key or resolve_instrument_key(symbol)
         if not inst_k:
             return False, f"Could not resolve instrument key for {symbol}"
-        return place_upstox_gtt_stop_loss(inst_k, quantity, sl_price, product=product, transaction_type=transaction_type)
+        return place_upstox_gtt_stop_loss(inst_k, quantity, clean_sl, product=product, transaction_type=transaction_type)
     return False, f"Unsupported broker for GTT: {broker}"
 
 
 def modify_broker_gtt_stop_loss(broker, order_id, quantity, new_sl_price, symbol=None, transaction_type="SELL", exchange="NSE", product="CNC"):
     """Unified dispatcher: atomically modifies an existing GTT Stop-Loss on designated broker."""
     b = (broker or "").strip().lower()
+    clean_sl = round_to_clean_int(new_sl_price)
     if b == "zerodha":
-        return modify_zerodha_gtt_stop_loss(order_id, symbol or "", quantity, new_sl_price, exchange=exchange, product=product, transaction_type=transaction_type)
+        return modify_zerodha_gtt_stop_loss(order_id, symbol or "", quantity, clean_sl, exchange=exchange, product=product, transaction_type=transaction_type)
     elif b == "dhan":
-        return modify_dhan_forever_stop_loss(order_id, quantity, new_sl_price, transaction_type=transaction_type)
+        return modify_dhan_forever_stop_loss(order_id, quantity, clean_sl, transaction_type=transaction_type)
     elif b == "upstox":
         return False, "Upstox GTT modify not yet implemented"
     return False, f"Unsupported broker for modify GTT: {broker}"
@@ -1706,6 +1806,8 @@ def get_pending_gtt_order(symbol, broker=None):
                                 qty = ords[0].get("quantity", 0) if ords else 0
                                 lim_p = ords[0].get("price", 0.0) if ords else 0.0
                                 tx_type = ords[0].get("transaction_type", "SELL") if ords else "SELL"
+                                ex_val = str(cond.get("exchange", "NSE")).upper()
+                                ord_prod = str(ords[0].get("product", "CNC")).upper() if ords else "CNC"
                                 return {
                                     "order_id": str(trig.get("id")),
                                     "broker": "ZERODHA",
@@ -1713,6 +1815,8 @@ def get_pending_gtt_order(symbol, broker=None):
                                     "trigger_price": float(trig_p),
                                     "price": float(lim_p),
                                     "transaction_type": str(tx_type).upper(),
+                                    "exchange": ex_val,
+                                    "product": ord_prod,
                                     "status": "ACTIVE_GTT",
                                     "order_type": "GTT",
                                     "is_gtt": True
@@ -2388,8 +2492,11 @@ def fetch_all_positions():
                                 if not sym or sym in ignored_symbols:
                                     continue
                                 if sym in tracked_holdings and not any(p["symbol"].upper() == sym and p["broker"] == "ZERODHA" for p in all_pos):
-                                    qty = int(h.get("quantity", 0)) + int(h.get("t1_quantity", 0))
+                                    cnc_q = int(h.get("quantity", 0)) + int(h.get("t1_quantity", 0))
+                                    mtf_q = int(h.get("mtf", {}).get("quantity", 0) or 0) if isinstance(h.get("mtf"), dict) else 0
+                                    qty = cnc_q + mtf_q
                                     if qty > 0:
+                                        prod_type = "MTF" if mtf_q > 0 else "CNC"
                                         avg_price = float(h.get("average_price", 0.0) or 0.0)
                                         ltp = float(h.get("last_price", avg_price) or avg_price)
                                         tot_pnl = float(h.get("pnl", 0.0) or round((ltp - avg_price) * qty, 2))
@@ -2398,7 +2505,7 @@ def fetch_all_positions():
                                         all_pos.append({
                                             "symbol": sym,
                                             "broker": "ZERODHA",
-                                            "product": "CNC",
+                                            "product": prod_type,
                                             "qty": qty,
                                             "avg_price": round(avg_price, 2),
                                             "ltp": round(ltp, 2),
@@ -2867,8 +2974,12 @@ def get_open_trades_from_logs():
                         "notes": meta.get("notes", "")
                     }
                 else:
-                    if not logged_trades[sym_u].get("stop_loss") and meta.get("sl"):
-                        logged_trades[sym_u]["stop_loss"] = float(meta["sl"])
+                    th_sl = float(meta.get("sl", 0) or 0)
+                    if th_sl > 0:
+                        curr_sl = float(logged_trades[sym_u].get("stop_loss", 0) or 0)
+                        # Active trailed SL in tracked_holdings takes precedence if tighter
+                        if curr_sl == 0 or th_sl > curr_sl:
+                            logged_trades[sym_u]["stop_loss"] = th_sl
                     if not logged_trades[sym_u].get("target") and meta.get("target"):
                         logged_trades[sym_u]["target"] = float(meta["target"])
         except Exception:
@@ -2976,7 +3087,7 @@ def get_daily_emas_and_atr(symbol, token=None):
     return res
 
 
-def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, product="MTF", instrument_key=None):
+def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, product="MTF", instrument_key=None, exchange=None, ltp=None):
     """
     Jeff Sun Trailing Automation:
     Ratchets the Stop-Loss up to Breakeven (+0.15% fee buffer) on the live broker.
@@ -2987,18 +3098,20 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
     sym = (symbol or "").strip().upper()
     b = (broker or "").strip().lower()
 
-    # Calculate Breakeven SL with tick size ₹0.05
+    # Calculate Breakeven SL strictly as a round integer (no decimal part)
     raw_be = entry_price * 1.0015
-    breakeven_sl = round(round(raw_be / 0.05) * 0.05, 2)
+    breakeven_sl = round_to_clean_int(raw_be)
+
+    target_exchange = resolve_symbol_exchange(sym, exchange)
 
     # Pre-Flight Guard: Check Live Quote to ensure LTP > breakeven_sl
     # (Mandatory Indian exchange rule: Sell Stop-Loss orders require Trigger Price < current LTP)
     q, _ = fetch_live_quote(sym)
-    current_ltp = float(q.get("ltp", 0) or 0) if q else 0
+    current_ltp = float(q.get("ltp", 0) or 0) if q else float(ltp or 0)
     if current_ltp > 0 and current_ltp <= breakeven_sl:
         return False, {
             "status": "failed",
-            "message": f"Cannot ratchet {sym} to Breakeven ₹{breakeven_sl:,.2f}: Current LTP (₹{current_ltp:,.2f}) is at or below Breakeven. Exchange rules require Trigger Price < LTP for Sell Stop-Loss orders.",
+            "message": f"Cannot ratchet {sym} to Breakeven ₹{breakeven_sl}: Current LTP (₹{current_ltp:,.2f}) is at or below Breakeven. Exchange rules require Trigger Price < LTP for Sell Stop-Loss orders.",
             "breakeven_sl": breakeven_sl,
             "current_ltp": current_ltp
         }
@@ -3012,8 +3125,15 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
     if existing_sl:
         old_oid = existing_sl["order_id"]
         is_gtt = existing_sl.get("is_gtt", False)
-        if is_gtt:
+        old_trig = float(existing_sl.get("trigger_price") or 0)
+        if old_trig >= breakeven_sl:
+            ok = True
+            atomic_success = True
+            res = {"status": "success", "mode": "ALREADY_AT_BREAKEVEN", "order_id": old_oid, "sl_price": old_trig}
+        elif is_gtt:
             # Atomically modify existing permanent GTT trigger directly
+            gtt_ex = existing_sl.get("exchange") or target_exchange
+            gtt_prod = existing_sl.get("product") or product
             mod_ok, mod_res = modify_broker_gtt_stop_loss(
                 broker=b,
                 order_id=old_oid,
@@ -3021,7 +3141,8 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
                 new_sl_price=breakeven_sl,
                 symbol=sym,
                 transaction_type="SELL",
-                product=product
+                exchange=gtt_ex,
+                product=gtt_prod
             )
             if mod_ok:
                 ok = True
@@ -3038,8 +3159,8 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
                 cancel_broker_order(b, old_oid)
                 time.sleep(0.6)
 
-    if not ok:
-        # Step 2: Fresh GTT placement (preferred permanent 1-year stop-loss)
+    if not ok and not (existing_sl and existing_sl.get("is_gtt")):
+        # Step 2: Fresh GTT placement only if no GTT trigger existed
         place_ok, place_res = place_broker_gtt_stop_loss(
             broker=b,
             symbol=sym,
@@ -3047,7 +3168,8 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
             sl_price=breakeven_sl,
             instrument_key=instrument_key,
             product=product,
-            transaction_type="SELL"
+            transaction_type="SELL",
+            exchange=target_exchange
         )
         if not place_ok:
             # Fall back to regular DAY stop-loss order if GTT placement is rejected
@@ -3203,12 +3325,12 @@ def rearm_overnight_stop_losses(notify=True, force=False):
                     break
         if target_sl <= 0 and avg_p > 0:
             if is_short:
-                target_sl = round(avg_p * 1.025, 2)
+                target_sl = round_to_clean_int(avg_p * 1.025)
             else:
-                target_sl = round(avg_p * 0.975, 2)
+                target_sl = round_to_clean_int(avg_p * 0.975)
             source_desc = "Default 2.5% SL"
 
-        target_sl = round_to_tick(target_sl)
+        target_sl = round_to_clean_int(target_sl)
 
         # Pre-flight exchange rule validation against current LTP:
         if not is_short and ltp > 0 and ltp <= target_sl:
@@ -3405,23 +3527,23 @@ def get_all_open_positions_with_trailing_sl():
 
         # Check if trade log has initial SL or target
         log_meta = logged_trades.get(sym, {})
-        initial_sl = float(log_meta.get("stop_loss", 0) or 0)
-        target_p = float(log_meta.get("target", 0) or 0)
+        initial_sl = round_to_clean_int(log_meta.get("stop_loss", 0) or 0)
+        target_p = round_to_clean_int(log_meta.get("target", 0) or 0)
 
         # If initial SL not logged, derive structural SL from quote Day Low or 2.5% default
         if initial_sl <= 0 and entry_p > 0:
             if "CE" in sym or "PE" in sym or "NIFTY" in sym:
-                initial_sl = round(entry_p * 0.70, 2)
+                initial_sl = round_to_clean_int(entry_p * 0.70)
             else:
                 q, _ = fetch_live_quote(sym)
                 dl = float(q.get("day_low", 0) or 0) if q else 0
                 if 0 < dl < entry_p and ((entry_p - dl) / entry_p) <= 0.05:
-                    initial_sl = round(dl, 2)
+                    initial_sl = round_to_clean_int(dl)
                 else:
-                    initial_sl = round(entry_p * 0.975, 2)
+                    initial_sl = round_to_clean_int(entry_p * 0.975)
 
         if target_p <= 0 and entry_p > 0 and initial_sl > 0:
-            target_p = round(entry_p + abs(entry_p - initial_sl) * 2.0, 2)
+            target_p = round_to_clean_int(entry_p + abs(entry_p - initial_sl) * 2.0)
 
         risk_per_share = max(0.10, abs(entry_p - initial_sl)) if entry_p > 0 and initial_sl > 0 else 1.0
         r_multiple = round((ltp - entry_p) / risk_per_share, 2) if risk_per_share > 0 else 0.0
@@ -3431,46 +3553,46 @@ def get_all_open_positions_with_trailing_sl():
         is_option = "CE" in sym or "PE" in sym or "NIFTY" in sym
         if is_option:
             if pnl_pct >= 100.0:
-                recommended_sl = round(entry_p * 2.0, 2)
+                recommended_sl = round_to_clean_int(entry_p * 2.0)
                 action_badge = "⭐ BOOK 50% & TRAIL"
-                action_text = f"Huge option gain (+{pnl_pct:.1f}%)! Book half and trail SL to ₹{recommended_sl:,.2f}"
+                action_text = f"Huge option gain (+{pnl_pct:.1f}%)! Book half and trail SL to ₹{recommended_sl:,.0f}"
             elif pnl_pct >= 40.0:
-                recommended_sl = entry_p
+                recommended_sl = round_to_clean_int(entry_p)
                 action_badge = "🟢 TRAIL TO COST"
                 action_text = f"Solid gain (+{pnl_pct:.1f}%)! Trail SL to entry ₹{entry_p:,.2f} for risk-free trade"
             elif ltp <= initial_sl:
-                recommended_sl = initial_sl
+                recommended_sl = round_to_clean_int(initial_sl)
                 action_badge = "🔴 EXIT — SL HIT"
-                action_text = f"Option SL breached at ₹{initial_sl:,.2f}"
+                action_text = f"Option SL breached at ₹{initial_sl:,.0f}"
             else:
-                recommended_sl = initial_sl
+                recommended_sl = round_to_clean_int(initial_sl)
                 action_badge = "✅ HOLD"
-                action_text = f"Keep initial SL at ₹{initial_sl:,.2f}"
+                action_text = f"Keep initial SL at ₹{initial_sl:,.0f}"
         else:
             if ltp <= initial_sl:
-                recommended_sl = initial_sl
+                recommended_sl = round_to_clean_int(initial_sl)
                 action_badge = "🔴 EXIT — SL HIT"
-                action_text = f"Stop-Loss breached! Market price ₹{ltp:,.2f} is below SL ₹{initial_sl:,.2f}"
+                action_text = f"Stop-Loss breached! Market price ₹{ltp:,.2f} is below SL ₹{initial_sl:,.0f}"
             elif dist_to_sl_pct <= 1.0:
-                recommended_sl = initial_sl
+                recommended_sl = round_to_clean_int(initial_sl)
                 action_badge = "🟡 DANGER — NEAR SL"
-                action_text = f"Danger! Price is only {dist_to_sl_pct:.1f}% away from SL ₹{initial_sl:,.2f}"
+                action_text = f"Danger! Price is only {dist_to_sl_pct:.1f}% away from SL ₹{initial_sl:,.0f}"
             elif r_multiple >= 3.0 or pnl_pct >= 6.0:
-                recommended_sl = round(entry_p + (risk_per_share * 1.5), 2)
+                recommended_sl = round_to_clean_int(entry_p + (risk_per_share * 1.5))
                 action_badge = "⭐ BOOK 50% & TRAIL"
-                action_text = f"Up +{r_multiple:.1f}R! Book 50% partial profit and trail SL to ₹{recommended_sl:,.2f} (+1.5R)"
+                action_text = f"Up +{r_multiple:.1f}R! Book 50% partial profit and trail SL to ₹{recommended_sl:,.0f} (+1.5R)"
             elif r_multiple >= 1.8 or pnl_pct >= 3.0:
-                recommended_sl = entry_p
+                recommended_sl = round_to_clean_int(entry_p)
                 action_badge = "🟢 TRAIL TO COST"
-                action_text = f"Up +{r_multiple:.1f}R (+{pnl_pct:.1f}%)! Move SL to Breakeven ₹{entry_p:,.2f} (Risk-Free!)"
+                action_text = f"Up +{r_multiple:.1f}R (+{pnl_pct:.1f}%)! Move SL to Breakeven ₹{recommended_sl:,.0f} (Risk-Free!)"
             elif r_multiple >= 1.0 or pnl_pct >= 1.5:
-                recommended_sl = round(entry_p - (risk_per_share * 0.5), 2)
+                recommended_sl = round_to_clean_int(entry_p - (risk_per_share * 0.5))
                 action_badge = "🔵 CUT RISK 50%"
-                action_text = f"Up +{r_multiple:.1f}R. Trail SL up to ₹{recommended_sl:,.2f} to cut max risk by 50%"
+                action_text = f"Up +{r_multiple:.1f}R. Trail SL up to ₹{recommended_sl:,.0f} to cut max risk by 50%"
             else:
-                recommended_sl = initial_sl
+                recommended_sl = round_to_clean_int(initial_sl)
                 action_badge = "✅ HOLD — ON TRACK"
-                action_text = f"Position healthy. Keep stop at ₹{initial_sl:,.2f} (Target: ₹{target_p:,.2f})"
+                action_text = f"Position healthy. Keep stop at ₹{initial_sl:,.0f} (Target: ₹{target_p:,.0f})"
 
         # Jeff Sun 10 EMA & 20 EMA Trailing Telemetry
         ema_info = get_daily_emas_and_atr(sym)
@@ -3502,7 +3624,7 @@ def get_all_open_positions_with_trailing_sl():
 
         is_short = qty < 0
         raw_be = entry_p * (0.9985 if is_short else 1.0015)
-        breakeven_p = round(round(raw_be / 0.05) * 0.05, 2)
+        breakeven_p = round_to_clean_int(raw_be)
         if not is_option and (r_multiple >= 1.5 or pnl_pct >= 2.5):
             if is_short:
                 recommended_sl = min(recommended_sl, breakeven_p) if recommended_sl > 0 else breakeven_p
@@ -3510,7 +3632,7 @@ def get_all_open_positions_with_trailing_sl():
                 recommended_sl = max(recommended_sl, breakeven_p)
             if "HOLD" in action_badge:
                 action_badge = "🟢 TRAIL TO BREAKEVEN"
-                action_text = f"Target milestone (+{r_multiple:.1f}R)! Move SL to Breakeven ₹{breakeven_p:,.2f} (Risk-Free!)"
+                action_text = f"Target milestone (+{r_multiple:.1f}R)! Move SL to Breakeven ₹{breakeven_p:,.0f} (Risk-Free!)"
 
         # Value at Risk (Current SL vs Recommended SL)
         if is_short:
@@ -3546,6 +3668,7 @@ def get_all_open_positions_with_trailing_sl():
             "symbol": sym,
             "broker": broker,
             "product": product,
+            "exchange": p.get("exchange", "NSE"),
             "source": "LIVE BROKER",
             "qty": qty,
             "entry_price": entry_p,
@@ -3582,8 +3705,8 @@ def get_all_open_positions_with_trailing_sl():
             continue
         entry_p = float(log_item.get("entry_price", 0) or 0)
         qty = int(log_item.get("qty", 0) or 0)
-        initial_sl = float(log_item.get("stop_loss", 0) or 0)
-        target_p = float(log_item.get("target", 0) or 0)
+        initial_sl = round_to_clean_int(log_item.get("stop_loss", 0) or 0)
+        target_p = round_to_clean_int(log_item.get("target", 0) or 0)
         if entry_p <= 0 or qty <= 0:
             continue
 
@@ -3593,38 +3716,38 @@ def get_all_open_positions_with_trailing_sl():
         pnl_pct = round(((ltp - entry_p) / entry_p) * 100, 2)
 
         if initial_sl <= 0:
-            initial_sl = round(entry_p * 0.975, 2)
+            initial_sl = round_to_clean_int(entry_p * 0.975)
         if target_p <= 0:
-            target_p = round(entry_p + abs(entry_p - initial_sl) * 2.0, 2)
+            target_p = round_to_clean_int(entry_p + abs(entry_p - initial_sl) * 2.0)
 
         risk_per_share = max(0.10, abs(entry_p - initial_sl))
         r_multiple = round((ltp - entry_p) / risk_per_share, 2)
         dist_to_sl_pct = round(((ltp - initial_sl) / ltp) * 100, 2) if ltp > 0 else 99.0
 
         if ltp <= initial_sl:
-            recommended_sl = initial_sl
+            recommended_sl = round_to_clean_int(initial_sl)
             action_badge = "🔴 EXIT — SL HIT"
-            action_text = f"Stop-Loss breached! Market price ₹{ltp:,.2f} is below SL ₹{initial_sl:,.2f}"
+            action_text = f"Stop-Loss breached! Market price ₹{ltp:,.2f} is below SL ₹{initial_sl:,.0f}"
         elif dist_to_sl_pct <= 1.0:
-            recommended_sl = initial_sl
+            recommended_sl = round_to_clean_int(initial_sl)
             action_badge = "🟡 DANGER — NEAR SL"
-            action_text = f"Danger! Price is only {dist_to_sl_pct:.1f}% away from SL ₹{initial_sl:,.2f}"
+            action_text = f"Danger! Price is only {dist_to_sl_pct:.1f}% away from SL ₹{initial_sl:,.0f}"
         elif r_multiple >= 3.0 or pnl_pct >= 6.0:
-            recommended_sl = round(entry_p + (risk_per_share * 1.5), 2)
+            recommended_sl = round_to_clean_int(entry_p + (risk_per_share * 1.5))
             action_badge = "⭐ BOOK 50% & TRAIL"
-            action_text = f"Up +{r_multiple:.1f}R! Book 50% partial profit and trail SL to ₹{recommended_sl:,.2f}"
+            action_text = f"Up +{r_multiple:.1f}R! Book 50% partial profit and trail SL to ₹{recommended_sl:,.0f}"
         elif r_multiple >= 1.8 or pnl_pct >= 3.0:
-            recommended_sl = entry_p
+            recommended_sl = round_to_clean_int(entry_p)
             action_badge = "🟢 TRAIL TO COST"
-            action_text = f"Up +{r_multiple:.1f}R! Move SL to Breakeven ₹{entry_p:,.2f} (Risk-Free!)"
+            action_text = f"Up +{r_multiple:.1f}R! Move SL to Breakeven ₹{recommended_sl:,.0f} (Risk-Free!)"
         elif r_multiple >= 1.0 or pnl_pct >= 1.5:
-            recommended_sl = round(entry_p - (risk_per_share * 0.5), 2)
+            recommended_sl = round_to_clean_int(entry_p - (risk_per_share * 0.5))
             action_badge = "🔵 CUT RISK 50%"
-            action_text = f"Up +{r_multiple:.1f}R. Trail SL up to ₹{recommended_sl:,.2f} to cut risk by 50%"
+            action_text = f"Up +{r_multiple:.1f}R. Trail SL up to ₹{recommended_sl:,.0f} to cut risk by 50%"
         else:
-            recommended_sl = initial_sl
+            recommended_sl = round_to_clean_int(initial_sl)
             action_badge = "✅ HOLD — ON TRACK"
-            action_text = f"Position healthy. Keep stop at ₹{initial_sl:,.2f}"
+            action_text = f"Position healthy. Keep stop at ₹{initial_sl:,.0f}"
 
         ema_info = get_daily_emas_and_atr(sym)
         ema10 = ema_info.get("ema10")
@@ -3654,12 +3777,12 @@ def get_all_open_positions_with_trailing_sl():
                 jeff_status += f" | ⚠️ Extended (+{atr_stretch}x ATR from 50MA) — Tighten trail!"
 
         raw_be = entry_p * 1.0015
-        breakeven_p = round(round(raw_be / 0.05) * 0.05, 2)
+        breakeven_p = round_to_clean_int(raw_be)
         if r_multiple >= 1.5 or pnl_pct >= 2.5:
             recommended_sl = max(recommended_sl, breakeven_p)
             if "HOLD" in action_badge:
                 action_badge = "🟢 TRAIL TO BREAKEVEN"
-                action_text = f"Target milestone (+{r_multiple:.1f}R)! Move SL to Breakeven ₹{breakeven_p:,.2f} (Risk-Free!)"
+                action_text = f"Target milestone (+{r_multiple:.1f}R)! Move SL to Breakeven ₹{breakeven_p:,.0f} (Risk-Free!)"
 
         # Value at Risk (Current SL vs Recommended SL)
         if initial_sl >= entry_p:
