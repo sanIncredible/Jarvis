@@ -280,6 +280,7 @@ def register_telegram_commands():
         {"command": "add", "description": "➕ Add stock ticker(s) to scanner watchlist"},
         {"command": "remove", "description": "➖ Remove stock ticker(s) from watchlist"},
         {"command": "token", "description": "🎟️ Check broker token health (Upstox/Dhan/Zerodha)"},
+        {"command": "login", "description": "🔗 1-Click Mobile Login to renew Upstox/Zerodha tokens"},
         {"command": "scan", "description": "⚡ Trigger instant market scan & cloud push"},
         {"command": "regime", "description": "🧭 View market regime & risk guidance"},
         {"command": "help", "description": "📖 Show complete command cockpit & manual"}
@@ -757,8 +758,51 @@ def handle_token_status_command():
 
     lines.append(f"🕒 <b>Checked At :</b> {get_ist_now().strftime('%H:%M:%S IST')}")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    lines.append("💡 <i>To update: /upstox &lt;token&gt; or /dhan &lt;token&gt;</i>")
-    return "\n".join(lines)
+    lines.append("💡 <i>Tap button below or use /login for 1-click mobile renewal:</i>")
+
+    domain = "https://tidbit-component-national.ngrok-free.dev"
+    markup = {
+        "inline_keyboard": [
+            [{"text": "🚀 1-Click Upstox Login", "url": f"{domain}/login/upstox"}],
+            [{"text": "⚡ 1-Click Zerodha Login", "url": f"{domain}/login/zerodha"}]
+        ]
+    }
+    return "\n".join(lines), markup
+
+
+def handle_login_command():
+    """Handles /login or /auth: sends 1-click mobile authentication buttons."""
+    domain = "https://tidbit-component-national.ngrok-free.dev"
+    lines = [
+        "⚡ <b>JARVIS 1-CLICK MOBILE TOKEN REFRESH</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "Tap the button below to log in directly on your phone:",
+        "",
+        "• <b>Upstox Pro</b>: 24-hr daily session token",
+        "• <b>Zerodha Kite</b>: Daily 6:00 AM session token",
+        "",
+        "<i>After login, your token is exchanged and saved directly to OCI, and scanner.service reloads automatically!</i>"
+    ]
+    markup = {
+        "inline_keyboard": [
+            [{"text": "🚀 Log In to Upstox Pro", "url": f"{domain}/login/upstox"}],
+            [{"text": "⚡ Log In to Zerodha Kite", "url": f"{domain}/login/zerodha"}]
+        ]
+    }
+    return "\n".join(lines), markup
+
+
+def handle_renew_dhan_command():
+    """Manually triggers Dhan token renewal."""
+    try:
+        from renew_dhan import renew_dhan
+        ok = renew_dhan()
+        if ok:
+            return "✅ <b>Dhan Token Successfully Renewed!</b>\nValid for another 24 hours. The perpetual auto-renewer is running."
+        else:
+            return "❌ <b>Dhan Renewal Failed.</b>\nIf your token has already expired, generate a fresh token on web.dhan.co and send <code>/dhan &lt;TOKEN&gt;</code> to re-prime the perpetual auto-renewer."
+    except Exception as e:
+        return f"❌ <b>Error:</b> {e}"
 
 
 def handle_update_token_command(broker_name, token_str):
@@ -1454,7 +1498,7 @@ def handle_trailing_command():
             lines.append(
                 f"<b>{sym}</b> [<code>{broker} • {prod}</code>]{src_tag}\n"
                 f"  • <b>Entry:</b> ₹{entry_p:,.2f} | <b>LTP:</b> ₹{ltp:,.2f} ({pct_sign}{pnl_pct:.2f}% | {r_sign}{r_mult:.1f}R)\n"
-                f"  • <b>Stop-Loss:</b> ₹{init_sl:,.2f} ➔ <b>Rec Trail:</b> <b>₹{rec_sl:,.2f}</b>\n"
+                f"  • <b>Stop-Loss:</b> ₹{init_sl:,.0f} ➔ <b>Rec Trail:</b> <b>₹{rec_sl:,.0f}</b>\n"
                 f"  • <b>Value at Risk:</b> {var_str} (➔ Rec: {rec_var_str})\n"
                 f"  • <b>Jeff Sun Trail:</b> <b>{j_badge}</b>\n"
                 f"    <i>{j_status}</i>{ema_str}"
@@ -1909,7 +1953,9 @@ def handle_callback_query(cq):
                 symbol=sym,
                 quantity=target_pos["qty"],
                 entry_price=target_pos["entry_price"],
-                product=target_pos["product"]
+                product=target_pos["product"],
+                exchange=target_pos.get("exchange", "NSE"),
+                ltp=target_pos.get("ltp")
             )
             be_sl = res.get("breakeven_sl", target_pos["entry_price"])
             if ok:
@@ -2013,6 +2059,8 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_exit_command(args)
     elif cmd in ("/journal", "/syncjournal", "/sync", "/eod", "/summary", "journal", "sync", "eod", "summary"):
         return handle_journal_command()
+    elif cmd in ("/login", "/auth", "login", "auth"):
+        return handle_login_command()
     elif cmd in ("/token", "/tokens", "/status", "/check", "token", "tokens", "status"):
         if args:
             sub_parts = args.split(maxsplit=1)
@@ -2023,6 +2071,8 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_token_status_command()
     elif cmd in ("/upstox", "upstox"):
         return handle_update_token_command("upstox", args)
+    elif cmd in ("/renew_dhan", "/renewdhan", "renew_dhan"):
+        return handle_renew_dhan_command()
     elif cmd in ("/dhan", "dhan"):
         return handle_update_token_command("dhan", args)
     elif cmd in ("/zerodha", "zerodha"):
@@ -2212,7 +2262,7 @@ def run_trailing_surveillance_worker():
                             if (now_ts - last_sent > 900) or (ltp <= sl and now_ts - last_sent > 300):
                                 is_hit = ltp <= sl
                                 title = f"🔴 <b>STOP-LOSS BREACHED: {sym}!</b>" if is_hit else f"🚨 <b>RISK DANGER: {sym} NEAR SL!</b>"
-                                status_desc = f"<b>CRITICAL:</b> LTP ₹{ltp:,.2f} is below Stop-Loss ₹{sl:,.2f}!" if is_hit else f"Price is only <b>{dist_sl:.2f}%</b> (₹{abs(ltp-sl):,.2f}) away from Stop-Loss ₹{sl:,.2f}."
+                                status_desc = f"<b>CRITICAL:</b> LTP ₹{ltp:,.2f} is below Stop-Loss ₹{sl:,.0f}!" if is_hit else f"Price is only <b>{dist_sl:.2f}%</b> (₹{abs(ltp-sl):,.2f}) away from Stop-Loss ₹{sl:,.0f}."
                                 var_inr = float(p.get("value_at_risk", 0.0) or 0.0)
                                 var_str = "🟢 ₹0.00 (Risk-Free)" if var_inr <= 0 else f"⚠️ -₹{var_inr:,.2f}"
 
@@ -2220,7 +2270,7 @@ def run_trailing_surveillance_worker():
                                     f"{title}\n"
                                     "━━━━━━━━━━━━━━━━━━━━━━\n"
                                     f"📌 <b>Symbol:</b> {sym} ({broker} • {prod})\n"
-                                    f"📈 <b>LTP:</b> ₹{ltp:,.2f} | <b>Stop-Loss:</b> ₹{sl:,.2f}\n"
+                                    f"📈 <b>LTP:</b> ₹{ltp:,.2f} | <b>Stop-Loss:</b> ₹{sl:,.0f}\n"
                                     f"⚠️ <b>Buffer:</b> {dist_sl:.2f}% | <b>Value at Risk:</b> {var_str}\n"
                                     f"💼 <b>Open Qty:</b> {qty} shs | <b>P&L:</b> ₹{pnl:+,.2f} ({pnl_pct:+.1f}%)\n"
                                     f"🎯 <b>Action:</b> <b>{badge}</b>\n"
@@ -2239,8 +2289,8 @@ def run_trailing_surveillance_worker():
                         elif (r_mult >= 3.0 or pnl_pct >= 6.0) and r_mult > 0:
                             # Autonomous check: ensure SL is at least at Breakeven
                             raw_be = entry_p * 1.0015
-                            from order_engine import round_to_tick
-                            breakeven_sl = round_to_tick(raw_be)
+                            from order_engine import round_to_clean_int
+                            breakeven_sl = round_to_clean_int(raw_be)
                             if sl < breakeven_sl and entry_p > 0 and sl > 0:
                                 ratchet_key = (sym, "AUTO_BREAKEVEN")
                                 if now_ts - _sent_trailing_alerts.get(ratchet_key, 0) > 1800:
@@ -2251,7 +2301,9 @@ def run_trailing_surveillance_worker():
                                         symbol=sym,
                                         quantity=qty,
                                         entry_price=entry_p,
-                                        product=prod
+                                        product=prod,
+                                        exchange=p.get("exchange", "NSE"),
+                                        ltp=p.get("ltp")
                                     )
 
                             alert_key = (sym, "BOOK_3R")
@@ -2265,7 +2317,7 @@ def run_trailing_surveillance_worker():
                                     f"📈 <b>LTP:</b> ₹{ltp:,.2f} (Entry: ₹{entry_p:,.2f})\n"
                                     f"🚀 <b>Gain:</b> <b>+{pnl_pct:.1f}%</b> (+{r_mult:.1f}R)\n"
                                     f"💰 <b>Unrealized P&L:</b> ₹{pnl:+,.2f}\n"
-                                    f"🎯 <b>Guidance:</b> Book 50% profit now to lock in gains, trail rest to ₹{rec_sl:,.2f}!\n"
+                                    f"🎯 <b>Guidance:</b> Book 50% profit now to lock in gains, trail rest to ₹{rec_sl:,.0f}!\n"
                                     "━━━━━━━━━━━━━━━━━━━━━━\n"
                                     "💡 <i>Tap below to execute partial exit immediately:</i>"
                                 )
@@ -2281,9 +2333,9 @@ def run_trailing_surveillance_worker():
                             ratchet_key = (sym, "AUTO_BREAKEVEN")
                             last_sent = _sent_trailing_alerts.get(ratchet_key, 0)
                             if (now_ts - last_sent > 1800) and sl > 0:
-                                from order_engine import round_to_tick, ratchet_stop_loss_to_breakeven
+                                from order_engine import round_to_clean_int, ratchet_stop_loss_to_breakeven
                                 raw_be = entry_p * 1.0015
-                                breakeven_sl = round_to_tick(raw_be)
+                                breakeven_sl = round_to_clean_int(raw_be)
                                 if sl < breakeven_sl:
                                     # Set cooldown immediately so we NEVER hammer broker in a loop on failure!
                                     _sent_trailing_alerts[ratchet_key] = now_ts
@@ -2292,7 +2344,9 @@ def run_trailing_surveillance_worker():
                                         symbol=sym,
                                         quantity=qty,
                                         entry_price=entry_p,
-                                        product=prod
+                                        product=prod,
+                                        exchange=p.get("exchange", "NSE"),
+                                        ltp=p.get("ltp")
                                     )
                                     if r_ok:
                                         ema10_val = p.get("ema10", "N/A")
@@ -2302,7 +2356,7 @@ def run_trailing_surveillance_worker():
                                             f"🚀 <b>Target Milestone Reached:</b> <b>+{r_mult:.1f}R (+{pnl_pct:.1f}%)</b>\n"
                                             f"📌 <b>Symbol:</b> {sym} ({broker} • {prod} • {qty} shs)\n"
                                             f"📈 <b>LTP:</b> ₹{ltp:,.2f} (Entry: ₹{entry_p:,.2f})\n"
-                                            f"🔒 <b>Broker Stop-Loss Ratcheted:</b> ₹{sl:,.2f} ➔ <b>₹{breakeven_sl:,.2f}</b>\n"
+                                            f"🔒 <b>Broker Stop-Loss Ratcheted:</b> ₹{sl:,.0f} ➔ <b>₹{breakeven_sl:,.0f}</b>\n"
                                             f"💰 <b>Covered Buffer:</b> Entry + 0.15% fee buffer\n"
                                             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                                             "🎉 <b>Capital Risk is 100% ELIMINATED!</b>\n"
@@ -2320,7 +2374,7 @@ def run_trailing_surveillance_worker():
                                             "risk_trailing",
                                             f"⚠️ <b>AUTO-TRAIL NOTICE: {sym} Breakeven Ratchet Failed</b>\n"
                                             f"• <b>Symbol:</b> {sym} ({broker} • {prod})\n"
-                                            f"• <b>Target SL:</b> ₹{breakeven_sl:,.2f}\n"
+                                            f"• <b>Target SL:</b> ₹{breakeven_sl:,.0f}\n"
                                             f"• <b>Broker Feedback:</b> <code>{err_details}</code>\n"
                                             "<i>Cooldown active (30 mins). Will not retry immediately to prevent repeated broker orders.</i>"
                                         )
@@ -2337,6 +2391,18 @@ def run_trailing_surveillance_worker():
 _bot_thread = None
 _surveillance_thread = None
 _bot_stop_event = None
+
+
+def run_dhan_token_watchdog_worker():
+    """Fail-safe background watchdog: checks Dhan token validity every 30 minutes."""
+    while True:
+        try:
+            time.sleep(1800)  # Check every 30 minutes
+            from renew_dhan import renew_dhan
+            renew_dhan(force=False, verbose=False)
+        except Exception as e:
+            print(f"[DHAN-WATCHDOG] Notice: {e}", flush=True)
+            time.sleep(300)
 
 
 def start_telegram_bot_thread():
@@ -2362,11 +2428,18 @@ def start_telegram_bot_thread():
     )
     _surveillance_thread.start()
 
+    threading.Thread(
+        target=run_dhan_token_watchdog_worker,
+        daemon=True,
+        name="DhanTokenWatchdogThread"
+    ).start()
+
     return _bot_thread
 
 
 if __name__ == "__main__":
     try:
+        threading.Thread(target=run_dhan_token_watchdog_worker, daemon=True, name="DhanWatchdog").start()
         run_telegram_bot_loop()
     except KeyboardInterrupt:
         print("\nExiting Telegram Bot.")
