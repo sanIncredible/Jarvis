@@ -799,6 +799,66 @@ def handle_momo90_command(args=""):
         return f"⚠️ <b>Momo90 Error:</b> {e}", None
 
 
+def handle_nr_command(args=""):
+    """
+    Handles /nr, /nrmomo, or /momo_nr:
+    Filters 90D momentum candidates for Narrow Range (NR4, NR7, Inside Day, Tight Range)
+    and formats an elite sniper card with 1-tap add buttons for tomorrow's 3m ORB.
+    """
+    try:
+        from scan_nr_momo import scan_nr_momentum_candidates
+        summary = scan_nr_momentum_candidates()
+        t1 = summary.get("tier1_candidates", [])
+        t2 = summary.get("tier2_candidates", [])
+
+        as_of_str = str(summary.get("as_of", ""))[:10]
+        lines = [
+            "🎯 <b>90D MOMENTUM + NR CONTRACTION SNIPER LIST</b>",
+            f"📅 <i>As Of: {as_of_str}</i>",
+            f"⚡ <b>Actionable Scanned:</b> {summary['total_scanned']} | <b>NR Qualified:</b> {summary['nr_qualified_count']}",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "🔥 <b>TIER 1 DOORSTEPS: NR SQUEEZE (≤3% from High)</b>"
+        ]
+
+        if not t1:
+            lines.append("<i>No Tier 1 stocks formed an NR contraction today.</i>")
+        else:
+            for c in t1[:6]:
+                tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{c['symbol']}'><b>{c['symbol']}</b></a>"
+                dist_str = f"-{c['dist_52w_pct']:.1f}%" if c.get('dist_52w_pct') is not None else "At High"
+                flag = " 👑" if c.get("is_fresh_3m") else ""
+                lines.append(f"• {tv_link}: <code>{c['nr_badge']}</code>\n   Range: <b>{c['daily_range_pct']:.2f}%</b> ({dist_str} 52W High){flag}")
+
+        if t2:
+            lines.append("")
+            lines.append("🚀 <b>TIER 2 LAUNCHPADS: NR COILS (3-7% from High)</b>")
+            for c in t2[:5]:
+                tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{c['symbol']}'><b>{c['symbol']}</b></a>"
+                lines.append(f"• {tv_link}: <code>{c['nr_badge']}</code> | Range: <b>{c['daily_range_pct']:.2f}%</b> (-{c['dist_52w_pct']:.1f}%)")
+
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append("💡 <i>Compressed volatility with tight LOD stop runway for tomorrow's 09:18 AM 3m ORB!</i>")
+
+        inline_keyboard = []
+        row1 = []
+        row2 = []
+        for idx, c in enumerate(t1[:6]):
+            btn = {"text": f"➕ {c['symbol']}", "callback_data": f"cand_add:{c['symbol']}"}
+            if idx < 3:
+                row1.append(btn)
+            else:
+                row2.append(btn)
+        if row1:
+            inline_keyboard.append(row1)
+        if row2:
+            inline_keyboard.append(row2)
+
+        markup = {"inline_keyboard": inline_keyboard} if inline_keyboard else None
+        return "\n".join(lines), markup
+    except Exception as e:
+        return f"⚠️ <b>NR Scan Error:</b> {e}", None
+
+
 def handle_token_status_command():
     """Handles /token, /tokens, or /status"""
     cfg = load_config()
@@ -1011,7 +1071,8 @@ def handle_help_command():
         "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
         "📋 <b>Watchlist & Screening:</b>\n"
         "• <code>/candidates</code> or <code>/screen</code> — Scan Nifty 500 swing setups (saves to candidates.txt)\n"
-        "• <code>/momo90</code> or <code>/broadmomo</code> — Breadth Ledger 90D/30% Next-Day Candidates (1-tap add)\n"
+        "• <code>/momo90</code> or <code>/broadmomo</code> — Breadth Ledger 90D/30% Candidates (1-tap add)\n"
+        "• <code>/nr</code> or <code>/momo_nr</code> — Narrow Range (NR4/NR7/Inside Day) Coils (Sniper List)\n"
         "• <code>/exited</code> or <code>/reentry</code> — Audit past exited stocks for candidate re-entry\n"
         "• <code>/hindsight</code> or <code>/sim</code> — EOD Multi-Trade Simulation & Strict Audit\n"
         "• <code>/add &lt;SYMBOL...&gt;</code> — Add stock(s) to scanner watchlist\n"
@@ -2286,6 +2347,8 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_candidates_command()
     elif cmd in ("/momo90", "/momo", "/broadmomo", "momo90", "momo", "broadmomo"):
         return handle_momo90_command(args)
+    elif cmd in ("/nr", "/momo_nr", "/nrmomo", "nr", "momo_nr", "nrmomo"):
+        return handle_nr_command(args)
     elif cmd in ("/exited", "/reentry", "/exholdings", "exited", "reentry"):
         return handle_exited_command()
     elif cmd in ("/positions", "/pos", "/portfolio", "/pnl", "/holdings", "positions", "pos", "pnl"):
@@ -2305,7 +2368,7 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_journal_command()
     elif cmd in ("/preflight", "/audit", "preflight", "audit"):
         return handle_preflight_command()
-    elif cmd in ("/hindsight", "/sim", "/simulation", "hindsight", "sim", "/hindsght", "hindsght", "/hindsite", "hindsite", "/strict", "strict", "/nr", "nr"):
+    elif cmd in ("/hindsight", "/sim", "/simulation", "hindsight", "sim", "/hindsght", "hindsght", "/hindsite", "hindsite", "/strict", "strict"):
         return handle_hindsight_command()
     elif cmd in ("/login", "/auth", "login", "auth"):
         return handle_login_command()
