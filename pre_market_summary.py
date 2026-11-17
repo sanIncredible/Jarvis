@@ -806,22 +806,45 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
             tag = " ⚠️ <i>[Lagging]</i>"
         lines.append(f"• <b>{s['name']}</b>: {sign}{s['change_pct']:.2f}% {icon}{tag}")
 
-    # Breadth Ledger 90D/30% Broad Momentum Doorstep Candidates
+    # Breadth Ledger 90D/30% Narrow Range (NR) Momentum Setups
     try:
-        from breadth_ledger_parser import fetch_breadth_ledger_data, get_90d_momo_candidates
-        bl_data = fetch_breadth_ledger_data(max_age_minutes=60)
-        if bl_data:
-            c_res = get_90d_momo_candidates(bl_data)
-            t1 = [c for c in c_res["actionable_candidates"] if c["tier"] == "TIER_1_DOORSTEP"][:5]
-            if t1:
-                lines.append("")
-                lines.append("🔥 <b>90D MOMENTUM DOORSTEP CANDIDATES (Gained ≥30% in 90D):</b>")
-                for c in t1:
-                    d_txt = f"-{c['dist_52w_pct']:.1f}%" if c['dist_52w_pct'] is not None else "3M High"
-                    flag = " 👑" if c['is_fresh_3m'] else ""
-                    lines.append(f"• <b>{c['symbol']}</b>: <code>{d_txt}</code> from 52W High ({c['industry']} | {c['gain_tier']}){flag}")
-    except Exception:
-        pass
+        from scan_nr_momo import scan_nr_momentum_candidates
+        nr_summary = scan_nr_momentum_candidates(max_workers=15)
+        t1_nr = nr_summary.get("tier1_candidates", [])
+        t2_nr = nr_summary.get("tier2_candidates", [])
+
+        if t1_nr or t2_nr:
+            lines.append("")
+            lines.append("🎯 <b>90D MOMO NARROW RANGE (NR) SNIPER SETUPS:</b>")
+            lines.append("<i>Filtered for NR4 / NR7 / Inside Day Coils &bull; Minimum LOD Risk</i>")
+            if t1_nr:
+                lines.append("<b>🚪 Tier 1 Doorstep Coils (≤3% from High):</b>")
+                for c in t1_nr[:6]:
+                    d_txt = f"-{c['dist_52w_pct']:.1f}%" if c.get('dist_52w_pct') is not None else "3M High"
+                    flag = " 👑" if c.get('is_fresh_3m') else ""
+                    tag = c.get('nr_tags', ['NR'])[0] if c.get('nr_tags') else 'NR'
+                    lines.append(f"• <b>{c['symbol']}</b>: <code>{tag}</code> ({c.get('daily_range_pct', 0):.1f}% rng) | <code>{d_txt}</code> ({c.get('industry', 'Equity')}){flag}")
+            if t2_nr:
+                lines.append("<b>🚀 Tier 2 Launchpad Coils (3-7% from High):</b>")
+                for c in t2_nr[:4]:
+                    d_txt = f"-{c['dist_52w_pct']:.1f}%" if c.get('dist_52w_pct') is not None else "Launchpad"
+                    tag = c.get('nr_tags', ['NR'])[0] if c.get('nr_tags') else 'NR'
+                    lines.append(f"• <b>{c['symbol']}</b>: <code>{tag}</code> ({c.get('daily_range_pct', 0):.1f}% rng) | <code>{d_txt}</code>")
+        else:
+            from breadth_ledger_parser import fetch_breadth_ledger_data, get_90d_momo_candidates
+            bl_data = fetch_breadth_ledger_data(max_age_minutes=60)
+            if bl_data:
+                c_res = get_90d_momo_candidates(bl_data)
+                t1 = [c for c in c_res["actionable_candidates"] if c["tier"] == "TIER_1_DOORSTEP"][:5]
+                if t1:
+                    lines.append("")
+                    lines.append("🔥 <b>90D MOMENTUM DOORSTEP CANDIDATES (Gained ≥30% in 90D):</b>")
+                    for c in t1:
+                        d_txt = f"-{c['dist_52w_pct']:.1f}%" if c['dist_52w_pct'] is not None else "3M High"
+                        flag = " 👑" if c['is_fresh_3m'] else ""
+                        lines.append(f"• <b>{c['symbol']}</b>: <code>{d_txt}</code> from 52W High ({c['industry']} | {c['gain_tier']}){flag}")
+    except Exception as e:
+        print(f"Notice: Pre-market NR momo scan exception: {e}")
 
     lines.append("")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
