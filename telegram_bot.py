@@ -1126,6 +1126,7 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
 
     pyramid_banner = ""
     order_title = "⚡ <b>JARVIS ORDER PREVIEW</b>"
+    pyr_data = calc.get("pyramid_data")
     if holding_info:
         order_title = "⚡ <b>JARVIS ORDER PREVIEW (🔺 PYRAMID)</b>"
         h_qty = holding_info.get("qty", 0)
@@ -1135,11 +1136,15 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
         blended = round(((h_qty * h_entry) + (new_q * calc['ltp'])) / (h_qty + new_q), 2) if (h_qty + new_q) > 0 else calc['ltp']
         h_entry_s = f"₹{h_entry:,.0f}" if (h_entry % 1 == 0) else f"₹{h_entry:,.2f}"
         blended_s = f"₹{blended:,.0f}" if (blended % 1 == 0) else f"₹{blended:,.2f}"
+        rf_cap_line = ""
+        if pyr_data and pyr_data.get("risk_free_qty"):
+            rf_cap_line = f"• Risk-Free Cap: <b>Max {pyr_data['risk_free_qty']} shs</b> (50% locked P&L)\n"
         pyramid_banner = (
             "🔺 <b>PYRAMID ADD-ON ADVISORY:</b>\n"
             f"• Hold: <b>{h_qty} shs @ {h_entry_s}</b> ({h_pnl:+.1f}%)\n"
             f"• Add : <b>+{new_q} shs @ ₹{calc['ltp']:.2f}</b>\n"
             f"• Avg : <b>{blended_s}</b> (Total: {h_qty + new_q} shs)\n"
+            f"{rf_cap_line}"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
         )
 
@@ -1169,21 +1174,35 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
     else:
         btn_text = f"{btn_icon} Execute on {broker.upper()} ({calc['quantity']} shs{warn_tag})"
 
-    reply_markup = {
-        "inline_keyboard": [
-            [
-                {"text": btn_text, "callback_data": f"buy_exec:{canonical_sym}:{mode}:{sl_mode}:{broker}"}
-            ],
-            [
-                {"text": f"{'👉 ' if broker == 'upstox' else ''}Upstox", "callback_data": f"buy_switch:{canonical_sym}:{mode}:{sl_mode}:upstox"},
-                {"text": f"{'👉 ' if broker == 'dhan' else ''}DhanHQ", "callback_data": f"buy_switch:{canonical_sym}:{mode}:{sl_mode}:dhan"},
-                {"text": f"{'👉 ' if broker == 'zerodha' else ''}Zerodha", "callback_data": f"buy_switch:{canonical_sym}:{mode}:{sl_mode}:zerodha"}
-            ],
-            [
-                {"text": "❌ Cancel Order", "callback_data": f"buy_cancel:{canonical_sym}"}
-            ]
+    kb_rows = [
+        [
+            {"text": btn_text, "callback_data": f"buy_exec:{canonical_sym}:{mode}:{sl_mode}:{broker}"}
         ]
-    }
+    ]
+
+    if holding_info and pyr_data and pyr_data.get("risk_free_qty"):
+        rf_q = pyr_data["risk_free_qty"]
+        if mode != "rf":
+            kb_rows.append([
+                {"text": f"🛡️ Switch to Risk-Free ({rf_q} shs)", "callback_data": f"buy_switch:{canonical_sym}:rf:{sl_mode}:{broker}"}
+            ])
+        else:
+            kb_rows.append([
+                {"text": "🛒 Switch to Mod Size (₹1.0L)", "callback_data": f"buy_switch:{canonical_sym}:mod:{sl_mode}:{broker}"}
+            ])
+
+    kb_rows.extend([
+        [
+            {"text": f"{'👉 ' if broker == 'upstox' else ''}Upstox", "callback_data": f"buy_switch:{canonical_sym}:{mode}:{sl_mode}:upstox"},
+            {"text": f"{'👉 ' if broker == 'dhan' else ''}DhanHQ", "callback_data": f"buy_switch:{canonical_sym}:{mode}:{sl_mode}:dhan"},
+            {"text": f"{'👉 ' if broker == 'zerodha' else ''}Zerodha", "callback_data": f"buy_switch:{canonical_sym}:{mode}:{sl_mode}:zerodha"}
+        ],
+        [
+            {"text": "❌ Cancel Order", "callback_data": f"buy_cancel:{canonical_sym}"}
+        ]
+    ])
+
+    reply_markup = {"inline_keyboard": kb_rows}
 
     return preview_text, reply_markup
 
@@ -1627,10 +1646,15 @@ def handle_trailing_command():
             b_code = p["broker"][:1].lower() if p.get("broker") else "u"
             sym = p["symbol"]
             short_s = sym[:8] if len(sym) > 8 else sym
-            kb_rows.append([
-                {"text": f"🛡️ Ratchet {short_s} to Cost", "callback_data": f"trail_be:{b_code}:{sym}"},
-                {"text": f"🔴 Exit {short_s}", "callback_data": f"ex_p:{b_code}:{sym}"}
-            ])
+            rec_sl_clean = int(round(p.get("recommended_sl", 0)))
+            row = [
+                {"text": f"🛡️ Ratchet {short_s} to Cost", "callback_data": f"trail_be:{b_code}:{sym}"}
+            ]
+            if rec_sl_clean > 0:
+                row.append({"text": f"🔒 Trail ₹{rec_sl_clean:,}", "callback_data": f"trail_rec:{b_code}:{sym}:{rec_sl_clean}"})
+            else:
+                row.append({"text": f"🔴 Exit {short_s}", "callback_data": f"ex_p:{b_code}:{sym}"})
+            kb_rows.append(row)
 
     reply_markup = {"inline_keyboard": kb_rows}
 
@@ -1657,6 +1681,17 @@ def handle_journal_command():
         )
     except Exception as e:
         return f"⚠️ <b>Journal Sync Notice:</b> {e}"
+
+
+def handle_preflight_command():
+    """Runs autonomous 08:45 AM pre-flight diagnostic audit."""
+    try:
+        from pre_flight_check import run_pre_flight_audit
+        res = run_pre_flight_audit()
+        return res["html"]
+    except Exception as e:
+        return f"⚠️ <b>Pre-Flight Notice:</b> {e}"
+
 
 def handle_hindsight_command():
     """
@@ -2080,6 +2115,46 @@ def handle_callback_query(cq):
         else:
             answer_callback_query(cq_id, f"Position for {sym} not found or already closed.", show_alert=True)
 
+    elif cq_data.startswith("trail_rec:"):
+        parts = cq_data.split(":")
+        b_code = parts[1]
+        sym = parts[2].upper()
+        target_sl = float(parts[3]) if len(parts) > 3 else 0.0
+
+        answer_callback_query(cq_id, f"Ratcheting {sym} SL to recommended ₹{target_sl:,.0f}...")
+        from order_engine import get_all_open_positions_with_trailing_sl, ratchet_stop_loss_to_breakeven
+        positions = get_all_open_positions_with_trailing_sl()
+        target_pos = next((p for p in positions if p["symbol"].upper() == sym), None)
+        if target_pos:
+            rec_sl = target_sl or target_pos.get("recommended_sl") or target_pos["entry_price"]
+            ok, res = ratchet_stop_loss_to_breakeven(
+                broker=target_pos["broker"],
+                symbol=sym,
+                quantity=target_pos["qty"],
+                entry_price=rec_sl / 1.0015,
+                product=target_pos["product"],
+                exchange=target_pos.get("exchange", "NSE"),
+                ltp=target_pos.get("ltp")
+            )
+            if ok:
+                answer_callback_query(cq_id, f"✅ {sym} SL locked at ₹{rec_sl:,.0f}!", show_alert=True)
+                send_telegram_msg(
+                    chat_id,
+                    f"🔒 <b>STOP-LOSS RATCHETED: {sym}</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"• <b>Broker:</b> {target_pos['broker']} ({target_pos['product']})\n"
+                    f"• <b>New Hard SL:</b> <b>₹{rec_sl:,.0f}</b>\n"
+                    f"• <b>Current LTP:</b> ₹{target_pos.get('ltp', 0):,.2f}\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"🎉 <i>Active on exchange orderbook. Trailing 10 EMA.</i>",
+                    thread_id=thread_id
+                )
+            else:
+                err_msg = res.get("message") or res.get("details") or "Broker rejection"
+                answer_callback_query(cq_id, f"⚠️ Notice: {err_msg}", show_alert=True)
+        else:
+            answer_callback_query(cq_id, f"Position for {sym} not found or closed.", show_alert=True)
+
     elif cq_data.startswith("buy_prep:"):
         parts = cq_data.split(":")
         symbol = parts[1] if len(parts) > 1 else ""
@@ -2162,6 +2237,8 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_exit_command(args)
     elif cmd in ("/journal", "/syncjournal", "/sync", "/eod", "/summary", "journal", "sync", "eod", "summary"):
         return handle_journal_command()
+    elif cmd in ("/preflight", "/audit", "preflight", "audit"):
+        return handle_preflight_command()
     elif cmd in ("/hindsight", "/sim", "/simulation", "hindsight", "sim", "/hindsght", "hindsght", "/hindsite", "hindsite", "/strict", "strict", "/nr", "nr"):
         return handle_hindsight_command()
     elif cmd in ("/login", "/auth", "login", "auth"):
@@ -2330,7 +2407,8 @@ def run_telegram_bot_loop(stop_event=None):
 # ---------------------------------------------------------
 # Background Thread Runner
 # ---------------------------------------------------------
-_sent_trailing_alerts = {}  # (symbol, alert_type) -> timestamp
+_sent_trailing_alerts = {}
+_preflight_sent_dates = set()  # (symbol, alert_type) -> timestamp
 
 
 def run_trailing_surveillance_worker():
@@ -2497,6 +2575,18 @@ def run_trailing_surveillance_worker():
                                             f"• <b>Broker Feedback:</b> <code>{err_details}</code>\n"
                                             "<i>Cooldown active (30 mins). Will not retry immediately to prevent repeated broker orders.</i>"
                                         )
+        except Exception:
+            pass
+
+        # Autonomous 08:45 AM Pre-Flight Health Diagnostic Ping
+        try:
+            now_dt = get_ist_now()
+            today_str = now_dt.strftime("%Y-%m-%d")
+            time_hm = now_dt.strftime("%H:%M")
+            if time_hm == "08:45" and today_str not in _preflight_sent_dates:
+                _preflight_sent_dates.add(today_str)
+                from pre_flight_check import dispatch_pre_flight
+                dispatch_pre_flight()
         except Exception:
             pass
 
