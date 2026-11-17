@@ -771,6 +771,21 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
                     })
                     print(f"📥 AUTO-JOURNALED Live Position: {p_sym} | {net_qty} shs @ ₹{buy_avg:,.2f} on {broker} ({prod})")
 
+        # Auto-register all currently live open positions into tracked_swing_holdings in config
+        try:
+            cfg_curr = load_config()
+            curr_tracked = set(s.upper() for s in cfg_curr.get("tracked_swing_holdings", []))
+            for lp in live_positions:
+                s_u = str(lp.get("symbol", "")).strip().upper()
+                if s_u and s_u not in ignored_symbols:
+                    curr_tracked.add(s_u)
+            cfg_curr["tracked_swing_holdings"] = sorted(list(curr_tracked))
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(cfg_curr, f, indent=2)
+            print(f"✅ Reconciled tracked_swing_holdings in config: {cfg_curr['tracked_swing_holdings']}")
+        except Exception as ex_t:
+            print(f"Notice auto-registering tracked_swing_holdings: {ex_t}")
+
     # =========================================================================
     # REFRESH OPEN POSITIONS & LIVE LTP
     # =========================================================================
