@@ -197,6 +197,98 @@ def get_52w_high_radar(data: Dict[str, Any], max_dist_pct: float = 3.0) -> List[
     return results
 
 
+def get_90d_momo_candidates(data: Dict[str, Any], max_dist_52w: float = 12.0) -> Dict[str, Any]:
+    """
+    Identifies high-probability candidates for next-day trading based on Breadth Ledger's Broad Momentum:
+    1. Gained >= 30% over the last 90 trading days (Stage-2 institutional velocity).
+    2. Enriched with proximity to 52-week High and 3-Month Fresh High cluster data.
+    3. Categorized into actionable tiers for tomorrow:
+       - Tier 1 [🔥 PIVOT DOORSTEP] : Sits <= 3.0% from 52W High or Fresh 3M High today. Immediate breakout trigger!
+       - Tier 2 [🚀 COIL LAUNCHPAD] : Sits 3.0% to 7.0% from 52W High. Coiled base consolidation.
+       - Tier 3 [📦 BASE RUNWAY]    : Sits 7.0% to 12.0% from 52W High. Multi-day runway.
+    """
+    momo_res = get_broad_momentum_stocks(data, lookback_days=90, min_gain_pct=30)
+    all_90d_stocks = momo_res.get("stocks", [])
+    as_of = data.get("asOf", "")
+
+    # Index 52W high distances
+    near_items = data.get("near", [])
+    dist_map = {}
+    for item in near_items:
+        if len(item) >= 4:
+            dist_map[item[0]] = {
+                "distance_pct": abs(float(item[1])),
+                "raw_dist": float(item[1]),
+                "industry": item[3]
+            }
+
+    # Index 3-Month high leaders from clusters
+    fresh_3m_syms = set()
+    clusters = data.get("clusters", [])
+    for c in clusters:
+        for name in c.get("names", []):
+            fresh_3m_syms.add(name)
+
+    candidates = []
+    for s in all_90d_stocks:
+        sym = s["symbol"]
+        ind = s["industry"]
+        near_info = dist_map.get(sym)
+        dist = near_info["distance_pct"] if near_info else None
+        is_fresh_3m = sym in fresh_3m_syms
+
+        # Determine Tier
+        if (dist is not None and dist <= 3.0) or is_fresh_3m:
+            tier = "TIER_1_DOORSTEP"
+            tier_badge = "🔥 PIVOT DOORSTEP (≤3% from 52W High)"
+            tier_order = 1
+        elif dist is not None and dist <= 7.0:
+            tier = "TIER_2_LAUNCHPAD"
+            tier_badge = "🚀 COIL LAUNCHPAD (3-7% from 52W High)"
+            tier_order = 2
+        elif dist is not None and dist <= max_dist_52w:
+            tier = "TIER_3_BASE"
+            tier_badge = "📦 BASE RUNWAY (7-12% from 52W High)"
+            tier_order = 3
+        else:
+            tier = "EXTENDED_OR_DEEP"
+            tier_badge = "⚪ CONSOLIDATING BASE (>12% from High)"
+            tier_order = 4
+
+        candidates.append({
+            "symbol": sym,
+            "industry": ind,
+            "gain_tier": s["gain_tier"],
+            "bucket_score": s["bucket_score"],
+            "dist_52w_pct": dist,
+            "is_fresh_3m": is_fresh_3m,
+            "tier": tier,
+            "tier_badge": tier_badge,
+            "tier_order": tier_order
+        })
+
+    # Sort: Tier order first, then dist_52w (closer is better), then 90D momentum bucket score
+    candidates.sort(key=lambda x: (
+        x["tier_order"],
+        x["dist_52w_pct"] if x["dist_52w_pct"] is not None else 999.0,
+        -x["bucket_score"],
+        x["symbol"]
+    ))
+
+    actionable = [c for c in candidates if c["tier_order"] <= 3]
+
+    return {
+        "as_of": as_of,
+        "total_90d_30pct_count": len(all_90d_stocks),
+        "actionable_candidate_count": len(actionable),
+        "tier1_doorstep_count": sum(1 for c in candidates if c["tier"] == "TIER_1_DOORSTEP"),
+        "tier2_launchpad_count": sum(1 for c in candidates if c["tier"] == "TIER_2_LAUNCHPAD"),
+        "tier3_base_count": sum(1 for c in candidates if c["tier"] == "TIER_3_BASE"),
+        "candidates": candidates,
+        "actionable_candidates": actionable
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="Breadth Ledger (Manas Arora) Stock Parser")
     parser.add_argument("--days", type=int, default=5, help="Lookback trading days: 5, 10, 20, 30, 60, 90, 125, 180, 250 (default: 5)")
@@ -204,6 +296,8 @@ def main():
     parser.add_argument("--industry", type=str, default=None, help="Filter by industry name (e.g. 'Bank', 'Auto', 'Defense')")
     parser.add_argument("--clusters", action="store_true", help="Display Where Fresh Highs Cluster")
     parser.add_argument("--near", type=float, default=None, help="Display stocks within X%% of 52W High (e.g. --near 3.0)")
+    parser.add_argument("--candidates", action="store_true", help="Identify 90D/30% momentum candidates for next day")
+    parser.add_argument("--save", action="store_true", help="Save actionable candidates to candidates_90d_momo.txt and .json")
     parser.add_argument("--tv", action="store_true", help="Output comma-separated symbols for TradingView / Watchlist import")
     parser.add_argument("--json", action="store_true", help="Output raw JSON")
 
@@ -215,6 +309,46 @@ def main():
         sys.exit(1)
 
     as_of = data.get("asOf", "")
+
+    # 1. 90D / 30% Next-Day Candidates
+    if args.candidates:
+        cand_res = get_90d_momo_candidates(data)
+        if args.json:
+            print(json.dumps(cand_res, indent=2))
+            return
+        if args.tv:
+            syms = [f"NSE:{c['symbol']}" for c in cand_res["actionable_candidates"]]
+            print(",".join(syms))
+            return
+
+        print("=" * 70)
+        print("🔥 BREADTH LEDGER: 90-DAY (30%+) NEXT-DAY CANDIDATES")
+        print(f"📅 As Of: {cand_res['as_of']}")
+        print(f"🎯 Total 90D/30% Pool: {cand_res['total_90d_30pct_count']} stocks")
+        print(f"⚡ Actionable Setups (≤12% of High): {cand_res['actionable_candidate_count']} stocks")
+        print(f"   • Tier 1 (Doorstep ≤3% or Fresh 3M High) : {cand_res['tier1_doorstep_count']} stocks")
+        print(f"   • Tier 2 (Launchpad Coil 3-7%)          : {cand_res['tier2_launchpad_count']} stocks")
+        print(f"   • Tier 3 (Base Runway 7-12%)             : {cand_res['tier3_base_count']} stocks")
+        print("=" * 70)
+
+        current_tier = None
+        for c in cand_res["actionable_candidates"]:
+            if c["tier_badge"] != current_tier:
+                current_tier = c["tier_badge"]
+                print(f"\n{current_tier}:")
+            dist_str = f"-{c['dist_52w_pct']:.1f}% from 52W High" if c['dist_52w_pct'] is not None else "Fresh 3M High Today"
+            flag = " [👑 3M High]" if c['is_fresh_3m'] else ""
+            print(f"  • {c['symbol']:<12} | {c['gain_tier']:<7} | {dist_str:<22}{flag} | [{c['industry']}]")
+
+        if args.save:
+            out_txt = Path(__file__).resolve().parent / "candidates_90d_momo.txt"
+            out_json = Path(__file__).resolve().parent / "candidates_90d_momo.json"
+            with open(out_txt, "w", encoding="utf-8") as f:
+                f.write("\n".join([c["symbol"] for c in cand_res["actionable_candidates"]]))
+            with open(out_json, "w", encoding="utf-8") as f:
+                json.dump(cand_res, f, indent=2)
+            print(f"\n💾 Saved {len(cand_res['actionable_candidates'])} candidates to {out_txt.name} & {out_json.name}")
+        return
 
     # 1. 52W High Radar
     if args.near is not None:
