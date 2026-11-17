@@ -2878,6 +2878,90 @@ def execute_broker_exit(symbol, broker=None, exit_qty=None, qty_ratio="all"):
 
 
 # ---------------------------------------------------------
+def reconcile_and_prune_exited_holdings(live_pos, broker_status):
+    """
+    Auto-prunes exited positions from tracked_holdings.json, orders_log.json,
+    and config_credentials.json. If a broker is online and healthy, any previously
+    tracked symbol for that broker that is NOT in live_pos has been closed/exited.
+    """
+    live_symbols_by_broker = {}
+    for p in live_pos:
+        b = str(p.get("broker", "")).upper()
+        s = str(p.get("symbol", "")).upper()
+        if b and s:
+            live_symbols_by_broker.setdefault(b, set()).add(s)
+
+    # 1. Prune tracked_holdings.json
+    th_file = SCRIPT_DIR / "tracked_holdings.json"
+    if th_file.is_file():
+        try:
+            with open(th_file, "r", encoding="utf-8") as f:
+                th_data = json.load(f)
+            modified = False
+            for sym, meta in list(th_data.items()):
+                b = str(meta.get("broker", "")).upper()
+                b_key = b.lower()
+                if b_key in broker_status and broker_status[b_key].startswith("OK"):
+                    live_syms = live_symbols_by_broker.get(b, set())
+                    if sym.upper() not in live_syms:
+                        del th_data[sym]
+                        modified = True
+                        print(f"🧹 Auto-pruned exited holding {sym} ({b}) from tracked_holdings.json")
+            if modified:
+                with open(th_file, "w", encoding="utf-8") as f:
+                    json.dump(th_data, f, indent=2)
+        except Exception as e:
+            print(f"Notice pruning tracked_holdings: {e}")
+
+    # 2. Mark exited orders in orders_log.json
+    if ORDERS_LOG_FILE.is_file():
+        try:
+            with open(ORDERS_LOG_FILE, "r", encoding="utf-8") as f:
+                orders = json.load(f)
+            modified = False
+            for o in orders:
+                sym = str(o.get("symbol", "")).upper()
+                b = str(o.get("broker", "")).upper()
+                b_key = b.lower()
+                status = str(o.get("status", "")).upper()
+                action = str(o.get("action", "")).upper()
+                if status in ("PLACED", "SUBMITTED") and action == "BUY":
+                    if b_key in broker_status and broker_status[b_key].startswith("OK"):
+                        live_syms = live_symbols_by_broker.get(b, set())
+                        if sym not in live_syms:
+                            o["status"] = "EXITED"
+                            o["notes"] = f"Auto-reconciled: position closed on {b} broker"
+                            modified = True
+                            print(f"🧹 Marked exited order for {sym} ({b}) in orders_log.json")
+            if modified:
+                with open(ORDERS_LOG_FILE, "w", encoding="utf-8") as f:
+                    json.dump(orders, f, indent=2)
+        except Exception as e:
+            print(f"Notice pruning orders_log: {e}")
+
+    # 3. Prune config_credentials.json tracked_swing_holdings
+    try:
+        cfg = load_config()
+        curr_tracked = cfg.get("tracked_swing_holdings", [])
+        new_tracked = []
+        for s in curr_tracked:
+            s_u = s.upper()
+            is_alive = False
+            for b, syms in live_symbols_by_broker.items():
+                if s_u in syms:
+                    is_alive = True
+                    break
+            if is_alive or not any(broker_status.get(k, "").startswith("OK") for k in ("dhan", "zerodha", "upstox")):
+                new_tracked.append(s)
+            else:
+                print(f"🧹 Removed {s_u} from config tracked_swing_holdings (exited)")
+        if len(new_tracked) != len(curr_tracked):
+            cfg["tracked_swing_holdings"] = new_tracked
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=2)
+    except Exception as e:
+        print(f"Notice updating config tracked_swing_holdings: {e}")
+
 # Trailing Stop-Loss & Risk Breakeven Recommendation Engine
 # ---------------------------------------------------------
 def get_open_trades_from_logs():
@@ -2896,7 +2980,18 @@ def get_open_trades_from_logs():
                 sym = str(o.get("symbol", "")).upper()
                 action = str(o.get("action", "")).upper()
                 status = str(o.get("status", "")).upper()
-                if not sym or status not in ("PLACED", "SUBMITTED"):
+                if not sym:
+                    continue
+                if action in ("EXIT", "SELL"):
+                    rem_qty = int(o.get("remaining_qty", 0) or 0)
+                    sell_qty = int(o.get("quantity", 0) or 0)
+                    if sym in logged_trades:
+                        if rem_qty <= 0 or sell_qty >= logged_trades[sym]["qty"]:
+                            logged_trades.pop(sym, None)
+                        else:
+                            logged_trades[sym]["qty"] -= sell_qty
+                    continue
+                if status not in ("PLACED", "SUBMITTED"):
                     continue
                 if action == "BUY":
                     logged_trades[sym] = {
@@ -2910,13 +3005,6 @@ def get_open_trades_from_logs():
                         "timestamp": o.get("timestamp", ""),
                         "mode": o.get("mode", "MODERATE")
                     }
-                elif action == "EXIT":
-                    if sym in logged_trades:
-                        rem_qty = o.get("remaining_qty", 0)
-                        if rem_qty <= 0:
-                            logged_trades.pop(sym, None)
-                        else:
-                            logged_trades[sym]["qty"] = rem_qty
         except Exception as e:
             print(f"Notice reading orders_log.json: {e}")
 
@@ -3507,6 +3595,10 @@ def get_all_open_positions_with_trailing_sl():
     Returns: list of enriched position dicts.
     """
     live_pos, totals, broker_status = fetch_all_positions()
+    try:
+        reconcile_and_prune_exited_holdings(live_pos, broker_status)
+    except Exception:
+        pass
     logged_trades = get_open_trades_from_logs()
 
     seen_symbols = set()
@@ -3702,6 +3794,11 @@ def get_all_open_positions_with_trailing_sl():
     # 2. Process any logged trades that are NOT already in live broker accounts
     for sym, log_item in logged_trades.items():
         if sym in seen_symbols:
+            continue
+        # If the broker is connected and healthy, and didn't report this symbol,
+        # it means the position has been exited in the broker! Never treat as open!
+        broker_name = str(log_item.get("broker", "")).lower()
+        if broker_name in broker_status and broker_status[broker_name].startswith("OK"):
             continue
         entry_p = float(log_item.get("entry_price", 0) or 0)
         qty = int(log_item.get("qty", 0) or 0)
