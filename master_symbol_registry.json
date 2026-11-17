@@ -1,0 +1,378 @@
+{
+  "TATAELXSI": {
+    "symbol": "TATAELXSI",
+    "isin": "",
+    "upstox_key": "NSE_EQ|TATAELXSI",
+    "dhan_id": "3411",
+    "zerodha_symbol": "TATAELXSI",
+    "exchange": "NSE"
+  },
+  "NIFTY": {
+    "symbol": "NIFTY",
+    "isin": "",
+    "upstox_key": "NSE_EQ|NIFTY",
+    "dhan_id": null,
+    "zerodha_symbol": "NIFTY",
+    "exchange": "NSE"
+  },
+  "PCJEWELLER": {
+    "symbol": "PCJEWELLER",
+    "isin": "",
+    "upstox_key": "NSE_EQ|PCJEWELLER",
+    "dhan_id": "29124",
+    "zerodha_symbol": "PCJEWELLER",
+    "exchange": "NSE"
+  },
+  "OAL": {
+    "symbol": "OAL",
+    "isin": "",
+    "upstox_key": "NSE_EQ|OAL",
+    "dhan_id": "10768",
+    "zerodha_symbol": "OAL",
+    "exchange": "NSE"
+  },
+  "WESTLIFE": {
+    "symbol": "WESTLIFE",
+    "isin": "",
+    "upstox_key": "NSE_EQ|WESTLIFE",
+    "dhan_id": "11580",
+    "zerodha_symbol": "WESTLIFE",
+    "exchange": "NSE"
+  },
+  "NSE": {
+    "symbol": "NSE",
+    "isin": "",
+    "upstox_key": "NSE_EQ|NSE",
+    "dhan_id": null,
+    "zerodha_symbol": "NSE",
+    "exchange": "NSE"
+  },
+  "INDGN": {
+    "symbol": "INDGN",
+    "isin": "INE06CR01012",
+    "upstox_key": "NSE_EQ|INE06CR01012",
+    "dhan_id": "23693",
+    "zerodha_symbol": "INDGN",
+    "exchange": "NSE"
+  },
+  "CEMPRO": {
+    "symbol": "CEMPRO",
+    "isin": "INE686A01026",
+    "upstox_key": "NSE_EQ|INE686A01026",
+    "dhan_id": "5622",
+    "zerodha_symbol": "CEMPRO",
+    "exchange": "NSE"
+  },
+  "NYKAA": {
+    "symbol": "NYKAA",
+    "isin": "",
+    "upstox_key": "NSE_EQ|NYKAA",
+    "dhan_id": "6545",
+    "zerodha_symbol": "NYKAA",
+    "exchange": "NSE"
+  },
+  "TIPSMUSIC": {
+    "symbol": "TIPSMUSIC",
+    "isin": "INE716B01029",
+    "upstox_key": "NSE_EQ|INE716B01029",
+    "dhan_id": "9117",
+    "zerodha_symbol": "TIPSMUSIC",
+    "exchange": "NSE"
+  },
+  "ENTERO": {
+    "symbol": "ENTERO",
+    "isin": "INE01CR01017",
+    "upstox_key": "NSE_EQ|INE01CR01017",
+    "dhan_id": "22717",
+    "zerodha_symbol": "ENTERO",
+    "exchange": "NSE"
+  },
+  "AARTIDRUGS": {
+    "symbol": "AARTIDRUGS",
+    "isin": "",
+    "upstox_key": "NSE_EQ|AARTIDRUGS",
+    "dhan_id": "4481",
+    "zerodha_symbol": "AARTIDRUGS",
+    "exchange": "NSE"
+  },
+  "INDEGENE": {
+    "symbol": "INDEGENE",
+    "isin": "",
+    "upstox_key": "NSE_EQ|INDEGENE",
+    "dhan_id": null,
+    "zerodha_symbol": "INDEGENE",
+    "exchange": "NSE"
+  },
+  "PERSISTENT": {
+    "symbol": "PERSISTENT",
+    "isin": "",
+    "upstox_key": "NSE_EQ|PERSISTENT",
+    "dhan_id": "18365",
+    "zerodha_symbol": "PERSISTENT",
+    "exchange": "NSE"
+  },
+  "IPCALAB": {
+    "symbol": "IPCALAB",
+    "isin": "",
+    "upstox_key": "NSE_EQ|IPCALAB",
+    "dhan_id": "1633",
+    "zerodha_symbol": "IPCALAB",
+    "exchange": "NSE"
+  },
+  "PAYTM": {
+    "symbol": "PAYTM",
+    "isin": "",
+    "upstox_key": "NSE_EQ|PAYTM",
+    "dhan_id": "6705",
+    "zerodha_symbol": "PAYTM",
+    "exchange": "NSE"
+  },
+  "SYNGENE": {
+    "symbol": "SYNGENE",
+    "isin": "",
+    "upstox_key": "NSE_EQ|SYNGENE",
+    "dhan_id": "10243",
+    "zerodha_symbol": "SYNGENE",
+    "exchange": "NSE"
+  },
+  "LLOYDSME": {
+    "symbol": "LLOYDSME",
+    "isin": "",
+    "upstox_key": "NSE_EQ|LLOYDSME",
+    "dhan_id": "17313",
+    "zerodha_symbol": "LLOYDSME",
+    "exchange": "NSE"
+  },
+  "FDC": {
+    "symbol": "FDC",
+    "isin": "",
+    "upstox_key": "NSE_EQ|FDC",
+    "dhan_id": "4898",
+    "zerodha_symbol": "FDC",
+    "exchange": "NSE"
+  },
+  "HBLENGINE": {
+    "symbol": "HBLENGINE",
+    "isin": "",
+    "upstox_key": "NSE_EQ|HBLENGINE",
+    "dhan_id": "13966",
+    "zerodha_symbol": "HBLENGINE",
+    "exchange": "NSE"
+  },
+  "DRREDDY": {
+    "symbol": "DRREDDY",
+    "isin": "",
+    "upstox_key": "NSE_EQ|DRREDDY",
+    "dhan_id": "881",
+    "zerodha_symbol": "DRREDDY",
+    "exchange": "NSE"
+  },
+  "DIVISLAB": {
+    "symbol": "DIVISLAB",
+    "isin": "",
+    "upstox_key": "NSE_EQ|DIVISLAB",
+    "dhan_id": "10940",
+    "zerodha_symbol": "DIVISLAB",
+    "exchange": "NSE"
+  },
+  "ANANDRATHI": {
+    "symbol": "ANANDRATHI",
+    "isin": "",
+    "upstox_key": "NSE_EQ|ANANDRATHI",
+    "dhan_id": "7145",
+    "zerodha_symbol": "ANANDRATHI",
+    "exchange": "NSE"
+  },
+  "GLAND": {
+    "symbol": "GLAND",
+    "isin": "",
+    "upstox_key": "NSE_EQ|GLAND",
+    "dhan_id": "1186",
+    "zerodha_symbol": "GLAND",
+    "exchange": "NSE"
+  },
+  "AUROPHARMA": {
+    "symbol": "AUROPHARMA",
+    "isin": "",
+    "upstox_key": "NSE_EQ|AUROPHARMA",
+    "dhan_id": "275",
+    "zerodha_symbol": "AUROPHARMA",
+    "exchange": "NSE"
+  },
+  "TRENT": {
+    "symbol": "TRENT",
+    "isin": "",
+    "upstox_key": "NSE_EQ|TRENT",
+    "dhan_id": "1964",
+    "zerodha_symbol": "TRENT",
+    "exchange": "NSE"
+  },
+  "MANKIND": {
+    "symbol": "MANKIND",
+    "isin": "",
+    "upstox_key": "NSE_EQ|MANKIND",
+    "dhan_id": "15380",
+    "zerodha_symbol": "MANKIND",
+    "exchange": "NSE"
+  },
+  "CIPLA": {
+    "symbol": "CIPLA",
+    "isin": "",
+    "upstox_key": "NSE_EQ|CIPLA",
+    "dhan_id": "694",
+    "zerodha_symbol": "CIPLA",
+    "exchange": "NSE"
+  },
+  "BHARTIARTL": {
+    "symbol": "BHARTIARTL",
+    "isin": "",
+    "upstox_key": "NSE_EQ|BHARTIARTL",
+    "dhan_id": "10604",
+    "zerodha_symbol": "BHARTIARTL",
+    "exchange": "NSE"
+  },
+  "TVSMOTOR": {
+    "symbol": "TVSMOTOR",
+    "isin": "",
+    "upstox_key": "NSE_EQ|TVSMOTOR",
+    "dhan_id": "8479",
+    "zerodha_symbol": "TVSMOTOR",
+    "exchange": "NSE"
+  },
+  "ONESOURCE": {
+    "symbol": "ONESOURCE",
+    "isin": "",
+    "upstox_key": "NSE_EQ|ONESOURCE",
+    "dhan_id": "29224",
+    "zerodha_symbol": "ONESOURCE",
+    "exchange": "NSE"
+  },
+  "ITCHOTELS": {
+    "symbol": "ITCHOTELS",
+    "isin": "",
+    "upstox_key": "NSE_EQ|ITCHOTELS",
+    "dhan_id": "29251",
+    "zerodha_symbol": "ITCHOTELS",
+    "exchange": "NSE"
+  },
+  "ICICIBANK": {
+    "symbol": "ICICIBANK",
+    "isin": "INE090A01021",
+    "upstox_key": "NSE_EQ|INE090A01021",
+    "dhan_id": "4963",
+    "zerodha_symbol": "ICICIBANK",
+    "exchange": "NSE"
+  },
+  "AXISBANK": {
+    "symbol": "AXISBANK",
+    "isin": "",
+    "upstox_key": "NSE_EQ|AXISBANK",
+    "dhan_id": "5900",
+    "zerodha_symbol": "AXISBANK",
+    "exchange": "NSE"
+  },
+  "LEMONTREE": {
+    "symbol": "LEMONTREE",
+    "isin": "",
+    "upstox_key": "NSE_EQ|LEMONTREE",
+    "dhan_id": "2606",
+    "zerodha_symbol": "LEMONTREE",
+    "exchange": "NSE"
+  },
+  "RKFORGE": {
+    "symbol": "RKFORGE",
+    "isin": "",
+    "upstox_key": "NSE_EQ|RKFORGE",
+    "dhan_id": "11411",
+    "zerodha_symbol": "RKFORGE",
+    "exchange": "NSE"
+  },
+  "TECHM": {
+    "symbol": "TECHM",
+    "isin": "",
+    "upstox_key": "NSE_EQ|TECHM",
+    "dhan_id": "13538",
+    "zerodha_symbol": "TECHM",
+    "exchange": "NSE"
+  },
+  "PNB": {
+    "symbol": "PNB",
+    "isin": "",
+    "upstox_key": "NSE_EQ|PNB",
+    "dhan_id": "10666",
+    "zerodha_symbol": "PNB",
+    "exchange": "NSE"
+  },
+  "ETERNAL": {
+    "symbol": "ETERNAL",
+    "isin": "",
+    "upstox_key": "NSE_EQ|ETERNAL",
+    "dhan_id": "5097",
+    "zerodha_symbol": "ETERNAL",
+    "exchange": "NSE"
+  },
+  "KARURVYSYA": {
+    "symbol": "KARURVYSYA",
+    "isin": "",
+    "upstox_key": "NSE_EQ|KARURVYSYA",
+    "dhan_id": "1838",
+    "zerodha_symbol": "KARURVYSYA",
+    "exchange": "NSE"
+  },
+  "ANGELONE": {
+    "symbol": "ANGELONE",
+    "isin": "",
+    "upstox_key": "NSE_EQ|ANGELONE",
+    "dhan_id": "324",
+    "zerodha_symbol": "ANGELONE",
+    "exchange": "NSE"
+  },
+  "FEDERALBNK": {
+    "symbol": "FEDERALBNK",
+    "isin": "",
+    "upstox_key": "NSE_EQ|FEDERALBNK",
+    "dhan_id": "1023",
+    "zerodha_symbol": "FEDERALBNK",
+    "exchange": "NSE"
+  },
+  "BHARTIHEXA": {
+    "symbol": "BHARTIHEXA",
+    "isin": "",
+    "upstox_key": "NSE_EQ|BHARTIHEXA",
+    "dhan_id": "23489",
+    "zerodha_symbol": "BHARTIHEXA",
+    "exchange": "NSE"
+  },
+  "VIJAYA": {
+    "symbol": "VIJAYA",
+    "isin": "",
+    "upstox_key": "NSE_EQ|VIJAYA",
+    "dhan_id": "5585",
+    "zerodha_symbol": "VIJAYA",
+    "exchange": "NSE"
+  },
+  "COHANCE": {
+    "symbol": "COHANCE",
+    "isin": "",
+    "upstox_key": "NSE_EQ|COHANCE",
+    "dhan_id": "17945",
+    "zerodha_symbol": "COHANCE",
+    "exchange": "NSE"
+  },
+  "BAJAJHCARE": {
+    "symbol": "BAJAJHCARE",
+    "isin": "",
+    "upstox_key": "NSE_EQ|BAJAJHCARE",
+    "dhan_id": "6863",
+    "zerodha_symbol": "BAJAJHCARE",
+    "exchange": "NSE"
+  },
+  "URBANCO": {
+    "symbol": "URBANCO",
+    "isin": "",
+    "upstox_key": "NSE_EQ|URBANCO",
+    "dhan_id": "759084",
+    "zerodha_symbol": "URBANCO",
+    "exchange": "NSE"
+  }
+}
