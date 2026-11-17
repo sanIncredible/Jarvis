@@ -838,8 +838,13 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
                             sym_broker = b
                             break
 
-                if broker_status and sym_broker and "OK" not in broker_status.get(sym_broker, ""):
+                is_tracked_swing = (sym_str in tracked_swing_holdings)
+                broker_ok = bool(sym_broker and "OK" in broker_status.get(sym_broker, ""))
+                
+                if sym_broker and not broker_ok:
                     print(f"⚠️ Preserving {sym_str} (broker {sym_broker.upper()} API status: {broker_status.get(sym_broker)})")
+                elif is_tracked_swing and not broker_ok:
+                    print(f"⚠️ Preserving tracked swing holding {sym_str} (broker API not confirmed OK: {broker_status})")
                 else:
                     print(f"🧹 Reconciled ghost row {r} for {sym_str} (0 shares held on live brokers) -> Marking CLOSED.")
                     ws_tj.cell(row=r, column=11, value="CLOSED")
