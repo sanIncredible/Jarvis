@@ -179,6 +179,39 @@ def get_fresh_high_clusters(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     return results
 
 
+def get_top_subsectors_by_cluster(data: Dict[str, Any], top_n: int = 10, min_stocks: int = 3) -> List[Dict[str, Any]]:
+    """
+    Ranks sub-sectors / industries by Fresh High Cluster density from Breadth Ledger:
+    - Primary Metric: Share of stocks at 3-Month High today (h3 / n * 100%).
+    - Secondary Metric: Share of stocks at 1-Month High today (h1 / n * 100%).
+    - Filter: Only industries with at least min_stocks (default 3) tracked.
+    Returns ranked list of top sub-sectors with their density metrics and leading stock tickers.
+    """
+    clusters = data.get("clusters", [])
+    ranked = []
+    for c in clusters:
+        n = c.get("n", 0)
+        if n >= min_stocks:
+            h3 = c.get("h3", 0)
+            h1 = c.get("h1", 0)
+            h6 = c.get("h6", 0)
+            share_3m = round((h3 / n) * 100.0, 1)
+            share_1m = round((h1 / n) * 100.0, 1)
+            ranked.append({
+                "industry": c.get("industry"),
+                "total_stocks": n,
+                "high_3m_count": h3,
+                "high_1m_count": h1,
+                "high_6m_count": h6,
+                "share_3m_pct": share_3m,
+                "share_1m_pct": share_1m,
+                "leaders": c.get("names", [])
+            })
+
+    ranked.sort(key=lambda x: (x["share_3m_pct"], x["share_1m_pct"], x["high_3m_count"]), reverse=True)
+    return ranked[:top_n]
+
+
 def get_52w_high_radar(data: Dict[str, Any], max_dist_pct: float = 3.0) -> List[Dict[str, Any]]:
     """Extracts stocks within max_dist_pct of their 52W high."""
     near = data.get("near", [])
