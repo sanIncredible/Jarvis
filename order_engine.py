@@ -2270,8 +2270,28 @@ def fetch_all_positions():
         broker_status: dict indicating which brokers were queried successfully
     """
     cfg = load_config()
-    tracked_holdings = set(s.upper() for s in cfg.get("tracked_swing_holdings", ["KROSS", "NSE", "BHARTIHEXA", "TATACONSUM", "ENTERO"]))
+    tracked_holdings = set(s.upper() for s in cfg.get("tracked_swing_holdings", []))
     ignored_symbols = set(s.upper() for s in cfg.get("ignored_symbols", ["MOTHERSON"]))
+    
+    # Auto-expand swing tracking symbols to include logged trades and active journal open trades
+    auto_swing_symbols = set(tracked_holdings)
+    try:
+        logged_trades = get_open_trades_from_logs()
+        auto_swing_symbols.update(logged_trades.keys())
+    except Exception:
+        pass
+    try:
+        j_file = SCRIPT_DIR / "Journal.xlsx"
+        if j_file.is_file():
+            import openpyxl
+            wb_j = openpyxl.load_workbook(j_file, data_only=True)
+            if "Trade Journal" in wb_j.sheetnames:
+                for r in list(wb_j["Trade Journal"].iter_rows(values_only=True))[1:]:
+                    if r and len(r) > 10 and r[2] and "OPEN" in str(r[10]).upper():
+                        auto_swing_symbols.add(str(r[2]).strip().upper())
+    except Exception:
+        pass
+
     all_pos = []
     broker_status = {}
 
@@ -2343,7 +2363,9 @@ def fetch_all_positions():
                                     sym = str(h.get("tradingSymbol", "")).strip().upper()
                                     if not sym or sym in ignored_symbols:
                                         continue
-                                    if sym in tracked_holdings and not any(p["symbol"].upper() == sym and p["broker"] == "DHAN" for p in all_pos):
+                                    mtf_q = int(h.get("mtf_qty", 0) or 0)
+                                    is_swing = (mtf_q > 0) or (sym in auto_swing_symbols)
+                                    if is_swing and not any(p["symbol"].upper() == sym and p["broker"] == "DHAN" for p in all_pos):
                                         qty = int(h.get("totalQty", 0))
                                         if qty > 0:
                                             buy_avg = float(h.get("avgCostPrice", 0.0) or 0.0)
@@ -2351,7 +2373,6 @@ def fetch_all_positions():
                                             tot_pnl = round((ltp - buy_avg) * qty, 2)
                                             pnl_pct = round(((ltp - buy_avg) / buy_avg) * 100, 2) if buy_avg > 0 else 0.0
                                             exposure = round(qty * ltp, 2)
-                                            mtf_q = int(h.get("mtf_qty", 0) or 0)
                                             prod_type = "MTF" if mtf_q > 0 else "CNC"
                                             all_pos.append({
                                                 "symbol": sym,
@@ -2419,6 +2440,48 @@ def fetch_all_positions():
                             "instrument_token": str(p.get("instrument_token", "")),
                             "exchange": p.get("exchange", "NSE_EQ")
                         })
+
+                # Check Upstox long-term holdings for carry-forward swing trades
+                try:
+                    req_uh = urllib.request.Request(
+                        "https://api.upstox.com/v2/portfolio/long-term-holdings",
+                        headers={
+                            "Authorization": f"Bearer {u_token}",
+                            "Accept": "application/json",
+                            "User-Agent": "Jarvis-Positions-Monitor"
+                        }
+                    )
+                    with urllib.request.urlopen(req_uh, timeout=6) as resp_uh:
+                        uh_data = json.loads(resp_uh.read().decode())
+                        uh_holdings = uh_data.get("data", [])
+                        for h in uh_holdings:
+                            sym = str(h.get("trading_symbol", "")).strip().upper()
+                            if not sym or sym in ignored_symbols:
+                                continue
+                            if (sym in auto_swing_symbols) and not any(p["symbol"].upper() == sym and p["broker"] == "UPSTOX" for p in all_pos):
+                                qty = int(h.get("quantity", 0) or 0)
+                                if qty > 0:
+                                    avg_price = float(h.get("average_price", 0.0) or 0.0)
+                                    ltp = float(h.get("last_price", avg_price) or avg_price)
+                                    tot_pnl = float(h.get("pnl", 0.0) or round((ltp - avg_price) * qty, 2))
+                                    pnl_pct = round((tot_pnl / (qty * avg_price)) * 100, 2) if avg_price > 0 else 0.0
+                                    exposure = round(qty * ltp, 2)
+                                    all_pos.append({
+                                        "symbol": sym,
+                                        "broker": "UPSTOX",
+                                        "product": "CNC",
+                                        "qty": qty,
+                                        "avg_price": round(avg_price, 2),
+                                        "ltp": round(ltp, 2),
+                                        "pnl": round(tot_pnl, 2),
+                                        "pnl_pct": pnl_pct,
+                                        "exposure": exposure,
+                                        "exchange": "NSE_EQ",
+                                        "instrument_token": str(h.get("instrument_token", "")),
+                                        "position_type": "LONG"
+                                    })
+                except Exception:
+                    pass
         except Exception as e:
             broker_status["upstox"] = f"Error ({e})"
     else:
@@ -2491,31 +2554,31 @@ def fetch_all_positions():
                                 sym = str(h.get("tradingsymbol", "")).strip().upper()
                                 if not sym or sym in ignored_symbols:
                                     continue
-                                if sym in tracked_holdings and not any(p["symbol"].upper() == sym and p["broker"] == "ZERODHA" for p in all_pos):
-                                    cnc_q = int(h.get("quantity", 0)) + int(h.get("t1_quantity", 0))
-                                    mtf_q = int(h.get("mtf", {}).get("quantity", 0) or 0) if isinstance(h.get("mtf"), dict) else 0
-                                    qty = cnc_q + mtf_q
-                                    if qty > 0:
-                                        prod_type = "MTF" if mtf_q > 0 else "CNC"
-                                        avg_price = float(h.get("average_price", 0.0) or 0.0)
-                                        ltp = float(h.get("last_price", avg_price) or avg_price)
-                                        tot_pnl = float(h.get("pnl", 0.0) or round((ltp - avg_price) * qty, 2))
-                                        pnl_pct = round((tot_pnl / (qty * avg_price)) * 100, 2) if avg_price > 0 else 0.0
-                                        exposure = round(qty * ltp, 2)
-                                        all_pos.append({
-                                            "symbol": sym,
-                                            "broker": "ZERODHA",
-                                            "product": prod_type,
-                                            "qty": qty,
-                                            "avg_price": round(avg_price, 2),
-                                            "ltp": round(ltp, 2),
-                                            "pnl": round(tot_pnl, 2),
-                                            "pnl_pct": pnl_pct,
-                                            "exposure": exposure,
-                                            "exchange": h.get("exchange", "NSE"),
-                                            "instrument_token": str(h.get("instrument_token", "")),
-                                            "position_type": "LONG"
-                                        })
+                                cnc_q = int(h.get("quantity", 0)) + int(h.get("t1_quantity", 0))
+                                mtf_q = int(h.get("mtf", {}).get("quantity", 0) or 0) if isinstance(h.get("mtf"), dict) else 0
+                                qty = cnc_q + mtf_q
+                                is_swing = (mtf_q > 0) or (sym in auto_swing_symbols)
+                                if is_swing and qty > 0 and not any(p["symbol"].upper() == sym and p["broker"] == "ZERODHA" for p in all_pos):
+                                    prod_type = "MTF" if mtf_q > 0 else "CNC"
+                                    avg_price = float(h.get("average_price", 0.0) or 0.0)
+                                    ltp = float(h.get("last_price", avg_price) or avg_price)
+                                    tot_pnl = float(h.get("pnl", 0.0) or round((ltp - avg_price) * qty, 2))
+                                    pnl_pct = round((tot_pnl / (qty * avg_price)) * 100, 2) if avg_price > 0 else 0.0
+                                    exposure = round(qty * ltp, 2)
+                                    all_pos.append({
+                                    "symbol": sym,
+                                    "broker": "ZERODHA",
+                                    "product": prod_type,
+                                    "qty": qty,
+                                    "avg_price": round(avg_price, 2),
+                                    "ltp": round(ltp, 2),
+                                    "pnl": round(tot_pnl, 2),
+                                    "pnl_pct": pnl_pct,
+                                    "exposure": exposure,
+                                    "exchange": h.get("exchange", "NSE"),
+                                    "instrument_token": str(h.get("instrument_token", "")),
+                                    "position_type": "LONG"
+                                    })
                     except Exception:
                         pass
         except Exception as e:
