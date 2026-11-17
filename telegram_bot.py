@@ -736,6 +736,69 @@ def handle_exited_command():
         return f"⚠️ <b>Exited Stocks Audit Error:</b> {e}", None
 
 
+def handle_momo90_command(args=""):
+    """
+    Handles /momo90, /momo, or /broadmomo:
+    Fetches Breadth Ledger Broad Momentum (stocks gained >=30% over 90 trading days)
+    and formats an actionable Next-Day Candidate Card grouped into Pivot Doorstep and Coil Launchpad.
+    """
+    try:
+        from breadth_ledger_parser import fetch_breadth_ledger_data, get_90d_momo_candidates
+        bl_data = fetch_breadth_ledger_data(max_age_minutes=30)
+        if not bl_data:
+            return "❌ Unable to fetch Breadth Ledger data at this time.", None
+
+        c_res = get_90d_momo_candidates(bl_data)
+        t1 = [c for c in c_res["actionable_candidates"] if c["tier"] == "TIER_1_DOORSTEP"]
+        t2 = [c for c in c_res["actionable_candidates"] if c["tier"] == "TIER_2_LAUNCHPAD"]
+
+        as_of_str = str(c_res.get("as_of", ""))[:10]
+        lines = [
+            "🔥 <b>BREADTH LEDGER: 90D/30% NEXT-DAY CANDIDATES</b>",
+            f"📅 <i>As Of: {as_of_str}</i>",
+            f"🎯 <b>Total 90D/30% Pool:</b> {c_res['total_90d_30pct_count']} stocks | <b>Actionable:</b> {c_res['actionable_candidate_count']}",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "🚪 <b>TIER 1: PIVOT DOORSTEP (≤3% from 52W High)</b>"
+        ]
+
+        # Display top 8 doorstep candidates
+        for c in t1[:8]:
+            d_txt = f"-{c['dist_52w_pct']:.1f}%" if c['dist_52w_pct'] is not None else "3M High"
+            flag = " 👑" if c['is_fresh_3m'] else ""
+            tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{c['symbol']}'><b>{c['symbol']}</b></a>"
+            lines.append(f"• {tv_link}: <code>{d_txt}</code> ({c['industry']}){flag}")
+
+        if t2:
+            lines.append("")
+            lines.append("🚀 <b>TIER 2: COIL LAUNCHPAD (3-7% from 52W High)</b>")
+            for c in t2[:6]:
+                tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{c['symbol']}'><b>{c['symbol']}</b></a>"
+                lines.append(f"• {tv_link}: <code>-{c['dist_52w_pct']:.1f}%</code> ({c['industry']})")
+
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append("💡 <i>Tap button below or use <code>/add &lt;SYM&gt;</code> to promote into tomorrow's 3m ORB watchlist.</i>")
+
+        # Build 1-tap add buttons for top doorstep candidates
+        inline_keyboard = []
+        row1 = []
+        row2 = []
+        for idx, c in enumerate(t1[:6]):
+            btn = {"text": f"➕ {c['symbol']}", "callback_data": f"cand_add:{c['symbol']}"}
+            if idx < 3:
+                row1.append(btn)
+            else:
+                row2.append(btn)
+        if row1:
+            inline_keyboard.append(row1)
+        if row2:
+            inline_keyboard.append(row2)
+
+        markup = {"inline_keyboard": inline_keyboard} if inline_keyboard else None
+        return "\n".join(lines), markup
+    except Exception as e:
+        return f"⚠️ <b>Momo90 Error:</b> {e}", None
+
+
 def handle_token_status_command():
     """Handles /token, /tokens, or /status"""
     cfg = load_config()
@@ -948,6 +1011,7 @@ def handle_help_command():
         "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
         "📋 <b>Watchlist & Screening:</b>\n"
         "• <code>/candidates</code> or <code>/screen</code> — Scan Nifty 500 swing setups (saves to candidates.txt)\n"
+        "• <code>/momo90</code> or <code>/broadmomo</code> — Breadth Ledger 90D/30% Next-Day Candidates (1-tap add)\n"
         "• <code>/exited</code> or <code>/reentry</code> — Audit past exited stocks for candidate re-entry\n"
         "• <code>/hindsight</code> or <code>/sim</code> — EOD Multi-Trade Simulation & Strict Audit\n"
         "• <code>/add &lt;SYMBOL...&gt;</code> — Add stock(s) to scanner watchlist\n"
@@ -2220,6 +2284,8 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_watchlist_command()
     elif cmd in ("/candidates", "/cand", "/screen", "/screener", "/eodscan", "/briefing", "candidates", "cand", "screen", "briefing"):
         return handle_candidates_command()
+    elif cmd in ("/momo90", "/momo", "/broadmomo", "momo90", "momo", "broadmomo"):
+        return handle_momo90_command(args)
     elif cmd in ("/exited", "/reentry", "/exholdings", "exited", "reentry"):
         return handle_exited_command()
     elif cmd in ("/positions", "/pos", "/portfolio", "/pnl", "/holdings", "positions", "pos", "pnl"):
