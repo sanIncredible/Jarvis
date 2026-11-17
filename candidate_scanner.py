@@ -141,6 +141,17 @@ def scan_nifty500_candidates(
 
     sector_perf, top_3_sectors = load_sector_leaders()
 
+    # Load Breadth Ledger 90D/30% Broad Momentum pool
+    momo_90d_map = {}
+    try:
+        from breadth_ledger_parser import fetch_breadth_ledger_data, get_broad_momentum_stocks
+        bl_data = fetch_breadth_ledger_data(max_age_minutes=60)
+        if bl_data:
+            m_res = get_broad_momentum_stocks(bl_data, lookback_days=90, min_gain_pct=30)
+            momo_90d_map = {s["symbol"]: s for s in m_res.get("stocks", [])}
+    except Exception:
+        pass
+
     # --- STAGE 1: Bulk Snapshot from Upstox ---
     chunk_size = 100
     chunks = [keys[i:i + chunk_size] for i in range(0, len(keys), chunk_size)]
@@ -413,6 +424,11 @@ def scan_nifty500_candidates(
                 if is_inside_day:
                     flags.append("📦 Inside Day")
 
+                momo_90 = momo_90d_map.get(sym)
+                if momo_90:
+                    score += 10.0  # Breadth Ledger 90D/30% velocity bonus
+                    flags.append(f"🚀 90D Momo ({momo_90['gain_tier']})")
+
                 res_item = dict(item)
                 res_item.update({
                     "tier": tier_label,
@@ -494,6 +510,17 @@ def scan_nifty500_candidates(
             c["sector_tag"] = sec_leader_tag
             if "🎯 Sector Leader" not in c.get("flags", []):
                 c.setdefault("flags", []).insert(0, "🎯 Sector Leader")
+
+    # Merge qualified past exited swing stocks coiled for re-entry
+    try:
+        from exited_stocks_manager import analyze_exited_stocks_eod
+        ex_audit = analyze_exited_stocks_eod()
+        for q in ex_audit.get("qualified", []):
+            if not any(c.get("symbol", "").upper() == q.get("symbol", "").upper() for c in top_candidates):
+                top_candidates.append(q)
+        top_candidates.sort(key=lambda x: x.get("score", 0.0), reverse=True)
+    except Exception:
+        pass
 
     now_str = now_ist.strftime("%Y-%m-%d %H:%M:%S IST")
     lines = [
