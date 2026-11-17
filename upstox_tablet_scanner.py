@@ -2610,6 +2610,23 @@ class ScannerHttpHandler(http.server.BaseHTTPRequestHandler):
                     except Exception:
                         pass
 
+        if self.path.startswith('/candidates_90d_momo.json'):
+            for cf in ["candidates_90d_momo.json", os.path.join(script_dir, "candidates_90d_momo.json")]:
+                if os.path.isfile(cf):
+                    try:
+                        with open(cf, "rb") as f:
+                            momo_bytes = f.read()
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/json; charset=utf-8')
+                        self.send_header('Access-Control-Allow-Origin', '*')
+                        self.send_header('Content-Length', str(len(momo_bytes)))
+                        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                        self.end_headers()
+                        self.wfile.write(momo_bytes)
+                        return
+                    except Exception:
+                        pass
+
         # Always serve SOTA index.html on root / or /index.html
         if self.path in ('/', '/index.html') or self.path.startswith('/index.html'):
             for idx_f in ["index.html", os.path.join(script_dir, "index.html")]:
@@ -2903,6 +2920,27 @@ def export_static_html(results, now_str, port):
                 except Exception:
                     pass
 
+        # Load 90D/30% Momo candidates if available
+        momo_payload = []
+        for m_path in ["candidates_90d_momo.json", os.path.join(script_dir, "candidates_90d_momo.json")]:
+            if os.path.isfile(m_path):
+                try:
+                    with open(m_path, "r", encoding="utf-8") as mf:
+                        m_data = json.load(mf)
+                        for c in m_data.get("candidates", []):
+                            momo_payload.append({
+                                "symbol": c.get("symbol"),
+                                "industry": c.get("industry"),
+                                "gain_tier": c.get("gain_tier"),
+                                "dist_52w_pct": c.get("dist_52w_pct"),
+                                "is_fresh_3m": c.get("is_fresh_3m", False),
+                                "tier": c.get("tier"),
+                                "tier_order": c.get("tier_order", 4)
+                            })
+                    break
+                except Exception:
+                    pass
+
         payload = {
             "updated_at": now_str,
             "updated_ts": int(time.time()),
@@ -2910,6 +2948,7 @@ def export_static_html(results, now_str, port):
             "market_regime": regime_data,
             "pre_market_summary": sa_summary_data,
             "candidates": candidates_payload,
+            "momo_candidates": momo_payload,
             "stocks": stocks_payload
         }
 
