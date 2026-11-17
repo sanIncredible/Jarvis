@@ -532,18 +532,18 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
             except Exception:
                 pass
 
-    # Build Detailed Action Card
+    # Build Streamlined Action Card (Optimized for iPhone 15 Pro Max: ~38-42 chars/line)
     if is_defensive:
         lines = [
             f"⚡ <b>JARVIS BREAKOUT ALERT — {t_clean}</b>",
             f"⛔ <b>DEFENSIVE REGIME ({regime_label})</b>",
-            "⚠️ <i>80%+ breakouts fail. SCALPS ONLY. 0% Swing Risk!</i>",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            "⚠️ <i>80%+ breakouts fail. SCALPS ONLY!</i>",
+            "━━━━━━━━━━━━━━━━━━━━━━"
         ]
     else:
         lines = [
             f"⚡ <b>JARVIS BREAKOUT ALERT — {t_clean}</b>",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            "━━━━━━━━━━━━━━━━━━━━━━"
         ]
 
     for i, b in enumerate(new_breakouts):
@@ -557,95 +557,109 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
         lod_dist = b["lod_dist"]
         stretch_pct = b["stretch_pct"]
 
-        # Header line with icon and TradingView hyperlink
         is_strict_stock = b.get("is_strict")
         is_pyramid = b.get("is_pyramid")
         holding_info = b.get("holding_info") or {}
 
+        # 1. Cockpit Header Badge & Direct Chart Link
         if is_pyramid and is_strict_stock:
             icon = "🔺💎"
-            title_prefix = "🔺💎 <b>PYRAMID ADD-ON (STRICT PLAYBOOK)</b>"
+            tag = "PYRAMID • STRICT"
         elif is_pyramid:
             icon = "🔺"
-            title_prefix = "🔺 <b>PYRAMID ADD-ON OPPORTUNITY</b>"
+            tag = "PYRAMID ADD-ON"
         elif is_strict_stock:
             icon = "💎"
-            title_prefix = "💎 <b>STRICT PLAYBOOK BREAKOUT</b>"
+            tag = "STRICT PLAYBOOK"
         elif lod_dist is not None and lod_dist > 100:
             icon = "⚠️"
-            title_prefix = None
+            tag = "EXTENDED BO"
         else:
             icon = "🚀"
-            title_prefix = None
+            tag = b["trigger"].replace(" Breakout", "").replace(" Break", "")
 
         tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'><b>{sym}</b></a>"
-        lines.append(f"{icon} {tv_link} (₹{ltp:,.2f})")
-        if title_prefix:
-            lines.append(f"• Setup   : {title_prefix}")
+        lines.append(f"{icon} {tv_link} (₹{ltp:,.2f}) • <b>{tag}</b>")
+
+        # 2. Pyramiding Active Position Summary (if applicable)
         if is_pyramid:
             h_qty = holding_info.get("qty", 0)
             h_entry = float(holding_info.get("entry_price") or 0.0)
-            h_broker = holding_info.get("broker", "HOLDING")
             pnl_s = ""
             if h_entry > 0:
                 p_pct = round(((ltp - h_entry) / h_entry) * 100.0, 1)
-                pnl_s = f" | {p_pct:+.1f}%"
-            lines.append(f"• Position: 🔺 Holding <b>{h_qty} shs @ ₹{h_entry:,.2f}</b> on {h_broker}{pnl_s}")
-            lines.append("• Strategy: 🔺 <b>Pyramiding Rule:</b> Adding to active holding on structural breakout")
+                pnl_s = f" ({p_pct:+.1f}%)"
+            lines.append(f"├ 💼 Hold: <b>{h_qty} shs @ ₹{h_entry:,.0f}</b>{pnl_s}")
 
-        lines.append(f"• Trigger : {b['trigger']}")
-
-        # ALWAYS show Prev Day NR structure if ratio or inside day is available
+        # 3. Structure & Trigger Pills
         pr_ratio = b.get("prev_range_ratio")
         is_in = b.get("is_inside_day")
+        nr_str = ""
         if pr_ratio is not None or is_in:
-            pr_str = f"{pr_ratio:.2f}x ATR" if pr_ratio is not None else "Contraction"
-            in_str = " (Inside Day 📦)" if is_in else ""
-            coil_tag = " • Coiled Spring 📦" if ((pr_ratio is not None and pr_ratio <= 0.75) or is_in) else ""
-            lines.append(f"• Structure: 🟡 Prev Day NR: {pr_str}{in_str}{coil_tag}")
+            if is_in and pr_ratio is not None:
+                nr_str = f"NR {pr_ratio:.2f}x 📦"
+            elif is_in:
+                nr_str = "Inside Day 📦"
+            else:
+                nr_str = f"NR {pr_ratio:.2f}x"
+                if pr_ratio <= 0.75:
+                    nr_str += " 📦"
 
+        gap_str = ""
         if b.get("is_gap_up") and b.get("gap_pct") is not None:
             sign = "+" if b["gap_pct"] > 0 else ""
-            lines.append(f"• Opening : 🚀 Gap-Up ({sign}{b['gap_pct']}%)")
+            gap_str = f"Gap {sign}{b['gap_pct']}%"
 
-        # LoD Dist badge and guidance
+        trig_short = b["trigger"].replace(" Breakout", "").replace(" Break", "").replace(" + ", "+")
+
+        struct_parts = []
+        if nr_str:
+            struct_parts.append(f"📏 {nr_str}")
+        if gap_str:
+            struct_parts.append(f"🚀 {gap_str}")
+        if trig_short:
+            struct_parts.append(f"⚡ {trig_short}")
+        if not struct_parts:
+            struct_parts.append(f"⚡ {b['trigger']}")
+
+        lines.append("├ " + " • ".join(struct_parts))
+
+        # 4. Risk, LoD Distance & 10 EMA Pills
+        risk_parts = []
+        if day_low is not None:
+            sl_val_s = f"₹{day_low:,.0f}" if (day_low % 1 == 0) else f"₹{day_low:,.2f}"
+            r_pct_s = f"{risk_pct:.0f}%" if (risk_pct is not None and risk_pct % 1 == 0) else (f"{risk_pct:.1f}%" if risk_pct is not None else "")
+            if r_pct_s:
+                risk_parts.append(f"🛑 {sl_val_s} (-{r_pct_s})")
+            else:
+                risk_parts.append(f"🛑 {sl_val_s}")
+        else:
+            risk_parts.append("🛑 N/A")
+
         if lod_dist is not None:
             if lod_dist <= 70:
-                lines.append(f"• LoD Dist: 🟢 {lod_dist}% ATR (Ample Headroom)")
+                risk_parts.append(f"🟢 LoD {lod_dist}%")
             elif lod_dist <= 100:
-                lines.append(f"• LoD Dist: ⚪ {lod_dist}% ATR (Mid Expansion)")
+                risk_parts.append(f"⚪ LoD {lod_dist}%")
             else:
-                lines.append(f"• LoD Dist: ⚠️ {lod_dist}% ATR (Range Exhausted — DO NOT CHASE!)")
-        else:
-            lines.append("• LoD Dist: ⚪ N/A")
+                risk_parts.append(f"⚠️ LoD {lod_dist}%")
 
-        # Stop loss with risk percentage and warning if too wide
-        if day_low is not None:
-            if risk_pct is not None:
-                risk_note = " — Too Wide" if risk_pct > 1.5 else ""
-                lines.append(f"• Stop Loss: ₹{day_low:,.2f} (Day Low: {risk_pct:.1f}% risk{risk_note})")
-            else:
-                lines.append(f"• Stop Loss: ₹{day_low:,.2f} (Day Low)")
-        else:
-            lines.append("• Stop Loss: N/A")
-
-        # 10 EMA micro-coil status
         if stretch_pct is not None:
             sign = "+" if stretch_pct > 0 else ""
+            str_val = f"{stretch_pct:.1f}%"
             if stretch_pct <= 0.6:
-                lines.append(f"• 10 EMA : 🟢 Prime Coil ({sign}{stretch_pct:.1f}%)")
+                risk_parts.append(f"🟢 10E {sign}{str_val}")
             elif stretch_pct <= 1.5:
-                lines.append(f"• 10 EMA : ⚪ Normal ({sign}{stretch_pct:.1f}%)")
+                risk_parts.append(f"⚪ 10E {sign}{str_val}")
             else:
-                lines.append(f"• 10 EMA : ⚠️ Extended ({sign}{stretch_pct:.1f}%) — Wait for Pullback")
+                risk_parts.append(f"⚠️ 10E {sign}{str_val}")
 
-        # Direct chart link
-        lines.append(f"• Chart : <a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'>Open TradingView ↗</a>")
+        lines.append("└ " + " • ".join(risk_parts))
 
-    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("📊 <a href='https://sanincredible.github.io/Jarvis/'>Open 3m Terminal Dashboard</a>")
 
-    # Interactive 1-Tap Buy Buttons for Triggered Breakouts
+    # Interactive 1-Tap Buy Buttons for Triggered Breakouts (iPhone 2-Column Grid)
     kb_buttons = []
     if new_breakouts:
         for b in new_breakouts[:3]:
@@ -653,8 +667,8 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
             is_pyr = b.get("is_pyramid")
             if is_pyr:
                 kb_buttons.append([
-                    {"text": f"🔺 Pyramid {sym} (50k Add-On)", "callback_data": f"buy_prep:{sym}:50k:lod:default"},
-                    {"text": f"🔺 Pyramid {sym} (Mod ₹1.0L)", "callback_data": f"buy_prep:{sym}:mod:lod:default"}
+                    {"text": f"🔺 Pyramid {sym} (50k)", "callback_data": f"buy_prep:{sym}:50k:lod:default"},
+                    {"text": f"🔺 Pyramid {sym} (1.0L)", "callback_data": f"buy_prep:{sym}:mod:lod:default"}
                 ])
             elif is_defensive:
                 kb_buttons.append([
@@ -663,7 +677,7 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                 ])
             else:
                 kb_buttons.append([
-                    {"text": f"🛒 Buy {sym} (Mod ₹1.0L)", "callback_data": f"buy_prep:{sym}:mod:lod:default"},
+                    {"text": f"🛒 Buy {sym} (1.0L)", "callback_data": f"buy_prep:{sym}:mod:lod:default"},
                     {"text": f"🛒 Buy {sym} (50k)", "callback_data": f"buy_prep:{sym}:50k:lod:default"}
                 ])
     reply_markup = {"inline_keyboard": kb_buttons} if kb_buttons else None
@@ -3184,7 +3198,7 @@ if __name__ == "__main__":
         t_now = get_ist_now().strftime("%H:%M IST")
         test_msg = (
             f"⚡ <b>JARVIS BREAKOUT ALERT — {t_now}</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
             "🚀 <a href='https://in.tradingview.com/chart/?symbol=NSE:RELIANCE'><b>RELIANCE</b></a> (₹1,320.50)\n"
             "• Trigger : ★ SS + ORB + PDH Break\n"
             "• LoD Dist: 🟢 42% ATR (Ample Headroom)\n"
@@ -3197,7 +3211,7 @@ if __name__ == "__main__":
             "• Stop Loss: ₹1,008.00 (Day Low: 3.1% risk — Too Wide)\n"
             "• 10 EMA : ⚪ Normal (+1.1%)\n"
             "• Chart : <a href='https://in.tradingview.com/chart/?symbol=NSE:SHILPAMED'>Open TradingView ↗</a>\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
             "📊 <a href='https://sanincredible.github.io/Jarvis/'>Open 3m Terminal Dashboard</a>"
         )
         ok, res = send_telegram_alert(test_msg)
