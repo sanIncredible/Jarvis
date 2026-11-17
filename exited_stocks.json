@@ -1,0 +1,278 @@
+{
+  "updated_at": "2026-11-17 13:21:07 IST",
+  "count": 27,
+  "symbols": [
+    "ABDL",
+    "ANTHEM",
+    "ARE&M",
+    "BAJAJHCARE",
+    "BELRISE",
+    "BHARTIHEXA",
+    "BLUEJET",
+    "CGPOWER",
+    "COHANCE",
+    "CYIENT",
+    "FDC",
+    "HBLENGINE",
+    "HONASA",
+    "INOXWIND",
+    "JYOTICNC",
+    "KOPRAN",
+    "KROSS",
+    "LICHSGFIN",
+    "PCJEWELLER",
+    "PERSISTENT",
+    "RKFORGE",
+    "SWIGGY",
+    "SYNGENE",
+    "TRITURBINE",
+    "URBANCO",
+    "VIJAYA",
+    "WESTLIFE"
+  ],
+  "history": {
+    "VIJAYA": {
+      "symbol": "VIJAYA",
+      "last_exit_date": "2026-09-29",
+      "last_exit_price": 1460.0,
+      "last_entry_price": 1460.0,
+      "realized_pnl": -84.07,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "LICHSGFIN": {
+      "symbol": "LICHSGFIN",
+      "last_exit_date": "2026-10-01",
+      "last_exit_price": 539.0,
+      "last_entry_price": 553.0,
+      "realized_pnl": -2888.28,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "INOXWIND": {
+      "symbol": "INOXWIND",
+      "last_exit_date": "2026-09-18",
+      "last_exit_price": 74.0,
+      "last_entry_price": 75.2,
+      "realized_pnl": -1876.17,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "WESTLIFE": {
+      "symbol": "WESTLIFE",
+      "last_exit_date": "2026-10-23",
+      "last_exit_price": 567.9,
+      "last_entry_price": 557.0,
+      "realized_pnl": 3190.97,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "BELRISE": {
+      "symbol": "BELRISE",
+      "last_exit_date": "2026-10-23",
+      "last_exit_price": 204.06,
+      "last_entry_price": 233.0,
+      "realized_pnl": -14571.7,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "URBANCO": {
+      "symbol": "URBANCO",
+      "last_exit_date": "2026-09-23",
+      "last_exit_price": 163.0,
+      "last_entry_price": 169.0,
+      "realized_pnl": -3073.62,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "BLUEJET": {
+      "symbol": "BLUEJET",
+      "last_exit_date": "2026-09-21",
+      "last_exit_price": 576.0,
+      "last_entry_price": 591.0,
+      "realized_pnl": -1576.74,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "SWIGGY": {
+      "symbol": "SWIGGY",
+      "last_exit_date": "2026-09-23",
+      "last_exit_price": 276.0,
+      "last_entry_price": 282.0,
+      "realized_pnl": -2480.87,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "BAJAJHCARE": {
+      "symbol": "BAJAJHCARE",
+      "last_exit_date": "2026-10-01",
+      "last_exit_price": 333.0,
+      "last_entry_price": 340.0,
+      "realized_pnl": -2179.26,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "HONASA": {
+      "symbol": "HONASA",
+      "last_exit_date": "2026-09-29",
+      "last_exit_price": 455.0,
+      "last_entry_price": 479.0,
+      "realized_pnl": -3688.38,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "ABDL": {
+      "symbol": "ABDL",
+      "last_exit_date": "2026-11-03",
+      "last_exit_price": 696.32,
+      "last_entry_price": 720.25,
+      "realized_pnl": -2481.71,
+      "status": "CLOSED",
+      "notes": "Live sync from DHAN (MTF)"
+    },
+    "COHANCE": {
+      "symbol": "COHANCE",
+      "last_exit_date": "2026-09-29",
+      "last_exit_price": 458.0,
+      "last_entry_price": 468.0,
+      "realized_pnl": -1058.65,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "CYIENT": {
+      "symbol": "CYIENT",
+      "last_exit_date": "2026-10-05",
+      "last_exit_price": 1148.24,
+      "last_entry_price": 1171.38,
+      "realized_pnl": -2413.33,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "CGPOWER": {
+      "symbol": "CGPOWER",
+      "last_exit_date": "2026-10-23",
+      "last_exit_price": 813.35,
+      "last_entry_price": 899.4,
+      "realized_pnl": -8758.79,
+      "status": "CLOSED",
+      "notes": "Day Low SL | 10 EMA Coil Breakout"
+    },
+    "RKFORGE": {
+      "symbol": "RKFORGE",
+      "last_exit_date": "2026-10-23",
+      "last_exit_price": 591.1,
+      "last_entry_price": 712.77,
+      "realized_pnl": -12350.8,
+      "status": "CLOSED",
+      "notes": "Day Low SL | 10 EMA Coil Breakout"
+    },
+    "JYOTICNC": {
+      "symbol": "JYOTICNC",
+      "last_exit_date": "2026-10-23",
+      "last_exit_price": 890.8,
+      "last_entry_price": 1050.0,
+      "realized_pnl": -16148.89,
+      "status": "CLOSED",
+      "notes": "Day Low SL | 10 EMA Coil Breakout"
+    },
+    "BHARTIHEXA": {
+      "symbol": "BHARTIHEXA",
+      "last_exit_date": "2026-11-06",
+      "last_exit_price": 1653.74,
+      "last_entry_price": 1651.0,
+      "realized_pnl": 187.78,
+      "status": "CLOSED",
+      "notes": "Dhan CNC Holding (Carried Swing)"
+    },
+    "KROSS": {
+      "symbol": "KROSS",
+      "last_exit_date": "2026-11-09",
+      "last_exit_price": 298.0,
+      "last_entry_price": 298.17,
+      "realized_pnl": -96.34,
+      "status": "CLOSED",
+      "notes": "Zerodha CNC Holding (5D Low SL)"
+    },
+    "HBLENGINE": {
+      "symbol": "HBLENGINE",
+      "last_exit_date": "Unknown",
+      "last_exit_price": null,
+      "last_entry_price": 850.2,
+      "realized_pnl": null,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "PERSISTENT": {
+      "symbol": "PERSISTENT",
+      "last_exit_date": "Unknown",
+      "last_exit_price": null,
+      "last_entry_price": 6160.91,
+      "realized_pnl": null,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "SYNGENE": {
+      "symbol": "SYNGENE",
+      "last_exit_date": "2026-11-05",
+      "last_exit_price": 416.26,
+      "last_entry_price": 422.38,
+      "realized_pnl": -1298.24,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "TRITURBINE": {
+      "symbol": "TRITURBINE",
+      "last_exit_date": "Unknown",
+      "last_exit_price": null,
+      "last_entry_price": 498.99,
+      "realized_pnl": null,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "ANTHEM": {
+      "symbol": "ANTHEM",
+      "last_exit_date": "Unknown",
+      "last_exit_price": null,
+      "last_entry_price": 946.0,
+      "realized_pnl": null,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "ARE&M": {
+      "symbol": "ARE&M",
+      "last_exit_date": "Unknown",
+      "last_exit_price": null,
+      "last_entry_price": 748.8,
+      "realized_pnl": null,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "KOPRAN": {
+      "symbol": "KOPRAN",
+      "last_exit_date": "2026-11-09",
+      "last_exit_price": 264.85,
+      "last_entry_price": 271.02,
+      "realized_pnl": -2099.4,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "FDC": {
+      "symbol": "FDC",
+      "last_exit_date": "2026-11-09",
+      "last_exit_price": 392.63,
+      "last_entry_price": 394.13,
+      "realized_pnl": -847.88,
+      "status": "CLOSED",
+      "notes": ""
+    },
+    "PCJEWELLER": {
+      "symbol": "PCJEWELLER",
+      "last_exit_date": "2026-11-12",
+      "last_exit_price": 15.86,
+      "last_entry_price": 16.18,
+      "realized_pnl": -1667.35,
+      "status": "CLOSED",
+      "notes": ""
+    }
+  }
+}
