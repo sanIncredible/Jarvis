@@ -405,6 +405,20 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
     else:
         t_clean = current_time_str
 
+    # Load active open holdings for Pyramiding detection
+    open_holdings = {}
+    for th_file in [
+        "tracked_holdings.json",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "tracked_holdings.json")
+    ]:
+        if os.path.isfile(th_file):
+            try:
+                with open(th_file, "r", encoding="utf-8") as th_f:
+                    open_holdings = json.load(th_f)
+                break
+            except Exception:
+                pass
+
     new_breakouts = []
     for row in results:
         score, d, m = row
@@ -422,8 +436,16 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
         trigger_label = None
         alert_type = None
 
+        # 0. Diamond Tier: Strict Criteria Setup (Narrow Prev Day + Strong Start + PDH Breakout)
+        if m.get("is_strict") or ("STRICT" in signal):
+            alert_type = "ORB_STRICT_TIER1"
+            if m.get("is_reversal"):
+                trigger_label = "💎 STRICT (NR + REVERSAL + PDH)"
+            else:
+                trigger_label = "💎 STRICT (NR + SS + PDH Break)"
+
         # 1. Tier 0: Bullish Reversal Breakout (Broke ORB Low first, now breaking ORB High)
-        if m.get("is_reversal"):
+        elif m.get("is_reversal"):
             alert_type = "ORB_REVERSAL"
             if pdh_broken:
                 trigger_label = "🔄 Reversal + PDH"
@@ -465,10 +487,18 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                 is_gap_up = bool(m.get("is_gap_up") or d.get("is_gap_up"))
                 gap_pct = m.get("gap_pct") if m.get("gap_pct") is not None else d.get("gap_pct")
 
+                holding_info = open_holdings.get(sym)
+                is_pyramid = holding_info is not None
+
                 new_breakouts.append({
                     "sym": sym,
                     "ltp": float(ltp),
                     "trigger": trigger_label,
+                    "is_strict": bool(m.get("is_strict") or ("STRICT" in signal)),
+                    "is_pyramid": is_pyramid,
+                    "holding_info": holding_info,
+                    "prev_range_ratio": d.get("prev_range_ratio"),
+                    "is_inside_day": bool(d.get("is_inside_day")),
                     "day_low": float(day_low) if day_low else None,
                     "risk_pct": risk_pct,
                     "lod_dist": lod_dist,
@@ -528,10 +558,52 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
         stretch_pct = b["stretch_pct"]
 
         # Header line with icon and TradingView hyperlink
-        icon = "⚠️" if (lod_dist is not None and lod_dist > 100) else "🚀"
+        is_strict_stock = b.get("is_strict")
+        is_pyramid = b.get("is_pyramid")
+        holding_info = b.get("holding_info") or {}
+
+        if is_pyramid and is_strict_stock:
+            icon = "🔺💎"
+            title_prefix = "🔺💎 <b>PYRAMID ADD-ON (STRICT PLAYBOOK)</b>"
+        elif is_pyramid:
+            icon = "🔺"
+            title_prefix = "🔺 <b>PYRAMID ADD-ON OPPORTUNITY</b>"
+        elif is_strict_stock:
+            icon = "💎"
+            title_prefix = "💎 <b>STRICT PLAYBOOK BREAKOUT</b>"
+        elif lod_dist is not None and lod_dist > 100:
+            icon = "⚠️"
+            title_prefix = None
+        else:
+            icon = "🚀"
+            title_prefix = None
+
         tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'><b>{sym}</b></a>"
         lines.append(f"{icon} {tv_link} (₹{ltp:,.2f})")
+        if title_prefix:
+            lines.append(f"• Setup   : {title_prefix}")
+        if is_pyramid:
+            h_qty = holding_info.get("qty", 0)
+            h_entry = float(holding_info.get("entry_price") or 0.0)
+            h_broker = holding_info.get("broker", "HOLDING")
+            pnl_s = ""
+            if h_entry > 0:
+                p_pct = round(((ltp - h_entry) / h_entry) * 100.0, 1)
+                pnl_s = f" | {p_pct:+.1f}%"
+            lines.append(f"• Position: 🔺 Holding <b>{h_qty} shs @ ₹{h_entry:,.2f}</b> on {h_broker}{pnl_s}")
+            lines.append("• Strategy: 🔺 <b>Pyramiding Rule:</b> Adding to active holding on structural breakout")
+
         lines.append(f"• Trigger : {b['trigger']}")
+
+        # ALWAYS show Prev Day NR structure if ratio or inside day is available
+        pr_ratio = b.get("prev_range_ratio")
+        is_in = b.get("is_inside_day")
+        if pr_ratio is not None or is_in:
+            pr_str = f"{pr_ratio:.2f}x ATR" if pr_ratio is not None else "Contraction"
+            in_str = " (Inside Day 📦)" if is_in else ""
+            coil_tag = " • Coiled Spring 📦" if ((pr_ratio is not None and pr_ratio <= 0.75) or is_in) else ""
+            lines.append(f"• Structure: 🟡 Prev Day NR: {pr_str}{in_str}{coil_tag}")
+
         if b.get("is_gap_up") and b.get("gap_pct") is not None:
             sign = "+" if b["gap_pct"] > 0 else ""
             lines.append(f"• Opening : 🚀 Gap-Up ({sign}{b['gap_pct']}%)")
@@ -578,7 +650,13 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
     if new_breakouts:
         for b in new_breakouts[:3]:
             sym = b["sym"]
-            if is_defensive:
+            is_pyr = b.get("is_pyramid")
+            if is_pyr:
+                kb_buttons.append([
+                    {"text": f"🔺 Pyramid {sym} (50k Add-On)", "callback_data": f"buy_prep:{sym}:50k:lod:default"},
+                    {"text": f"🔺 Pyramid {sym} (Mod ₹1.0L)", "callback_data": f"buy_prep:{sym}:mod:lod:default"}
+                ])
+            elif is_defensive:
                 kb_buttons.append([
                     {"text": f"🛡️ Scalp {sym} (50k)", "callback_data": f"buy_prep:{sym}:50k:regime:default"},
                     {"text": f"🛡️ Scalp {sym} (25k)", "callback_data": f"buy_prep:{sym}:25k:regime:default"}
@@ -706,6 +784,11 @@ def fetch_upstox_symbol_data(symbol, token, prefetched_quote=None):
     gap_pct = None
     is_gap_up = False
     pdh = None
+    pdl = None
+    prev_range = 0.0
+    prev_range_ratio = None
+    is_inside_day = False
+    is_narrow_prev_day = False
     pivot_point = None
     pivot_r1 = None
     pivot_r2 = None
@@ -814,10 +897,28 @@ def fetch_upstox_symbol_data(symbol, token, prefetched_quote=None):
 
                 if first_candle_date == today_iso and len(daily_raw) >= 2:
                     yesterday_candle = daily_raw[1]
+                    day_before_candle = daily_raw[2] if len(daily_raw) >= 3 else None
                 else:
                     yesterday_candle = daily_raw[0]
+                    day_before_candle = daily_raw[1] if len(daily_raw) >= 2 else None
 
                 pdh = float(yesterday_candle[2])  # high[1] = high of yesterday
+                pdl = float(yesterday_candle[3])  # low[1] = low of yesterday
+                yh = pdh
+                yl = pdl
+                yc = float(yesterday_candle[4])
+                prev_range = max(0.0, yh - yl)
+                prev_range_pct = round((prev_range / yc) * 100.0, 2) if yc > 0 else 0.0
+
+                is_inside_day = False
+                if day_before_candle:
+                    try:
+                        dbh = float(day_before_candle[2])
+                        dbl = float(day_before_candle[3])
+                        is_inside_day = bool(yh <= dbh and yl >= dbl)
+                    except Exception:
+                        pass
+
                 try:
                     prev_close = float(yesterday_candle[4])  # close[1] = close of yesterday
                     if day_open and day_low:
@@ -833,9 +934,6 @@ def fetch_upstox_symbol_data(symbol, token, prefetched_quote=None):
 
                 # Classic Floor Pivot Points: P = (H + L + C) / 3, R1 = 2*P - L, R2 = P + (H - L)
                 try:
-                    yh = float(yesterday_candle[2])
-                    yl = float(yesterday_candle[3])
-                    yc = float(yesterday_candle[4])
                     pivot_point = round((yh + yl + yc) / 3.0, 2)
                     pivot_r1 = round(2.0 * pivot_point - yl, 2)
                     pivot_r2 = round(pivot_point + (yh - yl), 2)
@@ -916,6 +1014,13 @@ def fetch_upstox_symbol_data(symbol, token, prefetched_quote=None):
                         trs.append(tr)
                     atr14 = sum(trs) / 14.0
 
+                if atr14 and atr14 > 0:
+                    prev_range_ratio = round(prev_range / atr14, 2)
+                    is_nr = bool(prev_range_ratio <= 0.75)
+                else:
+                    is_nr = bool(prev_range_pct <= 2.5)
+                is_narrow_prev_day = bool(is_nr or is_inside_day)
+
     except Exception:
         return None
 
@@ -931,6 +1036,11 @@ def fetch_upstox_symbol_data(symbol, token, prefetched_quote=None):
         "gap_pct": gap_pct,
         "is_gap_up": is_gap_up,
         "pdh": pdh,
+        "pdl": pdl,
+        "prev_range": prev_range,
+        "prev_range_ratio": prev_range_ratio,
+        "is_inside_day": is_inside_day,
+        "is_narrow_prev_day": is_narrow_prev_day,
         "pivot": pivot_point,
         "r1": pivot_r1,
         "r2": pivot_r2,
@@ -969,6 +1079,11 @@ def fetch_fallback_data(symbol):
     gap_pct = None
     is_gap_up = False
     pdh = None
+    pdl = None
+    prev_range = 0.0
+    prev_range_ratio = None
+    is_inside_day = False
+    is_narrow_prev_day = False
     rvol = None
     is_strong_start = False
     anchor_high = None
@@ -1048,6 +1163,17 @@ def fetch_fallback_data(symbol):
 
             if len(highs) >= 2:
                 pdh = highs[-2]
+                pdl = lows[-2]
+                yh = pdh
+                yl = pdl
+                yc = closes[-2]
+                prev_range = max(0.0, yh - yl)
+                prev_range_pct = round((prev_range / yc) * 100.0, 2) if yc > 0 else 0.0
+
+            if len(highs) >= 3:
+                dbh = highs[-3]
+                dbl = lows[-3]
+                is_inside_day = bool(yh <= dbh and yl >= dbl)
 
             if opens and lows and prev_close:
                 day_open = opens[-1]
@@ -1075,6 +1201,13 @@ def fetch_fallback_data(symbol):
                     )
                     trs.append(tr)
                 atr14 = sum(trs) / 14.0
+
+            if atr14 and atr14 > 0:
+                prev_range_ratio = round(prev_range / atr14, 2)
+                is_nr = bool(prev_range_ratio <= 0.75)
+            else:
+                is_nr = bool(prev_range_pct <= 2.5)
+            is_narrow_prev_day = bool(is_nr or is_inside_day)
 
         url_1m = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1m&range=1d"
         req_1m = urllib.request.Request(url_1m, headers=headers)
@@ -1166,6 +1299,11 @@ def fetch_fallback_data(symbol):
         "gap_pct": gap_pct,
         "is_gap_up": is_gap_up,
         "pdh": pdh,
+        "pdl": pdl,
+        "prev_range": prev_range,
+        "prev_range_ratio": prev_range_ratio,
+        "is_inside_day": is_inside_day,
+        "is_narrow_prev_day": is_narrow_prev_day,
         "rvol": rvol,
         "is_strong_start": is_strong_start,
         "orb_high": anchor_high,
@@ -1286,10 +1424,21 @@ def compute_metrics(d):
             reversal_type = "L_TO_H"
             reversal_desc = f"Broke ORB Low ({orb_low_break_time or 'Early'}) → Broke ORB High ({orb_high_break_time or 'Late'})"
 
-    # 7. Action Signal
+    # 7. Action Signal & Strict Setup Assessment
+    is_narrow = bool(d.get("is_narrow_prev_day", False))
+    is_ss = bool(d.get("is_strong_start", False))
+    is_strict = bool(is_narrow and is_ss and pdh_broken and orb_status == "H")
+
     signal = "IN RANGE"
     sig_color = RESET
-    if is_reversal:
+    if is_strict:
+        if is_reversal:
+            signal = "💎 STRICT: NR + REVERSAL BREAKOUT (ORB + PDH)"
+            sig_color = f"{YELLOW}{BOLD}"
+        else:
+            signal = "💎 STRICT: NARROW + STRONG START + PDH BREAKOUT"
+            sig_color = f"{YELLOW}{BOLD}"
+    elif is_reversal:
         if d.get("is_strong_start") and pdh_broken:
             signal = "★ SS + REVERSAL BREAKOUT (ORB + PDH)"
             sig_color = f"{MAGENTA}{BOLD}"
@@ -1359,6 +1508,7 @@ def compute_metrics(d):
         "tag": tag,
         "atr_mult": atr_mult,
         "is_breach": is_breach,
+        "is_strict": is_strict,
         "is_reversal": is_reversal,
         "reversal_type": reversal_type,
         "orb_low_break_time": orb_low_break_time,
@@ -1376,6 +1526,7 @@ def compute_metrics(d):
 def compute_strength_score(d, m):
     """
     Computes institutional Strength Score for sorting in descending order:
+    Tier 0 (Diamond Tier): 💎 STRICT (Narrow Prev Day + Strong Start + PDH Breakout + ORB High) -> Score: 1800 + H%*10 + Chg%
     Tier 1: ★ Strong Start + ORB Breakout + PDH Breakout (Score: 1500 + H%*10 + Chg%)
     Tier 1.5: 🔄 REVERSAL BREAKOUT (Score: 1400 if PDH else 1150 + H%*10 + Chg%)
     Tier 2: BULLISH BREAKOUT (ORB + PDH) (Score: 1300 + H%*10 + Chg%)
@@ -1388,10 +1539,13 @@ def compute_strength_score(d, m):
     pdh_broken = m.get("pdh_broken", False)
     is_ss = d.get("is_strong_start", False)
     is_rev = m.get("is_reversal", False)
+    is_strict = m.get("is_strict", False)
     h_pct = m.get("h_pct") or 0.0
     chg_pct = m.get("chg_pct") or 0.0
 
-    if is_ss and orb_status == "H" and pdh_broken:
+    if is_strict:
+        tier = 1800.0
+    elif is_ss and orb_status == "H" and pdh_broken:
         tier = 1500.0
     elif is_rev and pdh_broken:
         tier = 1400.0
@@ -1607,7 +1761,9 @@ def generate_html_dashboard(results, now_str, port):
             orb_class = f"badge-{m['orb_status'].lower()}"
             orb_display = f'<span class="badge {orb_class}">{m["orb_status"]}</span>'
 
-        if m.get("is_reversal"):
+        if m.get("is_strict") or ("STRICT" in m.get("signal", "")):
+            sig_class = "badge-sig-strict"
+        elif m.get("is_reversal"):
             sig_class = "badge-sig-rev"
         elif "BREAKOUT" in m["signal"] or "ABOVE" in m["signal"]:
             sig_class = "badge-sig-bull"
@@ -2618,6 +2774,10 @@ def export_static_html(results, now_str, port):
                 "chg_pct": round(m["chg_pct"], 2) if m.get("chg_pct") is not None else None,
                 "pdh": d.get("pdh"),
                 "pdh_broken": bool(m.get("pdh_broken", False)),
+                "is_strict": bool(m.get("is_strict", False)),
+                "is_narrow_prev_day": bool(d.get("is_narrow_prev_day", False)),
+                "prev_range_ratio": d.get("prev_range_ratio"),
+                "is_inside_day": bool(d.get("is_inside_day", False)),
                 "pivot": d.get("pivot"),
                 "day_low": m.get("day_low") or d.get("day_low"),
                 "lod_dist": m.get("lod_dist"),
