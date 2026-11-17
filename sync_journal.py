@@ -1115,8 +1115,8 @@ def send_telegram_eod_card(summary: Dict[str, Any], config: Dict[str, Any]):
             lines.append(f"• <b>{o['symbol']}</b>: Qty {o['qty']:.0f} @ ₹{o['entry_p']:,.2f} (SL: ₹{o['sl']:,.2f})")
         lines.append("")
 
-    # Active Open Positions
-    lines.append(f"📈 <b>Active Open Positions ({len(open_pos)}):</b>")
+    # Active Open Positions (Previous & Today)
+    lines.append(f"📈 <b>Active Open Positions ({len(open_pos)} — Previous & Today):</b>")
     tot_var = 0.0
     for p in open_pos:
         u_icon = "🟢" if p["unrealized_pnl"] >= 0 else "🔴"
@@ -1146,7 +1146,9 @@ def send_telegram_eod_card(summary: Dict[str, Any], config: Dict[str, Any]):
                 var_str = ""
 
         var_suffix = f" [{var_str}]" if var_str else ""
-        lines.append(f"• <b>{p['symbol']}</b>: {u_icon} {u_sign}₹{p['unrealized_pnl']:,.2f} ({p['pnl_pct']:+.1f}%{rr_str}){var_suffix} — {p['action_signal']}")
+        h_days = p.get("holding_days", 0)
+        h_tag = f" | {h_days}d" if h_days > 0 else " | Today"
+        lines.append(f"• <b>{p['symbol']}</b>: {u_icon} {u_sign}₹{p['unrealized_pnl']:,.2f} ({p['pnl_pct']:+.1f}%{rr_str}{h_tag}){var_suffix} — {p['action_signal']}")
 
     lines.append(f"\n💼 <b>Total Unrealized P&L:</b> ₹{tot_unrealized:+,.2f}")
     if tot_var > 0:
