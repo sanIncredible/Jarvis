@@ -2375,7 +2375,7 @@ def fetch_all_positions():
                                             tot_pnl = round((ltp - buy_avg) * qty, 2)
                                             pnl_pct = round(((ltp - buy_avg) / buy_avg) * 100, 2) if buy_avg > 0 else 0.0
                                             exposure = round(qty * ltp, 2)
-                                            prod_type = "MTF" if mtf_q > 0 else "CNC"
+                                            prod_type = "MTF" if (mtf_q > 0 or sym in ("TATACONSUM", "INDGN", "GRAPHITE")) else "CNC"
                                             all_pos.append({
                                                 "symbol": sym,
                                                 "broker": "DHAN",
@@ -2664,7 +2664,7 @@ def fetch_all_positions():
         qty = int(p.get("qty", 0) or 0)
         is_short = qty < 0
         log_meta = logged_trades.get(sym_u, {})
-        sl = float(log_meta.get("stop_loss", 0) or 0)
+        sl = float(log_meta.get("stop_loss", 0) or p.get("stop_loss", 0) or 0)
 
         # Fallback structural SL if not logged
         if sl <= 0 and buy_avg > 0:
