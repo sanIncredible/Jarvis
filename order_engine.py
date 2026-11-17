@@ -387,9 +387,24 @@ def get_symbol_scanner_data(symbol):
     return None
 
 
+def get_active_holding_info(symbol):
+    """Checks if symbol is in active tracked holdings / open positions for Pyramiding."""
+    sym = symbol.strip().upper()
+    th_file = SCRIPT_DIR / "tracked_holdings.json"
+    if th_file.is_file():
+        try:
+            with open(th_file, "r", encoding="utf-8") as f:
+                th = json.load(f)
+                if sym in th:
+                    return th[sym]
+        except Exception:
+            pass
+    return None
+
+
 def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
     """
-    Evaluates 7 core strategy rules:
+    Evaluates 8 core strategy rules:
     1. Regime Health (Macro & Bonde Breadth)
     2. Dynamic ORB High Breakout (LTP > ORB High)
     3. Previous Day High (PDH) Cleared
@@ -397,6 +412,7 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
     5. Relative Volume (RVOL) Participation
     6. Stop-Loss / LOD Risk Proximity (<= 4.0% risk)
     7. 10 EMA Extension / Stretch (< 3.5%)
+    8. Previous Day Narrow Range (NR) & Contraction
     """
     sc_data = get_symbol_scanner_data(symbol)
     regime = load_market_regime()
@@ -630,6 +646,30 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
                 "detail": "Price extended from short term moving average"
             })
             warnings.append(f"Overextended: Price is stretched {sign}{stretch_pct:.1f}% above 10 EMA. Consider waiting for pullback.")
+
+    # 8. Previous Day Narrow Range (NR) & Volatility Contraction
+    prev_range_ratio = sc_data.get("prev_range_ratio") if sc_data else None
+    is_inside_day = bool(sc_data.get("is_inside_day")) if sc_data else False
+    is_narrow_prev = bool(sc_data.get("is_narrow_prev_day")) if sc_data else False
+    if prev_range_ratio is not None or is_inside_day or is_narrow_prev:
+        in_tag = " • Inside Day 📦" if is_inside_day else ""
+        if (prev_range_ratio is not None and prev_range_ratio <= 0.75) or is_inside_day or is_narrow_prev:
+            r_str = f"{prev_range_ratio:.2f}x ATR" if prev_range_ratio is not None else "Coiled"
+            checklist.append({
+                "rule": "Narrow Range (NR)",
+                "passed": True,
+                "badge": "💎",
+                "text": f"💎 <b>Prev Day NR:</b> Coiled ({r_str}{in_tag})",
+                "detail": "Previous session volatility contraction (NR / Inside Day) setup"
+            })
+        else:
+            checklist.append({
+                "rule": "Narrow Range (NR)",
+                "passed": True,
+                "badge": "⚪",
+                "text": f"⚪ <b>Prev Day NR:</b> Normal Range ({prev_range_ratio:.2f}x ATR)",
+                "detail": "Normal previous day range"
+            })
 
     passed_count = sum(1 for c in checklist if c.get("passed"))
     total_count = len(checklist)
