@@ -419,19 +419,21 @@ def fetch_live_ltp(symbol: str) -> Optional[float]:
         except Exception:
             pass
 
-    # 2. Yahoo Finance fallback
-    try:
-        ticker = f"{clean_sym}.NS"
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=1d"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        r = requests.get(url, headers=headers, timeout=4)
-        if r.status_code == 200:
-            res = r.json()["chart"]["result"][0]
-            ltp = res["meta"].get("regularMarketPrice")
-            if ltp:
-                return round(float(ltp), 2)
-    except Exception:
-        pass
+    # 2. Yahoo Finance fallback (checks .NS and .BO for BSE tickers like NSE.BO)
+    clean_base = clean_sym.replace(".NS", "").replace(".BO", "")
+    for suffix in [".NS", ".BO"]:
+        try:
+            ticker = f"{clean_base}{suffix}"
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=1d"
+            headers = {"User-Agent": "Mozilla/5.0"}
+            r = requests.get(url, headers=headers, timeout=4)
+            if r.status_code == 200:
+                res = r.json()["chart"]["result"][0]
+                ltp = res["meta"].get("regularMarketPrice")
+                if ltp:
+                    return round(float(ltp), 2)
+        except Exception:
+            pass
 
     return None
 
