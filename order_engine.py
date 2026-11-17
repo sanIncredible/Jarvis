@@ -255,6 +255,15 @@ def resolve_dhan_security_id(symbol):
         except Exception:
             pass
 
+    # Instant lookup from pre-compiled Master Symbol Registry
+    try:
+        from master_registry import get_master_symbol
+        m_info = get_master_symbol(sym_u)
+        if m_info and m_info.get("dhan_id"):
+            return m_info["dhan_id"]
+    except Exception:
+        pass
+
     # Download Dhan scrip master CSV if not cached
     try:
         url = "https://images.dhan.co/api-data/api-scrip-master.csv"
@@ -743,6 +752,36 @@ def calculate_order_sizing(quote_data, mode_arg="mod", sl_mode="lod"):
 
     total_risk_inr = round(risk_per_share * quantity, 2)
 
+    # Dynamic "Risk-Free" Pyramiding Sizing (House Money Equation)
+    holding_info = get_active_holding_info(symbol)
+    pyramid_data = None
+    if holding_info:
+        h_qty = int(holding_info.get("qty", 0))
+        h_entry = float(holding_info.get("entry_price") or 0.0)
+        h_broker = holding_info.get("broker", "HOLDING")
+        if h_entry > 0 and h_qty > 0 and ltp > h_entry:
+            unrealized_pnl = round((ltp - h_entry) * h_qty, 2)
+            max_risk_allowed = round(unrealized_pnl * 0.50, 2)
+            sl_dist = max(1.0, ltp - sl_price)
+            risk_free_qty = max(1, int(max_risk_allowed / sl_dist))
+
+            if str(mode_arg).lower() in ("rf", "riskfree", "risk_free", "pyr_rf"):
+                quantity = risk_free_qty
+                effective_size = int(quantity * ltp)
+                actual_exposure = round(quantity * ltp, 2)
+                total_risk_inr = round(risk_per_share * quantity, 2)
+                mode_label = f"Risk-Free Pyramid ({quantity} shs)"
+
+            pyramid_data = {
+                "holding_qty": h_qty,
+                "holding_entry": h_entry,
+                "holding_broker": h_broker,
+                "unrealized_pnl": unrealized_pnl,
+                "max_risk_allowed": max_risk_allowed,
+                "risk_free_qty": risk_free_qty,
+                "is_profitable": True
+            }
+
     checklist_eval = evaluate_strategy_checklist(symbol, quote_data=quote_data, calc_data={
         "ltp": ltp,
         "day_low": day_low,
@@ -766,7 +805,8 @@ def calculate_order_sizing(quote_data, mode_arg="mod", sl_mode="lod"):
         "regime_label": regime_label,
         "regime_note": regime_note,
         "sl_mode": sl_mode.upper(),
-        "checklist": checklist_eval
+        "checklist": checklist_eval,
+        "pyramid_data": pyramid_data
     }
 
 
