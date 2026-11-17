@@ -739,25 +739,53 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
         vol_state = "Capitulation Blowout 💥" if vol_r >= 1.50 and bonde.get('dn_4_cnt', 0) >= 300 else ("Institutional Surge 🚀" if vol_r >= 1.20 else ("Subdued / Dry 💤" if vol_r < 0.40 else "Normal Baseline ⚖️"))
         lines.append(f"• <b>Vol Ratio (Inst. Participation):</b> <code>{vol_r:.2f}</code> ({bonde['above_vol_pct']:.1f}% High / {bonde['below_vol_pct']:.1f}% Low | {vol_state})")
 
-        # Top 10 Subsector / Industry Leaders (5D ROC Ranking from SBE Sheet)
-        sec_data = bonde.get("sectoral_5d_roc", {})
-        top_10 = sec_data.get("top_10", [])
-        laggards = sec_data.get("bottom_3", [])
-        if top_10:
+        # Top 10 Subsector / Industry Leaders based on Fresh High Clusters (Breadth Ledger)
+        cluster_leaders = []
+        try:
+            from breadth_ledger_parser import fetch_breadth_ledger_data, get_top_subsectors_by_cluster
+            bl_data = fetch_breadth_ledger_data(max_age_minutes=60)
+            if bl_data:
+                cluster_leaders = get_top_subsectors_by_cluster(bl_data, top_n=10, min_stocks=3)
+        except Exception:
+            cluster_leaders = []
+
+        if cluster_leaders:
             lines.append("")
-            lines.append("🏆 <b>TOP 10 SUBSECTOR LEADERS (5-Day ROC Ranking):</b>")
-            for rank, item in enumerate(top_10, 1):
-                s_name = item['sector']
-                roc = item['roc_5d_pct']
-                sign = "+" if roc > 0 else ""
-                icon = "🚀" if roc >= 3.0 else ("🟢" if roc > 0 else ("🔴" if roc < 0 else "⚪"))
+            lines.append("🏆 <b>TOP 10 SUBSECTOR LEADERS (Fresh High Cluster Density):</b>")
+            lines.append("<i>(Breadth Ledger: Share of stocks at 3-Month Highs today)</i>")
+            for rank, item in enumerate(cluster_leaders, 1):
                 badge = "🥇" if rank == 1 else ("🥈" if rank == 2 else ("🥉" if rank == 3 else f"#{rank}"))
-                lines.append(f"• {badge} <b>{s_name}:</b> <code>{sign}{roc:.2f}%</code> {icon}")
-            if laggards:
-                lag_strs = [f"{item['sector']} ({item['roc_5d_pct']:+.2f}%)" for item in laggards]
-                lines.append(f"• 🔻 <b>Laggards:</b> {' | '.join(lag_strs)}")
-            top_sec_names = " and ".join([item['sector'] for item in top_10[:2]])
-            lines.append(f"• 💡 <b>Leadership Mandate:</b> Primary institutional momentum clustered in <b>{top_sec_names}</b>. Prioritize watchlist breakout setups strictly in these top 10 subsectors.")
+                s_name = item['industry']
+                share_3m = item['share_3m_pct']
+                h3 = item['high_3m_count']
+                n = item['total_stocks']
+                leaders_str = ", ".join(item['leaders'][:3])
+                icon = "🚀" if share_3m >= 40.0 else ("🟢" if share_3m >= 20.0 else "⚪")
+                lead_txt = f" | {leaders_str}" if leaders_str else ""
+                lines.append(f"• {badge} <b>{s_name}:</b> <code>{h3}/{n}</code> at 3M High (<b>{share_3m:.1f}%</b>) {icon}{lead_txt}")
+
+            top_sec_names = " and ".join([item['industry'] for item in cluster_leaders[:2]])
+            lines.append(f"• 💡 <b>Cluster Mandate:</b> Institutional accumulation heaviest in <b>{top_sec_names}</b>. Prioritize watchlist breakout setups in these leading cluster subsectors.")
+        else:
+            # Fallback to SBE 5D ROC if Breadth Ledger API unavailable
+            sec_data = bonde.get("sectoral_5d_roc", {})
+            top_10 = sec_data.get("top_10", [])
+            laggards = sec_data.get("bottom_3", [])
+            if top_10:
+                lines.append("")
+                lines.append("🏆 <b>TOP 10 SUBSECTOR LEADERS (5-Day ROC Ranking):</b>")
+                for rank, item in enumerate(top_10, 1):
+                    s_name = item['sector']
+                    roc = item['roc_5d_pct']
+                    sign = "+" if roc > 0 else ""
+                    icon = "🚀" if roc >= 3.0 else ("🟢" if roc > 0 else ("🔴" if roc < 0 else "⚪"))
+                    badge = "🥇" if rank == 1 else ("🥈" if rank == 2 else ("🥉" if rank == 3 else f"#{rank}"))
+                    lines.append(f"• {badge} <b>{s_name}:</b> <code>{sign}{roc:.2f}%</code> {icon}")
+                if laggards:
+                    lag_strs = [f"{item['sector']} ({item['roc_5d_pct']:+.2f}%)" for item in laggards]
+                    lines.append(f"• 🔻 <b>Laggards:</b> {' | '.join(lag_strs)}")
+                top_sec_names = " and ".join([item['sector'] for item in top_10[:2]])
+                lines.append(f"• 💡 <b>Leadership Mandate:</b> Primary institutional momentum clustered in <b>{top_sec_names}</b>. Prioritize watchlist breakout setups strictly in these top 10 subsectors.")
 
     lines.append("")
     lines.append("🏛 <b>BENCHMARK &amp; MARKET CAP INDICES:</b>")
