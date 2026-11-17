@@ -826,7 +826,7 @@ def place_upstox_mtf_order(instrument_key, quantity, order_type="MARKET", price=
         "quantity": int(quantity),
         "product": "MTF",
         "validity": "DAY",
-        "price": int(round_to_clean_int(price)) if order_type.upper() == "LIMIT" else 0,
+        "price": float(round_to_tick(price, 0.05)) if order_type.upper() == "LIMIT" else 0.0,
         "tag": "JARVIS_MTF",
         "instrument_token": instrument_key,
         "order_type": order_type.upper(),
@@ -891,7 +891,7 @@ def place_dhan_mtf_order(symbol, quantity, order_type="MARKET", price=0.0):
         "validity": "DAY",
         "securityId": str(sec_id),
         "quantity": int(quantity),
-        "price": int(round_to_clean_int(price)) if order_type.upper() == "LIMIT" else 0,
+        "price": float(round_to_tick(price, 0.05)) if order_type.upper() == "LIMIT" else 0.0,
         "triggerPrice": 0.0,
         "afterMarketOrder": not market_open
     }
@@ -957,7 +957,7 @@ def place_zerodha_order(symbol, quantity, order_type="MARKET", product="CNC", pr
         "quantity": int(quantity),
         "product": product.upper(),
         "validity": "DAY",
-        "price": int(round_to_clean_int(price)) if order_type.upper() == "LIMIT" else 0,
+        "price": float(round_to_tick(price, 0.05)) if order_type.upper() == "LIMIT" else 0.0,
         "tag": "JARVIS"
     }
 
@@ -2229,10 +2229,104 @@ def cancel_symbol_stop_loss(symbol, broker=None):
     return cancelled
 
 
+def update_tracked_holding_on_fill(symbol, broker, product, quantity, fill_price, sl_price, target_price=None):
+    """
+    Instantly updates tracked_holdings.json and config_credentials.json upon successful order fill.
+    Eliminates the double-pyramid race condition and guarantees real-time sync with scanner & cockpit.
+    """
+    sym_u = (symbol or "").strip().upper()
+    b_name = (broker or "").strip().upper()
+    prod = "CNC" if b_name == "ZERODHA" else (product.split()[0].upper() if product else "MTF")
+    qty = int(quantity)
+    f_price = float(fill_price)
+    clean_sl = float(sl_price) if sl_price else 0.0
+    tgt_p = float(target_price) if target_price else (round(f_price + (abs(f_price - clean_sl) * 2.0), 2) if clean_sl > 0 else round(f_price * 1.05, 2))
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    th_file = SCRIPT_DIR / "tracked_holdings.json"
+    th_data = {}
+    if th_file.is_file():
+        try:
+            with open(th_file, "r", encoding="utf-8") as f:
+                th_data = json.load(f)
+        except Exception:
+            th_data = {}
+
+    if sym_u in th_data:
+        # Pyramiding fill: blend weighted average entry price
+        old_qty = int(th_data[sym_u].get("qty", 0))
+        old_entry = float(th_data[sym_u].get("entry_price", f_price) or f_price)
+        total_qty = old_qty + qty
+        new_avg = round(((old_qty * old_entry) + (qty * f_price)) / total_qty, 2) if total_qty > 0 else f_price
+        old_sl = float(th_data[sym_u].get("sl", 0) or 0)
+        new_sl = max(clean_sl, old_sl) if clean_sl > 0 else old_sl
+
+        th_data[sym_u].update({
+            "broker": b_name,
+            "product": prod,
+            "qty": total_qty,
+            "entry_price": new_avg,
+            "sl": new_sl,
+            "target": tgt_p,
+            "notes": f"{b_name} Holding | Pyramided (+{qty} shs @ ₹{f_price:,.2f})"
+        })
+    else:
+        # Fresh initial position
+        th_data[sym_u] = {
+            "broker": b_name,
+            "product": prod,
+            "qty": qty,
+            "entry_price": round(f_price, 2),
+            "sl": clean_sl,
+            "target": round(tgt_p, 2),
+            "entry_date": today_str,
+            "notes": f"{b_name} {prod} Position (Live Executed)"
+        }
+
+    try:
+        with open(th_file, "w", encoding="utf-8") as f:
+            json.dump(th_data, f, indent=2)
+    except Exception as e:
+        print(f"Error persisting tracked_holdings.json on fill: {e}")
+
+    # Ensure symbol is tracked in config_credentials.json tracked_swing_holdings
+    try:
+        cfg = load_config()
+        t_holdings = cfg.get("tracked_swing_holdings", [])
+        if sym_u not in [s.upper() for s in t_holdings]:
+            t_holdings.append(sym_u)
+            cfg["tracked_swing_holdings"] = t_holdings
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=2)
+    except Exception as e:
+        print(f"Notice updating config tracked_swing_holdings on fill: {e}")
+
+
+def update_tracked_holding_on_exit(symbol, remaining_qty):
+    """Updates or prunes symbol from tracked_holdings.json upon partial or full exit."""
+    sym_u = (symbol or "").strip().upper()
+    th_file = SCRIPT_DIR / "tracked_holdings.json"
+    if th_file.is_file():
+        try:
+            with open(th_file, "r", encoding="utf-8") as f:
+                th_data = json.load(f)
+            if sym_u in th_data:
+                if remaining_qty <= 0:
+                    del th_data[sym_u]
+                else:
+                    th_data[sym_u]["qty"] = int(remaining_qty)
+                    th_data[sym_u]["notes"] += f" | Partial Exit ({remaining_qty} shs remaining)"
+                with open(th_file, "w", encoding="utf-8") as f:
+                    json.dump(th_data, f, indent=2)
+        except Exception as e:
+            print(f"Notice updating tracked_holdings on exit: {e}")
+
+
 def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
     """
     Executes full pipeline across any requested broker:
     Upstox (MTF), Dhan (MTF), or Zerodha (CNC).
+    Uses Marketable Limit Order (+0.3% max ceiling) to eliminate slippage on volatile breakouts.
     """
     symbol = resolve_symbol(symbol)
     target_broker = (broker or get_default_broker()).strip().lower()
@@ -2248,26 +2342,35 @@ def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
         return False, f"Calculated quantity is 0. LTP (₹{calc['ltp']}) exceeds allocated size (₹{calc['target_size']:,})."
 
     product_label = "MTF"
+    ltp = float(calc.get("ltp", 0) or 0)
+    # Marketable Limit Order (+0.3% slippage protection ceiling): fills with market velocity while preventing freak ask sweeps
+    marketable_limit = round_to_tick(ltp * 1.003, 0.05) if ltp > 0 else 0.0
+    order_type = "LIMIT" if marketable_limit > 0 else "MARKET"
+    order_price = marketable_limit if marketable_limit > 0 else 0.0
+
     # Execute at designated broker
     if target_broker == "upstox":
         success, resp = place_upstox_mtf_order(
             instrument_key=calc["instrument_key"],
             quantity=calc["quantity"],
-            order_type="MARKET"
+            order_type=order_type,
+            price=order_price
         )
     elif target_broker == "dhan":
         success, resp = place_dhan_mtf_order(
             symbol=symbol,
             quantity=calc["quantity"],
-            order_type="MARKET"
+            order_type=order_type,
+            price=order_price
         )
     elif target_broker == "zerodha":
         product_label = "CNC (Delivery)"
         success, resp = place_zerodha_order(
             symbol=symbol,
             quantity=calc["quantity"],
-            order_type="MARKET",
-            product="CNC"
+            order_type=order_type,
+            product="CNC",
+            price=order_price
         )
     else:
         return False, f"Unsupported broker: {target_broker}"
@@ -2298,6 +2401,9 @@ def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
     calc["sl_placed"] = sl_placed
     calc["sl_order_id"] = sl_order_id
     calc["sl_error"] = sl_error
+    calc["order_type"] = order_type
+    calc["limit_price"] = order_price
+    calc["slippage_cap"] = "+0.3% (Marketable Limit)"
 
     record = {
         "timestamp": now_ist,
@@ -2305,6 +2411,8 @@ def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
         "broker": target_broker.upper(),
         "product": product_label,
         "action": "BUY",
+        "order_type": order_type,
+        "limit_price": order_price,
         "quantity": calc["quantity"],
         "ltp": calc["ltp"],
         "exposure": calc["actual_exposure"],
@@ -2320,6 +2428,21 @@ def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
     }
 
     log_executed_order(record)
+
+    # Instantly update tracked_holdings.json & in-memory cache to prevent double-pyramid race
+    if success:
+        try:
+            update_tracked_holding_on_fill(
+                symbol=symbol,
+                broker=target_broker,
+                product=product_label,
+                quantity=calc["quantity"],
+                fill_price=calc["ltp"],
+                sl_price=calc.get("stop_loss", 0),
+                target_price=calc.get("target")
+            )
+        except Exception as e:
+            print(f"Notice updating tracked holdings on fill: {e}")
 
     # Automatically add stock to watchlist.txt so scanner monitors it immediately
     try:
@@ -2930,6 +3053,7 @@ def execute_broker_exit(symbol, broker=None, exit_qty=None, qty_ratio="all"):
                         "action": "EXIT",
                         **res_dict
                     })
+                    update_tracked_holding_on_exit(target_pos["symbol"], abs_qty - actual_exit_qty)
                     return True, res_dict
                 err = data.get("errorMessage") or data.get("message") or "Order failed"
                 return False, f"Dhan error: {err}"
@@ -3003,6 +3127,7 @@ def execute_broker_exit(symbol, broker=None, exit_qty=None, qty_ratio="all"):
                         "action": "EXIT",
                         **res_dict
                     })
+                    update_tracked_holding_on_exit(target_pos["symbol"], abs_qty - actual_exit_qty)
                     return True, res_dict
                 return False, data.get("message", "Zerodha exit failed")
         except urllib.error.HTTPError as he:
@@ -3082,6 +3207,7 @@ def execute_broker_exit(symbol, broker=None, exit_qty=None, qty_ratio="all"):
                         "action": "EXIT",
                         **res_dict
                     })
+                    update_tracked_holding_on_exit(target_pos["symbol"], abs_qty - actual_exit_qty)
                     return True, res_dict
                 errors = data.get("errors", [])
                 err = errors[0].get("message") if errors else (data.get("message") or "Exit failed")
