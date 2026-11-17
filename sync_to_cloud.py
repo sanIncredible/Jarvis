@@ -179,6 +179,12 @@ def main():
                 sync_file_to_github_api(gh_cfg, "exited_stocks_manager.py", "Update exited stocks re-entry manager")
             if (BASE_DIR / "exited_stocks.json").is_file():
                 sync_file_to_github_api(gh_cfg, "exited_stocks.json", "Update exited stocks ledger")
+            if (BASE_DIR / "pre_flight_check.py").is_file():
+                sync_file_to_github_api(gh_cfg, "pre_flight_check.py", "Update pre-flight check diagnostic engine")
+            if (BASE_DIR / "master_registry.py").is_file():
+                sync_file_to_github_api(gh_cfg, "master_registry.py", "Update master symbol registry engine")
+            if (BASE_DIR / "master_symbol_registry.json").is_file():
+                sync_file_to_github_api(gh_cfg, "master_symbol_registry.json", "Update master symbol registry data")
             if ok_w and ok_j:
                 print("   ✅ GitHub Cloud Sync: SUCCESS! (watchlist, data.json, dashboard & index.html live)")
                 github_ok = True
@@ -277,8 +283,12 @@ def main():
             str(BASE_DIR / "order_engine.py"),
             str(BASE_DIR / "candidate_scanner.py"),
             str(BASE_DIR / "eod_hindsight_report.py"),
-            str(BASE_DIR / "exited_stocks_manager.py")
+            str(BASE_DIR / "exited_stocks_manager.py"),
+            str(BASE_DIR / "pre_flight_check.py"),
+            str(BASE_DIR / "master_registry.py")
         ]
+        if (BASE_DIR / "master_symbol_registry.json").is_file():
+            scp_files.append(str(BASE_DIR / "master_symbol_registry.json"))
         if (BASE_DIR / "exited_stocks.json").is_file():
             scp_files.append(str(BASE_DIR / "exited_stocks.json"))
         if (BASE_DIR / "candidates.txt").is_file():
