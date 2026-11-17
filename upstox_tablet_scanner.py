@@ -437,15 +437,23 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
         alert_type = None
 
         # 0. Diamond Tier: Strict Criteria Setup (Narrow Prev Day + Strong Start + PDH Breakout)
+        is_nr_stock = bool((d.get("prev_range_ratio") and d.get("prev_range_ratio") <= 0.75) or d.get("is_inside_day") or d.get("is_narrow_prev_day"))
+        is_reversal_sig = bool(m.get("is_reversal"))
+
         if m.get("is_strict") or ("STRICT" in signal):
             alert_type = "ORB_STRICT_TIER1"
-            if m.get("is_reversal"):
+            if is_reversal_sig:
                 trigger_label = "💎 STRICT (NR + REVERSAL + PDH)"
             else:
                 trigger_label = "💎 STRICT (NR + SS + PDH Break)"
 
-        # 1. Tier 0: Bullish Reversal Breakout (Broke ORB Low first, now breaking ORB High)
-        elif m.get("is_reversal"):
+        # 1. Tier 0: Afternoon Spring Reversal (Coiled NR stock broke ORB Low earlier, now breaking ORB High & PDH)
+        elif is_reversal_sig and pdh_broken and is_nr_stock:
+            alert_type = "ORB_SPRING_REVERSAL"
+            trigger_label = "💎 Spring Reversal (NR + L→H + PDH)"
+
+        # 2. Bullish Reversal Breakout (Broke ORB Low first, now breaking ORB High)
+        elif is_reversal_sig:
             alert_type = "ORB_REVERSAL"
             if pdh_broken:
                 trigger_label = "🔄 Reversal + PDH"
@@ -487,6 +495,11 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                 is_gap_up = bool(m.get("is_gap_up") or d.get("is_gap_up"))
                 gap_pct = m.get("gap_pct") if m.get("gap_pct") is not None else d.get("gap_pct")
 
+                is_spring_rev = bool(alert_type == "ORB_SPRING_REVERSAL")
+                if is_spring_rev and risk_pct and risk_pct > 2.0:
+                    day_low = round(float(ltp) * 0.985, 2)
+                    risk_pct = 1.5
+
                 holding_info = open_holdings.get(sym)
                 is_pyramid = holding_info is not None
 
@@ -495,6 +508,7 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                     "ltp": float(ltp),
                     "trigger": trigger_label,
                     "is_strict": bool(m.get("is_strict") or ("STRICT" in signal)),
+                    "is_spring_reversal": is_spring_rev,
                     "is_pyramid": is_pyramid,
                     "holding_info": holding_info,
                     "prev_range_ratio": d.get("prev_range_ratio"),
@@ -532,8 +546,35 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
             except Exception:
                 pass
 
+    # Upgrade 5: Event-Driven Real-Time Watchlist Breadth Circuit Breaker
+    adv_cnt = 0
+    dec_cnt = 0
+    for _, d, _ in results:
+        ltp_val = float(d.get("ltp") or 0.0)
+        pc_val = float(d.get("prev_close") or 0.0)
+        if ltp_val > 0 and pc_val > 0:
+            if ltp_val > pc_val:
+                adv_cnt += 1
+            elif ltp_val < pc_val:
+                dec_cnt += 1
+
+    tot_tr = adv_cnt + dec_cnt
+    b_ratio = (adv_cnt / tot_tr) if tot_tr > 0 else 1.0
+    is_circuit_breaker = False
+    if tot_tr >= 5 and b_ratio < 0.35:
+        is_circuit_breaker = True
+        is_defensive = True
+        regime_label = f"BREADTH FLUSH ({adv_cnt}/{tot_tr} Adv)"
+
     # Build Streamlined Action Card (Optimized for iPhone 15 Pro Max: ~38-42 chars/line)
-    if is_defensive:
+    if is_circuit_breaker:
+        lines = [
+            f"⚡ <b>JARVIS BREAKOUT ALERT — {t_clean}</b>",
+            f"🚨 <b>CIRCUIT BREAKER: {regime_label}</b>",
+            f"⚠️ <i>{dec_cnt}/{tot_tr} stocks declining. SCALPS ONLY!</i>",
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        ]
+    elif is_defensive:
         lines = [
             f"⚡ <b>JARVIS BREAKOUT ALERT — {t_clean}</b>",
             f"⛔ <b>DEFENSIVE REGIME ({regime_label})</b>",
@@ -568,6 +609,9 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
         elif is_pyramid:
             icon = "🔺"
             tag = "PYRAMID ADD-ON"
+        elif b.get("is_spring_reversal"):
+            icon = "💎🔄"
+            tag = "SPRING REVERSAL"
         elif is_strict_stock:
             icon = "💎"
             tag = "STRICT PLAYBOOK"
@@ -667,7 +711,7 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
             is_pyr = b.get("is_pyramid")
             if is_pyr:
                 kb_buttons.append([
-                    {"text": f"🔺 Pyramid {sym} (50k)", "callback_data": f"buy_prep:{sym}:50k:lod:default"},
+                    {"text": f"🔺 Pyramid {sym} (Risk-Free)", "callback_data": f"buy_prep:{sym}:rf:lod:default"},
                     {"text": f"🔺 Pyramid {sym} (1.0L)", "callback_data": f"buy_prep:{sym}:mod:lod:default"}
                 ])
             elif is_defensive:
