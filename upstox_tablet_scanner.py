@@ -1634,10 +1634,13 @@ def get_active_watchlist():
                 with open(w_path, "r", encoding="utf-8", errors="replace") as f:
                     content = f.read().replace("\r\n", "\n").replace("\r", "\n")
                     lines = [l.strip().upper().replace(",", " ") for l in content.split("\n") if l.strip() and not l.startswith("#")]
+                    IGNORED_TOKENS = {"NSE", "BSE", "NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "MIDCPNIFTY", "CNX500"}
                     syms = []
                     for line in lines:
                         for s in line.split():
                             canonical = SYMBOL_ALIASES.get(s, s)
+                            if canonical in IGNORED_TOKENS:
+                                continue
                             syms.append(canonical)
                     if syms:
                         return list(dict.fromkeys(syms))
@@ -1651,7 +1654,8 @@ def get_active_watchlist():
                     cfg = json.load(f)
                     syms = cfg.get("watchlist")
                     if syms and isinstance(syms, list):
-                        return [SYMBOL_ALIASES.get(s.strip().upper(), s.strip().upper()) for s in syms if s.strip()]
+                        IGNORED_TOKENS = {"NSE", "BSE", "NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "MIDCPNIFTY", "CNX500"}
+                        return [SYMBOL_ALIASES.get(s.strip().upper(), s.strip().upper()) for s in syms if s.strip() and SYMBOL_ALIASES.get(s.strip().upper(), s.strip().upper()) not in IGNORED_TOKENS]
             except Exception:
                 pass
 
@@ -2610,8 +2614,9 @@ class ScannerHttpHandler(http.server.BaseHTTPRequestHandler):
                     except Exception:
                         pass
 
-        if self.path.startswith('/candidates_90d_momo.json'):
-            for cf in ["candidates_90d_momo.json", os.path.join(script_dir, "candidates_90d_momo.json")]:
+        if self.path.startswith('/candidates_90d_nr.json') or self.path.startswith('/candidates_90d_momo.json'):
+            target_f = "candidates_90d_nr.json" if self.path.startswith('/candidates_90d_nr.json') else "candidates_90d_momo.json"
+            for cf in [target_f, os.path.join(script_dir, target_f)]:
                 if os.path.isfile(cf):
                     try:
                         with open(cf, "rb") as f:
@@ -2920,14 +2925,17 @@ def export_static_html(results, now_str, port):
                 except Exception:
                     pass
 
-        # Load 90D/30% Momo candidates if available
+        # Load 90D/30% NR Momo candidates if available (prioritize NR Coils)
         momo_payload = []
-        for m_path in ["candidates_90d_momo.json", os.path.join(script_dir, "candidates_90d_momo.json")]:
-            if os.path.isfile(m_path):
+        for nr_path in ["candidates_90d_nr.json", os.path.join(script_dir, "candidates_90d_nr.json")]:
+            if os.path.isfile(nr_path):
                 try:
-                    with open(m_path, "r", encoding="utf-8") as mf:
-                        m_data = json.load(mf)
-                        for c in m_data.get("candidates", []):
+                    with open(nr_path, "r", encoding="utf-8") as nf:
+                        nr_data = json.load(nf)
+                        t1 = nr_data.get("tier1_candidates", [])
+                        t2 = nr_data.get("tier2_candidates", [])
+                        t3 = nr_data.get("tier3_candidates", [])
+                        for c in (t1 + t2 + t3):
                             momo_payload.append({
                                 "symbol": c.get("symbol"),
                                 "industry": c.get("industry"),
@@ -2935,11 +2943,39 @@ def export_static_html(results, now_str, port):
                                 "dist_52w_pct": c.get("dist_52w_pct"),
                                 "is_fresh_3m": c.get("is_fresh_3m", False),
                                 "tier": c.get("tier"),
-                                "tier_order": c.get("tier_order", 4)
+                                "tier_order": c.get("tier_order", 1 if c.get("tier") == "TIER_1_DOORSTEP" else 2),
+                                "is_nr7": c.get("is_nr7", False),
+                                "is_nr4": c.get("is_nr4", False),
+                                "is_inside": c.get("is_inside", False),
+                                "is_tight": c.get("is_tight", False),
+                                "daily_range_pct": c.get("daily_range_pct"),
+                                "nr_badge": c.get("nr_badge", ""),
+                                "nr_tags": c.get("nr_tags", []),
+                                "curr_close": c.get("curr_close")
                             })
-                    break
+                    if momo_payload:
+                        break
                 except Exception:
                     pass
+        if not momo_payload:
+            for m_path in ["candidates_90d_momo.json", os.path.join(script_dir, "candidates_90d_momo.json")]:
+                if os.path.isfile(m_path):
+                    try:
+                        with open(m_path, "r", encoding="utf-8") as mf:
+                            m_data = json.load(mf)
+                            for c in m_data.get("candidates", []):
+                                momo_payload.append({
+                                    "symbol": c.get("symbol"),
+                                    "industry": c.get("industry"),
+                                    "gain_tier": c.get("gain_tier"),
+                                    "dist_52w_pct": c.get("dist_52w_pct"),
+                                    "is_fresh_3m": c.get("is_fresh_3m", False),
+                                    "tier": c.get("tier"),
+                                    "tier_order": c.get("tier_order", 4)
+                                })
+                        break
+                    except Exception:
+                        pass
 
         payload = {
             "updated_at": now_str,
@@ -3132,6 +3168,27 @@ def run_upstox_scanner(once=False, auto_open_web=False):
     timer_thread.start()
 
     # Background periodic scanner thread (orchestrates 09:14 warmup, 09:15 open, and 3m candles)
+    _last_auto_gtt_date = [None]
+
+    def check_and_run_auto_gtt_rearm(curr_now=None):
+        """
+        Automated 15:20 PM IST Overnight GTT Stop-Loss Rearm:
+        Every trading day (Mon-Fri) at 15:20 IST, automatically audits all open positions
+        across Upstox and Dhan, submitting permanent GTT stop-loss orders before the market close (15:30).
+        """
+        if curr_now is None:
+            curr_now = get_ist_now()
+        if curr_now.weekday() < 5 and curr_now.hour == 15 and 20 <= curr_now.minute <= 28:
+            today_str = curr_now.strftime('%Y-%m-%d')
+            if _last_auto_gtt_date[0] != today_str:
+                _last_auto_gtt_date[0] = today_str
+                try:
+                    from order_engine import rearm_overnight_stop_losses
+                    print(f"\n{YELLOW}🕒 15:20 PM IST: Triggering automated Overnight GTT Stop-Loss Rearm...{RESET}")
+                    rearm_overnight_stop_losses(notify=True)
+                except Exception as e:
+                    print(f"Notice: Automated 15:20 GTT rearm exception: {e}")
+
     def periodic_scanner():
         global latest_results, last_scan_time, next_refresh_timestamp, current_market_event
         while not stop_scanner_event.is_set():
@@ -3148,6 +3205,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
             while wait > 0 and not stop_scanner_event.is_set():
                 sleep_sec = min(poll_step, max(1.0, wait))
                 time.sleep(sleep_sec)
+                check_and_run_auto_gtt_rearm()
                 wait = (target - get_ist_now()).total_seconds()
 
                 # Fast quote pulse during prime window: check for instant breakouts without waiting 3 minutes
@@ -3191,6 +3249,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
             new_res = scan_watchlist()
             cur_time = get_ist_now().strftime('%H:%M:%S IST')
             evaluate_and_dispatch_alerts(new_res, cur_time)
+            check_and_run_auto_gtt_rearm()
 
             # Determine next target event
             nxt_now = get_ist_now()
