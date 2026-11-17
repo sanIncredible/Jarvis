@@ -192,7 +192,7 @@
     "status": "REARMED",
     "notes": "Overnight Auto-Rearm (Default 2.5% SL)",
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-17 11:37:33"
+    "ratcheted_at": "2026-11-17 12:35:27"
   },
   {
     "timestamp": "2026-11-08 23:51:10 IST",
@@ -272,9 +272,13 @@
     "price": 1632.95,
     "ltp": 1967.0,
     "exposure": 164927.95,
-    "stop_loss": 1608.46,
+    "stop_loss": 1635,
     "status": "PLACED",
-    "notes": "Zerodha CNC Swing Holding"
+    "notes": "Zerodha CNC Swing Holding",
+    "breakeven_ratcheted": true,
+    "ratcheted_at": "2026-11-17 14:00:06",
+    "sl_order_id": "343476050",
+    "sl_status": "PENDING"
   },
   {
     "timestamp": "2026-11-16 09:15:00 IST",
@@ -287,9 +291,11 @@
     "price": 286.45,
     "ltp": 293.7,
     "exposure": 114866.45,
-    "stop_loss": 282.15,
+    "stop_loss": 287,
     "status": "PLACED",
-    "notes": "Zerodha CNC Swing Holding"
+    "notes": "Zerodha CNC Swing Holding",
+    "breakeven_ratcheted": true,
+    "ratcheted_at": "2026-11-17 13:59:40"
   },
   {
     "timestamp": "2026-11-02 09:15:00 IST",
@@ -302,9 +308,13 @@
     "price": 1792.95,
     "ltp": 2128.7,
     "exposure": 91440.45,
-    "stop_loss": 1746.0,
+    "stop_loss": 1796,
     "status": "PLACED",
-    "notes": "Zerodha CNC Swing Holding"
+    "notes": "Zerodha CNC Swing Holding",
+    "breakeven_ratcheted": true,
+    "ratcheted_at": "2026-11-17 14:00:07",
+    "sl_order_id": "342986108",
+    "sl_status": "PENDING"
   },
   {
     "timestamp": "2026-11-13 09:15:00 IST",
@@ -365,5 +375,35 @@
     "stop_loss": 786.42,
     "status": "PLACED",
     "notes": "Dhan MTF Swing Holding"
+  },
+  {
+    "timestamp": "2026-11-17 15:10:13 IST",
+    "symbol": "GRAPHITE",
+    "broker": "DHAN",
+    "product": "MTF",
+    "action": "SELL",
+    "quantity": 151,
+    "ltp": 793.2,
+    "exposure": 119773.2,
+    "stop_loss": 786,
+    "sl_order_id": "34132611171606",
+    "sl_status": "PENDING",
+    "status": "REARMED",
+    "notes": "Overnight Auto-Rearm (Tracked Holdings)"
+  },
+  {
+    "timestamp": "2026-11-17 15:10:13 IST",
+    "symbol": "FEDFINA",
+    "broker": "ZERODHA",
+    "product": "MTF",
+    "action": "SELL",
+    "quantity": 501,
+    "ltp": 155.15,
+    "exposure": 77730.15,
+    "stop_loss": 154,
+    "sl_order_id": "345204229",
+    "sl_status": "PENDING",
+    "status": "REARMED",
+    "notes": "Overnight Auto-Rearm (Default 2.5% SL)"
   }
 ]
