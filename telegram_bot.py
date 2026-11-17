@@ -1173,7 +1173,7 @@ def handle_positions_command():
     status_str = " | ".join(status_parts)
 
     lines = [
-        "📊 <b>JARVIS LIVE PORTFOLIO & POSITIONS</b>",
+        "📊 <b>JARVIS LIVE PORTFOLIO (Previous & Today)</b>",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     ]
 
@@ -1212,8 +1212,19 @@ def handle_positions_command():
 
             sl_str = f"₹{sl_p:,.2f}" if sl_p > 0 else "<i>Not set</i>"
 
+            h_days = p.get("holding_days", 0)
+            e_dt = p.get("entry_date", "")
+            if h_days and h_days > 0:
+                h_tag = f"🗓️ <b>Holding:</b> {h_days} days"
+                if e_dt:
+                    h_tag += f" (Entry: {str(e_dt)[:10]})"
+            elif "Carried" in str(p.get("source", "")):
+                h_tag = "🗓️ <b>Carry-Forward Swing</b>"
+            else:
+                h_tag = "⚡ <b>Entered Today</b>"
+
             card = (
-                f"{pnl_icon} <b>{sym}</b> [<code>{broker} • {prod}</code>]\n"
+                f"{pnl_icon} <b>{sym}</b> [<code>{broker} • {prod}</code>] — {h_tag}\n"
                 f"  • <b>Qty:</b> {qty_sign}{qty} @ ₹{avg_p:,.2f} | <b>LTP:</b> ₹{ltp:,.2f}\n"
                 f"  • <b>P&L:</b> {pnl_icon} <b>{pnl_str}</b> ({pct_sign}{pnl_pct:.2f}%)\n"
                 f"  • <b>Exposure:</b> ₹{exposure:,.2f}\n"
