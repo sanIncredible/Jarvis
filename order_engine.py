@@ -341,32 +341,34 @@ def fetch_live_quote(symbol):
             "source": "Scanner Cache (data.json)"
         }, None
 
-    # Fallback 2: Yahoo Finance API
-    try:
-        clean_s = symbol.upper().replace(".NS", "").replace("NSE:", "")
-        yf_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{clean_s}.NS?interval=1d&range=1d"
-        req_yf = urllib.request.Request(yf_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-        with urllib.request.urlopen(req_yf, timeout=8) as resp:
-            data = json.loads(resp.read().decode())
-            meta = data["chart"]["result"][0]["meta"]
-            ltp = meta.get("regularMarketPrice")
-            prev_close = meta.get("chartPreviousClose") or meta.get("previousClose")
-            day_high = meta.get("regularMarketDayHigh") or ltp
-            day_low = meta.get("regularMarketDayLow") or (ltp * 0.985 if ltp else 0)
+    # Fallback 2: Yahoo Finance API (supports both NSE .NS and BSE .BO tickers like NSE.BO)
+    clean_s = symbol.upper().replace(".NS", "").replace("NSE:", "").replace(".BO", "").replace("BSE:", "")
+    for suffix in [".NS", ".BO"]:
+        try:
+            yf_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{clean_s}{suffix}?interval=1d&range=1d"
+            req_yf = urllib.request.Request(yf_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+            with urllib.request.urlopen(req_yf, timeout=8) as resp:
+                data = json.loads(resp.read().decode())
+                meta = data["chart"]["result"][0]["meta"]
+                ltp = meta.get("regularMarketPrice")
+                prev_close = meta.get("chartPreviousClose") or meta.get("previousClose")
+                day_high = meta.get("regularMarketDayHigh") or ltp
+                day_low = meta.get("regularMarketDayLow") or (ltp * 0.985 if ltp else 0)
 
-            if ltp and ltp > 0:
-                return {
-                    "symbol": symbol.upper(),
-                    "instrument_key": instrument_key,
-                    "ltp": float(ltp),
-                    "day_low": float(day_low) if day_low else float(ltp * 0.985),
-                    "day_high": float(day_high) if day_high else float(ltp),
-                    "day_open": float(ltp),
-                    "prev_close": float(prev_close) if prev_close else float(ltp),
-                    "source": "Yahoo Finance (Market Feed)"
-                }, None
-    except Exception as ex:
-        return None, f"Quote fetch failed across all sources: {ex}"
+                if ltp and ltp > 0:
+                    return {
+                        "symbol": symbol.upper(),
+                        "instrument_key": instrument_key,
+                        "ltp": float(ltp),
+                        "day_low": float(day_low) if day_low else float(ltp * 0.985),
+                        "day_high": float(day_high) if day_high else float(ltp),
+                        "day_open": float(ltp),
+                        "prev_close": float(prev_close) if prev_close else float(ltp),
+                        "source": f"Yahoo Finance ({clean_s}{suffix})"
+                    }, None
+        except Exception:
+            continue
+    return None, f"Quote fetch failed across all sources for {symbol}"
 
     return None, f"Could not retrieve quote for {symbol}"
 
