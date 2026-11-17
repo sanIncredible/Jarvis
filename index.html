@@ -2270,7 +2270,7 @@
     }
     const t = Date.now();
 
-    // Prepare candidate endpoints
+        // Prepare candidate endpoints in strict priority order
     const targets = [];
     if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
       let path = window.location.pathname || '/';
@@ -2279,26 +2279,29 @@
       } else if (!path.endsWith('/')) {
         path += '/';
       }
-      targets.push({ url: window.location.origin + path + 'data.json?_t=' + t, name: 'Local Edge' });
+      targets.push({ url: window.location.origin + path + 'data.json?_t=' + t, name: 'Local Edge', priority: 1 });
     }
-    // High-speed edge CDN (Cloudflare/Fastly - bypasses ISP blocks & CORS issues)
-    targets.push({ url: `${JSDELIVR_URL}?_t=${t}`, name: 'Edge CDN' });
-    // Raw GitHub Stream
-    targets.push({ url: `${RAW_GITHUB_URL}?_t=${t}`, name: 'GitHub Raw' });
+    // Raw GitHub Stream (bypasses CDN cache directly from GitHub git origin)
+    targets.push({ url: `${RAW_GITHUB_URL}?_t=${t}`, name: 'GitHub Raw', priority: 2 });
+    // High-speed edge CDN (Cloudflare/Fastly) as backup
+    targets.push({ url: `${JSDELIVR_URL}?_t=${t}`, name: 'Edge CDN', priority: 3 });
 
-    // Concurrently fetch candidate endpoints and select the freshest & most complete payload
+    // Concurrently fetch candidate endpoints and select the freshest payload
     try {
       const settled = await Promise.allSettled(targets.map(async (target) => {
-        const res = await fetchWithTimeout(target.url, { cache: 'no-store' }, 3500);
+        const res = await fetchWithTimeout(target.url, { 
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+        }, 3500);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (!data || !data.stocks || !data.stocks.length) throw new Error('Empty payload');
-        return { data, name: target.name };
+        return { data, name: target.name, priority: target.priority };
       }));
 
       const successful = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
       if (successful.length > 0) {
-        // Sort: prefer freshest payload (updated_ts or parsed updated_at)
+        // Sort: strictly prefer freshest epoch timestamp
         successful.sort((a, b) => {
           const tsA = a.data.updated_ts || 0;
           const tsB = b.data.updated_ts || 0;
@@ -2317,7 +2320,8 @@
             return secB - secA; // Freshest IST time wins
           }
 
-          return (b.data.stocks?.length || 0) - (a.data.stocks?.length || 0);
+          // In case of exact timestamp match, prefer higher priority source (Local Edge > GitHub Raw > Edge CDN)
+          return (a.priority || 99) - (b.priority || 99);
         });
         const best = successful[0];
         processIncomingData(best.data, best.name);
