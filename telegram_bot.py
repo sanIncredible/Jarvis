@@ -633,7 +633,7 @@ def handle_add_command(args_text):
     if already_present:
         res += f"ℹ️ <i>Already present: {', '.join(already_present)}</i>\n"
     res += (
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
         "⚡ <i>Background scan & GitHub Cloud sync triggered!</i>\n"
         "📊 <a href='https://sanincredible.github.io/Jarvis/'>Open Live Dashboard</a>"
     )
@@ -681,7 +681,7 @@ def handle_remove_command(args_text):
     if not_found:
         res += f"ℹ️ <i>Not in list: {', '.join(not_found)}</i>\n"
     res += (
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
         "📊 <a href='https://sanincredible.github.io/Jarvis/'>Open Live Dashboard</a>"
     )
     return res
@@ -695,13 +695,13 @@ def handle_watchlist_command():
 
     lines = [
         f"📋 <b>ACTIVE WATCHLIST ({len(syms)} Stocks)</b>",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        "━━━━━━━━━━━━━━━━━━━━━━"
     ]
     for idx, s in enumerate(syms, 1):
         tv_link = f"https://in.tradingview.com/chart/?symbol=NSE:{s}"
         lines.append(f"<b>{idx}.</b> <a href='{tv_link}'>{s}</a>")
 
-    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("💡 <i>Use /add &lt;SYM&gt; to add or /remove &lt;SYM&gt; to delete.</i>")
     lines.append("📊 <a href='https://sanincredible.github.io/Jarvis/'>Open Live Dashboard</a>")
     return "\n".join(lines)
@@ -742,7 +742,7 @@ def handle_token_status_command():
 
     lines = [
         "⚡ <b>JARVIS BROKER TOKENS & SYSTEM STATUS</b>",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        "━━━━━━━━━━━━━━━━━━━━━━"
     ]
 
     # 1. Upstox
@@ -782,7 +782,7 @@ def handle_token_status_command():
 
     # Watchlist & Regime
     syms = read_watchlist_symbols()
-    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━")
     lines.append(f"📋 <b>Watchlist  :</b> {len(syms)} active stocks")
 
     regime_file = SCRIPT_DIR / "market_regime.json"
@@ -796,7 +796,7 @@ def handle_token_status_command():
             pass
 
     lines.append(f"🕒 <b>Checked At :</b> {get_ist_now().strftime('%H:%M:%S IST')}")
-    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("💡 <i>Tap button below or use /login for 1-click mobile renewal:</i>")
 
     domain = "https://tidbit-component-national.ngrok-free.dev"
@@ -814,7 +814,7 @@ def handle_login_command():
     domain = "https://tidbit-component-national.ngrok-free.dev"
     lines = [
         "⚡ <b>JARVIS 1-CLICK MOBILE TOKEN REFRESH</b>",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "━━━━━━━━━━━━━━━━━━━━━━",
         "Tap the button below to log in directly on your phone:",
         "",
         "• <b>Upstox Pro</b>: 24-hr daily session token",
@@ -857,7 +857,7 @@ def handle_update_token_command(broker_name, token_str):
             f"✅ <b>{b_name.upper()} Token Successfully Updated & Verified!</b>\n"
             f"• <b>Status:</b> 🟢 ACTIVE\n"
             f"• <b>Verification:</b> {msg}\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
             "🚀 <i>The scanner engine has adopted the new credentials immediately.</i>"
         )
         send_topic_alert_async("token_refresh", card)
@@ -866,7 +866,7 @@ def handle_update_token_command(broker_name, token_str):
         card = (
             f"⚠️ <b>{b_name.upper()} Token Saved, But Verification Notice:</b>\n"
             f"• <b>Test Result:</b> {msg}\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
             "💡 <i>Please verify that your broker session is active.</i>"
         )
         send_topic_alert_async("token_refresh", card)
@@ -885,7 +885,7 @@ def handle_pasted_token(raw_text):
         f"🤖 <b>Auto-Detected {b_name.upper()} Token!</b>\n"
         f"• <b>Status:</b> {status_icon}\n"
         f"• <b>Verification:</b> {msg}\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
         "✅ <i>Credentials saved to config_credentials.json.</i>"
     )
     send_topic_alert_async("token_refresh", card)
@@ -898,7 +898,7 @@ def handle_scan_command():
     return (
         "⚡ <b>Instant Market Scan Initiated!</b>\n"
         "Compiling 3m ORB, Institutional Scores, and PDH breaches across all watchlist stocks.\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
         "📊 <a href='https://sanincredible.github.io/Jarvis/'>View Live Dashboard Results</a>"
     )
 
@@ -914,11 +914,11 @@ def handle_regime_command():
             r = json.load(f)
         return (
             f"🧭 <b>CURRENT MARKET REGIME: {r.get('state_label', 'N/A')}</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
             f"• <b>Guidance :</b> {r.get('guidance', 'N/A')}\n"
             f"• <b>Swing Alloc :</b> {r.get('swing_allocation_pct', 0)}%\n"
             f"• <b>Intra Risk  :</b> ₹{r.get('intraday_risk_per_trade', 1000):,}\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
             f"🕒 <i>Updated: {r.get('updated_at', 'Today')}</i>"
         )
     except Exception as e:
@@ -929,7 +929,7 @@ def handle_help_command():
     """Handles /help or /start"""
     return (
         "⚡ <b>JARVIS TELEGRAM COMMAND COCKPIT</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
         "🛒 <b>MTF Broker Orders:</b>\n"
         "• <code>/buy &lt;SYM&gt; [mode] [sl]</code> — Place MTF Order with LoD SL\n"
         "  - <code>/buy RELIANCE agg</code> — ₹1.5L Aggressive Size\n"
@@ -963,7 +963,7 @@ def handle_help_command():
         "• <code>/scan</code> — Trigger instant scan & push to cloud\n"
         "• <code>/regime</code> — Current market regime & risk allocation\n"
         "• <code>/status</code> — System, tokens & scanner status\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
         "📊 <a href='https://sanincredible.github.io/Jarvis/'>Open Live Web Dashboard</a>"
     )
 
@@ -977,7 +977,7 @@ def handle_funds_command():
 
     lines = [
         "💳 <b>MULTI-BROKER CAPITAL & FUNDS STATUS</b>",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        "━━━━━━━━━━━━━━━━━━━━━━"
     ]
 
     # DhanHQ
@@ -1030,7 +1030,7 @@ def handle_funds_command():
     else:
         lines.append("🟢 <b>Zerodha Kite:</b> ⚪ <i>Not Configured</i>")
 
-    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━")
     tot = funds.get("total_available_margin", 0.0)
     lines.append(f"💰 <b>Total Available Purchasing Power:</b> <b>₹{tot:,.2f}</b>")
     now_str = get_ist_now().strftime("%d %b %H:%M:%S IST")
@@ -1083,26 +1083,35 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
     checklist_data = calc.get("checklist", {})
     checklist_items = checklist_data.get("checklist", [])
     warnings = checklist_data.get("warnings", [])
+    passed_count = checklist_data.get("passed_count", 0)
+    total_count = checklist_data.get("total_count", len(checklist_items))
     scanner_sig = checklist_data.get("scanner_signal")
 
-    checklist_lines = [f"• {c['text']}" for c in checklist_items]
-    checklist_block = "\n".join(checklist_lines)
-
-    if warnings:
-        warn_lines = "\n".join([
-            f"  {i+1}. <i>{str(w).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')}</i>"
-            for i, w in enumerate(warnings)
-        ])
-        alert_block = (
-            f"\n🚨 <b>STRATEGY WARNINGS ({len(warnings)} Unsatisfied):</b>\n"
-            f"{warn_lines}\n"
-        )
+    # Exception-Only Checklist (iPhone 15 Pro Max: Hide verbose pass lines)
+    if not warnings:
+        checklist_block = f"⭐ <b>CHECKLIST ({passed_count}/{total_count} Passed):</b> All rules clean ✅"
     else:
-        alert_block = "\n⭐ <b>A+ SETUP: All Strategy Checklist Rules Satisfied!</b>\n"
+        warn_lines = "\n".join([
+            f"  • ⚠️ <i>{str(w).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')}</i>"
+            for w in warnings
+        ])
+        checklist_block = (
+            f"⚠️ <b>CHECKLIST ({passed_count}/{total_count} Passed • {len(warnings)} Warns):</b>\n"
+            f"{warn_lines}"
+        )
 
-    sig_line = f"🏷️ <b>Scanner Signal:</b> <code>{scanner_sig}</code>\n" if scanner_sig else ""
-    reg_note_safe = str(calc['regime_note']).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;') if calc.get("regime_note") else ""
-    reg_note_line = f"🛡️ <b>Regime Policy:</b> {reg_note_safe}\n" if reg_note_safe else ""
+    sig_line = f"🏷️ <b>Scanner:</b> <code>{scanner_sig}</code>\n" if scanner_sig else ""
+    # Clean compact regime line
+    reg_note_line = ""
+    if calc.get("regime_note"):
+        rn = str(calc["regime_note"]).strip()
+        # Extract core summary if verbose
+        if "Exposure capped to" in rn:
+            cap_part = rn.split("Exposure capped to")[-1].split("(")[0].strip()
+            reg_note_line = f"🛡️ <b>Regime:</b> DEFENSIVE (Capped to {cap_part})\n"
+        else:
+            clean_rn = rn.replace("🛡️", "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").strip()
+            reg_note_line = f"🛡️ <b>Regime:</b> {clean_rn}\n"
 
     canonical_sym = quote_data["symbol"]
     sym_display = f"{canonical_sym} (<i>{symbol}</i>)" if symbol.upper() != canonical_sym else canonical_sym
@@ -1118,42 +1127,39 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
     pyramid_banner = ""
     order_title = "⚡ <b>JARVIS ORDER PREVIEW</b>"
     if holding_info:
-        order_title = "⚡ <b>JARVIS ORDER PREVIEW (🔺 PYRAMID ADD-ON)</b>"
+        order_title = "⚡ <b>JARVIS ORDER PREVIEW (🔺 PYRAMID)</b>"
         h_qty = holding_info.get("qty", 0)
         h_entry = float(holding_info.get("entry_price") or 0.0)
-        h_broker = holding_info.get("broker", "HOLDING")
         h_pnl = round(((calc['ltp'] - h_entry) / h_entry) * 100.0, 1) if h_entry > 0 else 0.0
         new_q = calc['quantity']
         blended = round(((h_qty * h_entry) + (new_q * calc['ltp'])) / (h_qty + new_q), 2) if (h_qty + new_q) > 0 else calc['ltp']
+        h_entry_s = f"₹{h_entry:,.0f}" if (h_entry % 1 == 0) else f"₹{h_entry:,.2f}"
+        blended_s = f"₹{blended:,.0f}" if (blended % 1 == 0) else f"₹{blended:,.2f}"
         pyramid_banner = (
             "🔺 <b>PYRAMID ADD-ON ADVISORY:</b>\n"
-            f"• Current Position: <b>{h_qty} shs @ ₹{h_entry:,.2f}</b> on {h_broker} ({h_pnl:+.1f}%)\n"
-            f"• Proposed Add-On : <b>+{new_q} shs @ ₹{calc['ltp']:.2f}</b>\n"
-            f"• New Blended Avg : <b>₹{blended:,.2f}</b> (Total: {h_qty + new_q} shs)\n"
+            f"• Hold: <b>{h_qty} shs @ {h_entry_s}</b> ({h_pnl:+.1f}%)\n"
+            f"• Add : <b>+{new_q} shs @ ₹{calc['ltp']:.2f}</b>\n"
+            f"• Avg : <b>{blended_s}</b> (Total: {h_qty + new_q} shs)\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
         )
+
+    actual_exp = int(round(calc['actual_exposure']))
+    total_risk = int(round(calc['total_risk_inr']))
 
     preview_text = (
         f"{order_title}\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         f"{pyramid_banner}"
-        f"📌 <b>Symbol:</b> <b>{sym_display}</b> (NSE Equity)\n"
-        f"🏦 <b>Selected Broker:</b> <b>{b_label}</b>\n"
-        f"💰 <b>Size Mode:</b> {calc['mode_label']}\n"
-        f"📈 <b>Live LTP:</b> ₹{calc['ltp']:.2f}\n"
-        f"🎯 <b>Calculated Qty:</b> <b>{calc['quantity']} shares</b>\n"
-        f"💼 <b>Actual Exposure:</b> ₹{calc['actual_exposure']:,}\n"
-        f"🛑 <b>Stop Loss:</b> <b>₹{calc['stop_loss']}</b> ({calc['sl_mode']}: -{calc['risk_pct']}%)\n"
-        f"⚠️ <b>Total Risk ₹:</b> ₹{calc['total_risk_inr']:,}\n"
+        f"📌 <b>{sym_display}</b> • <b>{b_label}</b>\n"
+        f"💰 <b>Qty:</b> {calc['quantity']} shs • <b>Exposure:</b> ₹{actual_exp:,}\n"
+        f"🛑 <b>SL:</b> ₹{calc['stop_loss']} (-{calc['risk_pct']}%) • <b>Risk:</b> ₹{total_risk:,}\n"
         f"{reg_note_line}"
         f"{sig_line}"
         f"{margin_advisory}"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📋 <b>STRATEGY CHECKLIST ({checklist_data.get('passed_count', 0)}/{checklist_data.get('total_count', len(checklist_items))} Passed):</b>\n"
         f"{checklist_block}\n"
-        f"{alert_block}"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"💡 <i>Reply <code>/buy {canonical_sym} {mode} {broker} confirm</code> or tap below:</i>"
+        f"💡 <i>Reply <code>/buy {canonical_sym} {mode}</code> or tap:</i>"
     )
 
     btn_icon = "⚠️" if warnings else "✅"
@@ -1210,11 +1216,11 @@ def handle_broker_command(args):
 
     return (
         f"🏦 <b>CURRENT DEFAULT BROKER: {curr_display}</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
         f"• <b>Upstox</b>  : {u_stat} {'👈 [DEFAULT]' if curr_broker == 'upstox' else ''}\n"
         f"• <b>DhanHQ</b>  : {d_stat} {'👈 [DEFAULT]' if curr_broker == 'dhan' else ''}\n"
         f"• <b>Zerodha</b> : {z_stat} {'👈 [DEFAULT]' if curr_broker == 'zerodha' else ''}\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
         "💡 <b>To switch default broker:</b>\n"
         "• <code>/broker upstox</code>\n"
         "• <code>/broker dhan</code>\n"
@@ -1251,7 +1257,7 @@ def handle_positions_command():
 
     lines = [
         "📊 <b>JARVIS LIVE PORTFOLIO (Previous & Today)</b>",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        "━━━━━━━━━━━━━━━━━━━━━━"
     ]
 
     if not positions:
@@ -1309,7 +1315,7 @@ def handle_positions_command():
             )
             lines.append(card)
 
-    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━")
     tot_pnl = totals["total_pnl"]
     tot_pnl_icon = "🟢" if tot_pnl >= 0 else "🔴"
     tot_pnl_str = f"+₹{tot_pnl:,.2f}" if tot_pnl > 0 else (f"-₹{abs(tot_pnl):,.2f}" if tot_pnl < 0 else "₹0.00")
@@ -1324,7 +1330,7 @@ def handle_positions_command():
     lines.append(f"• <b>Total Exposure:</b> ₹{totals['total_exposure']:,.2f}")
     lines.append(f"• <b>Total Value at Risk (VaR):</b> {var_icon} <b>₹{tot_var:,.2f}</b> ({tot_var_pct:.2f}% of exposure)")
     lines.append(f"• <b>Brokers Synced:</b> {status_str}")
-    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━")
     lines.append(f"🕒 <i>Updated: {now_str}</i>")
 
     message_text = "\n".join(lines)
@@ -1389,16 +1395,13 @@ def build_exit_preview(symbol, broker_code=None):
     est_val = round(abs_qty * ltp, 2)
 
     text = (
-        "⚠️ <b>CONFIRM POSITION EXIT / SQUARE-OFF</b>\n"
+        "⚠️ <b>CONFIRM POSITION EXIT</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📌 <b>Symbol:</b> <b>{sym}</b>\n"
-        f"🏦 <b>Broker:</b> <b>{broker}</b> ({prod})\n"
-        f"📦 <b>Open Quantity:</b> <b>{abs_qty} shares</b>\n"
-        f"📈 <b>Live LTP:</b> ₹{ltp:,.2f}\n"
-        f"💰 <b>Total Est. Value:</b> ~₹{est_val:,.2f}\n"
-        f"📊 <b>Unrealized P&L:</b> {pnl_icon} <b>{pnl_str}</b> ({pct_sign}{pnl_pct:.2f}%)\n"
+        f"📌 <b>{sym}</b> • <b>{broker}</b> ({prod})\n"
+        f"📈 <b>Qty:</b> <b>{abs_qty} shs</b> @ ₹{ltp:,.2f} (~₹{est_val:,.0f})\n"
+        f"📊 <b>P&L:</b> {pnl_icon} <b>{pnl_str}</b> ({pct_sign}{pnl_pct:.2f}%)\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "<i>Select quantity to execute MARKET sell immediately:</i>"
+        "<i>Tap below to execute immediate MARKET sell:</i>"
     )
 
     btn_row1 = [
@@ -1506,7 +1509,7 @@ def handle_trailing_command():
 
     lines = [
         "🎯 <b>JARVIS LIVE TRAILING SL & RISK COCKPIT</b>",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        "━━━━━━━━━━━━━━━━━━━━━━"
     ]
 
     if not positions:
@@ -1598,16 +1601,16 @@ def handle_trailing_command():
         tot_var_pct = round((tot_var / tot_exp) * 100, 2) if tot_exp > 0 else 0.0
         var_icon = "🟢" if tot_var <= 0 else "🛡️"
 
-        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━")
         lines.append(f"🛡️ <b>Portfolio Total Value at Risk:</b> {var_icon} <b>₹{tot_var:,.2f}</b> ({tot_var_pct:.2f}% of exposure)")
 
-    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("💡 <b>Jeff Sun Momentum Trailing Framework:</b>")
     lines.append("• <b>Gain &ge; +1.5R (+2.5%):</b> Auto-Ratchet SL to Breakeven (+0.15% fee buffer)")
     lines.append("• <b>10 EMA Trailing:</b> Ride winners while daily close holds above 10 EMA")
     lines.append("• <b>Exit Trigger:</b> Daily Close &lt; 10 EMA + Next-Day 5m ORL Breakdown")
     lines.append("• <b>Overextension:</b> If stretch &ge; 3.0x ATR from 50MA, book partials & tighten")
-    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━")
     lines.append(f"🕒 <i>Updated: {now_str}</i>")
 
     message_text = "\n".join(lines)
@@ -1644,12 +1647,12 @@ def handle_journal_command():
         run_eod_sync()
         return (
             "✅ <b>TRADE JOURNAL RECONCILED & UPDATED!</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
             "• Synced live broker fills from Dhan & Zerodha Kite.\n"
             "• Auto-reconciled all carried-forward live open positions.\n"
             "• Updated 'Trade Journal' & 'Open Positions' sheets.\n"
             "• Created timestamped backup in <code>backups/</code> folder.\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
             "💡 <i>Full executive report delivered above. Type <code>/positions</code> or <code>/trail</code> to view live cards.</i>"
         )
     except Exception as e:
@@ -1677,7 +1680,7 @@ def handle_buy_command(args, from_chat_id):
     if not args:
         return (
             "🛒 <b>JARVIS MULTI-BROKER ORDER PLACEMENT</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
             "<b>Usage:</b> <code>/buy &lt;SYMBOL&gt; [mode] [sl] [broker] [confirm]</code>\n\n"
             "<b>Sizing Modes:</b>\n"
             "• <code>agg</code> / <code>1.5L</code> — Aggressive (₹1,50,000 exposure)\n"
@@ -1697,7 +1700,7 @@ def handle_buy_command(args, from_chat_id):
             "• <code>/buy TCS 50k zerodha</code> — Preview ₹50K on Zerodha\n"
             "• <code>/buy TATAMOTORS mod confirm</code> — Instant 1-shot execution\n"
             "• <code>/broker</code> — View/switch default broker\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
             "💡 <i>MTF enables 3x-4x broker leverage while capping your maximum capital exposure!</i>"
         )
 
@@ -1823,16 +1826,13 @@ def handle_callback_query(cq):
             sl_footer = "🛡️ <i>Hard Stop-Loss order placed in broker orderbook. Fully protected on exchange!</i>" if res.get("sl_placed") else f"💡 <i>Recommendation: Set GTT / SL-M trigger at ₹{res['stop_loss']} in {res['broker']} app. Added to scanner watchlist.</i>"
 
             receipt = (
-                f"🎉 <b>ORDER EXECUTED ON {res['broker']}!</b>\n"
+                f"🎉 <b>ORDER EXECUTED ON {res['broker']}</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"📌 <b>Symbol:</b> {res['symbol']}\n"
-                f"🎯 <b>Order ID:</b> <code>{res['order_id']}</code>\n"
-                f"📦 <b>Product:</b> {res['product_label']}\n"
-                f"📈 <b>Quantity:</b> <b>{res['quantity']} shares</b> @ ₹{res['ltp']}\n"
-                f"💰 <b>Exposure:</b> ₹{res['actual_exposure']:,} ({res['mode_label']})\n"
-                f"🛑 <b>Stop Loss:</b> <b>₹{res['stop_loss']}</b> ({res['sl_mode']}: -{res['risk_pct']}%)\n"
+                f"📌 <b>{res['symbol']}</b> • {res['product_label']}\n"
+                f"🎯 <b>ID:</b> <code>{res['order_id']}</code>\n"
+                f"📈 <b>Bought:</b> <b>{res['quantity']} shs @ ₹{res['ltp']}</b> (₹{res['actual_exposure']:,})\n"
+                f"🛑 <b>SL:</b> <b>₹{res['stop_loss']}</b> (-{res['risk_pct']}%) • <b>Risk:</b> ₹{res['total_risk_inr']:,}\n"
                 f"{sl_broker_line}"
-                f"⚠️ <b>Risk at SL:</b> ₹{res['total_risk_inr']:,}\n"
                 f"🌐 <b>Regime:</b> {res['regime_label']}\n"
                 f"{warn_str}"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -1845,7 +1845,7 @@ def handle_callback_query(cq):
                 f"📌 <b>Symbol:</b> {symbol}\n"
                 f"⚠️ <b>Error:</b> {res}\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"💡 <i>Check token validity (/token) or MTF eligibility of this stock on {broker.upper()}.</i>"
+                f"💡 <i>Check token validity (/token) or MTF eligibility.</i>"
             )
 
         edit_telegram_msg(chat_id, msg_id, receipt, reply_markup={"inline_keyboard": []})
@@ -2064,13 +2064,13 @@ def handle_callback_query(cq):
                 send_telegram_msg(
                     chat_id,
                     f"🛡️ <b>STOP-LOSS RATCHETED TO BREAKEVEN: {sym}</b>\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
                     f"• <b>Broker:</b> {target_pos['broker']} ({target_pos['product']})\n"
                     f"• <b>Quantity:</b> {target_pos['qty']} shs\n"
                     f"• <b>Entry Price:</b> ₹{target_pos['entry_price']:,.2f}\n"
                     f"• <b>New Hard SL:</b> <b>₹{be_sl:,.2f}</b> (Entry + 0.15% brokerage buffer)\n"
                     f"• <b>Risk Status:</b> 🟢 <b>100% Risk-Free (Free Roll!)</b>\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
                     f"💡 <i>Remaining shares are now riding the 10 EMA (₹{target_pos.get('ema10', 'N/A')}).</i>",
                     thread_id=thread_id
                 )
@@ -2471,13 +2471,13 @@ def run_trailing_surveillance_worker():
                                         ema10_val = p.get("ema10", "N/A")
                                         alert_msg = (
                                             f"🛡️ <b>JEFF SUN AUTO-TRAIL: {sym} RATCHETED TO BREAKEVEN!</b>\n"
-                                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                            "━━━━━━━━━━━━━━━━━━━━━━\n"
                                             f"🚀 <b>Target Milestone Reached:</b> <b>+{r_mult:.1f}R (+{pnl_pct:.1f}%)</b>\n"
                                             f"📌 <b>Symbol:</b> {sym} ({broker} • {prod} • {qty} shs)\n"
                                             f"📈 <b>LTP:</b> ₹{ltp:,.2f} (Entry: ₹{entry_p:,.2f})\n"
                                             f"🔒 <b>Broker Stop-Loss Ratcheted:</b> ₹{sl:,.0f} ➔ <b>₹{breakeven_sl:,.0f}</b>\n"
                                             f"💰 <b>Covered Buffer:</b> Entry + 0.15% fee buffer\n"
-                                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                            "━━━━━━━━━━━━━━━━━━━━━━\n"
                                             "🎉 <b>Capital Risk is 100% ELIMINATED!</b>\n"
                                             "• The trade is now a guaranteed risk-free runner.\n"
                                             f"• <b>Trailing Guide:</b> Riding the <b>10 EMA</b> (₹{ema10_val}). Hold until daily close &lt; 10 EMA."
