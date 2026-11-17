@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1300,8 +1300,8 @@
       <span class="tab-icon">🎯</span> <span id="txt-tab-cand">EOD Candidates</span> 
       <span id="tab-badge-cand" class="tab-badge">25</span>
     </button>
-    <button id="tab-btn-momo" class="main-tab-btn" onclick="switchMainView('momo')" title="View 90D/30% Broad Momentum Setups by Tier">
-      <span class="tab-icon">🔥</span> <span id="txt-tab-momo">90D Momo</span> 
+    <button id="tab-btn-momo" class="main-tab-btn" onclick="switchMainView('momo')" title="View 90D/30% Narrow Range (NR) Momentum Setups">
+      <span class="tab-icon">🎯</span> <span id="txt-tab-momo">90D Momo (NR)</span> 
       <span id="tab-badge-momo" class="tab-badge">0</span>
     </button>
   </div>
@@ -1527,17 +1527,33 @@
 
   </div> <!-- /#view-candidates -->
 
-  <!-- VIEW 3: 90D/30% Broad Momentum Setups (Tier-Wise Doorstep, Launchpad & Base Runway) -->
+  <!-- VIEW 3: 90D/30% Narrow Range (NR) Momentum Setups (Doorstep, Launchpad & Base Coils) -->
   <div id="view-momo" style="display:none;" class="cand-view-container">
+
+    <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:12px 18px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <div style="font-size:14px; font-weight:800; color:#34d399; display:flex; align-items:center; gap:8px;">
+          <span>🎯 90D MOMENTUM NARROW RANGE (NR) COIL RADAR</span>
+        </div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+          Institutional High-Tight Flags &amp; Volatility Squeezes (NR7 / NR4 / Inside Day / Range &le; 2.2%) with &ge;30% 90D Momentum &bull; Minimal LOD Stop-Loss Risk
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; font-size:11px; font-weight:700;">
+        <span style="color:#10b981; background:rgba(16,185,129,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.4);">🎯 NR7 Squeeze</span>
+        <span style="color:#38bdf8; background:rgba(56,189,248,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(56,189,248,0.4);">⚡ NR4 Coil</span>
+        <span style="color:#c084fc; background:rgba(192,132,252,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(192,132,252,0.4);">📦 Inside Day</span>
+      </div>
+    </div>
 
     <!-- TIER 1: PIVOT DOORSTEP -->
     <div class="tier-card tier-1a-border">
       <div class="tier-header">
         <div class="tier-title-group">
-          <span class="tier-title tier-1a-title">🔥 <span id="txt-momo-t1-title">TIER 1: 🚪 PIVOT DOORSTEP (&le;3.0% from 52W High / Fresh 3M High)</span></span>
+          <span class="tier-title tier-1a-title">🎯 <span id="txt-momo-t1-title">TIER 1: 🚪 PIVOT DOORSTEP NR COILS (&le;3.0% from 52W High / Fresh 3M High)</span></span>
           <span id="momo-cnt-tier1" class="tier-badge-pill tier-1a-pill">-- Setups</span>
         </div>
-        <div class="tier-subtitle" id="txt-momo-t1-sub">Immediate Breakout Doorsteps sitting on the verge of 52-Week Highs or printing Fresh 3-Month Highs today &bull; Zero overhead supply</div>
+        <div class="tier-subtitle" id="txt-momo-t1-sub">Immediate Breakout Doorsteps coiling in NR4 / NR7 / Inside Day contractions sitting on doorstep of 52W or Fresh 3M High &bull; Zero overhead supply &bull; Tightest LOD Risk</div>
       </div>
       <div id="momo-grid-tier1" class="cand-grid">
         <!-- Rendered dynamically -->
@@ -1548,10 +1564,10 @@
     <div class="tier-card tier-2-border">
       <div class="tier-header">
         <div class="tier-title-group">
-          <span class="tier-title tier-2-title">🚀 <span id="txt-momo-t2-title">TIER 2: COIL LAUNCHPAD (3.0% &ndash; 7.0% from 52W High)</span></span>
+          <span class="tier-title tier-2-title">🚀 <span id="txt-momo-t2-title">TIER 2: COIL LAUNCHPAD NR COILS (3.0% &ndash; 7.0% from 52W High)</span></span>
           <span id="momo-cnt-tier2" class="tier-badge-pill tier-2-pill">-- Setups</span>
         </div>
-        <div class="tier-subtitle" id="txt-momo-t2-sub">Consolidated Base Launchpads coiled near 10/20 EMA support with proven 90D momentum (&ge;30% thrust)</div>
+        <div class="tier-subtitle" id="txt-momo-t2-sub">Consolidated Base Launchpads coiled in NR contractions near 10/20 EMA support with proven 90D momentum (&ge;30% thrust)</div>
       </div>
       <div id="momo-grid-tier2" class="cand-grid">
         <!-- Rendered dynamically -->
@@ -1562,26 +1578,12 @@
     <div class="tier-card tier-3-border">
       <div class="tier-header">
         <div class="tier-title-group">
-          <span class="tier-title tier-3-title">📦 <span id="txt-momo-t3-title">TIER 3: BASE RUNWAY (7.0% &ndash; 12.0% from 52W High)</span></span>
+          <span class="tier-title tier-3-title">📦 <span id="txt-momo-t3-title">TIER 3: BASE RUNWAY NR COILS (7.0% &ndash; 12.0% from 52W High)</span></span>
           <span id="momo-cnt-tier3" class="tier-badge-pill tier-3-pill">-- Setups</span>
         </div>
-        <div class="tier-subtitle" id="txt-momo-t3-sub">Stage-2 Intermediate Base Formations &bull; High velocity 90D momentum resting 7&ndash;12% below peak for multi-day swing runway</div>
+        <div class="tier-subtitle" id="txt-momo-t3-sub">Stage-2 Intermediate Base Formations &bull; High velocity 90D momentum resting 7&ndash;12% below peak in tight contractions</div>
       </div>
       <div id="momo-grid-tier3" class="cand-grid">
-        <!-- Rendered dynamically -->
-      </div>
-    </div>
-
-    <!-- DEEP BASES: >12% FROM HIGH -->
-    <div class="tier-card tier-sectoral-border">
-      <div class="tier-header">
-        <div class="tier-title-group">
-          <span class="tier-title tier-sectoral-title">⚪ <span id="txt-momo-deep-title">CONSOLIDATING BASES (&gt;12.0% from 52W High)</span></span>
-          <span id="momo-cnt-deep" class="tier-badge-pill tier-sectoral-pill">-- Setups</span>
-        </div>
-        <div class="tier-subtitle" id="txt-momo-deep-sub">Gained &ge;30% in 90 Days currently undergoing healthy secondary base consolidation or deep pullbacks</div>
-      </div>
-      <div id="momo-grid-deep" class="cand-grid">
         <!-- Rendered dynamically -->
       </div>
     </div>
@@ -1778,28 +1780,26 @@
       fetchMomoFallback();
       return;
     }
+    // Only display Narrow Range (NR) Momentum setups
     const t1 = RAW_MOMO.filter(c => c.tier === 'TIER_1_DOORSTEP' || c.tier_order === 1);
     const t2 = RAW_MOMO.filter(c => c.tier === 'TIER_2_LAUNCHPAD' || c.tier_order === 2);
     const t3 = RAW_MOMO.filter(c => c.tier === 'TIER_3_BASE' || c.tier_order === 3);
-    const tDeep = RAW_MOMO.filter(c => c.tier_order > 3 || (!c.tier_order && !t1.includes(c) && !t2.includes(c) && !t3.includes(c)));
 
+    const totalNR = t1.length + t2.length + t3.length;
     const badge = document.getElementById('tab-badge-momo');
-    if (badge) badge.innerText = RAW_MOMO.length;
+    if (badge) badge.innerText = totalNR;
 
     let r = 1;
     renderMomoTierGrid('momo-grid-tier1', t1, r); r += t1.length;
     renderMomoTierGrid('momo-grid-tier2', t2, r); r += t2.length;
-    renderMomoTierGrid('momo-grid-tier3', t3, r); r += t3.length;
-    renderMomoTierGrid('momo-grid-deep', tDeep, r);
+    renderMomoTierGrid('momo-grid-tier3', t3, r);
 
     const c1 = document.getElementById('momo-cnt-tier1');
-    if (c1) c1.innerText = `${t1.length} Setups`;
+    if (c1) c1.innerText = `${t1.length} Coils`;
     const c2 = document.getElementById('momo-cnt-tier2');
-    if (c2) c2.innerText = `${t2.length} Setups`;
+    if (c2) c2.innerText = `${t2.length} Coils`;
     const c3 = document.getElementById('momo-cnt-tier3');
-    if (c3) c3.innerText = `${t3.length} Setups`;
-    const cDeep = document.getElementById('momo-cnt-deep');
-    if (cDeep) cDeep.innerText = `${tDeep.length} Setups`;
+    if (c3) c3.innerText = `${t3.length} Coils`;
   }
 
   function renderMomoTierGrid(containerId, list, startRank) {
@@ -1815,24 +1815,42 @@
       const rank = startRank + idx;
       const tvUrl = `https://in.tradingview.com/chart/?symbol=NSE:${sym}`;
       const displaySym = isStealthMode ? formatNodeName(sym) : sym;
-      const distStr = (c.dist_52w_pct !== null && c.dist_52w_pct !== undefined) ? `-${Math.abs(c.dist_52w_pct).toFixed(1)}%` : 'At High';
+      const distStr = (c.dist_52w_pct !== null && c.dist_52w_pct !== undefined) 
+        ? (c.dist_52w_pct === 0 ? '3M High' : `-${Math.abs(c.dist_52w_pct).toFixed(1)}%`) 
+        : 'At High';
+
+      let badgesHtml = '';
+      if (c.is_nr7) {
+        badgesHtml += '<span style="font-size:10px; font-weight:800; color:#10b981; background:rgba(16,185,129,0.18); border:1px solid rgba(16,185,129,0.4); padding:1px 5px; border-radius:4px;">🎯 NR7</span>';
+      } else if (c.is_nr4) {
+        badgesHtml += '<span style="font-size:10px; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); padding:1px 5px; border-radius:4px;">⚡ NR4</span>';
+      }
+      if (c.is_inside) {
+        badgesHtml += '<span style="font-size:10px; font-weight:800; color:#c084fc; background:rgba(192,132,252,0.18); border:1px solid rgba(192,132,252,0.4); padding:1px 5px; border-radius:4px;">📦 Inside</span>';
+      }
+      if (c.daily_range_pct) {
+        badgesHtml += `<span style="font-size:10px; color:#fde047; background:rgba(234,179,8,0.15); padding:1px 5px; border-radius:4px;">${c.daily_range_pct.toFixed(1)}% rng</span>`;
+      }
+
       html += `
-        <a href="${tvUrl}" target="_blank" class="cand-link-btn" title="Open ${sym} chart on TradingView" style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px;">
-          <div style="display:flex; flex-direction:column; gap:2px; min-width:0;">
-            <div style="display:flex; align-items:center; gap:6px;">
+        <a href="${tvUrl}" target="_blank" class="cand-link-btn" title="Open ${sym} chart on TradingView" style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px; gap:8px;">
+          <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
               <span class="cand-rank">#${rank}</span>
               <span class="cand-sym" style="font-size:13px; font-weight:800;">📈 ${displaySym}</span>
               ${c.is_fresh_3m ? '<span style="font-size:11px;" title="Fresh 3M High Today">👑</span>' : ''}
+              ${badgesHtml}
             </div>
-            <div style="font-size:10px; color:var(--text-muted); display:flex; gap:4px; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            <div style="font-size:10px; color:var(--text-muted); display:flex; gap:5px; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
               <span style="color:#38bdf8; font-weight:700;">${distStr}</span>
               <span>•</span>
-              <span style="max-width:90px; overflow:hidden; text-overflow:ellipsis;">${c.industry || 'Equity'}</span>
+              <span style="max-width:120px; overflow:hidden; text-overflow:ellipsis;">${c.industry || 'Equity'}</span>
+              <span>•</span>
+              <span style="color:#34d399; font-weight:700;">${c.gain_tier || '≥30%'}</span>
             </div>
           </div>
-          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0;">
-            <span style="font-size:10px; font-weight:800; color:#34d399; background:rgba(52,211,153,0.15); padding:1px 5px; border-radius:4px;">${c.gain_tier || '≥30%'}</span>
-            <span class="cand-tv-icon" style="font-size:11px;">↗</span>
+          <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+            <span class="cand-tv-icon" style="font-size:12px;">↗</span>
           </div>
         </a>
       `;
@@ -1842,17 +1860,30 @@
 
   async function fetchMomoFallback() {
     const endpoints = [
+      'candidates_90d_nr.json',
+      'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/candidates_90d_nr.json',
+      'https://raw.githubusercontent.com/sanIncredible/Jarvis/main/candidates_90d_nr.json',
       'candidates_90d_momo.json',
-      'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/candidates_90d_momo.json',
-      'https://raw.githubusercontent.com/sanIncredible/Jarvis/main/candidates_90d_momo.json'
+      'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/candidates_90d_momo.json'
     ];
     for (const url of endpoints) {
       try {
         const res = await fetchWithTimeout(url, { cache: 'no-store' }, 3000);
         if (!res.ok) continue;
         const d = await res.json();
-        const list = d.candidates || d;
-        if (Array.isArray(list) && list.length) {
+        let list = [];
+        if (d.tier1_candidates || d.tier2_candidates) {
+          list = [
+            ...(d.tier1_candidates || []),
+            ...(d.tier2_candidates || []),
+            ...(d.tier3_candidates || [])
+          ];
+        } else if (Array.isArray(d.candidates)) {
+          list = d.candidates.filter(c => c.is_nr7 || c.is_nr4 || c.is_inside || c.is_tight || c.tier_order <= 2);
+        } else if (Array.isArray(d)) {
+          list = d;
+        }
+        if (list.length) {
           RAW_MOMO = list;
           renderMomoView();
           break;
