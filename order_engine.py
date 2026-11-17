@@ -2363,10 +2363,10 @@ def fetch_all_positions():
                                     sym = str(h.get("tradingSymbol", "")).strip().upper()
                                     if not sym or sym in ignored_symbols:
                                         continue
+                                    qty = int(h.get("totalQty", 0))
                                     mtf_q = int(h.get("mtf_qty", 0) or 0)
                                     is_swing = (mtf_q > 0) or (sym in auto_swing_symbols)
-                                    if is_swing and not any(p["symbol"].upper() == sym and p["broker"] == "DHAN" for p in all_pos):
-                                        qty = int(h.get("totalQty", 0))
+                                    if is_swing and qty > 0 and not any(p["symbol"].upper() == sym and p["broker"] == "DHAN" for p in all_pos):
                                         if qty > 0:
                                             buy_avg = float(h.get("avgCostPrice", 0.0) or 0.0)
                                             ltp = float(h.get("lastTradedPrice", buy_avg) or buy_avg)
@@ -2586,6 +2586,72 @@ def fetch_all_positions():
     else:
         broker_status["zerodha"] = "Not configured"
 
+    # 3.9 Reconcile with Journal.xlsx to guarantee ALL previous open positions are always present
+    # Even if a broker API token expired overnight or returned an error,
+    # previous days' open swing positions stored in Journal.xlsx are NEVER dropped!
+    try:
+        from datetime import date, datetime
+        j_path = SCRIPT_DIR / "Journal.xlsx"
+        if j_path.is_file():
+            import openpyxl
+            wb_j = openpyxl.load_workbook(j_path, data_only=True)
+            if "Trade Journal" in wb_j.sheetnames:
+                ws_j = wb_j["Trade Journal"]
+                for r in list(ws_j.iter_rows(values_only=True))[1:]:
+                    if not r or len(r) < 11:
+                        continue
+                    sym = str(r[2] or "").strip().upper()
+                    status = str(r[10] or "").upper()
+                    if sym and "OPEN" in status and sym not in ignored_symbols:
+                        # If not already returned by live broker API, preserve it from Journal
+                        if not any(p["symbol"].upper() == sym for p in all_pos):
+                            entry_p = float(r[4] or 0)
+                            sl_p = float(r[5] or 0)
+                            tgt_p = float(r[6] or 0)
+                            qty = int(float(r[7] or 0))
+                            if qty > 0 and entry_p > 0:
+                                col22 = str(r[21] if len(r) > 21 else "").upper()
+                                b_name = "ZERODHA" if "ZERODHA" in col22 else ("DHAN" if "DHAN" in col22 else ("UPSTOX" if "UPSTOX" in col22 else "BROKER"))
+                                prod_name = "MTF" if "MTF" in col22 else "CNC"
+                                
+                                q, _ = fetch_live_quote(sym)
+                                ltp = float(q.get("ltp", 0) or entry_p) if q else entry_p
+                                pnl = round((ltp - entry_p) * qty, 2)
+                                pnl_pct = round(((ltp - entry_p) / entry_p) * 100, 2)
+                                exposure = round(qty * ltp, 2)
+                                
+                                entry_dt = r[1]
+                                holding_days = 1
+                                if entry_dt:
+                                    if hasattr(entry_dt, "date"):
+                                        holding_days = max(1, (date.today() - entry_dt.date()).days)
+                                    elif isinstance(entry_dt, str):
+                                        try:
+                                            d_parsed = datetime.strptime(entry_dt[:10], "%Y-%m-%d").date()
+                                            holding_days = max(1, (date.today() - d_parsed).days)
+                                        except Exception:
+                                            pass
+
+                                all_pos.append({
+                                    "symbol": sym,
+                                    "broker": b_name,
+                                    "product": prod_name,
+                                    "qty": qty,
+                                    "avg_price": round(entry_p, 2),
+                                    "ltp": round(ltp, 2),
+                                    "pnl": round(pnl, 2),
+                                    "pnl_pct": pnl_pct,
+                                    "exposure": exposure,
+                                    "stop_loss": sl_p,
+                                    "target": tgt_p,
+                                    "source": "JOURNAL (Carried Forward)",
+                                    "entry_date": str(entry_dt or ""),
+                                    "holding_days": holding_days,
+                                    "exchange": "NSE"
+                                })
+    except Exception as ex_j:
+        print(f"Notice reconciling journal open positions in fetch_all_positions: {ex_j}")
+
     # 4. Enrich positions with active Stop-Loss & Value at Risk (VaR)
     logged_trades = get_open_trades_from_logs()
     total_var = 0.0
@@ -2636,6 +2702,18 @@ def fetch_all_positions():
         p["is_risk_free"] = bool(var_inr <= 0)
         p["is_short"] = is_short
         p["position_type"] = "SHORT" if is_short else "LONG"
+        if "holding_days" not in p:
+            e_dt_str = log_meta.get("date") or log_meta.get("timestamp")
+            if e_dt_str:
+                try:
+                    from datetime import date, datetime
+                    d_parsed = datetime.strptime(str(e_dt_str)[:10], "%Y-%m-%d").date()
+                    p["holding_days"] = max(0, (date.today() - d_parsed).days)
+                    p["entry_date"] = str(e_dt_str)[:10]
+                except Exception:
+                    p["holding_days"] = 0
+            else:
+                p["holding_days"] = 0
         total_var += var_inr
 
     total_pnl = sum(p["pnl"] for p in all_pos)
