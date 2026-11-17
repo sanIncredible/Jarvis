@@ -1,20 +1,20 @@
 {
-  "updated_at": "2026-10-26 22:46:41 IST",
-  "state_code": "DEFENSIVE",
-  "state_label": "\u26a0\ufe0f DEFENSIVE / HIGH FAKEOUT RISK",
-  "guidance": "Defensive breadth. 0% of breakouts failing today (BO S/F: 14.0). Preserve capital.",
-  "swing_allocation_pct": 0,
-  "swing_risk_per_trade": 0,
+  "updated_at": "2026-11-17 15:00:02 IST",
+  "state_code": "SELECTIVE",
+  "state_label": "\ud83d\udfe1 SELECTIVE ROTATION",
+  "guidance": "Mixed breadth (BO S/F: 1.22). Half risk (50%) only. Stick strictly to top relative strength leaders.",
+  "swing_allocation_pct": 50,
+  "swing_risk_per_trade": 5000,
   "intraday_risk_per_trade": 1000,
   "intraday_max_daily_loss": 2000,
   "intraday_max_open_trades": 2,
-  "fakeout_warning": "HIGH FAKEOUT RISK: 80%+ of long breakouts fail in this regime.",
+  "fakeout_warning": "NORMAL EXECUTION",
   "breakout_quality": {
-    "bo_sf_ratio": 14.0,
-    "breakouts_attempted": 14,
-    "breakouts_sustained": 14,
-    "breakouts_failed": 0,
-    "uh_lh_ratio": 1.0,
+    "bo_sf_ratio": 1.22,
+    "breakouts_attempted": 40,
+    "breakouts_sustained": 22,
+    "breakouts_failed": 18,
+    "uh_lh_ratio": 1.35,
     "trap_active": false
   },
   "volume_telemetry": {
@@ -27,19 +27,19 @@
     "vol_description": "Subdued/dry volume (Vol Ratio: 0.39 < 0.40). Retail churn."
   },
   "global_markets": {
-    "updated_at": "22:46:41 IST",
-    "bias_code": "BULLISH",
-    "bias_badge": "\ud83d\udfe2 STRONG RISK-ON (Global Tailwind)",
+    "updated_at": "15:00:02 IST",
+    "bias_code": "BEARISH",
+    "bias_badge": "\ud83d\udd34 HEAVY RISK-OFF (Global Headwind)",
     "us": [
       {
         "name": "S&P 500",
         "region": "US",
         "symbol": "^GSPC",
         "display": "S&P 500",
-        "ltp": 7687.92,
-        "prev_close": 7663.43,
-        "change": 24.49,
-        "pct_change": 0.32,
+        "ltp": 7416.59,
+        "prev_close": 7592.4,
+        "change": -175.81,
+        "pct_change": -2.32,
         "status": "OK"
       },
       {
@@ -47,10 +47,10 @@
         "region": "US",
         "symbol": "^IXIC",
         "display": "Nasdaq",
-        "ltp": 26248.82,
-        "prev_close": 26008.86,
-        "change": 239.96,
-        "pct_change": 0.92,
+        "ltp": 24509.76,
+        "prev_close": 25366.09,
+        "change": -856.33,
+        "pct_change": -3.38,
         "status": "OK"
       },
       {
@@ -58,10 +58,10 @@
         "region": "US",
         "symbol": "^DJI",
         "display": "Dow Jones",
-        "ltp": 52365.24,
-        "prev_close": 52867.98,
-        "change": -502.74,
-        "pct_change": -0.95,
+        "ltp": 51608.17,
+        "prev_close": 52297.09,
+        "change": -688.92,
+        "pct_change": -1.32,
         "status": "OK"
       },
       {
@@ -69,10 +69,10 @@
         "region": "US",
         "symbol": "ES=F",
         "display": "S&P Fut (ES)",
-        "ltp": 7717.75,
-        "prev_close": 7659.75,
-        "change": 58.0,
-        "pct_change": 0.76,
+        "ltp": 7396.75,
+        "prev_close": 7439.0,
+        "change": -42.25,
+        "pct_change": -0.57,
         "status": "OK"
       },
       {
@@ -80,10 +80,10 @@
         "region": "US",
         "symbol": "NQ=F",
         "display": "Nasdaq Fut (NQ)",
-        "ltp": 29499.75,
-        "prev_close": 29117.75,
-        "change": 382.0,
-        "pct_change": 1.31,
+        "ltp": 27096.0,
+        "prev_close": 27284.25,
+        "change": -188.25,
+        "pct_change": -0.69,
         "status": "OK"
       }
     ],
@@ -93,10 +93,10 @@
         "region": "EUROPE",
         "symbol": "^GDAXI",
         "display": "DAX 40",
-        "ltp": 25410.84,
-        "prev_close": 25371.75,
-        "change": 39.09,
-        "pct_change": 0.15,
+        "ltp": 26355.87,
+        "prev_close": 26749.95,
+        "change": -394.08,
+        "pct_change": -1.47,
         "status": "OK"
       },
       {
@@ -104,10 +104,10 @@
         "region": "EUROPE",
         "symbol": "^FTSE",
         "display": "FTSE 100",
-        "ltp": 10767.33,
-        "prev_close": 10725.0,
-        "change": 42.33,
-        "pct_change": 0.39,
+        "ltp": 10805.06,
+        "prev_close": 10902.6,
+        "change": -97.54,
+        "pct_change": -0.89,
         "status": "OK"
       },
       {
@@ -115,10 +115,10 @@
         "region": "EUROPE",
         "symbol": "^FCHI",
         "display": "CAC 40",
-        "ltp": 7847.32,
-        "prev_close": 7782.82,
-        "change": 64.5,
-        "pct_change": 0.83,
+        "ltp": 8286.51,
+        "prev_close": 8352.0,
+        "change": -65.49,
+        "pct_change": -0.78,
         "status": "OK"
       },
       {
@@ -126,10 +126,10 @@
         "region": "EUROPE",
         "symbol": "^STOXX50E",
         "display": "Stoxx 50",
-        "ltp": 6116.23,
-        "prev_close": 6068.22,
-        "change": 48.01,
-        "pct_change": 0.79,
+        "ltp": 6287.3,
+        "prev_close": 6348.35,
+        "change": -61.05,
+        "pct_change": -0.96,
         "status": "OK"
       }
     ],
@@ -139,10 +139,10 @@
         "region": "ASIA_ASEAN",
         "symbol": "^N225",
         "display": "Nikkei 225",
-        "ltp": 62189.65,
-        "prev_close": 62693.16,
-        "change": -503.51,
-        "pct_change": -0.8,
+        "ltp": 58860.43,
+        "prev_close": 59662.02,
+        "change": -801.59,
+        "pct_change": -1.34,
         "status": "OK"
       },
       {
@@ -150,10 +150,10 @@
         "region": "ASIA_ASEAN",
         "symbol": "^HSI",
         "display": "Hang Seng",
-        "ltp": 23211.81,
-        "prev_close": 22934.68,
-        "change": 277.13,
-        "pct_change": 1.21,
+        "ltp": 23508.17,
+        "prev_close": 23637.6,
+        "change": -129.43,
+        "pct_change": -0.55,
         "status": "OK"
       },
       {
@@ -161,10 +161,10 @@
         "region": "ASIA_ASEAN",
         "symbol": "000001.SS",
         "display": "Shanghai",
-        "ltp": 3697.52,
-        "prev_close": 3690.47,
-        "change": 7.05,
-        "pct_change": 0.19,
+        "ltp": 3584.58,
+        "prev_close": 3602.57,
+        "change": -17.99,
+        "pct_change": -0.5,
         "status": "OK"
       },
       {
@@ -172,10 +172,10 @@
         "region": "ASIA_ASEAN",
         "symbol": "^STI",
         "display": "Straits Times (SG)",
-        "ltp": 5415.91,
-        "prev_close": 5415.14,
-        "change": 0.77,
-        "pct_change": 0.01,
+        "ltp": 5110.21,
+        "prev_close": 5231.84,
+        "change": -121.63,
+        "pct_change": -2.32,
         "status": "OK"
       },
       {
@@ -183,10 +183,10 @@
         "region": "ASIA_ASEAN",
         "symbol": "^KS11",
         "display": "Kospi (KR)",
-        "ltp": 5469.47,
-        "prev_close": 5533.77,
-        "change": -64.3,
-        "pct_change": -1.16,
+        "ltp": 4968.48,
+        "prev_close": 5290.53,
+        "change": -322.05,
+        "pct_change": -6.09,
         "status": "OK"
       },
       {
@@ -194,10 +194,10 @@
         "region": "ASIA_ASEAN",
         "symbol": "^JKSE",
         "display": "Jakarta (ID)",
-        "ltp": 5373.09,
-        "prev_close": 5439.26,
-        "change": -66.16,
-        "pct_change": -1.22,
+        "ltp": 5304.76,
+        "prev_close": 5320.98,
+        "change": -16.23,
+        "pct_change": -0.3,
         "status": "OK"
       },
       {
@@ -205,24 +205,24 @@
         "region": "ASIA_ASEAN",
         "symbol": "^KLSE",
         "display": "KLCI (MY)",
-        "ltp": 1604.36,
-        "prev_close": 1611.56,
-        "change": -7.2,
-        "pct_change": -0.45,
+        "ltp": 1575.15,
+        "prev_close": 1588.03,
+        "change": -12.88,
+        "pct_change": -0.81,
         "status": "OK"
       }
     ],
-    "us_futures_avg": 1.04,
-    "global_avg_chg": 0.14,
+    "us_futures_avg": -0.63,
+    "global_avg_chg": -1.52,
     "total_tracked": 16,
     "valid_count": 16
   },
   "breadth_snapshot": {
-    "advancers": 165,
-    "decliners": 81,
-    "ad_ratio": 2.04,
-    "up_4_count": 14,
-    "dn_4_count": 3,
-    "net_thrust": 11
+    "advancers": 254,
+    "decliners": 244,
+    "ad_ratio": 1.04,
+    "up_4_count": 13,
+    "dn_4_count": 7,
+    "net_thrust": 6
   }
 }
