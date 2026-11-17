@@ -2,7 +2,6 @@
 # Add or remove NSE stock tickers below (one per line, or space/comma separated)
 
 PCJEWELLER
-OAL
 WESTLIFE
 INDGN
 CEMPRO
