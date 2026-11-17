@@ -138,6 +138,29 @@ def send_telegram_msg(chat_id, text, parse_mode="HTML", reply_markup=None, threa
     if not bot_token or not chat_id:
         return False, "Missing bot_token or chat_id"
 
+    # Auto-chunk oversized text to guarantee delivery within Telegram 4096 char limit
+    if text and len(text) > 4000:
+        lines = text.split("\n")
+        chunks = []
+        cur_c = []
+        cur_l = 0
+        for l in lines:
+            if cur_l + len(l) + 1 > 3800:
+                chunks.append("\n".join(cur_c))
+                cur_c = [l]
+                cur_l = len(l)
+            else:
+                cur_c.append(l)
+                cur_l += len(l) + 1
+        if cur_c:
+            chunks.append("\n".join(cur_c))
+        last_res = (True, {})
+        for c in chunks:
+            ok, res = send_telegram_msg(chat_id, c, parse_mode=parse_mode, reply_markup=reply_markup, thread_id=thread_id)
+            last_res = (ok, res)
+            time.sleep(0.5)
+        return last_res
+
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {
         "chat_id": chat_id,
@@ -272,6 +295,7 @@ def register_telegram_commands():
         {"command": "positions", "description": "📊 Live multi-broker positions & open P&L"},
         {"command": "funds", "description": "💳 Multi-broker available cash & MTF margin"},
         {"command": "candidates", "description": "🎯 Scan Nifty 500 swing breakout setups (candidates.txt)"},
+        {"command": "exited", "description": "🔄 Audit past exited stocks for candidate re-entry"},
         {"command": "trail", "description": "🎯 Trailing SL & Risk Breakeven recommendations"},
         {"command": "exit", "description": "🔴 Quick exit/square-off open positions"},
         {"command": "journal", "description": "📓 Reconcile broker trades into Journal.xlsx"},
@@ -697,6 +721,21 @@ def handle_candidates_command():
         return f"⚠️ <b>Candidate Scanner Error:</b> {e}", None
 
 
+def handle_exited_command():
+    """
+    Audits past exited swing trade stocks at EOD against institutional candidate criteria,
+    promoting qualified coiled setups into candidates and returning an executive review card.
+    """
+    try:
+        from exited_stocks_manager import analyze_exited_stocks_eod, promote_exited_to_candidates, format_exited_analysis_telegram_card
+        res = analyze_exited_stocks_eod()
+        promote_exited_to_candidates(res.get("qualified", []))
+        text, markup = format_exited_analysis_telegram_card(res)
+        return text, markup
+    except Exception as e:
+        return f"⚠️ <b>Exited Stocks Audit Error:</b> {e}", None
+
+
 def handle_token_status_command():
     """Handles /token, /tokens, or /status"""
     cfg = load_config()
@@ -814,20 +853,24 @@ def handle_update_token_command(broker_name, token_str):
     ok, b_name, msg = update_broker_token(broker_name, token_clean)
 
     if ok:
-        return (
+        card = (
             f"✅ <b>{b_name.upper()} Token Successfully Updated & Verified!</b>\n"
             f"• <b>Status:</b> 🟢 ACTIVE\n"
             f"• <b>Verification:</b> {msg}\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             "🚀 <i>The scanner engine has adopted the new credentials immediately.</i>"
         )
+        send_topic_alert_async("token_refresh", card)
+        return card
     else:
-        return (
+        card = (
             f"⚠️ <b>{b_name.upper()} Token Saved, But Verification Notice:</b>\n"
             f"• <b>Test Result:</b> {msg}\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             "💡 <i>Please verify that your broker session is active.</i>"
         )
+        send_topic_alert_async("token_refresh", card)
+        return card
 
 
 def handle_pasted_token(raw_text):
@@ -838,13 +881,15 @@ def handle_pasted_token(raw_text):
 
     ok, b_name, msg = update_broker_token(b_type, raw_text.strip())
     status_icon = "🟢 ACTIVE" if ok else "⚠️ SAVED (Notice)"
-    return (
+    card = (
         f"🤖 <b>Auto-Detected {b_name.upper()} Token!</b>\n"
         f"• <b>Status:</b> {status_icon}\n"
         f"• <b>Verification:</b> {msg}\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         "✅ <i>Credentials saved to config_credentials.json.</i>"
     )
+    send_topic_alert_async("token_refresh", card)
+    return card
 
 
 def handle_scan_command():
@@ -903,6 +948,8 @@ def handle_help_command():
         "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
         "📋 <b>Watchlist & Screening:</b>\n"
         "• <code>/candidates</code> or <code>/screen</code> — Scan Nifty 500 swing setups (saves to candidates.txt)\n"
+        "• <code>/exited</code> or <code>/reentry</code> — Audit past exited stocks for candidate re-entry\n"
+        "• <code>/hindsight</code> or <code>/sim</code> — EOD Multi-Trade Simulation & Strict Audit\n"
         "• <code>/add &lt;SYMBOL...&gt;</code> — Add stock(s) to scanner watchlist\n"
         "• <code>/remove &lt;SYMBOL...&gt;</code> — Remove stock(s) from watchlist\n"
         "• <code>/watchlist</code> — Show full active watchlist & TV links\n\n"
@@ -1578,6 +1625,19 @@ def handle_journal_command():
     except Exception as e:
         return f"⚠️ <b>Journal Sync Notice:</b> {e}"
 
+def handle_hindsight_command():
+    """
+    Generates and returns the latest Hindsight Report with Narrow Range (NR) & Strict Criteria section
+    (Narrow Previous Day + Strong Start + PDH Breakout).
+    """
+    try:
+        from eod_hindsight_report import generate_hindsight_data, format_hindsight_report
+        data = generate_hindsight_data()
+        messages = format_hindsight_report(data)
+        return messages
+    except Exception as e:
+        return f"⚠️ <b>Hindsight Report Notice:</b> {e}"
+
 
 def handle_buy_command(args, from_chat_id):
     """
@@ -2055,6 +2115,8 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_watchlist_command()
     elif cmd in ("/candidates", "/cand", "/screen", "/screener", "/eodscan", "/briefing", "candidates", "cand", "screen", "briefing"):
         return handle_candidates_command()
+    elif cmd in ("/exited", "/reentry", "/exholdings", "exited", "reentry"):
+        return handle_exited_command()
     elif cmd in ("/positions", "/pos", "/portfolio", "/pnl", "/holdings", "positions", "pos", "pnl"):
         return handle_positions_command()
     elif cmd in ("/trail", "/trailing", "/sl", "/trails", "trail", "trailing"):
@@ -2070,6 +2132,8 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_exit_command(args)
     elif cmd in ("/journal", "/syncjournal", "/sync", "/eod", "/summary", "journal", "sync", "eod", "summary"):
         return handle_journal_command()
+    elif cmd in ("/hindsight", "/sim", "/simulation", "hindsight", "sim", "/hindsght", "hindsght", "/hindsite", "hindsite", "/strict", "strict", "/nr", "nr"):
+        return handle_hindsight_command()
     elif cmd in ("/login", "/auth", "login", "auth"):
         return handle_login_command()
     elif cmd in ("/token", "/tokens", "/status", "/check", "token", "tokens", "status"):
@@ -2200,7 +2264,14 @@ def run_telegram_bot_loop(stop_event=None):
 
                         reply = dispatch_command(text, chat_id, user_id=user_id, thread_id=thread_id)
                         if reply:
-                            if isinstance(reply, tuple):
+                            if isinstance(reply, list):
+                                for r_item in reply:
+                                    if isinstance(r_item, tuple):
+                                        ok, resp_data = send_telegram_msg(chat_id, r_item[0], reply_markup=r_item[1], thread_id=thread_id)
+                                    else:
+                                        ok, resp_data = send_telegram_msg(chat_id, r_item, thread_id=thread_id)
+                                    time.sleep(0.5)
+                            elif isinstance(reply, tuple):
                                 ok, resp_data = send_telegram_msg(chat_id, reply[0], reply_markup=reply[1], thread_id=thread_id)
                             else:
                                 ok, resp_data = send_telegram_msg(chat_id, reply, thread_id=thread_id)
