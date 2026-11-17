@@ -415,11 +415,12 @@ def push_watchlist_and_data_to_github():
     """Pushes watchlist.txt and data.json to GitHub repository via REST API."""
     try:
         push_watchlist_to_github()
-        from upstox_tablet_scanner import load_github_config, sync_file_to_github_api
+        from upstox_tablet_scanner import load_github_config, sync_file_to_github_api, purge_jsdelivr_cache
         gh_cfg = load_github_config()
         if gh_cfg and (SCRIPT_DIR / "data.json").is_file():
             syms = read_watchlist_symbols()
             sync_file_to_github_api(gh_cfg, "data.json", f"Sync data.json via Telegram ({len(syms)} symbols)")
+            purge_jsdelivr_cache()
         return True
     except Exception as e:
         print(f"GitHub Push notice: {e}")
