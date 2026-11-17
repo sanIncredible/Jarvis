@@ -1,23 +1,92 @@
 {
-  "TATACONSUM": {
-    "broker": "DHAN",
-    "sl": 1004,
-    "target": 1120,
-    "gtt_id": "22132611042738",
-    "notes": "Dhan MTF Holding | Dhan Forever GTT (Order 22132611042738)"
-  },
   "ENTERO": {
     "broker": "ZERODHA",
-    "sl": 1635,
-    "target": 1780,
-    "gtt_id": "343476050",
-    "notes": "Zerodha MTF Holding | Zerodha GTT (Trigger 343476050 @ \u20b91635 Breakeven)"
+    "product": "CNC",
+    "qty": 101,
+    "entry_price": 1632.95,
+    "sl": 1608.46,
+    "target": 1714.6,
+    "entry_date": "2026-11-04",
+    "notes": "Zerodha CNC Holding"
+  },
+  "ITC": {
+    "broker": "ZERODHA",
+    "product": "CNC",
+    "qty": 401,
+    "entry_price": 286.45,
+    "sl": 282.15,
+    "target": 300.77,
+    "entry_date": "2026-11-16",
+    "notes": "Zerodha CNC Holding"
   },
   "NSE": {
     "broker": "ZERODHA",
-    "sl": 1796,
-    "target": 1880,
-    "gtt_id": "342986108",
-    "notes": "Zerodha MTF Holding | Zerodha GTT (Trigger 342986108 @ \u20b91796 Breakeven)"
+    "product": "CNC",
+    "qty": 51,
+    "entry_price": 1792.95,
+    "sl": 1746.0,
+    "target": 1880.0,
+    "entry_date": "2026-11-02",
+    "notes": "Zerodha CNC Holding"
+  },
+  "TIPSMUSIC": {
+    "broker": "ZERODHA",
+    "product": "CNC",
+    "qty": 51,
+    "entry_price": 817.0,
+    "sl": 804.75,
+    "target": 857.85,
+    "entry_date": "2026-11-13",
+    "notes": "Zerodha CNC Holding"
+  },
+  "WEWORK": {
+    "broker": "ZERODHA",
+    "product": "CNC",
+    "qty": 122,
+    "entry_price": 696.14,
+    "sl": 685.7,
+    "target": 730.95,
+    "entry_date": "2026-11-12",
+    "notes": "Zerodha CNC Holding"
+  },
+  "HEGAM": {
+    "broker": "ZERODHA",
+    "product": "CNC",
+    "qty": 501,
+    "entry_price": 282.88,
+    "sl": 272.0,
+    "target": 305.0,
+    "entry_date": "2026-11-14",
+    "notes": "Zerodha CNC Holding"
+  },
+  "TATACONSUM": {
+    "broker": "DHAN",
+    "product": "MTF",
+    "qty": 101,
+    "entry_price": 1002.76,
+    "sl": 1004.0,
+    "target": 1120.0,
+    "entry_date": "2026-10-22",
+    "notes": "Dhan MTF Holding"
+  },
+  "GRAPHITE": {
+    "broker": "DHAN",
+    "product": "MTF",
+    "qty": 151,
+    "entry_price": 806.58,
+    "sl": 786.42,
+    "target": 846.91,
+    "entry_date": "2026-11-17",
+    "notes": "Dhan MTF Position"
+  },
+  "INDGN": {
+    "broker": "DHAN",
+    "product": "MTF",
+    "qty": 151,
+    "entry_price": 624.47,
+    "sl": 608.86,
+    "target": 655.69,
+    "entry_date": "2026-11-08",
+    "notes": "Dhan MTF Holding"
   }
 }
