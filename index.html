@@ -1300,6 +1300,10 @@
       <span class="tab-icon">🎯</span> <span id="txt-tab-cand">EOD Candidates</span> 
       <span id="tab-badge-cand" class="tab-badge">25</span>
     </button>
+    <button id="tab-btn-momo" class="main-tab-btn" onclick="switchMainView('momo')" title="View 90D/30% Broad Momentum Setups by Tier">
+      <span class="tab-icon">🔥</span> <span id="txt-tab-momo">90D Momo</span> 
+      <span id="tab-badge-momo" class="tab-badge">0</span>
+    </button>
   </div>
 
   <!-- VIEW 1: 3m ORB Live Scanner View -->
@@ -1523,6 +1527,67 @@
 
   </div> <!-- /#view-candidates -->
 
+  <!-- VIEW 3: 90D/30% Broad Momentum Setups (Tier-Wise Doorstep, Launchpad & Base Runway) -->
+  <div id="view-momo" style="display:none;" class="cand-view-container">
+
+    <!-- TIER 1: PIVOT DOORSTEP -->
+    <div class="tier-card tier-1a-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1a-title">🔥 <span id="txt-momo-t1-title">TIER 1: 🚪 PIVOT DOORSTEP (&le;3.0% from 52W High / Fresh 3M High)</span></span>
+          <span id="momo-cnt-tier1" class="tier-badge-pill tier-1a-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-momo-t1-sub">Immediate Breakout Doorsteps sitting on the verge of 52-Week Highs or printing Fresh 3-Month Highs today &bull; Zero overhead supply</div>
+      </div>
+      <div id="momo-grid-tier1" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 2: COIL LAUNCHPAD -->
+    <div class="tier-card tier-2-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-2-title">🚀 <span id="txt-momo-t2-title">TIER 2: COIL LAUNCHPAD (3.0% &ndash; 7.0% from 52W High)</span></span>
+          <span id="momo-cnt-tier2" class="tier-badge-pill tier-2-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-momo-t2-sub">Consolidated Base Launchpads coiled near 10/20 EMA support with proven 90D momentum (&ge;30% thrust)</div>
+      </div>
+      <div id="momo-grid-tier2" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 3: BASE RUNWAY -->
+    <div class="tier-card tier-3-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-3-title">📦 <span id="txt-momo-t3-title">TIER 3: BASE RUNWAY (7.0% &ndash; 12.0% from 52W High)</span></span>
+          <span id="momo-cnt-tier3" class="tier-badge-pill tier-3-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-momo-t3-sub">Stage-2 Intermediate Base Formations &bull; High velocity 90D momentum resting 7&ndash;12% below peak for multi-day swing runway</div>
+      </div>
+      <div id="momo-grid-tier3" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- DEEP BASES: >12% FROM HIGH -->
+    <div class="tier-card tier-sectoral-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-sectoral-title">⚪ <span id="txt-momo-deep-title">CONSOLIDATING BASES (&gt;12.0% from 52W High)</span></span>
+          <span id="momo-cnt-deep" class="tier-badge-pill tier-sectoral-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-momo-deep-sub">Gained &ge;30% in 90 Days currently undergoing healthy secondary base consolidation or deep pullbacks</div>
+      </div>
+      <div id="momo-grid-deep" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+  </div> <!-- /#view-momo -->
+
 
   <div id="page-footer" class="footer">
     Cluster Telemetry &amp; Node Observer Daemon • Distributed Ingress Telemetry Pipeline • High-Throughput Stream • Press [?] for Diagnostics
@@ -1617,25 +1682,29 @@
 
   let currentMainView = 'orb';
   let RAW_CANDIDATES = [];
+  let RAW_MOMO = [];
 
   function switchMainView(viewName) {
     currentMainView = viewName;
     const btnOrb = document.getElementById('tab-btn-orb');
     const btnCand = document.getElementById('tab-btn-cand');
+    const btnMomo = document.getElementById('tab-btn-momo');
     const viewOrb = document.getElementById('view-orb');
     const viewCand = document.getElementById('view-candidates');
+    const viewMomo = document.getElementById('view-momo');
+
+    if (btnOrb) btnOrb.classList.toggle('active', viewName === 'orb');
+    if (btnCand) btnCand.classList.toggle('active', viewName === 'candidates');
+    if (btnMomo) btnMomo.classList.toggle('active', viewName === 'momo');
+
+    if (viewOrb) viewOrb.style.display = (viewName === 'orb') ? 'block' : 'none';
+    if (viewCand) viewCand.style.display = (viewName === 'candidates') ? 'flex' : 'none';
+    if (viewMomo) viewMomo.style.display = (viewName === 'momo') ? 'flex' : 'none';
 
     if (viewName === 'candidates') {
-      if (btnOrb) btnOrb.classList.remove('active');
-      if (btnCand) btnCand.classList.add('active');
-      if (viewOrb) viewOrb.style.display = 'none';
-      if (viewCand) viewCand.style.display = 'flex';
       renderCandidatesView();
-    } else {
-      if (btnCand) btnCand.classList.remove('active');
-      if (btnOrb) btnOrb.classList.add('active');
-      if (viewCand) viewCand.style.display = 'none';
-      if (viewOrb) viewOrb.style.display = 'block';
+    } else if (viewName === 'momo') {
+      renderMomoView();
     }
   }
 
@@ -1702,6 +1771,96 @@
       `;
     });
     container.innerHTML = html;
+  }
+
+  function renderMomoView() {
+    if (!RAW_MOMO.length) {
+      fetchMomoFallback();
+      return;
+    }
+    const t1 = RAW_MOMO.filter(c => c.tier === 'TIER_1_DOORSTEP' || c.tier_order === 1);
+    const t2 = RAW_MOMO.filter(c => c.tier === 'TIER_2_LAUNCHPAD' || c.tier_order === 2);
+    const t3 = RAW_MOMO.filter(c => c.tier === 'TIER_3_BASE' || c.tier_order === 3);
+    const tDeep = RAW_MOMO.filter(c => c.tier_order > 3 || (!c.tier_order && !t1.includes(c) && !t2.includes(c) && !t3.includes(c)));
+
+    const badge = document.getElementById('tab-badge-momo');
+    if (badge) badge.innerText = RAW_MOMO.length;
+
+    let r = 1;
+    renderMomoTierGrid('momo-grid-tier1', t1, r); r += t1.length;
+    renderMomoTierGrid('momo-grid-tier2', t2, r); r += t2.length;
+    renderMomoTierGrid('momo-grid-tier3', t3, r); r += t3.length;
+    renderMomoTierGrid('momo-grid-deep', tDeep, r);
+
+    const c1 = document.getElementById('momo-cnt-tier1');
+    if (c1) c1.innerText = `${t1.length} Setups`;
+    const c2 = document.getElementById('momo-cnt-tier2');
+    if (c2) c2.innerText = `${t2.length} Setups`;
+    const c3 = document.getElementById('momo-cnt-tier3');
+    if (c3) c3.innerText = `${t3.length} Setups`;
+    const cDeep = document.getElementById('momo-cnt-deep');
+    if (cDeep) cDeep.innerText = `${tDeep.length} Setups`;
+  }
+
+  function renderMomoTierGrid(containerId, list, startRank) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!list || !list.length) {
+      container.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:10px;">No setups in this tier.</div>';
+      return;
+    }
+    let html = '';
+    list.forEach((c, idx) => {
+      const sym = c.symbol;
+      const rank = startRank + idx;
+      const tvUrl = `https://in.tradingview.com/chart/?symbol=NSE:${sym}`;
+      const displaySym = isStealthMode ? formatNodeName(sym) : sym;
+      const distStr = (c.dist_52w_pct !== null && c.dist_52w_pct !== undefined) ? `-${Math.abs(c.dist_52w_pct).toFixed(1)}%` : 'At High';
+      html += `
+        <a href="${tvUrl}" target="_blank" class="cand-link-btn" title="Open ${sym} chart on TradingView" style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px;">
+          <div style="display:flex; flex-direction:column; gap:2px; min-width:0;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="cand-rank">#${rank}</span>
+              <span class="cand-sym" style="font-size:13px; font-weight:800;">📈 ${displaySym}</span>
+              ${c.is_fresh_3m ? '<span style="font-size:11px;" title="Fresh 3M High Today">👑</span>' : ''}
+            </div>
+            <div style="font-size:10px; color:var(--text-muted); display:flex; gap:4px; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              <span style="color:#38bdf8; font-weight:700;">${distStr}</span>
+              <span>•</span>
+              <span style="max-width:90px; overflow:hidden; text-overflow:ellipsis;">${c.industry || 'Equity'}</span>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0;">
+            <span style="font-size:10px; font-weight:800; color:#34d399; background:rgba(52,211,153,0.15); padding:1px 5px; border-radius:4px;">${c.gain_tier || '≥30%'}</span>
+            <span class="cand-tv-icon" style="font-size:11px;">↗</span>
+          </div>
+        </a>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
+  async function fetchMomoFallback() {
+    const endpoints = [
+      'candidates_90d_momo.json',
+      'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/candidates_90d_momo.json',
+      'https://raw.githubusercontent.com/sanIncredible/Jarvis/main/candidates_90d_momo.json'
+    ];
+    for (const url of endpoints) {
+      try {
+        const res = await fetchWithTimeout(url, { cache: 'no-store' }, 3000);
+        if (!res.ok) continue;
+        const d = await res.json();
+        const list = d.candidates || d;
+        if (Array.isArray(list) && list.length) {
+          RAW_MOMO = list;
+          renderMomoView();
+          break;
+        }
+      } catch (e) {
+        // continue
+      }
+    }
   }
 
   async function fetchCandidatesFallback() {
@@ -2295,6 +2454,13 @@
       renderCandidatesView();
     } else if (!RAW_CANDIDATES.length) {
       fetchCandidatesFallback();
+    }
+
+    if (data.momo_candidates && Array.isArray(data.momo_candidates) && data.momo_candidates.length) {
+      RAW_MOMO = data.momo_candidates;
+      renderMomoView();
+    } else if (!RAW_MOMO.length) {
+      fetchMomoFallback();
     }
     const tabBadgeOrb = document.getElementById('tab-badge-orb');
     if (tabBadgeOrb && data.stocks) tabBadgeOrb.innerText = data.stocks.length;
