@@ -2239,6 +2239,13 @@ def run_trailing_surveillance_worker():
 
                 if chat_id and positions:
                     for p in positions:
+                        # CRITICAL GUARD: Only monitor verified LIVE broker positions with active capital at risk.
+                        # NEVER alert on phantom, exited, or closed trades from old logs/spreadsheets!
+                        if p.get("source") != "LIVE BROKER":
+                            continue
+                        qty = int(p.get("qty", 0) or 0)
+                        if qty <= 0:
+                            continue
                         sym = p.get("symbol", "").upper()
                         ltp = float(p.get("ltp", 0) or 0)
                         entry_p = float(p.get("entry_price", 0) or 0)
