@@ -46,6 +46,7 @@ TARGET_INDICES = [
     ("Nifty 50", "Benchmark", "NSE_INDEX|Nifty 50", "^NSEI"),
     ("Nifty Bank", "Benchmark", "NSE_INDEX|Nifty Bank", "^NSEBANK"),
     ("Nifty Midcap 100", "Market Cap", "NSE_INDEX|NIFTY MIDCAP 100", "^CRSLDX"),
+    ("India VIX", "Volatility", "NSE_INDEX|India VIX", "^INDIAVIX"),
     ("Nifty IT", "Sectoral", "NSE_INDEX|Nifty IT", "^CNXIT"),
     ("Nifty Auto", "Sectoral", "NSE_INDEX|Nifty Auto", "^CNXAUTO"),
     ("Nifty Pharma", "Sectoral", "NSE_INDEX|Nifty Pharma", "^CNXPHARMA"),
@@ -168,6 +169,10 @@ def classify_bonde_multi_day_state(history: List[Dict[str, Any]]) -> Dict[str, A
         elif d['net_breadth'] < 0:
             if consec_green > 0: break
             consec_red += 1
+
+    strip_color = "TEAL" if consec_green > 0 else "CLAY"
+    strip_streak = consec_green if consec_green > 0 else consec_red
+    strip_badge = f"🟢 TEAL (Day-{consec_green} Expansion Streak)" if consec_green > 0 else f"🔴 CLAY (Day-{consec_red} Distribution Streak)"
 
     # Check for recent climax washout in last 3 sessions
     recent_3 = history[max(0, idx - 2):idx + 1]
@@ -305,7 +310,10 @@ def classify_bonde_multi_day_state(history: List[Dict[str, Any]]) -> Dict[str, A
         "mandate_headline": mandate_headline,
         "action_intra": action_intra,
         "action_swing": action_swing,
-        "action_positional": action_positional
+        "action_positional": action_positional,
+        "strip_color": strip_color,
+        "strip_streak": strip_streak,
+        "strip_badge": strip_badge
     }
 
 
@@ -444,6 +452,7 @@ def extract_bonde_breadth_metrics(file_path: Path) -> Optional[Dict[str, Any]]:
             "net_30_hl": net_30_hl,
             "sectoral_5d_roc": {
                 "ranking": sectors_roc,
+                "top_10": sectors_roc[:10],
                 "top_3": sectors_roc[:3],
                 "bottom_3": sectors_roc[-3:] if len(sectors_roc) >= 3 else []
             }
@@ -555,10 +564,22 @@ def fetch_nse_preopen_nifty() -> Optional[Dict[str, Any]]:
             advances = data.get("advances", 0)
             declines = data.get("declines", 0)
             unchanged = data.get("unchanged", 0)
+            stk_list = data.get("data", [])
+            gappers = []
+            for item in stk_list:
+                meta = item.get("metadata", {})
+                sym = meta.get("symbol")
+                pchg = float(meta.get("pChange", 0.0) or 0.0)
+                ltp = float(meta.get("lastPrice", 0.0) or 0.0)
+                val = float(item.get("detail", {}).get("preOpenMarket", {}).get("totalTurnover", 0.0) or 0.0)
+                if sym and pchg >= 0.8 and sym != "NIFTY 50":
+                    gappers.append({"symbol": sym, "pChange": pchg, "lastPrice": ltp, "turnover": val})
+            gappers.sort(key=lambda x: x["pChange"], reverse=True)
             return {
                 "advances": advances,
                 "declines": declines,
-                "unchanged": unchanged
+                "unchanged": unchanged,
+                "top_gappers": gappers[:4]
             }
     except Exception:
         return None
@@ -668,6 +689,24 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
     if preopen_data and preopen_data.get("advances") is not None and (preopen_data["advances"] + preopen_data["declines"]) > 0:
         lines.append(f"🏛 <b>Nifty 50 Pre-Open Fills:</b> 🟢 {preopen_data['advances']} Adv | 🔴 {preopen_data['declines']} Dec")
 
+    if preopen_data and preopen_data.get("top_gappers"):
+        gap_strs = [f"{g['symbol']} (+{g['pChange']:.1f}%)" for g in preopen_data["top_gappers"]]
+        lines.append(f"⚡ <b>09:08 Pre-Open Gappers:</b> {', '.join(gap_strs)}")
+
+    vix_item = next((idx for idx in indices_results if idx["name"] == "India VIX"), None)
+    if vix_item and vix_item["ltp"] > 0:
+        vix_val = vix_item["ltp"]
+        vix_chg = vix_item["change_pct"]
+        if vix_val < 13.0:
+            vix_regime = "Calm / Complacent ☀️"
+        elif vix_val <= 16.5:
+            vix_regime = "Normal Sweet Spot ⚖️"
+        elif vix_val <= 20.0:
+            vix_regime = "Elevated Turbulence ⚠️"
+        else:
+            vix_regime = "High Risk Spike 🚨"
+        lines.append(f"🌊 <b>India VIX Volatility:</b> <code>{vix_val:.2f}</code> ({vix_chg:+.1f}% | {vix_regime})")
+
     # Stockbee / Pradeep Bonde Market Breadth Section
     if bonde:
         lines.append("")
@@ -677,6 +716,8 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
         lines.append(f"💼 <b>Swing Capital Allocation:</b> <b>{bonde.get('allocation_pct', 0)}% Risk</b>")
         lines.append(f"🎯 <b>Action:</b> {bonde.get('state_action', '')}")
         lines.append(f"📈 <b>Trajectory:</b> {bonde.get('trajectory_context', '')}")
+        if bonde.get("strip_badge"):
+            lines.append(f"🧬 <b>Session Breadth Strip:</b> {bonde['strip_badge']}")
         lines.append("")
         lines.append("🛡️ <b>BONDE DETECTOR SIGNALS:</b>")
         lines.append(f"• <b>Washout Climax:</b> {bonde.get('washout_status', '⚪ QUIET')}")
@@ -690,6 +731,7 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
         lines.append(f"• <b>Ratios:</b> 5-Day: <b>{bonde['ratio_5d']:.2f}</b> | 10-Day: <b>{bonde['ratio_10d']:.2f}</b>")
         lines.append(f"• <b>52W NH vs NL:</b> {bonde['nh_cnt']} Highs ({bonde['nh_pct']:.1f}%) | {bonde['nl_cnt']} Lows ({bonde['nl_pct']:.1f}%)")
         lines.append(f"• <b>Net NH-NL:</b> <code>{bonde['net_nh_nl']:+.2f}%</code> | <b>Net 15% H-L:</b> <code>{bonde['net_15_hl']:+.2f}%</code>")
+        lines.append(f"• <b>Short-Term Cycle Pulse:</b> 1-Month Net: <code>{bonde.get('net_30_hl', 0.0):+.2f}%</code> | 15-Day Net: <code>{bonde.get('net_15_hl', 0.0):+.2f}%</code>")
         lines.append(f"• <b>Breakout Quality:</b> {bonde['bo_sustained']:.1f}% Sustained | <b>{bonde['bo_failure']:.1f}% Failed</b> (S/F: {bonde['bo_sf_ratio']:.2f})")
         lines.append(f"• <b>Breakdown Quality:</b> {bonde['bd_sustained']:.1f}% Sustained | {bonde['bd_failure']:.1f}% Failed (S/F: {bonde['bd_sf_ratio']:.2f})")
         lines.append(f"• <b>Close UH/LH:</b> {bonde['close_uh_pct']:.1f}% Upper | {bonde['close_lh_pct']:.1f}% Lower (UH/LH: {bonde['uh_lh_ratio']:+.1f}%)")
@@ -697,24 +739,27 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
         vol_state = "Capitulation Blowout 💥" if vol_r >= 1.50 and bonde.get('dn_4_cnt', 0) >= 300 else ("Institutional Surge 🚀" if vol_r >= 1.20 else ("Subdued / Dry 💤" if vol_r < 0.40 else "Normal Baseline ⚖️"))
         lines.append(f"• <b>Vol Ratio (Inst. Participation):</b> <code>{vol_r:.2f}</code> ({bonde['above_vol_pct']:.1f}% High / {bonde['below_vol_pct']:.1f}% Low | {vol_state})")
 
-        # 5-Day Sectoral 5D ROC Leaders (Kedia SBE Clumping)
+        # Top 10 Subsector / Industry Leaders (5D ROC Ranking from SBE Sheet)
         sec_data = bonde.get("sectoral_5d_roc", {})
-        leaders = sec_data.get("top_3", [])
+        top_10 = sec_data.get("top_10", [])
         laggards = sec_data.get("bottom_3", [])
-        if leaders:
+        if top_10:
             lines.append("")
-            lines.append("🏆 <b>5-DAY SECTORAL LEADERS (Kedia 5D ROC Clumping):</b>")
-            medals = ["🥇", "🥈", "🥉"]
-            for m, item in zip(medals, leaders):
+            lines.append("🏆 <b>TOP 10 SUBSECTOR LEADERS (5-Day ROC Ranking):</b>")
+            for rank, item in enumerate(top_10, 1):
                 s_name = item['sector']
                 roc = item['roc_5d_pct']
                 sign = "+" if roc > 0 else ""
-                lines.append(f"• {m} <b>{s_name}:</b> <code>{sign}{roc:.2f}%</code> {'🚀' if roc >= 3.0 else '🟢'}")
+                icon = "🚀" if roc >= 3.0 else ("🟢" if roc > 0 else ("🔴" if roc < 0 else "⚪"))
+                badge = "🥇" if rank == 1 else ("🥈" if rank == 2 else ("🥉" if rank == 3 else f"#{rank}"))
+                lines.append(f"• {badge} <b>{s_name}:</b> <code>{sign}{roc:.2f}%</code> {icon}")
             if laggards:
                 lag_strs = [f"{item['sector']} ({item['roc_5d_pct']:+.2f}%)" for item in laggards]
                 lines.append(f"• 🔻 <b>Laggards:</b> {' | '.join(lag_strs)}")
-            top_sec_names = " and ".join([item['sector'] for item in leaders[:2]])
-            lines.append(f"• 💡 <b>Sector Theme Mandate:</b> Institutional accumulation active in <b>{top_sec_names}</b>. Prioritize watchlist breakout setups strictly in these sectors; avoid laggards.")
+            top_sec_names = " and ".join([item['sector'] for item in top_10[:2]])
+            lines.append(f"• 💡 <b>Leadership Mandate:</b> Primary institutional momentum clustered in <b>{top_sec_names}</b>. Prioritize watchlist breakout setups strictly in these top 10 subsectors.")
+
+    lines.append("")
     lines.append("🏛 <b>BENCHMARK &amp; MARKET CAP INDICES:</b>")
     for b in benchmarks:
         icon = "🟢" if b["change_pct"] > 0 else ("🔴" if b["change_pct"] < 0 else "⚪")
