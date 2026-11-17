@@ -1107,9 +1107,36 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
     canonical_sym = quote_data["symbol"]
     sym_display = f"{canonical_sym} (<i>{symbol}</i>)" if symbol.upper() != canonical_sym else canonical_sym
 
+    # Check if this is an active holding for Pyramiding
+    holding_info = None
+    try:
+        from order_engine import get_active_holding_info
+        holding_info = get_active_holding_info(canonical_sym) or get_active_holding_info(symbol)
+    except Exception:
+        pass
+
+    pyramid_banner = ""
+    order_title = "⚡ <b>JARVIS ORDER PREVIEW</b>"
+    if holding_info:
+        order_title = "⚡ <b>JARVIS ORDER PREVIEW (🔺 PYRAMID ADD-ON)</b>"
+        h_qty = holding_info.get("qty", 0)
+        h_entry = float(holding_info.get("entry_price") or 0.0)
+        h_broker = holding_info.get("broker", "HOLDING")
+        h_pnl = round(((calc['ltp'] - h_entry) / h_entry) * 100.0, 1) if h_entry > 0 else 0.0
+        new_q = calc['quantity']
+        blended = round(((h_qty * h_entry) + (new_q * calc['ltp'])) / (h_qty + new_q), 2) if (h_qty + new_q) > 0 else calc['ltp']
+        pyramid_banner = (
+            "🔺 <b>PYRAMID ADD-ON ADVISORY:</b>\n"
+            f"• Current Position: <b>{h_qty} shs @ ₹{h_entry:,.2f}</b> on {h_broker} ({h_pnl:+.1f}%)\n"
+            f"• Proposed Add-On : <b>+{new_q} shs @ ₹{calc['ltp']:.2f}</b>\n"
+            f"• New Blended Avg : <b>₹{blended:,.2f}</b> (Total: {h_qty + new_q} shs)\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+        )
+
     preview_text = (
-        "⚡ <b>JARVIS ORDER PREVIEW</b>\n"
+        f"{order_title}\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"{pyramid_banner}"
         f"📌 <b>Symbol:</b> <b>{sym_display}</b> (NSE Equity)\n"
         f"🏦 <b>Selected Broker:</b> <b>{b_label}</b>\n"
         f"💰 <b>Size Mode:</b> {calc['mode_label']}\n"
@@ -1122,7 +1149,7 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
         f"{sig_line}"
         f"{margin_advisory}"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📋 <b>STRATEGY CHECKLIST ({checklist_data.get('passed_count', 0)}/{checklist_data.get('total_count', 7)} Passed):</b>\n"
+        f"📋 <b>STRATEGY CHECKLIST ({checklist_data.get('passed_count', 0)}/{checklist_data.get('total_count', len(checklist_items))} Passed):</b>\n"
         f"{checklist_block}\n"
         f"{alert_block}"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -1131,7 +1158,10 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
 
     btn_icon = "⚠️" if warnings else "✅"
     warn_tag = f" ({len(warnings)} Warns)" if warnings else ""
-    btn_text = f"{btn_icon} Execute on {broker.upper()} ({calc['quantity']} shs{warn_tag})"
+    if holding_info:
+        btn_text = f"🔺 Execute Pyramid on {broker.upper()} (+{calc['quantity']} shs{warn_tag})"
+    else:
+        btn_text = f"{btn_icon} Execute on {broker.upper()} ({calc['quantity']} shs{warn_tag})"
 
     reply_markup = {
         "inline_keyboard": [
