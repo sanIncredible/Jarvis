@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1780,10 +1780,14 @@
       fetchMomoFallback();
       return;
     }
-    // Only display Narrow Range (NR) Momentum setups
-    const t1 = RAW_MOMO.filter(c => c.tier === 'TIER_1_DOORSTEP' || c.tier_order === 1);
-    const t2 = RAW_MOMO.filter(c => c.tier === 'TIER_2_LAUNCHPAD' || c.tier_order === 2);
-    const t3 = RAW_MOMO.filter(c => c.tier === 'TIER_3_BASE' || c.tier_order === 3);
+    // Only display genuine Narrow Range (NR) Momentum setups:
+    // Must satisfy at least one NR condition (NR7, NR4, Inside Day, Tight Range) AND have legitimate daily range >= 0.25%
+    const isNR = c => ((c.is_nr7 || c.is_nr4 || c.is_inside || c.is_tight) && ((c.daily_range_pct || 0) >= 0.25 || (c.nr_tags && c.nr_tags.length > 0)));
+    const nrCandidates = RAW_MOMO.filter(isNR);
+
+    const t1 = nrCandidates.filter(c => c.tier === 'TIER_1_DOORSTEP' || c.tier_order === 1);
+    const t2 = nrCandidates.filter(c => c.tier === 'TIER_2_LAUNCHPAD' || c.tier_order === 2);
+    const t3 = nrCandidates.filter(c => c.tier === 'TIER_3_BASE' || c.tier_order === 3);
 
     const totalNR = t1.length + t2.length + t3.length;
     const badge = document.getElementById('tab-badge-momo');
@@ -1862,9 +1866,7 @@
     const endpoints = [
       'candidates_90d_nr.json',
       'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/candidates_90d_nr.json',
-      'https://raw.githubusercontent.com/sanIncredible/Jarvis/main/candidates_90d_nr.json',
-      'candidates_90d_momo.json',
-      'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/candidates_90d_momo.json'
+      'https://raw.githubusercontent.com/sanIncredible/Jarvis/main/candidates_90d_nr.json'
     ];
     for (const url of endpoints) {
       try {
@@ -1879,9 +1881,9 @@
             ...(d.tier3_candidates || [])
           ];
         } else if (Array.isArray(d.candidates)) {
-          list = d.candidates.filter(c => c.is_nr7 || c.is_nr4 || c.is_inside || c.is_tight || c.tier_order <= 2);
+          list = d.candidates.filter(c => (c.is_nr7 || c.is_nr4 || c.is_inside || c.is_tight) && ((c.daily_range_pct || 0) >= 0.25));
         } else if (Array.isArray(d)) {
-          list = d;
+          list = d.filter(c => (c.is_nr7 || c.is_nr4 || c.is_inside || c.is_tight) && ((c.daily_range_pct || 0) >= 0.25));
         }
         if (list.length) {
           RAW_MOMO = list;
