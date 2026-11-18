@@ -2936,6 +2936,10 @@ def export_static_html(results, now_str, port):
                         t2 = nr_data.get("tier2_candidates", [])
                         t3 = nr_data.get("tier3_candidates", [])
                         for c in (t1 + t2 + t3):
+                            rng_pct = float(c.get("daily_range_pct") or 0)
+                            has_nr = c.get("is_nr7") or c.get("is_nr4") or c.get("is_inside") or c.get("is_tight")
+                            if not has_nr or rng_pct < 0.25:
+                                continue
                             momo_payload.append({
                                 "symbol": c.get("symbol"),
                                 "industry": c.get("industry"),
@@ -2948,7 +2952,7 @@ def export_static_html(results, now_str, port):
                                 "is_nr4": c.get("is_nr4", False),
                                 "is_inside": c.get("is_inside", False),
                                 "is_tight": c.get("is_tight", False),
-                                "daily_range_pct": c.get("daily_range_pct"),
+                                "daily_range_pct": rng_pct,
                                 "nr_badge": c.get("nr_badge", ""),
                                 "nr_tags": c.get("nr_tags", []),
                                 "curr_close": c.get("curr_close")
@@ -2957,25 +2961,8 @@ def export_static_html(results, now_str, port):
                         break
                 except Exception:
                     pass
-        if not momo_payload:
-            for m_path in ["candidates_90d_momo.json", os.path.join(script_dir, "candidates_90d_momo.json")]:
-                if os.path.isfile(m_path):
-                    try:
-                        with open(m_path, "r", encoding="utf-8") as mf:
-                            m_data = json.load(mf)
-                            for c in m_data.get("candidates", []):
-                                momo_payload.append({
-                                    "symbol": c.get("symbol"),
-                                    "industry": c.get("industry"),
-                                    "gain_tier": c.get("gain_tier"),
-                                    "dist_52w_pct": c.get("dist_52w_pct"),
-                                    "is_fresh_3m": c.get("is_fresh_3m", False),
-                                    "tier": c.get("tier"),
-                                    "tier_order": c.get("tier_order", 4)
-                                })
-                        break
-                    except Exception:
-                        pass
+        # Do not fallback to raw candidates_90d_momo.json without NR criteria;
+        # the dashboard Momo tab strictly displays genuine Narrow Range (NR4/NR7/ID/Tight) coils.
 
         payload = {
             "updated_at": now_str,
