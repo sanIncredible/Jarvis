@@ -2632,6 +2632,24 @@ class ScannerHttpHandler(http.server.BaseHTTPRequestHandler):
                     except Exception:
                         pass
 
+        if self.path.startswith('/candidates_nifty_ipo.json'):
+            target_f = "candidates_nifty_ipo.json"
+            for cf in [target_f, os.path.join(script_dir, target_f)]:
+                if os.path.isfile(cf):
+                    try:
+                        with open(cf, "rb") as f:
+                            ipo_bytes = f.read()
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/json; charset=utf-8')
+                        self.send_header('Access-Control-Allow-Origin', '*')
+                        self.send_header('Content-Length', str(len(ipo_bytes)))
+                        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                        self.end_headers()
+                        self.wfile.write(ipo_bytes)
+                        return
+                    except Exception:
+                        pass
+
         # Always serve SOTA index.html on root / or /index.html
         if self.path in ('/', '/index.html') or self.path.startswith('/index.html'):
             for idx_f in ["index.html", os.path.join(script_dir, "index.html")]:
@@ -2964,6 +2982,40 @@ def export_static_html(results, now_str, port):
         # Do not fallback to raw candidates_90d_momo.json without NR criteria;
         # the dashboard Momo tab strictly displays genuine Narrow Range (NR4/NR7/ID/Tight) coils.
 
+        # Load Nifty IPO candidates if available
+        ipo_payload = []
+        for ipo_path in ["candidates_nifty_ipo.json", os.path.join(script_dir, "candidates_nifty_ipo.json")]:
+            if os.path.isfile(ipo_path):
+                try:
+                    with open(ipo_path, "r", encoding="utf-8") as ipof:
+                        ipo_data = json.load(ipof)
+                        t1 = ipo_data.get("tier1_candidates", [])
+                        t2 = ipo_data.get("tier2_candidates", [])
+                        t3 = ipo_data.get("tier3_candidates", [])
+                        for c in (t1 + t2 + t3):
+                            ipo_payload.append({
+                                "symbol": c.get("symbol"),
+                                "name": c.get("name"),
+                                "industry": c.get("industry"),
+                                "ltp": c.get("ltp"),
+                                "change_pct": c.get("change_pct"),
+                                "dist_ath_pct": c.get("dist_ath_pct"),
+                                "ath": c.get("ath"),
+                                "tier": c.get("tier"),
+                                "tier_order": c.get("tier_order", 1),
+                                "is_nr7": c.get("is_nr7", False),
+                                "is_nr4": c.get("is_nr4", False),
+                                "is_inside": c.get("is_inside", False),
+                                "is_tight": c.get("is_tight", False),
+                                "daily_range_pct": c.get("daily_range_pct"),
+                                "nr_badge": c.get("nr_badge", ""),
+                                "nr_tags": c.get("nr_tags", [])
+                            })
+                    if ipo_payload:
+                        break
+                except Exception:
+                    pass
+
         payload = {
             "updated_at": now_str,
             "updated_ts": int(time.time()),
@@ -2972,6 +3024,7 @@ def export_static_html(results, now_str, port):
             "pre_market_summary": sa_summary_data,
             "candidates": candidates_payload,
             "momo_candidates": momo_payload,
+            "ipo_candidates": ipo_payload,
             "stocks": stocks_payload
         }
 
