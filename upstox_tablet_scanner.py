@@ -2668,6 +2668,24 @@ class ScannerHttpHandler(http.server.BaseHTTPRequestHandler):
                     except Exception:
                         pass
 
+        if self.path.startswith('/candidates_merged.json'):
+            target_f = "candidates_merged.json"
+            for cf in [target_f, os.path.join(script_dir, target_f)]:
+                if os.path.isfile(cf):
+                    try:
+                        with open(cf, "rb") as f:
+                            merged_bytes = f.read()
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/json; charset=utf-8')
+                        self.send_header('Access-Control-Allow-Origin', '*')
+                        self.send_header('Content-Length', str(len(merged_bytes)))
+                        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                        self.end_headers()
+                        self.wfile.write(merged_bytes)
+                        return
+                    except Exception:
+                        pass
+
         # Always serve SOTA index.html on root / or /index.html
         if self.path in ('/', '/index.html') or self.path.startswith('/index.html'):
             for idx_f in ["index.html", os.path.join(script_dir, "index.html")]:
@@ -3061,6 +3079,35 @@ def export_static_html(results, now_str, port):
                 except Exception:
                     pass
 
+        # Load Unified Merged Candidates if available
+        merged_payload = []
+        for m_path in ["candidates_merged.json", os.path.join(script_dir, "candidates_merged.json")]:
+            if os.path.isfile(m_path):
+                try:
+                    with open(m_path, "r", encoding="utf-8") as mf:
+                        m_data = json.load(mf)
+                        for c in m_data.get("candidates", []):
+                            merged_payload.append({
+                                "symbol": c.get("symbol"),
+                                "industry": c.get("industry"),
+                                "tier_order": c.get("tier_order", 1),
+                                "tier": c.get("tier") or c.get("tier_label"),
+                                "total_score": round(float(c.get("total_score", 0)), 1),
+                                "sources": c.get("sources", [c.get("source", "eod")]),
+                                "cross_list_bonus": c.get("cross_list_bonus", 0),
+                                "dist_52w_pct": c.get("dist_52w_pct"),
+                                "rs_rating": c.get("rs_rating", 0),
+                                "ltp": c.get("ltp"),
+                                "change_pct": c.get("change_pct"),
+                                "coil_tag": c.get("coil_tag"),
+                                "vol_tag": c.get("vol_tag"),
+                                "flags": c.get("flags", [])
+                            })
+                    if merged_payload:
+                        break
+                except Exception:
+                    pass
+
         payload = {
             "updated_at": now_str,
             "updated_ts": int(time.time()),
@@ -3071,6 +3118,7 @@ def export_static_html(results, now_str, port):
             "momo_candidates": momo_payload,
             "ipo_candidates": ipo_payload,
             "ems_candidates": ems_payload,
+            "merged_candidates": merged_payload,
             "stocks": stocks_payload
         }
 
