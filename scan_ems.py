@@ -50,6 +50,36 @@ OUT_EMS_TXT = BASE_DIR / "candidates_ems.txt"
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
+# ── Sector mapping (matches candidate_scanner.py) ──────────────────────────
+INDUSTRY_TO_SECTOR = {
+    "Automobile and Auto Components": "Nifty Auto",
+    "Healthcare": "Nifty Pharma",
+    "Information Technology": "Nifty IT",
+    "Metals & Mining": "Nifty Metal",
+    "Realty": "Nifty Realty",
+    "Financial Services": "Nifty Bank",
+    "Power": "Nifty Energy",
+    "Oil Gas & Consumable Fuels": "Nifty Energy",
+    "Fast Moving Consumer Goods": "Nifty FMCG",
+    "Capital Goods": "Nifty Infra",
+    "Construction": "Nifty Infra",
+    "Media": "Nifty Media",
+}
+
+# Short display name from Nifty index name
+_SECTOR_DISPLAY = {
+    "Nifty Auto": "Auto",
+    "Nifty Pharma": "Pharma",
+    "Nifty IT": "IT",
+    "Nifty Metal": "Metal",
+    "Nifty Realty": "Realty",
+    "Nifty Bank": "Bank",
+    "Nifty Energy": "Energy",
+    "Nifty FMCG": "FMCG",
+    "Nifty Infra": "Infra",
+    "Nifty Media": "Media",
+}
+
 
 def get_ist_now() -> datetime:
     return datetime.now(timezone.utc).astimezone(IST).replace(tzinfo=None)
@@ -178,6 +208,10 @@ def scan_ems_candidates() -> Dict[str, Any]:
             dist_val = near_map.get(sym)
             rs_val = rs_map.get(sym, 0)
 
+            # ── Risk filter: reject stocks extended >25% below 52W high ──
+            if dist_val is not None and dist_val < -25:
+                continue
+
             # Classify into 3 Tiers
             num_trig = len(triggers)
             has_short = any("1W" in t or "1M" in t for t in triggers)
@@ -196,9 +230,36 @@ def scan_ems_candidates() -> Dict[str, Any]:
                 tier_label = "TIER 3: 📦 STRUCTURAL TREND LEADERS (1Q / 6M)"
                 tier_order = 3
 
+            # ── Sector tag ───────────────────────────────────────────
+            mapped_sector = INDUSTRY_TO_SECTOR.get(ind)
+            if mapped_sector:
+                sector_display = _SECTOR_DISPLAY.get(mapped_sector, mapped_sector)
+                sector_tag = f"🏢 {sector_display}"
+                sector_score = 5.0
+            else:
+                sector_tag = f"🏢 {ind}"
+                sector_score = 3.0
+
+            # ── Volume proxy from RS rating ──────────────────────────
+            rs_int = int(rs_val) if rs_val else 0
+            if rs_int >= 90:
+                volume_score = 15.0
+            elif rs_int >= 80:
+                volume_score = 10.0
+            elif rs_int >= 70:
+                volume_score = 5.0
+            else:
+                volume_score = 0.0
+
+            # ── Unified scoring ──────────────────────────────────────
+            tier_score = {1: 30, 2: 20, 3: 10}.get(tier_order, 0)
+            momentum_score = num_trig * 10
+            total_score = tier_score + volume_score + momentum_score + sector_score
+
             candidates.append({
                 "symbol": sym,
                 "industry": ind,
+                "sector_tag": sector_tag,
                 "tier": tier_code,
                 "tier_label": tier_label,
                 "tier_order": tier_order,
@@ -206,7 +267,12 @@ def scan_ems_candidates() -> Dict[str, Any]:
                 "trigger_badges": trigger_badges,
                 "triggers_count": num_trig,
                 "dist_52w_pct": round(dist_val, 1) if dist_val is not None else None,
-                "rs_rating": int(rs_val) if rs_val else 0,
+                "rs_rating": rs_int,
+                "volume_score": volume_score,
+                "momentum_score": momentum_score,
+                "sector_score": sector_score,
+                "tier_score": tier_score,
+                "total_score": total_score,
                 "m5": m5,
                 "m20": m20,
                 "m30": m30,
@@ -221,6 +287,7 @@ def scan_ems_candidates() -> Dict[str, Any]:
     # 4. Proximity to 52W high (dist_52w_pct closest to 0)
     candidates.sort(key=lambda x: (
         x["tier_order"],
+        -x["total_score"],
         -x["triggers_count"],
         -(x["rs_rating"] or 0),
         -(x["dist_52w_pct"] if x["dist_52w_pct"] is not None else -999)
@@ -382,3 +449,9 @@ if __name__ == "__main__":
     if args.notify:
         send_telegram_ems_notification(summary)
         print("📲 Dispatched Telegram EMS briefing.")
+
+    try:
+        from enrich_candidates import main as enrich_main
+        enrich_main()
+    except Exception as e:
+        print(f"ℹ️ Auto-enrichment notice: {e}")
