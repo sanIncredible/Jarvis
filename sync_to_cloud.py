@@ -39,14 +39,16 @@ import urllib.request
 
 def purge_jsdelivr_cache():
     """Purges jsDelivr CDN cache instantly so cloud dashboard reflects updates immediately."""
-    try:
-        url = "https://purge.jsdelivr.net/gh/sanIncredible/Jarvis@main/data.json"
-        req = urllib.request.Request(url, headers={"User-Agent": "Jarvis-Purge"})
-        with urllib.request.urlopen(req, timeout=4) as resp:
+    purge_list = ["data.json", "index.html", "candidates_merged.json", "candidates_merged.txt", "candidates_ems.json", "candidates_90d_nr.json", "candidates_nifty_ipo.json"]
+    for f in purge_list:
+        try:
+            url = f"https://purge.jsdelivr.net/gh/sanIncredible/Jarvis@main/{f}"
+            req = urllib.request.Request(url, headers={"User-Agent": "Jarvis-Purge"})
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                pass
+        except Exception:
             pass
-        print("   ⚡ jsDelivr Edge CDN Cache Purged successfully!")
-    except Exception as e:
-        print(f"   ℹ️ CDN purge notice: {e}")
+    print("   ⚡ jsDelivr Edge CDN Cache Purged successfully!")
 
 def pull_latest_data_json():
     """Downloads the latest data.json from GitHub so local dashboard/files match cloud immediately."""
@@ -62,10 +64,40 @@ def pull_latest_data_json():
     except Exception as e:
         print(f"   ℹ️ Local pull notice: {e}")
 
+def pull_latest_watchlist_from_github():
+    """Pulls latest watchlist from GitHub if updated via Telegram so remote changes are never wiped."""
+    try:
+        from upstox_tablet_scanner import load_github_config
+        gh_cfg = load_github_config()
+        if not gh_cfg:
+            return
+        token = gh_cfg.get("token", "").strip()
+        owner = gh_cfg.get("username", "sanIncredible").strip()
+        repo = gh_cfg.get("repo", "Jarvis").strip()
+        url = f"https://api.github.com/repos/{owner}/{repo}/commits?path=watchlist.txt&per_page=1"
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}", "User-Agent": "Jarvis-Sync"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            commits = json.loads(resp.read().decode("utf-8"))
+            if commits:
+                msg = commits[0].get("commit", {}).get("message", "")
+                if "via Telegram" in msg:
+                    raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/main/watchlist.txt?_t={int(time.time())}"
+                    with urllib.request.urlopen(urllib.request.Request(raw_url, headers={"Cache-Control": "no-cache"}), timeout=5) as r_resp:
+                        txt = r_resp.read().decode("utf-8")
+                        if txt.strip():
+                            with open(WATCHLIST_FILE, "w", encoding="utf-8") as f:
+                                f.write(txt)
+                            print(f"   📥 Pulled latest Telegram watchlist from GitHub ({msg})")
+    except Exception as e:
+        print(f"   ℹ️ Telegram watchlist pull notice: {e}")
+
 def main():
     print("=" * 60)
     print("⚡ 1-CLICK CLOUD SYNC — UPSTOX TOKEN & WATCHLIST")
     print("=" * 60)
+
+    # 0. Safety Pull: Check if Telegram bot updated watchlist on GitHub
+    pull_latest_watchlist_from_github()
 
     # 1. Watchlist Check (Local watchlist is master authority: replaces GitHub & OCI VM, no merging)
     if not WATCHLIST_FILE.is_file():
@@ -185,6 +217,20 @@ def main():
                 sync_file_to_github_api(gh_cfg, "master_registry.py", "Update master symbol registry engine")
             if (BASE_DIR / "master_symbol_registry.json").is_file():
                 sync_file_to_github_api(gh_cfg, "master_symbol_registry.json", "Update master symbol registry data")
+            if (BASE_DIR / ".nojekyll").is_file():
+                sync_file_to_github_api(gh_cfg, ".nojekyll", "Add .nojekyll for GitHub Pages")
+            if (BASE_DIR / "scan_nr_momo.py").is_file():
+                sync_file_to_github_api(gh_cfg, "scan_nr_momo.py", "Update 90D momentum scanner")
+            if (BASE_DIR / "candidates_90d_nr.json").is_file():
+                sync_file_to_github_api(gh_cfg, "candidates_90d_nr.json", "Update 90D momo candidates json")
+            if (BASE_DIR / "candidates_90d_nr.txt").is_file():
+                sync_file_to_github_api(gh_cfg, "candidates_90d_nr.txt", "Update 90D momo candidates txt")
+            if (BASE_DIR / "scan_nifty_ipo.py").is_file():
+                sync_file_to_github_api(gh_cfg, "scan_nifty_ipo.py", "Update Nifty IPO scanner")
+            if (BASE_DIR / "candidates_nifty_ipo.json").is_file():
+                sync_file_to_github_api(gh_cfg, "candidates_nifty_ipo.json", "Update Nifty IPO candidates json")
+            if (BASE_DIR / "candidates_nifty_ipo.txt").is_file():
+                sync_file_to_github_api(gh_cfg, "candidates_nifty_ipo.txt", "Update Nifty IPO candidates txt")
             if (BASE_DIR / "scan_ems.py").is_file():
                 sync_file_to_github_api(gh_cfg, "scan_ems.py", "Update Easy Money Scan (EMS) engine")
             if (BASE_DIR / "candidates_ems.json").is_file():
@@ -309,6 +355,18 @@ def main():
             scp_files.append(str(BASE_DIR / "candidates.txt"))
         if (BASE_DIR / "candidates.json").is_file():
             scp_files.append(str(BASE_DIR / "candidates.json"))
+        if (BASE_DIR / "scan_nr_momo.py").is_file():
+            scp_files.append(str(BASE_DIR / "scan_nr_momo.py"))
+        if (BASE_DIR / "candidates_90d_nr.json").is_file():
+            scp_files.append(str(BASE_DIR / "candidates_90d_nr.json"))
+        if (BASE_DIR / "candidates_90d_nr.txt").is_file():
+            scp_files.append(str(BASE_DIR / "candidates_90d_nr.txt"))
+        if (BASE_DIR / "scan_nifty_ipo.py").is_file():
+            scp_files.append(str(BASE_DIR / "scan_nifty_ipo.py"))
+        if (BASE_DIR / "candidates_nifty_ipo.json").is_file():
+            scp_files.append(str(BASE_DIR / "candidates_nifty_ipo.json"))
+        if (BASE_DIR / "candidates_nifty_ipo.txt").is_file():
+            scp_files.append(str(BASE_DIR / "candidates_nifty_ipo.txt"))
         if (BASE_DIR / "scan_ems.py").is_file():
             scp_files.append(str(BASE_DIR / "scan_ems.py"))
         if (BASE_DIR / "candidates_ems.json").is_file():
@@ -342,7 +400,7 @@ def main():
         ]
 
         try:
-            res = subprocess.run(scp_cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10)
+            res = subprocess.run(scp_cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=40)
             if res.returncode == 0:
                 print("   ✅ Files copied to OCI VM (/home/opc/Jarvis/)")
                 # Reload scanner
@@ -351,9 +409,9 @@ def main():
                     "-i", str(KEY_FILE)
                 ] + ssh_opts + [
                     f"{SERVER_USER}@{SERVER_IP}",
-                    "sudo systemctl restart scanner"
+                    "cd /home/opc/Jarvis && python3 enrich_candidates.py && sudo systemctl restart scanner && (sudo systemctl restart telegram_bot 2>/dev/null || true)"
                 ]
-                subprocess.run(ssh_cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10)
+                subprocess.run(ssh_cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=25)
                 print("   🌟 Scanner service reloaded on OCI VM!")
                 ssh_ok = True
             else:
