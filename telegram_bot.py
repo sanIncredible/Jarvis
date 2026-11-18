@@ -914,6 +914,22 @@ def handle_ems_command(args=""):
         return f"⚠️ <b>Easy Money Screener Error:</b> {e}", None
 
 
+def handle_merged_command(args=""):
+    """
+    Handles /merged or /confluence:
+    Runs candidate deduplication & cross-list confluence scoring across EOD, MOMO, IPO, and EMS.
+    """
+    try:
+        from enrich_candidates import merge_candidates, format_merged_telegram_card, write_json, write_txt
+        payload = merge_candidates()
+        write_json(payload)
+        write_txt(payload)
+        text, markup = format_merged_telegram_card(payload)
+        return text, markup
+    except Exception as e:
+        return f"⚠️ <b>Unified Confluence Error:</b> {e}", None
+
+
 def handle_token_status_command():
     """Handles /token, /tokens, or /status"""
     cfg = load_config()
@@ -1130,6 +1146,7 @@ def handle_help_command():
         "• <code>/nr</code> or <code>/momo_nr</code> — Narrow Range (NR4/NR7/Inside Day) Coils (Sniper List)\n"
         "• <code>/ipo</code> or <code>/niftyipo</code> — Official Nifty IPO Index High-Tight &amp; NR Contractions\n"
         "• <code>/ems</code> or <code>/easymoney</code> — Chirag Kedia Easy Money Scan (1W/1M/1Q/6M Momentum)\n"
+        "• <code>/merged</code> or <code>/confluence</code> — 🏆 Unified Candidate Confluence (Best across all 4 scanners)\n"
         "• <code>/exited</code> or <code>/reentry</code> — Audit past exited stocks for candidate re-entry\n"
         "• <code>/hindsight</code> or <code>/sim</code> — EOD Multi-Trade Simulation & Strict Audit\n"
         "• <code>/add &lt;SYMBOL...&gt;</code> — Add stock(s) to scanner watchlist\n"
@@ -2434,6 +2451,8 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_nifty_ipo_command(args)
     elif cmd in ("/ems", "/easymoney", "ems", "easymoney"):
         return handle_ems_command(args)
+    elif cmd in ("/merged", "/confluence", "/combo", "/best", "merged", "confluence", "combo", "best"):
+        return handle_merged_command(args)
     elif cmd in ("/exited", "/reentry", "/exholdings", "exited", "reentry"):
         return handle_exited_command()
     elif cmd in ("/positions", "/pos", "/portfolio", "/pnl", "/holdings", "positions", "pos", "pnl"):
