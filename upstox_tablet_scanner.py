@@ -2650,6 +2650,24 @@ class ScannerHttpHandler(http.server.BaseHTTPRequestHandler):
                     except Exception:
                         pass
 
+        if self.path.startswith('/candidates_ems.json'):
+            target_f = "candidates_ems.json"
+            for cf in [target_f, os.path.join(script_dir, target_f)]:
+                if os.path.isfile(cf):
+                    try:
+                        with open(cf, "rb") as f:
+                            ems_bytes = f.read()
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/json; charset=utf-8')
+                        self.send_header('Access-Control-Allow-Origin', '*')
+                        self.send_header('Content-Length', str(len(ems_bytes)))
+                        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                        self.end_headers()
+                        self.wfile.write(ems_bytes)
+                        return
+                    except Exception:
+                        pass
+
         # Always serve SOTA index.html on root / or /index.html
         if self.path in ('/', '/index.html') or self.path.startswith('/index.html'):
             for idx_f in ["index.html", os.path.join(script_dir, "index.html")]:
@@ -3016,6 +3034,33 @@ def export_static_html(results, now_str, port):
                 except Exception:
                     pass
 
+        # Load Chirag Kedia Easy Money Scan (EMS) candidates if available
+        ems_payload = []
+        for ems_path in ["candidates_ems.json", os.path.join(script_dir, "candidates_ems.json")]:
+            if os.path.isfile(ems_path):
+                try:
+                    with open(ems_path, "r", encoding="utf-8") as emsf:
+                        ems_data = json.load(emsf)
+                        t1 = ems_data.get("tier1_candidates", [])
+                        t2 = ems_data.get("tier2_candidates", [])
+                        t3 = ems_data.get("tier3_candidates", [])
+                        for c in (t1 + t2 + t3):
+                            ems_payload.append({
+                                "symbol": c.get("symbol"),
+                                "industry": c.get("industry"),
+                                "tier": c.get("tier"),
+                                "tier_order": c.get("tier_order", 1),
+                                "triggers": c.get("triggers", []),
+                                "trigger_badges": c.get("trigger_badges", []),
+                                "triggers_count": c.get("triggers_count", 1),
+                                "dist_52w_pct": c.get("dist_52w_pct"),
+                                "rs_rating": c.get("rs_rating", 0)
+                            })
+                    if ems_payload:
+                        break
+                except Exception:
+                    pass
+
         payload = {
             "updated_at": now_str,
             "updated_ts": int(time.time()),
@@ -3025,6 +3070,7 @@ def export_static_html(results, now_str, port):
             "candidates": candidates_payload,
             "momo_candidates": momo_payload,
             "ipo_candidates": ipo_payload,
+            "ems_candidates": ems_payload,
             "stocks": stocks_payload
         }
 
