@@ -1304,6 +1304,10 @@
       <span class="tab-icon">🎯</span> <span id="txt-tab-momo">90D Momo (NR)</span> 
       <span id="tab-badge-momo" class="tab-badge">0</span>
     </button>
+    <button id="tab-btn-ipo" class="main-tab-btn" onclick="switchMainView('ipo')" title="View Nifty IPO Index Filtered Candidates">
+      <span class="tab-icon">🚀</span> <span id="txt-tab-ipo">Nifty IPO (NR)</span> 
+      <span id="tab-badge-ipo" class="tab-badge">0</span>
+    </button>
   </div>
 
   <!-- VIEW 1: 3m ORB Live Scanner View -->
@@ -1590,6 +1594,69 @@
 
   </div> <!-- /#view-momo -->
 
+  <!-- VIEW 4: Nifty IPO Index Filtered Candidates -->
+  <div id="view-ipo" style="display:none;" class="cand-view-container">
+
+    <div style="background:rgba(245, 158, 11, 0.08); border:1px solid rgba(245, 158, 11, 0.3); border-radius:10px; padding:12px 18px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <div style="font-size:14px; font-weight:800; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+          <span>🚀 NIFTY IPO INDEX: HIGH-TIGHT &amp; NR CONTRACTION COIL RADAR</span>
+        </div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+          Official Nifty IPO Index Constituents screened for Stage 1/2 IPO Bases, NR Contractions (NR7 / NR4 / Inside Day / Tight Range) &amp; ATH Doorsteps &bull; Zero Overhead Supply
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; font-size:11px; font-weight:700;">
+        <span style="color:#10b981; background:rgba(16,185,129,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.4);">🎯 NR7 Squeeze</span>
+        <span style="color:#38bdf8; background:rgba(56,189,248,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(56,189,248,0.4);">⚡ NR4 Coil</span>
+        <span style="color:#c084fc; background:rgba(192,132,252,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(192,132,252,0.4);">📦 Inside Day</span>
+      </div>
+    </div>
+
+    <!-- TIER 1: IPO PIVOT DOORSTEP -->
+    <div class="tier-card tier-1a-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1a-title">🔥 <span id="txt-ipo-t1-title">TIER 1: 👑 IPO PIVOT DOORSTEP (≤3.5% from All-Time High / 3M High)</span></span>
+          <span id="ipo-cnt-tier1" class="tier-badge-pill tier-1a-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-ipo-t1-sub">Fresh IPO leaders sitting right on the doorstep of All-Time High &bull; Squeezed in NR7 / NR4 / Inside Day &bull; Immediate blue-sky ignition</div>
+      </div>
+      <div id="ipo-grid-tier1" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 2: IPO LAUNCHPAD BASE -->
+    <div class="tier-card tier-1b-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1b-title">🚀 <span id="txt-ipo-t2-title">TIER 2: 🎯 IPO LAUNCHPAD BASE (3.5% to 8.0% from ATH)</span></span>
+          <span id="ipo-cnt-tier2" class="tier-badge-pill tier-1b-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-ipo-t2-sub">Secondary IPO base consolidation resting on 10/20 EMA cushion &bull; Multi-day volatility compression &bull; Asymmetrical upside runway</div>
+      </div>
+      <div id="ipo-grid-tier2" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 3: IPO BASE COIL -->
+    <div class="tier-card tier-3-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-3-title">📦 <span id="txt-ipo-t3-title">TIER 3: 🧱 IPO BASE ACCUMULATION (8% to 18% from ATH)</span></span>
+          <span id="ipo-cnt-tier3" class="tier-badge-pill tier-3-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-ipo-t3-sub">Constructive Stage 1 IPO base building &bull; Multi-week accumulation coils preparing for primary breakout</div>
+      </div>
+      <div id="ipo-grid-tier3" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+  </div> <!-- /#view-ipo -->
+
 
   <div id="page-footer" class="footer">
     Cluster Telemetry &amp; Node Observer Daemon • Distributed Ingress Telemetry Pipeline • High-Throughput Stream • Press [?] for Diagnostics
@@ -1685,28 +1752,35 @@
   let currentMainView = 'orb';
   let RAW_CANDIDATES = [];
   let RAW_MOMO = [];
+  let RAW_IPO = [];
 
   function switchMainView(viewName) {
     currentMainView = viewName;
     const btnOrb = document.getElementById('tab-btn-orb');
     const btnCand = document.getElementById('tab-btn-cand');
     const btnMomo = document.getElementById('tab-btn-momo');
+    const btnIpo = document.getElementById('tab-btn-ipo');
     const viewOrb = document.getElementById('view-orb');
     const viewCand = document.getElementById('view-candidates');
     const viewMomo = document.getElementById('view-momo');
+    const viewIpo = document.getElementById('view-ipo');
 
     if (btnOrb) btnOrb.classList.toggle('active', viewName === 'orb');
     if (btnCand) btnCand.classList.toggle('active', viewName === 'candidates');
     if (btnMomo) btnMomo.classList.toggle('active', viewName === 'momo');
+    if (btnIpo) btnIpo.classList.toggle('active', viewName === 'ipo');
 
     if (viewOrb) viewOrb.style.display = (viewName === 'orb') ? 'block' : 'none';
     if (viewCand) viewCand.style.display = (viewName === 'candidates') ? 'flex' : 'none';
     if (viewMomo) viewMomo.style.display = (viewName === 'momo') ? 'flex' : 'none';
+    if (viewIpo) viewIpo.style.display = (viewName === 'ipo') ? 'flex' : 'none';
 
     if (viewName === 'candidates') {
       renderCandidatesView();
     } else if (viewName === 'momo') {
       renderMomoView();
+    } else if (viewName === 'ipo') {
+      renderIpoView();
     }
   }
 
@@ -1896,6 +1970,128 @@
     }
   }
 
+  function renderIpoView() {
+    if (!RAW_IPO.length) {
+      fetchIpoFallback();
+      return;
+    }
+    const t1 = RAW_IPO.filter(c => c.tier_order === 1 || (c.tier || '').toUpperCase().includes('TIER 1') || c.tier === 'TIER_1_DOORSTEP');
+    const t2 = RAW_IPO.filter(c => c.tier_order === 2 || (c.tier || '').toUpperCase().includes('TIER 2') || c.tier === 'TIER_2_LAUNCHPAD');
+    const t3 = RAW_IPO.filter(c => c.tier_order === 3 || (c.tier || '').toUpperCase().includes('TIER 3') || c.tier === 'TIER_3_BASE');
+
+    const totalIPO = t1.length + t2.length + t3.length;
+    const badge = document.getElementById('tab-badge-ipo');
+    if (badge) badge.innerText = totalIPO;
+
+    let r = 1;
+    renderIpoTierGrid('ipo-grid-tier1', t1, r); r += t1.length;
+    renderIpoTierGrid('ipo-grid-tier2', t2, r); r += t2.length;
+    renderIpoTierGrid('ipo-grid-tier3', t3, r);
+
+    const c1 = document.getElementById('ipo-cnt-tier1');
+    if (c1) c1.innerText = `${t1.length} Setups`;
+    const c2 = document.getElementById('ipo-cnt-tier2');
+    if (c2) c2.innerText = `${t2.length} Setups`;
+    const c3 = document.getElementById('ipo-cnt-tier3');
+    if (c3) c3.innerText = `${t3.length} Setups`;
+  }
+
+  function renderIpoTierGrid(containerId, list, startRank) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!list || !list.length) {
+      container.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:10px;">No setups in this tier.</div>';
+      return;
+    }
+    let html = '';
+    list.forEach((c, idx) => {
+      const sym = c.symbol;
+      const rank = startRank + idx;
+      const tvUrl = `https://in.tradingview.com/chart/?symbol=NSE:${sym}`;
+      const displaySym = isStealthMode ? formatNodeName(sym) : sym;
+      const distVal = (c.dist_ath_pct !== undefined && c.dist_ath_pct !== null) ? c.dist_ath_pct : c.dist_52w_pct;
+      const distStr = (distVal !== null && distVal !== undefined) 
+        ? (distVal <= 0 ? 'ATH Doorstep' : `-${Math.abs(distVal).toFixed(1)}%`) 
+        : 'At High';
+
+      let badgesHtml = '';
+      if (c.is_nr7) {
+        badgesHtml += '<span style="font-size:10px; font-weight:800; color:#10b981; background:rgba(16,185,129,0.18); border:1px solid rgba(16,185,129,0.4); padding:1px 5px; border-radius:4px;">🎯 NR7</span>';
+      } else if (c.is_nr4) {
+        badgesHtml += '<span style="font-size:10px; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); padding:1px 5px; border-radius:4px;">⚡ NR4</span>';
+      }
+      if (c.is_inside) {
+        badgesHtml += '<span style="font-size:10px; font-weight:800; color:#c084fc; background:rgba(192,132,252,0.18); border:1px solid rgba(192,132,252,0.4); padding:1px 5px; border-radius:4px;">📦 Inside</span>';
+      }
+      if (c.daily_range_pct) {
+        badgesHtml += `<span style="font-size:10px; color:#fde047; background:rgba(234,179,8,0.15); padding:1px 5px; border-radius:4px;">${c.daily_range_pct.toFixed(1)}% rng</span>`;
+      }
+
+      const ltpStr = c.ltp ? `₹${c.ltp}` : '';
+      const chgStr = c.change_pct !== undefined && c.change_pct !== null ? `${c.change_pct >= 0 ? '+' : ''}${c.change_pct.toFixed(1)}%` : '';
+      const chgColor = (c.change_pct || 0) >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+
+      html += `
+        <a href="${tvUrl}" target="_blank" class="cand-link-btn" title="Open ${sym} chart on TradingView" style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px; gap:8px;">
+          <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span class="cand-rank">#${rank}</span>
+              <span class="cand-sym" style="font-size:13px; font-weight:800;">🚀 ${displaySym}</span>
+              ${ltpStr ? `<span style="font-size:11px; font-weight:700; color:var(--text-main);">${ltpStr}</span>` : ''}
+              ${chgStr ? `<span style="font-size:10px; font-weight:700; color:${chgColor};">${chgStr}</span>` : ''}
+              ${badgesHtml}
+            </div>
+            <div style="font-size:10px; color:var(--text-muted); display:flex; gap:5px; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              <span style="color:#fbbf24; font-weight:700;">${distStr}</span>
+              <span>•</span>
+              <span style="max-width:140px; overflow:hidden; text-overflow:ellipsis;">${c.industry || 'IPO'}</span>
+              <span>•</span>
+              <span style="color:#94a3b8; overflow:hidden; text-overflow:ellipsis; max-width:160px;">${c.name || sym}</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+            <span class="cand-tv-icon" style="font-size:12px;">↗</span>
+          </div>
+        </a>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
+  async function fetchIpoFallback() {
+    const endpoints = [
+      'candidates_nifty_ipo.json',
+      'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/candidates_nifty_ipo.json',
+      'https://raw.githubusercontent.com/sanIncredible/Jarvis/main/candidates_nifty_ipo.json'
+    ];
+    for (const url of endpoints) {
+      try {
+        const res = await fetchWithTimeout(url, { cache: 'no-store' }, 3000);
+        if (!res.ok) continue;
+        const d = await res.json();
+        let list = [];
+        if (d.tier1_candidates || d.tier2_candidates) {
+          list = [
+            ...(d.tier1_candidates || []),
+            ...(d.tier2_candidates || []),
+            ...(d.tier3_candidates || [])
+          ];
+        } else if (Array.isArray(d.all_candidates)) {
+          list = d.all_candidates;
+        } else if (Array.isArray(d)) {
+          list = d;
+        }
+        if (list.length) {
+          RAW_IPO = list;
+          renderIpoView();
+          break;
+        }
+      } catch (e) {
+        // continue
+      }
+    }
+  }
+
   async function fetchCandidatesFallback() {
     const endpoints = [
       'candidates.json',
@@ -1971,6 +2167,8 @@
     const txtTabOrb = document.getElementById('txt-tab-orb');
     if (txtTabOrb) txtTabOrb.innerText = isStealthMode ? 'Telemetry Nodes' : '3m ORB Triggers';
     if (currentMainView === 'candidates') renderCandidatesView();
+    if (currentMainView === 'momo') renderMomoView();
+    if (currentMainView === 'ipo') renderIpoView();
 
     const pageTitle = document.getElementById('page-title');
     const txtBrandTitle = document.getElementById('txt-brand-title');
@@ -2498,6 +2696,13 @@
       renderMomoView();
     } else if (!RAW_MOMO.length) {
       fetchMomoFallback();
+    }
+
+    if (data.ipo_candidates && Array.isArray(data.ipo_candidates) && data.ipo_candidates.length) {
+      RAW_IPO = data.ipo_candidates;
+      renderIpoView();
+    } else if (!RAW_IPO.length) {
+      fetchIpoFallback();
     }
     const tabBadgeOrb = document.getElementById('tab-badge-orb');
     if (tabBadgeOrb && data.stocks) tabBadgeOrb.innerText = data.stocks.length;
