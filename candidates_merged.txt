@@ -1,198 +1,82 @@
-# JARVIS MERGED CANDIDATE UNIVERSE — 2026-11-18 22:00:48 IST
-# Total Unique Symbols: 179
-# Cross-List Appearances: 39
-# Sources: {'eod': 32, 'nr90': 28, 'ipo': 39, 'ems': 122}
+# JARVIS UNIFIED CANDIDATE CONFLUENCE & A+ SNIPER BRIEFING — 2026-11-18 22:37:13 IST
+# Market Regime: 🛑 DEFENSIVE / SELLING CASCADE ACTIVE (Swing Alloc: 0%)
+# Total Unique: 179 | 🎯 A+ Snipers: 26 | 👑 Blue Sky: 69 | 🔗 Multi-Source: 39
+# 3-Check Rule: [1] Momentum Velocity + [2] Blue Sky/Doorstep (≤3.5% 52W) + [3] Volatility Contraction (≤2.2% rng / NR)
 
-#    SYMBOL           SCORE TIER SOURCES               BONUS INDUSTRY                      
-──── ────────────── ─────── ──── ──────────────────── ────── ──────────────────────────────
-1    DIVISLAB         168.3    1 ems,eod,nr90            +20 Healthcare                    
-2    GLAND            153.6    1 ems,eod                 +10 Healthcare                    
-3    MEESHO           150.0    1 ems,ipo,nr90            +20 Consumer Services             
-4    DRREDDY          149.4    1 eod                         Healthcare                    
-5    ANANDRATHI       146.7    1 eod                         Financial Services            
-6    STEAMHOUSE       145.0    1 ems,ipo                 +10 Chemicals                     
-7    AUROPHARMA       139.0    1 eod                         Healthcare                    
-8    TRENT            138.0    1 eod                         Consumer Services             
-9    MANKIND          136.4    1 eod                         Healthcare                    
-10   CIPLA            135.0    1 eod                         Healthcare                    
-11   BHARTIARTL       132.7    1 eod                         Telecommunication             
-12   TVSMOTOR         132.6    1 eod                         Automobile and Auto Components
-13   IPCALAB          130.3    1 eod                         Healthcare                    
-14   ONESOURCE        129.8    1 eod                         Healthcare                    
-15   PERSISTENT       129.1    1 eod                         Information Technology        
-16   PAYTM            128.4    1 ems,eod,nr90            +20 Financial Services            
-17   ITCHOTELS        127.0    1 eod                         Consumer Services             
-18   RKFORGE          125.2    1 ems,eod                 +10                               
-19   PNB              123.0    1 ems,eod                 +10 Financial Services            
-20   ETERNAL          122.1    1 ems,eod                 +10 Consumer Services             
-21   KARURVYSYA       121.9    3 eod,nr90                +10 Financial Services            
-22   ICICIBANK        120.5    1 eod                         Financial Services            
-23   AONESTEELS       120.0    1 ipo                         Capital Goods                 
-24   SAIPARENT        120.0    3 ipo                         Healthcare                    
-25   ELEVATE          120.0    3 ipo                         Services                      
-26   AXISBANK         119.7    2 eod                         Financial Services            
-27   LEMONTREE        117.8    1 eod                         Consumer Services             
-28   TECHM            114.5    1 eod                         Information Technology        
-29   WESTLIFE         111.5    2 eod                                                       
-30   ANGELONE         111.3    1 eod                         Financial Services            
-31   FEDERALBNK       109.7    3 eod                         Financial Services            
-32   BHARTIHEXA       109.6    1 eod                         Telecommunication             
-33   VIJAYA           109.0    1 eod                                                       
-34   FDC              108.3    2 eod                                                       
-35   URBANCO          101.3    1 ems,eod                 +10                               
-36   COHANCE          100.4    3 eod                                                       
-37   SONA             100.0    2 ipo                         Textiles                      
-38   LENSKART         100.0    2 ems,ipo                 +10 Consumer Services             
-39   MIDWESTLTD       100.0    3 ipo                         Consumer Durables             
-40   BAJAJHCARE        99.4    3 eod                                                       
-41   GCSL              95.0    1 ems,nr90                +10 Investment Banking & Broking  
-42   SHADOWFAX         95.0    1 ems,ipo                 +10 Services                      
-43   ORKLAINDIA        95.0    3 ipo                         Fast Moving Consumer Goods    
-44   STUDDS            95.0    3 ipo                         Automobile and Auto Components
-45   TIMEX             90.0    2 ems,nr90                +10 Diversified Retail            
-46   THELEELA          90.0    2 ems,nr90                +10 Hotels                        
-47   SKYWAYS           90.0    2 ipo                         Services                      
-48   CLEANMAX          90.0    3 ipo                         Power                         
-49   GREAVESCOT        88.0    1 ems                         Auto Ancilaries               
-50   BLSPOLY           85.0    1 ipo                         Chemicals                     
-51   TFCILTD           80.0    2 ems,nr90                +10 Financial Services-Specialty  
-52   SYMBIOTEC         80.0    1 ems,ipo                 +10 Healthcare                    
-53   VEEGALAND         80.0    3 ipo                         Realty                        
-54   MONEYVIEW         80.0    3 ipo                         Financial Services            
-55   MANIPALHOS        80.0    3 ipo                         Healthcare                    
-56   PINELABS          80.0    3 ipo                         Financial Services            
-57   SHREEJISPG        78.0    1 ems,nr90                +10 Ship building & Allied services
-58   KPL               78.0    1 ems,nr90                +10 Pharmaceuticals               
-59   NEOGEN            78.0    1 ems,nr90                +10 Chemicals Specialty           
-60   SONACOMS          78.0    1 ems,nr90                +10 Auto Ancilaries               
-61   LAURUSLABS        78.0    1 ems,nr90                +10 Medical-Diversified           
-62   ROSSTECH          78.0    1 ems,nr90                +10 Aerospace & Defense           
-63   KOPRAN            78.0    1 ems,nr90                +10 Medical-Diversified           
-64   DIACABS           78.0    1 ems,nr90                +10 Electrical - Power Equipment  
-65   MBAPL             78.0    1 ems,nr90                +10 Agro chemicals                
-66   UNIMECH           78.0    1 ems,nr90                +10 Aerospace & Defense           
-67   RATNAVEER         78.0    1 ems,nr90                +10 Iron & Steel                  
-68   MARSONS           78.0    1 ems,nr90                +10 Electrical - Power Equipment  
-69   ATHERENERG        78.0    1 ems                         Auto Manufacturers            
-70   SSWL              78.0    1 ems                         Auto Ancilaries               
-71   SGMART            78.0    1 ems                         Civil Construction            
-72   KDDL              78.0    1 ems                         Jewellery                     
-73   ICIL              78.0    1 ems                         Textiles                      
-74   ENTERO            78.0    1 ems                         Pharmaceuticals               
-75   SAILIFE           78.0    1 ems                         Pharmaceuticals               
-76   PTCIL             75.0    3 ems,nr90                +10 Iron & Steel                  
-77   KARAMTARA         75.0    3 ipo                         Capital Goods                 
-78   MILKYMIST         75.0    3 ems,ipo                 +10 Fast Moving Consumer Goods    
-79   KOTAKBANK         70.0    1 ems,nr90                +10 Private Banks                 
-80   BONFIG            70.0    1 ipo                         Capital Goods                 
-81   CMRGREEN          70.0    3 ipo                         Capital Goods                 
-82   INNOVISION        70.0    3 ipo                         Services                      
-83   INDOMIM           70.0    3 ems,ipo                 +10 Capital Goods                 
-84   TECHNOCRAF        70.0    3 ems,ipo                 +10 Utilities                     
-85   TBZ               68.0    1 ems                         Jewellery                     
-86   CUPID             68.0    1 ems                         Personal Care                 
-87   RAYMOND           68.0    1 ems                         Textiles                      
-88   INDSWFTLAB        68.0    1 ems                         Pharmaceuticals               
-89   KMEW              68.0    1 ems                         Ship building & Allied services
-90   RPEL              68.0    1 ems                         Industrial Products & Manufacturing
-91   SANSERA           68.0    1 ems                         Auto Ancilaries               
-92   FILATEX           68.0    1 ems                         Textiles                      
-93   SKYGOLD           68.0    1 ems                         Jewellery                     
-94   SHILPAMED         68.0    1 ems                         Medical-Diversified           
-95   WELCORP           68.0    1 ems                         Iron & Steel                  
-96   MOREPENLAB        68.0    1 ems                         Medical-Diversified           
-97   AHCL              68.0    1 ems                         Pharmaceuticals               
-98   SGFIN             68.0    1 ems                         Finance & Investment          
-99   WELSPUNLIV        68.0    1 ems                         Textiles                      
-100  CYIENTDLM         68.0    1 ems                         EMS                           
-101  MARINE            68.0    1 ems                         EMS                           
-102  PGIL              68.0    1 ems                         Textiles                      
-103  ORIENTHOT         68.0    1 ems                         Hotels                        
-104  FEDDERSHOL        68.0    1 ems                         NBFC                          
-105  SOUTHBANK         68.0    1 ems                         Private Banks                 
-106  LOTUSDEV          68.0    1 ems                         Real Estate                   
-107  SYNCOMF           68.0    1 ems                         Medical-Diversified           
-108  DPABHUSHAN        68.0    1 ems                         Jewellery                     
-109  NAVINFLUOR        68.0    1 ems                         Chemicals Specialty           
-110  SUDEEPPHRM        68.0    1 ems                         Pharmaceuticals               
-111  NAZARA            65.0    1 ems,nr90                +10 Software Services             
-112  LTTS              65.0    3 ems,nr90                +10 Software Services             
-113  LUMAXTECH         63.0    1 ems                         Auto Ancilaries               
-114  ROLEXRINGS        63.0    1 ems                         Industrial Products & Manufacturing
-115  KALYANKJIL        63.0    1 ems                         Jewellery                     
-116  IGIL              63.0    1 ems                         Financial Services-Specialty  
-117  UNIONBANK         60.0    1 nr90                        PSU Banks                     
-118  CORONA            60.0    3 ipo                         Healthcare                    
-119  JYOTICNC          58.0    1 ems                         Industrial Products & Manufacturing
-120  SBIFUNDS          55.0    3 ipo                         Financial Services            
-121  AMAGI             55.0    3 ipo                         Information Technology        
-122  PRASOLCHEM        55.0    3 ipo                         Chemicals                     
-123  SRIT              55.0    3 ipo                         Information Technology        
-124  TANLA             53.0    2 ems,nr90                +10 Software Products             
-125  PPLPHARMA         50.0    2 ems,nr90                +10 Medical-Diversified           
-126  DHOOTTRANS        50.0    3 ipo                         Automobile and Auto Components
-127  WHEELS            48.0    3 ems,nr90                +10 Auto Ancilaries               
-128  ACUTAAS           48.0    2 ems                         Chemicals Specialty           
-129  EMCURE            48.0    2 ems                         Pharmaceuticals               
-130  JPL               45.0    2 ipo                         Telecommunication             
-131  FRACTAL           45.0    3 ipo                         Information Technology        
-132  SFCTECH           45.0    3 ipo                         Utilities                     
-133  UNOMINDA          38.0    2 ems                         Auto Ancilaries               
-134  BLISSGVS          38.0    3 ems                         Pharmaceuticals               
-135  SHUKRAPHAR        38.0    3 ems                         Pharmaceuticals               
-136  SETL              38.0    3 ems                         Industrial Products & Manufacturing
-137  RAMBHAJO          38.0    3 ems                         Jewellery                     
-138  KRISHANA          38.0    3 ems                         Chemicals Specialty           
-139  CPPLUS            38.0    3 ems                         Industrial Products & Manufacturing
-140  IOLCP             38.0    3 ems                         Chemicals Specialty           
-141  KSHINTL           38.0    3 ems                         Mining_Minerals               
-142  PAISALO           38.0    3 ems                         NBFC                          
-143  CENTUM            38.0    3 ems                         EMS                           
-144  RUBICON           38.0    3 ems                         Pharmaceuticals               
-145  CEMPRO            38.0    3 ems                         Civil Construction            
-146  SAMBHV            38.0    3 ems                         Iron & Steel                  
-147  KROSS             38.0    3 ems                         Auto Ancilaries               
-148  MCX               38.0    3 ems                         Financial Services-Specialty  
-149  SHYAMMETL         38.0    3 ems                         Iron & Steel                  
-150  PARAS             38.0    3 ems                         Aerospace & Defense           
-151  XTRANET           38.0    3 ems                         Software Services             
-152  BHARATCOAL        35.0    3 ipo                         Oil Gas & Consumable Fuels    
-153  JNPR              35.0    3 ipo                         Power                         
-154  PERNIASPOP        35.0    3 ipo                         Consumer Services             
-155  AETHER            33.0    3 ems                         Chemicals Specialty           
-156  E2E               33.0    3 ems                         Software Services             
-157  ABDL              33.0    3 ems                         Breweries & Distilleries      
-158  YATHARTH          33.0    3 ems                         Hospitals                     
-159  SMSPHARMA         33.0    3 ems                         Pharmaceuticals               
-160  MVELECTRO         33.0    3 ems                         Electrical - Power Equipment  
-161  QUADFUTURE        33.0    3 ems                         Electrical - Power Equipment  
-162  MOLBIO            33.0    3 ems                         Hospitals                     
-163  QUESS             33.0    3 ems                         Diversified Commercial Services
-164  AEGISLOG          33.0    3 ems                         Logistics                     
-165  AARTIPHARM        33.0    3 ems                         Pharmaceuticals               
-166  ONEPOINT          33.0    3 ems                         Software Services             
-167  SMLMAH            33.0    3 ems                         Auto Manufacturers            
-168  63MOONS           33.0    3 ems                         Financial Services-Specialty  
-169  MSTCLTD           33.0    3 ems                         E- Commerce                   
-170  GNA               33.0    3 ems                         Auto Ancilaries               
-171  COFORGE           33.0    3 ems                         Software Services             
-172  KWIL              33.0    3 ems                         Food Products                 
-173  JINDWORLD         33.0    3 ems                         Textiles                      
-174  HLEGLAS           33.0    3 ems                         Industrial Products & Manufacturing
-175  ASKAUTOLTD        28.0    3 ems                         Auto Ancilaries               
-176  PNGSREVA          28.0    3 ems                         Jewellery                     
-177  GMMPFAUDLR        28.0    3 ems                         Industrial Products & Manufacturing
-178  ARIS              28.0    3 ems                         Civil Construction            
-179  ICICIAMC          25.0    3 ipo                         Financial Services            
+==========================================================================================
+🎯 A+ SNIPER WATCHLIST (PRIME 3-CHECK SETUPS FOR TOMORROW'S 3m ORB)
+==========================================================================================
+#    SYMBOL           SCORE  GRADE SOURCES              52W DIST    RANGE INDUSTRY                  
+──── ────────────── ─────── ────── ────────────────── ────────── ──────── ──────────────────────────
+1    DIVISLAB         213.3     A+ ems,eod,nr90            +5.7%    1.20% Healthcare                
+2    MEESHO           195.0     A+ ems,ipo,nr90            +2.9%    1.26% Consumer Services         
+3    STEAMHOUSE       190.0     A+ ems,ipo                 +1.0%    3.12% Chemicals                 
+4    GLAND            183.6     A+ ems,eod                 -5.8%    1.57% Healthcare                
+5    PAYTM            173.4     A+ ems,eod,nr90            +2.7%    2.72% Financial Services        
+6    KARURVYSYA       166.9     A+ eod,nr90                +1.1%    2.65% Financial Services        
+7    RKFORGE          155.2     A+ ems,eod                 -5.6%    2.23% Iron & Steel              
+8    LENSKART         145.0     A+ ems,ipo                 +4.0%    1.86% Consumer Services         
+9    GCSL             140.0     A+ ems,nr90                +1.3%    1.80% Investment Banking & Broking
+10   SHADOWFAX        140.0     A+ ems,ipo                 +1.8%    3.60% Services                  
+11   TIMEX            135.0     A+ ems,nr90                +3.7%    3.14% Diversified Retail        
+12   THELEELA         135.0     A+ ems,nr90                +4.3%    2.25% Hotels                    
+13   TFCILTD          125.0     A+ ems,nr90                +3.4%    1.46% Financial Services-Specialty
+14   SYMBIOTEC        125.0     A+ ems,ipo                 +2.6%    3.99% Healthcare                
+15   SHREEJISPG       123.0     A+ ems,nr90                -2.6%    2.07% Ship building & Allied services
+16   KPL              123.0     A+ ems,nr90                -0.6%    2.59% Pharmaceuticals           
+17   NEOGEN           123.0     A+ ems,nr90                -3.3%    4.68% Chemicals Specialty       
+18   PTCIL            120.0     A+ ems,nr90                +8.2%    2.67% Iron & Steel              
+19   MILKYMIST        120.0     A+ ems,ipo                +11.3%    3.98% Fast Moving Consumer Goods
+20   KOTAKBANK        115.0     A+ ems,nr90                +0.5%    1.55% Private Banks             
+21   INDOMIM          115.0     A+ ems,ipo                +12.3%    2.54% Capital Goods             
+22   TECHNOCRAF       115.0     A+ ems,ipo                +16.6%    2.91% Utilities                 
+23   NAZARA           110.0     A+ ems,nr90                +3.0%    3.58% Software Services         
+24   LTTS             110.0     A+ ems,nr90               +12.0%    1.77% Software Services         
+25   UNIONBANK        105.0     A+ nr90                    +0.9%    1.72% PSU Banks                 
+26   PPLPHARMA         95.0     A+ ems,nr90                +5.2%    3.63% Medical-Diversified       
 
-# Top 10 by Score:
-   1. DIVISLAB         168.3  (ems,eod,nr90)
-   2. GLAND            153.6  (ems,eod)
-   3. MEESHO           150.0  (ems,ipo,nr90)
-   4. DRREDDY          149.4  (eod)
-   5. ANANDRATHI       146.7  (eod)
-   6. STEAMHOUSE       145.0  (ems,ipo)
-   7. AUROPHARMA       139.0  (eod)
-   8. TRENT            138.0  (eod)
-   9. MANKIND          136.4  (eod)
-  10. CIPLA            135.0  (eod)
+==========================================================================================
+🏆 ALL RANKED CANDIDATES (TOP 40)
+==========================================================================================
+#    SYMBOL           SCORE  GRADE SOURCES              52W DIST  BONUS INDUSTRY                  
+──── ────────────── ─────── ────── ────────────────── ────────── ────── ──────────────────────────
+1    DIVISLAB         213.3     A+ ems,eod,nr90            +5.7%    +20 Healthcare                
+2    MEESHO           195.0     A+ ems,ipo,nr90            +2.9%    +20 Consumer Services         
+3    STEAMHOUSE       190.0     A+ ems,ipo                 +1.0%    +10 Chemicals                 
+4    GLAND            183.6     A+ ems,eod                 -5.8%    +10 Healthcare                
+5    PAYTM            173.4     A+ ems,eod,nr90            +2.7%    +20 Financial Services        
+6    KARURVYSYA       166.9     A+ eod,nr90                +1.1%    +10 Financial Services        
+7    DRREDDY          159.4      A eod                         -        Healthcare                
+8    ANANDRATHI       156.7      A eod                         -        Financial Services        
+9    RKFORGE          155.2     A+ ems,eod                 -5.6%    +10 Iron & Steel              
+10   AUROPHARMA       149.0      A eod                         -        Healthcare                
+11   TRENT            148.0      A eod                         -        Consumer Services         
+12   CIPLA            145.0      A eod                         -        Healthcare                
+13   AONESTEELS       145.0      A ipo                     +2.5%        Capital Goods             
+14   LENSKART         145.0     A+ ems,ipo                 +4.0%    +10 Consumer Services         
+15   SAIPARENT        145.0      A ipo                    +13.3%        Healthcare                
+16   ELEVATE          145.0      A ipo                    +15.2%        Services                  
+17   BHARTIARTL       142.7      A eod                         -        Telecommunication         
+18   TVSMOTOR         142.6      A eod                         -        Automobile and Auto Components
+19   IPCALAB          140.3      A eod                         -        Healthcare                
+20   GCSL             140.0     A+ ems,nr90                +1.3%    +10 Investment Banking & Broking
+21   SHADOWFAX        140.0     A+ ems,ipo                 +1.8%    +10 Services                  
+22   ONESOURCE        139.8      B eod                         -        Healthcare                
+23   PERSISTENT       139.1      A eod                         -        Information Technology    
+24   PNB              138.0      A ems,eod                 -2.0%    +10 Financial Services        
+25   ETERNAL          137.1      A ems,eod                 -3.2%    +10 Consumer Services         
+26   MANKIND          136.4      B eod                         -        Healthcare                
+27   TIMEX            135.0     A+ ems,nr90                +3.7%    +10 Diversified Retail        
+28   THELEELA         135.0     A+ ems,nr90                +4.3%    +10 Hotels                    
+29   ICICIBANK        130.5      A eod                         -        Financial Services        
+30   AXISBANK         129.7      B eod                         -        Financial Services        
+31   ITCHOTELS        127.0      B eod                         -        Consumer Services         
+32   TFCILTD          125.0     A+ ems,nr90                +3.4%    +10 Financial Services-Specialty
+33   SYMBIOTEC        125.0     A+ ems,ipo                 +2.6%    +10 Healthcare                
+34   SONA             125.0      A ipo                     +5.7%        Textiles                  
+35   MIDWESTLTD       125.0      A ipo                    +17.7%        Consumer Durables         
+36   TECHM            124.5      B eod                         -        Information Technology    
+37   SHREEJISPG       123.0     A+ ems,nr90                -2.6%    +10 Ship building & Allied services
+38   KPL              123.0     A+ ems,nr90                -0.6%    +10 Pharmaceuticals           
+39   NEOGEN           123.0     A+ ems,nr90                -3.3%    +10 Chemicals Specialty       
+40   WESTLIFE         121.5      B eod                         -                                  
