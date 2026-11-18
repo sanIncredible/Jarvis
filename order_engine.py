@@ -63,18 +63,10 @@ def round_to_clean_int(price):
 
 def round_to_tick(price, tick=1.0):
     """
-    Rounds price strictly to a valid round number / integer (no decimal part)
-    per user strategy preference for all GTT, Limit, and Trail orders.
+    Rounds price strictly to a clean integer (no decimal part)
+    per user strategy preference for all orders, GTT, Limit, and Trail orders.
     """
-    if price is None:
-        return 0
-    try:
-        p = float(price)
-        if tick >= 1.0:
-            return int(round(p))
-        return round(round(p / tick) * tick, 2)
-    except Exception:
-        return 0
+    return round_to_clean_int(price)
 
 
 def is_market_open():
@@ -826,13 +818,13 @@ def place_upstox_mtf_order(instrument_key, quantity, order_type="MARKET", price=
         "quantity": int(quantity),
         "product": "MTF",
         "validity": "DAY",
-        "price": float(round_to_tick(price, 0.05)) if order_type.upper() == "LIMIT" else 0.0,
+        "price": int(round_to_clean_int(price)) if order_type.upper() == "LIMIT" else 0,
         "tag": "JARVIS_MTF",
         "instrument_token": instrument_key,
         "order_type": order_type.upper(),
         "transaction_type": "BUY",
         "disclosed_quantity": 0,
-        "trigger_price": 0.0,
+        "trigger_price": 0,
         "is_amo": not market_open
     }
 
@@ -891,8 +883,8 @@ def place_dhan_mtf_order(symbol, quantity, order_type="MARKET", price=0.0):
         "validity": "DAY",
         "securityId": str(sec_id),
         "quantity": int(quantity),
-        "price": float(round_to_tick(price, 0.05)) if order_type.upper() == "LIMIT" else 0.0,
-        "triggerPrice": 0.0,
+        "price": int(round_to_clean_int(price)) if order_type.upper() == "LIMIT" else 0,
+        "triggerPrice": 0,
         "afterMarketOrder": not market_open
     }
     if not market_open:
@@ -957,7 +949,7 @@ def place_zerodha_order(symbol, quantity, order_type="MARKET", product="CNC", pr
         "quantity": int(quantity),
         "product": product.upper(),
         "validity": "DAY",
-        "price": float(round_to_tick(price, 0.05)) if order_type.upper() == "LIMIT" else 0.0,
+        "price": int(round_to_clean_int(price)) if order_type.upper() == "LIMIT" else 0,
         "tag": "JARVIS"
     }
 
@@ -2343,10 +2335,10 @@ def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
 
     product_label = "MTF"
     ltp = float(calc.get("ltp", 0) or 0)
-    # Marketable Limit Order (+0.3% slippage protection ceiling): fills with market velocity while preventing freak ask sweeps
-    marketable_limit = round_to_tick(ltp * 1.003, 0.05) if ltp > 0 else 0.0
+    # Marketable Limit Order (+0.3% slippage protection ceiling): clean integer price without fractional decimals
+    marketable_limit = round_to_clean_int(ltp * 1.003) if ltp > 0 else 0
     order_type = "LIMIT" if marketable_limit > 0 else "MARKET"
-    order_price = marketable_limit if marketable_limit > 0 else 0.0
+    order_price = int(marketable_limit) if marketable_limit > 0 else 0
 
     # Execute at designated broker
     if target_broker == "upstox":
@@ -2808,6 +2800,24 @@ def fetch_all_positions():
                     sym = str(r[2] or "").strip().upper()
                     status = str(r[10] or "").upper()
                     if sym and "OPEN" in status and sym not in ignored_symbols:
+                        # Determine originating broker
+                        col22 = str(r[21] if len(r) > 21 else "").upper()
+                        b_name = "ZERODHA" if "ZERODHA" in col22 else ("DHAN" if "DHAN" in col22 else ("UPSTOX" if "UPSTOX" in col22 else "BROKER"))
+                        b_key = b_name.lower()
+
+                        # BROKER TRUTH GUARD:
+                        # If the broker's API is currently connected and healthy (status starts with 'OK'),
+                        # then the broker API is the authoritative source of truth.
+                        # Missing from live broker positions means the trade has already been CLOSED/EXITED!
+                        # We must NEVER resurrect closed trades into active surveillance or dashboard!
+                        if b_key in broker_status and broker_status[b_key].startswith("OK"):
+                            continue
+                        if b_key == "broker":
+                            any_ok = any(st.startswith("OK") for st in broker_status.values())
+                            any_err = any(st.startswith("Error") for st in broker_status.values())
+                            if any_ok and not any_err:
+                                continue
+
                         # If not already returned by live broker API, preserve it from Journal
                         if not any(p["symbol"].upper() == sym for p in all_pos):
                             entry_p = float(r[4] or 0)
@@ -2815,8 +2825,6 @@ def fetch_all_positions():
                             tgt_p = float(r[6] or 0)
                             qty = int(float(r[7] or 0))
                             if qty > 0 and entry_p > 0:
-                                col22 = str(r[21] if len(r) > 21 else "").upper()
-                                b_name = "ZERODHA" if "ZERODHA" in col22 else ("DHAN" if "DHAN" in col22 else ("UPSTOX" if "UPSTOX" in col22 else "BROKER"))
                                 prod_name = "MTF" if "MTF" in col22 else "CNC"
                                 
                                 q, _ = fetch_live_quote(sym)
@@ -4110,7 +4118,7 @@ def get_all_open_positions_with_trailing_sl():
             "broker": broker,
             "product": product,
             "exchange": p.get("exchange", "NSE"),
-            "source": "LIVE BROKER",
+            "source": p.get("source", "LIVE BROKER"),
             "qty": qty,
             "entry_price": entry_p,
             "ltp": ltp,
