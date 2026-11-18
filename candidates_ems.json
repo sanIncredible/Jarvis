@@ -1,0 +1,5692 @@
+{
+  "as_of": "2026-11-18 20:58:22 IST",
+  "source": "Manas Arora Breadth Ledger (markets.manasarora.com)",
+  "scan_name": "Chirag Kedia Easy Money Scan (EMS)",
+  "rules": [
+    "1-Week Price Change >= 20%",
+    "1-Month Price Change >= 25%",
+    "1-Quarter Price Change >= 35%",
+    "6-Month Price Change >= 50%"
+  ],
+  "universe_count": 994,
+  "total_ems_candidates": 128,
+  "tier1_count": 64,
+  "tier2_count": 8,
+  "tier3_count": 56,
+  "tier1_candidates": [
+    {
+      "symbol": "GREAVESCOT",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1W \u2265 20%",
+        "1M \u2265 30%",
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\u26a1 1W +20%",
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 4,
+      "dist_52w_pct": -1.9,
+      "rs_rating": 91,
+      "m5": 3,
+      "m20": 5,
+      "m30": 2,
+      "m60": 5,
+      "m125": 7
+    },
+    {
+      "symbol": "ATHERENERG",
+      "industry": "Auto Manufacturers",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 50%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 3,
+      "dist_52w_pct": -6,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 5,
+      "m30": 5,
+      "m60": 5,
+      "m125": 9
+    },
+    {
+      "symbol": "SSWL",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 100%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +100%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 3,
+      "dist_52w_pct": -7.3,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 5,
+      "m30": 4,
+      "m60": 8,
+      "m125": 9
+    },
+    {
+      "symbol": "SGMART",
+      "industry": "Civil Construction",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 50%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 3,
+      "dist_52w_pct": -2.1,
+      "rs_rating": 97,
+      "m5": 1,
+      "m20": 5,
+      "m30": 5,
+      "m60": 3,
+      "m125": 7
+    },
+    {
+      "symbol": "KDDL",
+      "industry": "Jewellery",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 50%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 3,
+      "dist_52w_pct": -6.2,
+      "rs_rating": 96,
+      "m5": 1,
+      "m20": 5,
+      "m30": 3,
+      "m60": 3,
+      "m125": 8
+    },
+    {
+      "symbol": "ICIL",
+      "industry": "Textiles",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 40%",
+        "1Q \u2265 30%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +40%",
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 3,
+      "dist_52w_pct": -0.8,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 6,
+      "m30": 3,
+      "m60": 4,
+      "m125": 8
+    },
+    {
+      "symbol": "ENTERO",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 50%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 3,
+      "dist_52w_pct": -7.1,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 5,
+      "m30": 2,
+      "m60": 5,
+      "m125": 7
+    },
+    {
+      "symbol": "SAILIFE",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 25%",
+        "1Q \u2265 40%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%",
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 3,
+      "dist_52w_pct": -8.5,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 4,
+      "m30": 1,
+      "m60": 3,
+      "m125": 7
+    },
+    {
+      "symbol": "TBZ",
+      "industry": "Jewellery",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 100%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +100%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -24.8,
+      "rs_rating": 99,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 9,
+      "m125": 9
+    },
+    {
+      "symbol": "BODALCHEM",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 100%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +100%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -27.8,
+      "rs_rating": 99,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 8,
+      "m125": 9
+    },
+    {
+      "symbol": "CUPID",
+      "industry": "Personal Care",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": null,
+      "rs_rating": 99,
+      "m5": 0,
+      "m20": 0,
+      "m30": 1,
+      "m60": 4,
+      "m125": 9
+    },
+    {
+      "symbol": "GCSL",
+      "industry": "Investment Banking & Broking",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -0.5,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 2,
+      "m30": 3,
+      "m60": 7,
+      "m125": 9
+    },
+    {
+      "symbol": "TFCILTD",
+      "industry": "Financial Services-Specialty",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 100%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +100%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -1.3,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 1,
+      "m30": 3,
+      "m60": 4,
+      "m125": 9
+    },
+    {
+      "symbol": "SHREEJISPG",
+      "industry": "Ship building & Allied services",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -2.6,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 2,
+      "m30": 1,
+      "m60": 6,
+      "m125": 9
+    },
+    {
+      "symbol": "RATNAVEER",
+      "industry": "Iron & Steel",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 100%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +100%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -5,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 1,
+      "m30": 1,
+      "m60": 5,
+      "m125": 9
+    },
+    {
+      "symbol": "RAYMOND",
+      "industry": "Textiles",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 75%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +75%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -9.6,
+      "rs_rating": 98,
+      "m5": 1,
+      "m20": 1,
+      "m30": 0,
+      "m60": 8,
+      "m125": 9
+    },
+    {
+      "symbol": "INDSWFTLAB",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -21.1,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 9
+    },
+    {
+      "symbol": "KMEW",
+      "industry": "Ship building & Allied services",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -5.3,
+      "rs_rating": 97,
+      "m5": 1,
+      "m20": 2,
+      "m30": 1,
+      "m60": 5,
+      "m125": 8
+    },
+    {
+      "symbol": "RPEL",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -6.7,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 1,
+      "m125": 9
+    },
+    {
+      "symbol": "SANSERA",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -7.2,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 2,
+      "m125": 8
+    },
+    {
+      "symbol": "FILATEX",
+      "industry": "Textiles",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 75%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +75%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -7.8,
+      "rs_rating": 97,
+      "m5": 1,
+      "m20": 1,
+      "m30": 0,
+      "m60": 5,
+      "m125": 9
+    },
+    {
+      "symbol": "DIACABS",
+      "industry": "Electrical - Power Equipment",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -10.1,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 8
+    },
+    {
+      "symbol": "SKYGOLD",
+      "industry": "Jewellery",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -14.8,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 8
+    },
+    {
+      "symbol": "SHILPAMED",
+      "industry": "Medical-Diversified",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -16.4,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 8
+    },
+    {
+      "symbol": "WELCORP",
+      "industry": "Iron & Steel",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -23.3,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "LAURUSLABS",
+      "industry": "Medical-Diversified",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -6.7,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 2,
+      "m30": 1,
+      "m60": 4,
+      "m125": 7
+    },
+    {
+      "symbol": "MBAPL",
+      "industry": "Agro chemicals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -7.7,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 2,
+      "m30": 2,
+      "m60": 1,
+      "m125": 8
+    },
+    {
+      "symbol": "ROSSTECH",
+      "industry": "Aerospace & Defense",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -9.9,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 6,
+      "m125": 7
+    },
+    {
+      "symbol": "MOREPENLAB",
+      "industry": "Medical-Diversified",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": null,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 9
+    },
+    {
+      "symbol": "AHCL",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 75%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +75%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": null,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 8,
+      "m125": 8
+    },
+    {
+      "symbol": "SGFIN",
+      "industry": "Finance & Investment",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -0.7,
+      "rs_rating": 95,
+      "m5": 2,
+      "m20": 5,
+      "m30": 4,
+      "m60": 3,
+      "m125": 6
+    },
+    {
+      "symbol": "NEOGEN",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -3.3,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 2,
+      "m30": 1,
+      "m60": 3,
+      "m125": 7
+    },
+    {
+      "symbol": "WELSPUNLIV",
+      "industry": "Textiles",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -4.3,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 3,
+      "m30": 0,
+      "m60": 5,
+      "m125": 8
+    },
+    {
+      "symbol": "KOPRAN",
+      "industry": "Medical-Diversified",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -10.1,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 5,
+      "m125": 7
+    },
+    {
+      "symbol": "CYIENTDLM",
+      "industry": "EMS",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -22.8,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 8
+    },
+    {
+      "symbol": "SHADOWFAX",
+      "industry": "Logistics",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -1.8,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 2,
+      "m125": 7
+    },
+    {
+      "symbol": "TIMEX",
+      "industry": "Diversified Retail",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -3.4,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 3,
+      "m125": 9
+    },
+    {
+      "symbol": "UNIMECH",
+      "industry": "Aerospace & Defense",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -11.3,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 3,
+      "m125": 8
+    },
+    {
+      "symbol": "MARINE",
+      "industry": "EMS",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -15.5,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 8
+    },
+    {
+      "symbol": "KPL",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -0.6,
+      "rs_rating": 93,
+      "m5": 0,
+      "m20": 3,
+      "m30": 1,
+      "m60": 4,
+      "m125": 9
+    },
+    {
+      "symbol": "PGIL",
+      "industry": "Textiles",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -2.4,
+      "rs_rating": 93,
+      "m5": 0,
+      "m20": 2,
+      "m30": 1,
+      "m60": 2,
+      "m125": 8
+    },
+    {
+      "symbol": "ORIENTHOT",
+      "industry": "Hotels",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -4.3,
+      "rs_rating": 93,
+      "m5": 0,
+      "m20": 2,
+      "m30": 3,
+      "m60": 4,
+      "m125": 8
+    },
+    {
+      "symbol": "DIVISLAB",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -6.6,
+      "rs_rating": 93,
+      "m5": 0,
+      "m20": 3,
+      "m30": 2,
+      "m60": 4,
+      "m125": 7
+    },
+    {
+      "symbol": "FEDDERSHOL",
+      "industry": "NBFC",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -22.1,
+      "rs_rating": 93,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 6,
+      "m125": 8
+    },
+    {
+      "symbol": "PCJEWELLER",
+      "industry": "Jewellery",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -26.7,
+      "rs_rating": 93,
+      "m5": 0,
+      "m20": 0,
+      "m30": 1,
+      "m60": 6,
+      "m125": 8
+    },
+    {
+      "symbol": "THELEELA",
+      "industry": "Hotels",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -2.5,
+      "rs_rating": 92,
+      "m5": 0,
+      "m20": 2,
+      "m30": 2,
+      "m60": 3,
+      "m125": 7
+    },
+    {
+      "symbol": "SOUTHBANK",
+      "industry": "Private Banks",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 25%",
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%",
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -2.5,
+      "rs_rating": 92,
+      "m5": 0,
+      "m20": 1,
+      "m30": 4,
+      "m60": 5,
+      "m125": 6
+    },
+    {
+      "symbol": "LOTUSDEV",
+      "industry": "Real Estate",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -6.2,
+      "rs_rating": 92,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 6,
+      "m125": 7
+    },
+    {
+      "symbol": "SYNCOMF",
+      "industry": "Medical-Diversified",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -19.7,
+      "rs_rating": 92,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 5,
+      "m125": 7
+    },
+    {
+      "symbol": "DPABHUSHAN",
+      "industry": "Jewellery",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -24.7,
+      "rs_rating": 92,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 4,
+      "m125": 9
+    },
+    {
+      "symbol": "NAVINFLUOR",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 25%",
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%",
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -0.2,
+      "rs_rating": 91,
+      "m5": 0,
+      "m20": 4,
+      "m30": 3,
+      "m60": 4,
+      "m125": 6
+    },
+    {
+      "symbol": "SONACOMS",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -4.9,
+      "rs_rating": 91,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "MARSONS",
+      "industry": "Electrical - Power Equipment",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -6.1,
+      "rs_rating": 91,
+      "m5": 0,
+      "m20": 5,
+      "m30": 5,
+      "m60": 5,
+      "m125": 0
+    },
+    {
+      "symbol": "SUDEEPPHRM",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -12.8,
+      "rs_rating": 91,
+      "m5": 0,
+      "m20": 3,
+      "m30": 0,
+      "m60": 0,
+      "m125": 8
+    },
+    {
+      "symbol": "PAYTM",
+      "industry": "Financial Services-Specialty",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -3.6,
+      "rs_rating": 90,
+      "m5": 0,
+      "m20": 1,
+      "m30": 1,
+      "m60": 2,
+      "m125": 7
+    },
+    {
+      "symbol": "LENSKART",
+      "industry": "E- Commerce",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -4,
+      "rs_rating": 90,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 1,
+      "m125": 7
+    },
+    {
+      "symbol": "LUMAXTECH",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 25%",
+        "1Q \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%",
+        "\ud83c\udfaf 1Q +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -7.5,
+      "rs_rating": 89,
+      "m5": 0,
+      "m20": 4,
+      "m30": 3,
+      "m60": 2,
+      "m125": 6
+    },
+    {
+      "symbol": "ROLEXRINGS",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 25%",
+        "1Q \u2265 40%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%",
+        "\ud83c\udfaf 1Q +40%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -7.7,
+      "rs_rating": 89,
+      "m5": 0,
+      "m20": 4,
+      "m30": 0,
+      "m60": 1,
+      "m125": 6
+    },
+    {
+      "symbol": "KALYANKJIL",
+      "industry": "Jewellery",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -10.9,
+      "rs_rating": 89,
+      "m5": 0,
+      "m20": 2,
+      "m30": 2,
+      "m60": 0,
+      "m125": 8
+    },
+    {
+      "symbol": "IGIL",
+      "industry": "Financial Services-Specialty",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -2.1,
+      "rs_rating": 87,
+      "m5": 0,
+      "m20": 5,
+      "m30": 5,
+      "m60": 5,
+      "m125": 4
+    },
+    {
+      "symbol": "PNB",
+      "industry": "PSU Banks",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 40%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +40%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -2,
+      "rs_rating": 85,
+      "m5": 0,
+      "m20": 3,
+      "m30": 5,
+      "m60": 4,
+      "m125": 6
+    },
+    {
+      "symbol": "PTCIL",
+      "industry": "Iron & Steel",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -9,
+      "rs_rating": 85,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 2,
+      "m125": 7
+    },
+    {
+      "symbol": "URBANCO",
+      "industry": "Diversified Commercial Services",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 25%",
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%",
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -6.1,
+      "rs_rating": 84,
+      "m5": 0,
+      "m20": 4,
+      "m30": 0,
+      "m60": 0,
+      "m125": 6
+    },
+    {
+      "symbol": "JYOTICNC",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -7.5,
+      "rs_rating": 79,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    }
+  ],
+  "tier2_candidates": [
+    {
+      "symbol": "ACUTAAS",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 25%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -3.4,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 4,
+      "m30": 4,
+      "m60": 4,
+      "m125": 5
+    },
+    {
+      "symbol": "EMCURE",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -3.9,
+      "rs_rating": 90,
+      "m5": 0,
+      "m20": 5,
+      "m30": 3,
+      "m60": 4,
+      "m125": 5
+    },
+    {
+      "symbol": "TANLA",
+      "industry": "Software Products",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 40%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +40%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -5.5,
+      "rs_rating": 84,
+      "m5": 0,
+      "m20": 3,
+      "m30": 6,
+      "m60": 3,
+      "m125": 5
+    },
+    {
+      "symbol": "UNOMINDA",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 25%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -2.6,
+      "rs_rating": 70,
+      "m5": 0,
+      "m20": 4,
+      "m30": 3,
+      "m60": 0,
+      "m125": 4
+    },
+    {
+      "symbol": "LTTS",
+      "industry": "Software Services",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 25%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -14.4,
+      "rs_rating": 70,
+      "m5": 0,
+      "m20": 0,
+      "m30": 4,
+      "m60": 1,
+      "m125": 1
+    },
+    {
+      "symbol": "AGIIL",
+      "industry": "Civil Construction",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -28.5,
+      "rs_rating": 66,
+      "m5": 0,
+      "m20": 5,
+      "m30": 2,
+      "m60": 0,
+      "m125": 0
+    },
+    {
+      "symbol": "STEAMHOUSE",
+      "industry": "Civil Construction",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -1,
+      "rs_rating": 0,
+      "m5": 0,
+      "m20": 3,
+      "m30": 5,
+      "m60": 0,
+      "m125": 0
+    },
+    {
+      "symbol": "SYMBIOTEC",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 40%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +40%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -2.6,
+      "rs_rating": 0,
+      "m5": 0,
+      "m20": 5,
+      "m30": 6,
+      "m60": 0,
+      "m125": 0
+    }
+  ],
+  "tier3_candidates": [
+    {
+      "symbol": "BLISSGVS",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -8,
+      "rs_rating": 99,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 2,
+      "m125": 9
+    },
+    {
+      "symbol": "SHUKRAPHAR",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +75%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -3.1,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 3,
+      "m30": 1,
+      "m60": 8,
+      "m125": 0
+    },
+    {
+      "symbol": "SETL",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -21.7,
+      "rs_rating": 98,
+      "m5": 1,
+      "m20": 1,
+      "m30": 0,
+      "m60": 3,
+      "m125": 9
+    },
+    {
+      "symbol": "WHEELS",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -10,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 7,
+      "m125": 6
+    },
+    {
+      "symbol": "RAMBHAJO",
+      "industry": "Jewellery",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +75%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -20.5,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 8,
+      "m125": 0
+    },
+    {
+      "symbol": "KRISHANA",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": null,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 2,
+      "m30": 3,
+      "m60": 3,
+      "m125": 0
+    },
+    {
+      "symbol": "CPPLUS",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -14.7,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 7
+    },
+    {
+      "symbol": "IOLCP",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -15.3,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 7
+    },
+    {
+      "symbol": "YASHO",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -25.1,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 0,
+      "m125": 8
+    },
+    {
+      "symbol": "MILKYMIST",
+      "industry": "Food Products",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -11.3,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 7,
+      "m125": 0
+    },
+    {
+      "symbol": "KSHINTL",
+      "industry": "Mining_Minerals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -11.8,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "PAISALO",
+      "industry": "NBFC",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -20.4,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "CENTUM",
+      "industry": "EMS",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -10.1,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 5,
+      "m125": 6
+    },
+    {
+      "symbol": "RUBICON",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -12.7,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "IBULLSLTD",
+      "industry": "Software Services",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -25.9,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 7
+    },
+    {
+      "symbol": "TECHNOCRAF",
+      "industry": "Civil Construction",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 40%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -16.6,
+      "rs_rating": 93,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 6,
+      "m125": 0
+    },
+    {
+      "symbol": "CEMPRO",
+      "industry": "Civil Construction",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -17.9,
+      "rs_rating": 92,
+      "m5": 0,
+      "m20": 2,
+      "m30": 2,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "GLAND",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -5.8,
+      "rs_rating": 91,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 1,
+      "m125": 6
+    },
+    {
+      "symbol": "SAMBHV",
+      "industry": "Iron & Steel",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -10,
+      "rs_rating": 91,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 3,
+      "m125": 6
+    },
+    {
+      "symbol": "KROSS",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -12.3,
+      "rs_rating": 91,
+      "m5": 0,
+      "m20": 0,
+      "m30": 1,
+      "m60": 5,
+      "m125": 6
+    },
+    {
+      "symbol": "MCX",
+      "industry": "Financial Services-Specialty",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -4.1,
+      "rs_rating": 90,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 1,
+      "m125": 0
+    },
+    {
+      "symbol": "SHYAMMETL",
+      "industry": "Iron & Steel",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -4.7,
+      "rs_rating": 90,
+      "m5": 0,
+      "m20": 1,
+      "m30": 3,
+      "m60": 5,
+      "m125": 6
+    },
+    {
+      "symbol": "PARAS",
+      "industry": "Aerospace & Defense",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -21.5,
+      "rs_rating": 90,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "XTRANET",
+      "industry": "Software Services",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 40%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": null,
+      "rs_rating": 90,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 6,
+      "m125": 0
+    },
+    {
+      "symbol": "MEESHO",
+      "industry": "E- Commerce",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -2.9,
+      "rs_rating": 89,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 3,
+      "m125": 5
+    },
+    {
+      "symbol": "AETHER",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -9.2,
+      "rs_rating": 89,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "E2E",
+      "industry": "Software Services",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": null,
+      "rs_rating": 89,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 0
+    },
+    {
+      "symbol": "NAZARA",
+      "industry": "Software Services",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -4.5,
+      "rs_rating": 88,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 2,
+      "m125": 6
+    },
+    {
+      "symbol": "ABDL",
+      "industry": "Breweries & Distilleries",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -6.6,
+      "rs_rating": 88,
+      "m5": 0,
+      "m20": 1,
+      "m30": 1,
+      "m60": 5,
+      "m125": 6
+    },
+    {
+      "symbol": "YATHARTH",
+      "industry": "Hospitals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -7.8,
+      "rs_rating": 88,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 4,
+      "m125": 4
+    },
+    {
+      "symbol": "SMSPHARMA",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -10.9,
+      "rs_rating": 88,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 5,
+      "m125": 1
+    },
+    {
+      "symbol": "MVELECTRO",
+      "industry": "Electrical - Power Equipment",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -23.1,
+      "rs_rating": 88,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 5,
+      "m125": 0
+    },
+    {
+      "symbol": "QUADFUTURE",
+      "industry": "Electrical - Power Equipment",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -24.8,
+      "rs_rating": 88,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "MOLBIO",
+      "industry": "Hospitals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -11.2,
+      "rs_rating": 87,
+      "m5": 1,
+      "m20": 1,
+      "m30": 0,
+      "m60": 5,
+      "m125": 0
+    },
+    {
+      "symbol": "QUESS",
+      "industry": "Diversified Commercial Services",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -15.8,
+      "rs_rating": 87,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "AEGISLOG",
+      "industry": "Logistics",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -23,
+      "rs_rating": 87,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "AARTIPHARM",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 40%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -3.2,
+      "rs_rating": 86,
+      "m5": 0,
+      "m20": 3,
+      "m30": 0,
+      "m60": 3,
+      "m125": 6
+    },
+    {
+      "symbol": "ONEPOINT",
+      "industry": "Software Services",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -16.7,
+      "rs_rating": 86,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 4,
+      "m125": 3
+    },
+    {
+      "symbol": "SMLMAH",
+      "industry": "Auto Manufacturers",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -19.5,
+      "rs_rating": 86,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 6
+    },
+    {
+      "symbol": "63MOONS",
+      "industry": "Financial Services-Specialty",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -5.6,
+      "rs_rating": 85,
+      "m5": 0,
+      "m20": 0,
+      "m30": 2,
+      "m60": 2,
+      "m125": 5
+    },
+    {
+      "symbol": "MSTCLTD",
+      "industry": "E- Commerce",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -13.9,
+      "rs_rating": 85,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "GNA",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -14.2,
+      "rs_rating": 85,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "COFORGE",
+      "industry": "Software Services",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -3.7,
+      "rs_rating": 84,
+      "m5": 0,
+      "m20": 0,
+      "m30": 1,
+      "m60": 0,
+      "m125": 6
+    },
+    {
+      "symbol": "KWIL",
+      "industry": "Food Products",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -18,
+      "rs_rating": 84,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "ETERNAL",
+      "industry": "E- Commerce",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -3.2,
+      "rs_rating": 83,
+      "m5": 0,
+      "m20": 2,
+      "m30": 1,
+      "m60": 1,
+      "m125": 7
+    },
+    {
+      "symbol": "PPLPHARMA",
+      "industry": "Medical-Diversified",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -5.9,
+      "rs_rating": 83,
+      "m5": 0,
+      "m20": 3,
+      "m30": 2,
+      "m60": 1,
+      "m125": 5
+    },
+    {
+      "symbol": "INDOMIM",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -12.3,
+      "rs_rating": 83,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 5,
+      "m125": 0
+    },
+    {
+      "symbol": "JINDWORLD",
+      "industry": "Textiles",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": null,
+      "rs_rating": 83,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 6
+    },
+    {
+      "symbol": "HLEGLAS",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -13.4,
+      "rs_rating": 82,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 5,
+      "m125": 5
+    },
+    {
+      "symbol": "KOTAKBANK",
+      "industry": "Private Banks",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -1.6,
+      "rs_rating": 80,
+      "m5": 0,
+      "m20": 1,
+      "m30": 1,
+      "m60": 3,
+      "m125": 4
+    },
+    {
+      "symbol": "BLUESTONE",
+      "industry": "Jewellery",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -28.1,
+      "rs_rating": 80,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "RKFORGE",
+      "industry": "Iron & Steel",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -5.6,
+      "rs_rating": 79,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 0,
+      "m125": 5
+    },
+    {
+      "symbol": "ASKAUTOLTD",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -8.4,
+      "rs_rating": 79,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 0,
+      "m125": 6
+    },
+    {
+      "symbol": "PNGSREVA",
+      "industry": "Jewellery",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -20.2,
+      "rs_rating": 79,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 6
+    },
+    {
+      "symbol": "GMMPFAUDLR",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -22.4,
+      "rs_rating": 74,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 2,
+      "m125": 5
+    },
+    {
+      "symbol": "ARIS",
+      "industry": "Civil Construction",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -8.1,
+      "rs_rating": 71,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 2
+    }
+  ],
+  "all_candidates": [
+    {
+      "symbol": "GREAVESCOT",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1W \u2265 20%",
+        "1M \u2265 30%",
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\u26a1 1W +20%",
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 4,
+      "dist_52w_pct": -1.9,
+      "rs_rating": 91,
+      "m5": 3,
+      "m20": 5,
+      "m30": 2,
+      "m60": 5,
+      "m125": 7
+    },
+    {
+      "symbol": "ATHERENERG",
+      "industry": "Auto Manufacturers",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 50%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 3,
+      "dist_52w_pct": -6,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 5,
+      "m30": 5,
+      "m60": 5,
+      "m125": 9
+    },
+    {
+      "symbol": "SSWL",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 100%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +100%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 3,
+      "dist_52w_pct": -7.3,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 5,
+      "m30": 4,
+      "m60": 8,
+      "m125": 9
+    },
+    {
+      "symbol": "SGMART",
+      "industry": "Civil Construction",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 50%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 3,
+      "dist_52w_pct": -2.1,
+      "rs_rating": 97,
+      "m5": 1,
+      "m20": 5,
+      "m30": 5,
+      "m60": 3,
+      "m125": 7
+    },
+    {
+      "symbol": "KDDL",
+      "industry": "Jewellery",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 50%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 3,
+      "dist_52w_pct": -6.2,
+      "rs_rating": 96,
+      "m5": 1,
+      "m20": 5,
+      "m30": 3,
+      "m60": 3,
+      "m125": 8
+    },
+    {
+      "symbol": "ICIL",
+      "industry": "Textiles",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 40%",
+        "1Q \u2265 30%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +40%",
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 3,
+      "dist_52w_pct": -0.8,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 6,
+      "m30": 3,
+      "m60": 4,
+      "m125": 8
+    },
+    {
+      "symbol": "ENTERO",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 50%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 3,
+      "dist_52w_pct": -7.1,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 5,
+      "m30": 2,
+      "m60": 5,
+      "m125": 7
+    },
+    {
+      "symbol": "SAILIFE",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 25%",
+        "1Q \u2265 40%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%",
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 3,
+      "dist_52w_pct": -8.5,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 4,
+      "m30": 1,
+      "m60": 3,
+      "m125": 7
+    },
+    {
+      "symbol": "TBZ",
+      "industry": "Jewellery",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 100%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +100%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -24.8,
+      "rs_rating": 99,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 9,
+      "m125": 9
+    },
+    {
+      "symbol": "BODALCHEM",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 100%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +100%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -27.8,
+      "rs_rating": 99,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 8,
+      "m125": 9
+    },
+    {
+      "symbol": "CUPID",
+      "industry": "Personal Care",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": null,
+      "rs_rating": 99,
+      "m5": 0,
+      "m20": 0,
+      "m30": 1,
+      "m60": 4,
+      "m125": 9
+    },
+    {
+      "symbol": "GCSL",
+      "industry": "Investment Banking & Broking",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -0.5,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 2,
+      "m30": 3,
+      "m60": 7,
+      "m125": 9
+    },
+    {
+      "symbol": "TFCILTD",
+      "industry": "Financial Services-Specialty",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 100%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +100%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -1.3,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 1,
+      "m30": 3,
+      "m60": 4,
+      "m125": 9
+    },
+    {
+      "symbol": "SHREEJISPG",
+      "industry": "Ship building & Allied services",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -2.6,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 2,
+      "m30": 1,
+      "m60": 6,
+      "m125": 9
+    },
+    {
+      "symbol": "RATNAVEER",
+      "industry": "Iron & Steel",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 100%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +100%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -5,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 1,
+      "m30": 1,
+      "m60": 5,
+      "m125": 9
+    },
+    {
+      "symbol": "RAYMOND",
+      "industry": "Textiles",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 75%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +75%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -9.6,
+      "rs_rating": 98,
+      "m5": 1,
+      "m20": 1,
+      "m30": 0,
+      "m60": 8,
+      "m125": 9
+    },
+    {
+      "symbol": "INDSWFTLAB",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -21.1,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 9
+    },
+    {
+      "symbol": "KMEW",
+      "industry": "Ship building & Allied services",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -5.3,
+      "rs_rating": 97,
+      "m5": 1,
+      "m20": 2,
+      "m30": 1,
+      "m60": 5,
+      "m125": 8
+    },
+    {
+      "symbol": "RPEL",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -6.7,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 1,
+      "m125": 9
+    },
+    {
+      "symbol": "SANSERA",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -7.2,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 2,
+      "m125": 8
+    },
+    {
+      "symbol": "FILATEX",
+      "industry": "Textiles",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 75%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +75%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -7.8,
+      "rs_rating": 97,
+      "m5": 1,
+      "m20": 1,
+      "m30": 0,
+      "m60": 5,
+      "m125": 9
+    },
+    {
+      "symbol": "DIACABS",
+      "industry": "Electrical - Power Equipment",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -10.1,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 8
+    },
+    {
+      "symbol": "SKYGOLD",
+      "industry": "Jewellery",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -14.8,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 8
+    },
+    {
+      "symbol": "SHILPAMED",
+      "industry": "Medical-Diversified",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -16.4,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 8
+    },
+    {
+      "symbol": "WELCORP",
+      "industry": "Iron & Steel",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -23.3,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "LAURUSLABS",
+      "industry": "Medical-Diversified",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -6.7,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 2,
+      "m30": 1,
+      "m60": 4,
+      "m125": 7
+    },
+    {
+      "symbol": "MBAPL",
+      "industry": "Agro chemicals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -7.7,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 2,
+      "m30": 2,
+      "m60": 1,
+      "m125": 8
+    },
+    {
+      "symbol": "ROSSTECH",
+      "industry": "Aerospace & Defense",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -9.9,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 6,
+      "m125": 7
+    },
+    {
+      "symbol": "MOREPENLAB",
+      "industry": "Medical-Diversified",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": null,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 9
+    },
+    {
+      "symbol": "AHCL",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 75%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +75%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": null,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 8,
+      "m125": 8
+    },
+    {
+      "symbol": "SGFIN",
+      "industry": "Finance & Investment",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -0.7,
+      "rs_rating": 95,
+      "m5": 2,
+      "m20": 5,
+      "m30": 4,
+      "m60": 3,
+      "m125": 6
+    },
+    {
+      "symbol": "NEOGEN",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -3.3,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 2,
+      "m30": 1,
+      "m60": 3,
+      "m125": 7
+    },
+    {
+      "symbol": "WELSPUNLIV",
+      "industry": "Textiles",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -4.3,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 3,
+      "m30": 0,
+      "m60": 5,
+      "m125": 8
+    },
+    {
+      "symbol": "KOPRAN",
+      "industry": "Medical-Diversified",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -10.1,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 5,
+      "m125": 7
+    },
+    {
+      "symbol": "CYIENTDLM",
+      "industry": "EMS",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -22.8,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 8
+    },
+    {
+      "symbol": "SHADOWFAX",
+      "industry": "Logistics",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -1.8,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 2,
+      "m125": 7
+    },
+    {
+      "symbol": "TIMEX",
+      "industry": "Diversified Retail",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -3.4,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 3,
+      "m125": 9
+    },
+    {
+      "symbol": "UNIMECH",
+      "industry": "Aerospace & Defense",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -11.3,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 3,
+      "m125": 8
+    },
+    {
+      "symbol": "MARINE",
+      "industry": "EMS",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -15.5,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 8
+    },
+    {
+      "symbol": "KPL",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -0.6,
+      "rs_rating": 93,
+      "m5": 0,
+      "m20": 3,
+      "m30": 1,
+      "m60": 4,
+      "m125": 9
+    },
+    {
+      "symbol": "PGIL",
+      "industry": "Textiles",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -2.4,
+      "rs_rating": 93,
+      "m5": 0,
+      "m20": 2,
+      "m30": 1,
+      "m60": 2,
+      "m125": 8
+    },
+    {
+      "symbol": "ORIENTHOT",
+      "industry": "Hotels",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -4.3,
+      "rs_rating": 93,
+      "m5": 0,
+      "m20": 2,
+      "m30": 3,
+      "m60": 4,
+      "m125": 8
+    },
+    {
+      "symbol": "DIVISLAB",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -6.6,
+      "rs_rating": 93,
+      "m5": 0,
+      "m20": 3,
+      "m30": 2,
+      "m60": 4,
+      "m125": 7
+    },
+    {
+      "symbol": "FEDDERSHOL",
+      "industry": "NBFC",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -22.1,
+      "rs_rating": 93,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 6,
+      "m125": 8
+    },
+    {
+      "symbol": "PCJEWELLER",
+      "industry": "Jewellery",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -26.7,
+      "rs_rating": 93,
+      "m5": 0,
+      "m20": 0,
+      "m30": 1,
+      "m60": 6,
+      "m125": 8
+    },
+    {
+      "symbol": "THELEELA",
+      "industry": "Hotels",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -2.5,
+      "rs_rating": 92,
+      "m5": 0,
+      "m20": 2,
+      "m30": 2,
+      "m60": 3,
+      "m125": 7
+    },
+    {
+      "symbol": "SOUTHBANK",
+      "industry": "Private Banks",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 25%",
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%",
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -2.5,
+      "rs_rating": 92,
+      "m5": 0,
+      "m20": 1,
+      "m30": 4,
+      "m60": 5,
+      "m125": 6
+    },
+    {
+      "symbol": "LOTUSDEV",
+      "industry": "Real Estate",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -6.2,
+      "rs_rating": 92,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 6,
+      "m125": 7
+    },
+    {
+      "symbol": "SYNCOMF",
+      "industry": "Medical-Diversified",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -19.7,
+      "rs_rating": 92,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 5,
+      "m125": 7
+    },
+    {
+      "symbol": "DPABHUSHAN",
+      "industry": "Jewellery",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 50%",
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%",
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -24.7,
+      "rs_rating": 92,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 4,
+      "m125": 9
+    },
+    {
+      "symbol": "NAVINFLUOR",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 25%",
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%",
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -0.2,
+      "rs_rating": 91,
+      "m5": 0,
+      "m20": 4,
+      "m30": 3,
+      "m60": 4,
+      "m125": 6
+    },
+    {
+      "symbol": "SONACOMS",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -4.9,
+      "rs_rating": 91,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "MARSONS",
+      "industry": "Electrical - Power Equipment",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -6.1,
+      "rs_rating": 91,
+      "m5": 0,
+      "m20": 5,
+      "m30": 5,
+      "m60": 5,
+      "m125": 0
+    },
+    {
+      "symbol": "SUDEEPPHRM",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -12.8,
+      "rs_rating": 91,
+      "m5": 0,
+      "m20": 3,
+      "m30": 0,
+      "m60": 0,
+      "m125": 8
+    },
+    {
+      "symbol": "PAYTM",
+      "industry": "Financial Services-Specialty",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 40%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -3.6,
+      "rs_rating": 90,
+      "m5": 0,
+      "m20": 1,
+      "m30": 1,
+      "m60": 2,
+      "m125": 7
+    },
+    {
+      "symbol": "LENSKART",
+      "industry": "E- Commerce",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -4,
+      "rs_rating": 90,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 1,
+      "m125": 7
+    },
+    {
+      "symbol": "LUMAXTECH",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 25%",
+        "1Q \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%",
+        "\ud83c\udfaf 1Q +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -7.5,
+      "rs_rating": 89,
+      "m5": 0,
+      "m20": 4,
+      "m30": 3,
+      "m60": 2,
+      "m125": 6
+    },
+    {
+      "symbol": "ROLEXRINGS",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 25%",
+        "1Q \u2265 40%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%",
+        "\ud83c\udfaf 1Q +40%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -7.7,
+      "rs_rating": 89,
+      "m5": 0,
+      "m20": 4,
+      "m30": 0,
+      "m60": 1,
+      "m125": 6
+    },
+    {
+      "symbol": "KALYANKJIL",
+      "industry": "Jewellery",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -10.9,
+      "rs_rating": 89,
+      "m5": 0,
+      "m20": 2,
+      "m30": 2,
+      "m60": 0,
+      "m125": 8
+    },
+    {
+      "symbol": "IGIL",
+      "industry": "Financial Services-Specialty",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -2.1,
+      "rs_rating": 87,
+      "m5": 0,
+      "m20": 5,
+      "m30": 5,
+      "m60": 5,
+      "m125": 4
+    },
+    {
+      "symbol": "PNB",
+      "industry": "PSU Banks",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 30%",
+        "1Q \u2265 40%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%",
+        "\ud83c\udfaf 1Q +40%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -2,
+      "rs_rating": 85,
+      "m5": 0,
+      "m20": 3,
+      "m30": 5,
+      "m60": 4,
+      "m125": 6
+    },
+    {
+      "symbol": "PTCIL",
+      "industry": "Iron & Steel",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -9,
+      "rs_rating": 85,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 2,
+      "m125": 7
+    },
+    {
+      "symbol": "URBANCO",
+      "industry": "Diversified Commercial Services",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1M \u2265 25%",
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%",
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -6.1,
+      "rs_rating": 84,
+      "m5": 0,
+      "m20": 4,
+      "m30": 0,
+      "m60": 0,
+      "m125": 6
+    },
+    {
+      "symbol": "JYOTICNC",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_1_MULTI",
+      "tier_label": "TIER 1: \ud83d\udd25 MULTI-TIMEFRAME THRUST (2+ Triggers)",
+      "tier_order": 1,
+      "triggers": [
+        "1Q \u2265 30%",
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%",
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 2,
+      "dist_52w_pct": -7.5,
+      "rs_rating": 79,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "ACUTAAS",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 25%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -3.4,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 4,
+      "m30": 4,
+      "m60": 4,
+      "m125": 5
+    },
+    {
+      "symbol": "EMCURE",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -3.9,
+      "rs_rating": 90,
+      "m5": 0,
+      "m20": 5,
+      "m30": 3,
+      "m60": 4,
+      "m125": 5
+    },
+    {
+      "symbol": "TANLA",
+      "industry": "Software Products",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 40%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +40%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -5.5,
+      "rs_rating": 84,
+      "m5": 0,
+      "m20": 3,
+      "m30": 6,
+      "m60": 3,
+      "m125": 5
+    },
+    {
+      "symbol": "UNOMINDA",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 25%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -2.6,
+      "rs_rating": 70,
+      "m5": 0,
+      "m20": 4,
+      "m30": 3,
+      "m60": 0,
+      "m125": 4
+    },
+    {
+      "symbol": "LTTS",
+      "industry": "Software Services",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 25%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +25%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -14.4,
+      "rs_rating": 70,
+      "m5": 0,
+      "m20": 0,
+      "m30": 4,
+      "m60": 1,
+      "m125": 1
+    },
+    {
+      "symbol": "AGIIL",
+      "industry": "Civil Construction",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -28.5,
+      "rs_rating": 66,
+      "m5": 0,
+      "m20": 5,
+      "m30": 2,
+      "m60": 0,
+      "m125": 0
+    },
+    {
+      "symbol": "STEAMHOUSE",
+      "industry": "Civil Construction",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -1,
+      "rs_rating": 0,
+      "m5": 0,
+      "m20": 3,
+      "m30": 5,
+      "m60": 0,
+      "m125": 0
+    },
+    {
+      "symbol": "SYMBIOTEC",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_2_SHORT",
+      "tier_label": "TIER 2: \ud83d\ude80 SHORT-TERM MOMENTUM BURST (1W / 1M)",
+      "tier_order": 2,
+      "triggers": [
+        "1M \u2265 40%"
+      ],
+      "trigger_badges": [
+        "\ud83d\ude80 1M +40%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -2.6,
+      "rs_rating": 0,
+      "m5": 0,
+      "m20": 5,
+      "m30": 6,
+      "m60": 0,
+      "m125": 0
+    },
+    {
+      "symbol": "BLISSGVS",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -8,
+      "rs_rating": 99,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 2,
+      "m125": 9
+    },
+    {
+      "symbol": "SHUKRAPHAR",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +75%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -3.1,
+      "rs_rating": 98,
+      "m5": 0,
+      "m20": 3,
+      "m30": 1,
+      "m60": 8,
+      "m125": 0
+    },
+    {
+      "symbol": "SETL",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 100%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +100%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -21.7,
+      "rs_rating": 98,
+      "m5": 1,
+      "m20": 1,
+      "m30": 0,
+      "m60": 3,
+      "m125": 9
+    },
+    {
+      "symbol": "WHEELS",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -10,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 7,
+      "m125": 6
+    },
+    {
+      "symbol": "RAMBHAJO",
+      "industry": "Jewellery",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +75%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -20.5,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 8,
+      "m125": 0
+    },
+    {
+      "symbol": "KRISHANA",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": null,
+      "rs_rating": 97,
+      "m5": 0,
+      "m20": 2,
+      "m30": 3,
+      "m60": 3,
+      "m125": 0
+    },
+    {
+      "symbol": "CPPLUS",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -14.7,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 7
+    },
+    {
+      "symbol": "IOLCP",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -15.3,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 7
+    },
+    {
+      "symbol": "YASHO",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 75%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +75%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -25.1,
+      "rs_rating": 96,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 0,
+      "m125": 8
+    },
+    {
+      "symbol": "MILKYMIST",
+      "industry": "Food Products",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -11.3,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 7,
+      "m125": 0
+    },
+    {
+      "symbol": "KSHINTL",
+      "industry": "Mining_Minerals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -11.8,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "PAISALO",
+      "industry": "NBFC",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -20.4,
+      "rs_rating": 95,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "CENTUM",
+      "industry": "EMS",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -10.1,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 5,
+      "m125": 6
+    },
+    {
+      "symbol": "RUBICON",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -12.7,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "IBULLSLTD",
+      "industry": "Software Services",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -25.9,
+      "rs_rating": 94,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 7
+    },
+    {
+      "symbol": "TECHNOCRAF",
+      "industry": "Civil Construction",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 40%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -16.6,
+      "rs_rating": 93,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 6,
+      "m125": 0
+    },
+    {
+      "symbol": "CEMPRO",
+      "industry": "Civil Construction",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -17.9,
+      "rs_rating": 92,
+      "m5": 0,
+      "m20": 2,
+      "m30": 2,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "GLAND",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -5.8,
+      "rs_rating": 91,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 1,
+      "m125": 6
+    },
+    {
+      "symbol": "SAMBHV",
+      "industry": "Iron & Steel",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -10,
+      "rs_rating": 91,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 3,
+      "m125": 6
+    },
+    {
+      "symbol": "KROSS",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -12.3,
+      "rs_rating": 91,
+      "m5": 0,
+      "m20": 0,
+      "m30": 1,
+      "m60": 5,
+      "m125": 6
+    },
+    {
+      "symbol": "MCX",
+      "industry": "Financial Services-Specialty",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -4.1,
+      "rs_rating": 90,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 1,
+      "m125": 0
+    },
+    {
+      "symbol": "SHYAMMETL",
+      "industry": "Iron & Steel",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -4.7,
+      "rs_rating": 90,
+      "m5": 0,
+      "m20": 1,
+      "m30": 3,
+      "m60": 5,
+      "m125": 6
+    },
+    {
+      "symbol": "PARAS",
+      "industry": "Aerospace & Defense",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -21.5,
+      "rs_rating": 90,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "XTRANET",
+      "industry": "Software Services",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 40%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": null,
+      "rs_rating": 90,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 6,
+      "m125": 0
+    },
+    {
+      "symbol": "MEESHO",
+      "industry": "E- Commerce",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -2.9,
+      "rs_rating": 89,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 3,
+      "m125": 5
+    },
+    {
+      "symbol": "AETHER",
+      "industry": "Chemicals Specialty",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -9.2,
+      "rs_rating": 89,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "E2E",
+      "industry": "Software Services",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": null,
+      "rs_rating": 89,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 0
+    },
+    {
+      "symbol": "NAZARA",
+      "industry": "Software Services",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -4.5,
+      "rs_rating": 88,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 2,
+      "m125": 6
+    },
+    {
+      "symbol": "ABDL",
+      "industry": "Breweries & Distilleries",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -6.6,
+      "rs_rating": 88,
+      "m5": 0,
+      "m20": 1,
+      "m30": 1,
+      "m60": 5,
+      "m125": 6
+    },
+    {
+      "symbol": "YATHARTH",
+      "industry": "Hospitals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -7.8,
+      "rs_rating": 88,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 4,
+      "m125": 4
+    },
+    {
+      "symbol": "SMSPHARMA",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -10.9,
+      "rs_rating": 88,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 5,
+      "m125": 1
+    },
+    {
+      "symbol": "MVELECTRO",
+      "industry": "Electrical - Power Equipment",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -23.1,
+      "rs_rating": 88,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 5,
+      "m125": 0
+    },
+    {
+      "symbol": "QUADFUTURE",
+      "industry": "Electrical - Power Equipment",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -24.8,
+      "rs_rating": 88,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "MOLBIO",
+      "industry": "Hospitals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -11.2,
+      "rs_rating": 87,
+      "m5": 1,
+      "m20": 1,
+      "m30": 0,
+      "m60": 5,
+      "m125": 0
+    },
+    {
+      "symbol": "QUESS",
+      "industry": "Diversified Commercial Services",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -15.8,
+      "rs_rating": 87,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "AEGISLOG",
+      "industry": "Logistics",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -23,
+      "rs_rating": 87,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "AARTIPHARM",
+      "industry": "Pharmaceuticals",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 40%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +40%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -3.2,
+      "rs_rating": 86,
+      "m5": 0,
+      "m20": 3,
+      "m30": 0,
+      "m60": 3,
+      "m125": 6
+    },
+    {
+      "symbol": "ONEPOINT",
+      "industry": "Software Services",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -16.7,
+      "rs_rating": 86,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 4,
+      "m125": 3
+    },
+    {
+      "symbol": "SMLMAH",
+      "industry": "Auto Manufacturers",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -19.5,
+      "rs_rating": 86,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 6
+    },
+    {
+      "symbol": "63MOONS",
+      "industry": "Financial Services-Specialty",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -5.6,
+      "rs_rating": 85,
+      "m5": 0,
+      "m20": 0,
+      "m30": 2,
+      "m60": 2,
+      "m125": 5
+    },
+    {
+      "symbol": "MSTCLTD",
+      "industry": "E- Commerce",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -13.9,
+      "rs_rating": 85,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "GNA",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -14.2,
+      "rs_rating": 85,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "COFORGE",
+      "industry": "Software Services",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -3.7,
+      "rs_rating": 84,
+      "m5": 0,
+      "m20": 0,
+      "m30": 1,
+      "m60": 0,
+      "m125": 6
+    },
+    {
+      "symbol": "KWIL",
+      "industry": "Food Products",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -18,
+      "rs_rating": 84,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "ETERNAL",
+      "industry": "E- Commerce",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -3.2,
+      "rs_rating": 83,
+      "m5": 0,
+      "m20": 2,
+      "m30": 1,
+      "m60": 1,
+      "m125": 7
+    },
+    {
+      "symbol": "PPLPHARMA",
+      "industry": "Medical-Diversified",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -5.9,
+      "rs_rating": 83,
+      "m5": 0,
+      "m20": 3,
+      "m30": 2,
+      "m60": 1,
+      "m125": 5
+    },
+    {
+      "symbol": "INDOMIM",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -12.3,
+      "rs_rating": 83,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 5,
+      "m125": 0
+    },
+    {
+      "symbol": "JINDWORLD",
+      "industry": "Textiles",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": null,
+      "rs_rating": 83,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 1,
+      "m125": 6
+    },
+    {
+      "symbol": "HLEGLAS",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -13.4,
+      "rs_rating": 82,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 5,
+      "m125": 5
+    },
+    {
+      "symbol": "KOTAKBANK",
+      "industry": "Private Banks",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -1.6,
+      "rs_rating": 80,
+      "m5": 0,
+      "m20": 1,
+      "m30": 1,
+      "m60": 3,
+      "m125": 4
+    },
+    {
+      "symbol": "BLUESTONE",
+      "industry": "Jewellery",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "6M \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83d\udc8e 6M +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -28.1,
+      "rs_rating": 80,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 7
+    },
+    {
+      "symbol": "RKFORGE",
+      "industry": "Iron & Steel",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -5.6,
+      "rs_rating": 79,
+      "m5": 0,
+      "m20": 2,
+      "m30": 0,
+      "m60": 0,
+      "m125": 5
+    },
+    {
+      "symbol": "ASKAUTOLTD",
+      "industry": "Auto Ancilaries",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -8.4,
+      "rs_rating": 79,
+      "m5": 0,
+      "m20": 1,
+      "m30": 0,
+      "m60": 0,
+      "m125": 6
+    },
+    {
+      "symbol": "PNGSREVA",
+      "industry": "Jewellery",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -20.2,
+      "rs_rating": 79,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 6
+    },
+    {
+      "symbol": "GMMPFAUDLR",
+      "industry": "Industrial Products & Manufacturing",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 50%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +50%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -22.4,
+      "rs_rating": 74,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 2,
+      "m125": 5
+    },
+    {
+      "symbol": "ARIS",
+      "industry": "Civil Construction",
+      "tier": "TIER_3_STRUCT",
+      "tier_label": "TIER 3: \ud83d\udce6 STRUCTURAL TREND LEADERS (1Q / 6M)",
+      "tier_order": 3,
+      "triggers": [
+        "1Q \u2265 30%"
+      ],
+      "trigger_badges": [
+        "\ud83c\udfaf 1Q +30%"
+      ],
+      "triggers_count": 1,
+      "dist_52w_pct": -8.1,
+      "rs_rating": 71,
+      "m5": 0,
+      "m20": 0,
+      "m30": 0,
+      "m60": 0,
+      "m125": 2
+    }
+  ]
+}
