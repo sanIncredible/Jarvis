@@ -1738,14 +1738,13 @@
           <span>🏆 UNIFIED CANDIDATE CONFLUENCE RADAR</span>
         </div>
         <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
-          Cross-list deduplication &amp; confluence ranking across EOD Swing (VCP), 90D MOMO, Nifty IPO &amp; Easy Money (EMS) &bull; Stocks with multi-scanner confirmation receive +10 confluence bonuses
+          Cross-list deduplication &amp; 3-Check Sniper Sieve &bull; Stocks with multi-scanner confirmation receive +10 confluence bonuses
         </div>
       </div>
-      <div style="display:flex; gap:8px; font-size:11px; font-weight:700;">
-        <span style="color:#10b981; background:rgba(16,185,129,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.4);">🔥 EOD Swing</span>
-        <span style="color:#38bdf8; background:rgba(56,189,248,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(56,189,248,0.4);">📊 90D MOMO</span>
-        <span style="color:#f59e0b; background:rgba(245,158,11,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(245,158,11,0.4);">🚀 Nifty IPO</span>
-        <span style="color:#c084fc; background:rgba(192,132,252,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(192,132,252,0.4);">⚡ Easy Money</span>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button id="btn-mrg-all" class="pill-btn active" onclick="setMergedFilter('all')" style="font-size:11px; padding:3px 10px; cursor:pointer; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#fff; font-weight:700;">All (<span id="cnt-mrg-all">0</span>)</button>
+        <button id="btn-mrg-sniper" class="pill-btn" onclick="setMergedFilter('sniper')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#ef4444; border:1px solid rgba(239,68,68,0.5); background:rgba(239,68,68,0.12); border-radius:4px; font-weight:800;">🎯 A+ Sniper (<span id="cnt-mrg-sniper">0</span>)</button>
+        <button id="btn-mrg-bluesky" class="pill-btn" onclick="setMergedFilter('bluesky')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#fbbf24; border:1px solid rgba(251,191,36,0.5); background:rgba(251,191,36,0.12); border-radius:4px; font-weight:700;">👑 Blue Sky (<span id="cnt-mrg-bluesky">0</span>)</button>
       </div>
     </div>
 
@@ -2353,16 +2352,47 @@
     }
   }
 
+  let MERGED_FILTER_MODE = 'all';
+
+  function setMergedFilter(mode) {
+    MERGED_FILTER_MODE = mode;
+    const bAll = document.getElementById('btn-mrg-all');
+    const bSniper = document.getElementById('btn-mrg-sniper');
+    const bBlue = document.getElementById('btn-mrg-bluesky');
+    if (bAll) bAll.style.opacity = (mode === 'all') ? '1' : '0.6';
+    if (bSniper) bSniper.style.opacity = (mode === 'sniper') ? '1' : '0.6';
+    if (bBlue) bBlue.style.opacity = (mode === 'bluesky') ? '1' : '0.6';
+    renderMergedView();
+  }
+
   function renderMergedView() {
     if (!RAW_MERGED.length) {
       fetchMergedFallback();
       return;
     }
-    const t1 = RAW_MERGED.filter(c => c.tier_order === 1 || (c.tier || '').toUpperCase().includes('TIER 1') || (c.sources && c.sources.length >= 2));
-    const t2 = RAW_MERGED.filter(c => (c.tier_order === 2 || (c.tier || '').toUpperCase().includes('TIER 2')) && !t1.includes(c));
-    const t3 = RAW_MERGED.filter(c => !t1.includes(c) && !t2.includes(c));
 
-    const totalMerged = RAW_MERGED.length;
+    const cntAll = RAW_MERGED.length;
+    const cntSniper = RAW_MERGED.filter(c => c.is_sniper || c.grade === 'A+').length;
+    const cntBlue = RAW_MERGED.filter(c => c.is_blue_sky).length;
+    const elAll = document.getElementById('cnt-mrg-all');
+    const elSniper = document.getElementById('cnt-mrg-sniper');
+    const elBlue = document.getElementById('cnt-mrg-bluesky');
+    if (elAll) elAll.innerText = cntAll;
+    if (elSniper) elSniper.innerText = cntSniper;
+    if (elBlue) elBlue.innerText = cntBlue;
+
+    let filtered = RAW_MERGED;
+    if (MERGED_FILTER_MODE === 'sniper') {
+      filtered = RAW_MERGED.filter(c => c.is_sniper || c.grade === 'A+');
+    } else if (MERGED_FILTER_MODE === 'bluesky') {
+      filtered = RAW_MERGED.filter(c => c.is_blue_sky);
+    }
+
+    const t1 = filtered.filter(c => c.tier_order === 1 || (c.tier || '').toUpperCase().includes('TIER 1') || (c.sources && c.sources.length >= 2));
+    const t2 = filtered.filter(c => (c.tier_order === 2 || (c.tier || '').toUpperCase().includes('TIER 2')) && !t1.includes(c));
+    const t3 = filtered.filter(c => !t1.includes(c) && !t2.includes(c));
+
+    const totalMerged = filtered.length;
     const badge = document.getElementById('tab-badge-merged');
     if (badge) badge.innerText = totalMerged;
 
@@ -2412,7 +2442,14 @@
 
       let bonusBadge = '';
       if (c.cross_list_bonus && c.cross_list_bonus > 0) {
-        bonusBadge = `<span style="font-size:10px; font-weight:800; color:#fbbf24; background:rgba(251,191,36,0.2); border:1px solid rgba(251,191,36,0.5); padding:1px 5px; border-radius:4px;">⚡+${Math.round(c.cross_list_bonus)} Confluence</span>`;
+        bonusBadge = `<span style="font-size:10px; font-weight:800; color:#fbbf24; background:rgba(251,191,36,0.2); border:1px solid rgba(251,191,36,0.5); padding:1px 5px; border-radius:4px;">⚡+${Math.round(c.cross_list_bonus)}</span>`;
+      }
+
+      let sniperBadge = '';
+      if (c.is_sniper || c.grade === 'A+') {
+        sniperBadge = `<span style="font-size:10px; font-weight:800; color:#fff; background:#ef4444; border:1px solid #f87171; padding:1px 6px; border-radius:4px; box-shadow:0 0 6px rgba(239,68,68,0.5);">🎯 A+ SNIPER</span>`;
+      } else if (c.is_blue_sky) {
+        sniperBadge = `<span style="font-size:10px; font-weight:800; color:#fde047; background:rgba(234,179,8,0.2); border:1px solid rgba(234,179,8,0.5); padding:1px 5px; border-radius:4px;">👑 Blue Sky</span>`;
       }
 
       const scoreVal = c.total_score || c.score || c.priority_score || 0;
@@ -2423,6 +2460,7 @@
             <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
               <span class="cand-rank">#${rank}</span>
               <span class="cand-sym" style="font-size:13px; font-weight:800;">🏆 ${displaySym}</span>
+              ${sniperBadge}
               ${sourceBadges}
               ${bonusBadge}
             </div>
