@@ -374,17 +374,86 @@ def fetch_live_quote(symbol):
     return None, f"Could not retrieve quote for {symbol}"
 
 
+_ON_DEMAND_SCANNER_CACHE = {}  # {symbol: (timestamp, data_dict)}
+_ON_DEMAND_CACHE_TTL = 45  # 45 seconds cache to keep interactive preview switches instant
+
+
 def get_symbol_scanner_data(symbol):
-    """Retrieves 3m ORB, SS, PDH, and RVOL metrics from data.json if available."""
+    """
+    Retrieves 3m ORB, SS, PDH, and RVOL metrics from data.json if available.
+    If the stock is not in data.json (non-watchlist stock e.g. /buy RIL agg),
+    dynamically calculates live 3m ORB, PDH, 10 EMA stretch, RVOL, and NR
+    using Upstox API v2 (or fallback) so the user gets the identical rich banner.
+    """
+    if not symbol:
+        return None
+
+    sym_u = resolve_symbol(symbol).strip().upper()
+
+    # 1. Fast cache check from data.json (watchlist stocks)
     if DATA_FILE.is_file():
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 d = json.load(f)
             for s in d.get("stocks", []):
-                if s.get("symbol", "").upper() == symbol.upper():
+                s_sym = resolve_symbol(s.get("symbol", "")).strip().upper()
+                if s_sym == sym_u:
                     return s
         except Exception:
             pass
+
+    # 2. In-memory TTL cache for recently fetched non-watchlist stocks (45s TTL)
+    now_ts = time.time()
+    cached = _ON_DEMAND_SCANNER_CACHE.get(sym_u)
+    if cached and (now_ts - cached[0]) < _ON_DEMAND_CACHE_TTL:
+        return cached[1]
+
+    # 3. Dynamic on-demand calculation for non-watchlist stocks (e.g. /buy RIL agg)
+    try:
+        from upstox_tablet_scanner import (
+            load_upstox_token,
+            fetch_upstox_symbol_data,
+            fetch_fallback_data,
+            compute_metrics
+        )
+        token = load_upstox_token()
+        raw_stk = None
+        if token:
+            try:
+                raw_stk = fetch_upstox_symbol_data(sym_u, token)
+            except Exception:
+                pass
+
+        if not raw_stk or not raw_stk.get("ltp"):
+            raw_stk = fetch_fallback_data(sym_u)
+
+        if raw_stk and raw_stk.get("ltp"):
+            metrics = compute_metrics(raw_stk)
+            full_data = dict(raw_stk)
+            full_data.update(metrics)
+
+            c_highs = [c["h"] for c in raw_stk.get("candles", []) if isinstance(c, dict) and "h" in c]
+            if not full_data.get("day_high"):
+                full_data["day_high"] = max(c_highs) if c_highs else (raw_stk.get("ltp") or 0.0)
+
+            # Map fields explicitly expected by evaluate_strategy_checklist
+            if metrics.get("is_reversal"):
+                full_data["orb_status"] = "L➔H"
+            else:
+                full_data["orb_status"] = metrics.get("orb_status")
+
+            full_data["is_ss"] = bool(raw_stk.get("is_strong_start", False))
+            full_data["is_narrow_prev_day"] = bool(raw_stk.get("is_narrow_prev_day", False))
+            full_data["prev_range_ratio"] = raw_stk.get("prev_range_ratio")
+            full_data["is_inside_day"] = bool(raw_stk.get("is_inside_day", False))
+            full_data["rvol"] = round(raw_stk["rvol"], 2) if raw_stk.get("rvol") is not None else None
+            full_data["symbol"] = sym_u
+
+            _ON_DEMAND_SCANNER_CACHE[sym_u] = (now_ts, full_data)
+            return full_data
+    except Exception as e:
+        print(f"Dynamic scanner telemetry calculation note for {symbol}: {e}")
+
     return None
 
 
