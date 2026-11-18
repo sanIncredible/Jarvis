@@ -900,6 +900,20 @@ def handle_nifty_ipo_command(args=""):
         return f"⚠️ <b>Nifty IPO Screener Error:</b> {e}", None
 
 
+def handle_ems_command(args=""):
+    """
+    Handles /ems or /easymoney:
+    Runs Chirag Kedia Easy Money Scan (1W >=20%, 1M >=25%, 1Q >=35%, 6M >=50%) from Breadth Ledger.
+    """
+    try:
+        from scan_ems import scan_ems_candidates, format_ems_telegram_card
+        summary = scan_ems_candidates()
+        text, markup = format_ems_telegram_card(summary)
+        return text, markup
+    except Exception as e:
+        return f"⚠️ <b>Easy Money Screener Error:</b> {e}", None
+
+
 def handle_token_status_command():
     """Handles /token, /tokens, or /status"""
     cfg = load_config()
@@ -1115,6 +1129,7 @@ def handle_help_command():
         "• <code>/momo90</code> or <code>/broadmomo</code> — Breadth Ledger 90D/30% Candidates (1-tap add)\n"
         "• <code>/nr</code> or <code>/momo_nr</code> — Narrow Range (NR4/NR7/Inside Day) Coils (Sniper List)\n"
         "• <code>/ipo</code> or <code>/niftyipo</code> — Official Nifty IPO Index High-Tight &amp; NR Contractions\n"
+        "• <code>/ems</code> or <code>/easymoney</code> — Chirag Kedia Easy Money Scan (1W/1M/1Q/6M Momentum)\n"
         "• <code>/exited</code> or <code>/reentry</code> — Audit past exited stocks for candidate re-entry\n"
         "• <code>/hindsight</code> or <code>/sim</code> — EOD Multi-Trade Simulation & Strict Audit\n"
         "• <code>/add &lt;SYMBOL...&gt;</code> — Add stock(s) to scanner watchlist\n"
@@ -2417,6 +2432,8 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_nr_command(args)
     elif cmd in ("/ipo", "/niftyipo", "/ipos", "ipo", "niftyipo", "ipos"):
         return handle_nifty_ipo_command(args)
+    elif cmd in ("/ems", "/easymoney", "ems", "easymoney"):
+        return handle_ems_command(args)
     elif cmd in ("/exited", "/reentry", "/exholdings", "exited", "reentry"):
         return handle_exited_command()
     elif cmd in ("/positions", "/pos", "/portfolio", "/pnl", "/holdings", "positions", "pos", "pnl"):
