@@ -192,7 +192,7 @@
     "status": "REARMED",
     "notes": "Overnight Auto-Rearm (Default 2.5% SL)",
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-17 11:37:33"
+    "ratcheted_at": "2026-11-18 09:15:49"
   },
   {
     "timestamp": "2026-11-08 23:51:10 IST",
@@ -272,9 +272,13 @@
     "price": 1632.95,
     "ltp": 1967.0,
     "exposure": 164927.95,
-    "stop_loss": 1608.46,
+    "stop_loss": 1635,
     "status": "PLACED",
-    "notes": "Zerodha CNC Swing Holding"
+    "notes": "Zerodha CNC Swing Holding",
+    "breakeven_ratcheted": true,
+    "ratcheted_at": "2026-11-18 09:15:51",
+    "sl_order_id": "343476050",
+    "sl_status": "PENDING"
   },
   {
     "timestamp": "2026-11-16 09:15:00 IST",
@@ -287,9 +291,11 @@
     "price": 286.45,
     "ltp": 293.7,
     "exposure": 114866.45,
-    "stop_loss": 282.15,
+    "stop_loss": 287,
     "status": "PLACED",
-    "notes": "Zerodha CNC Swing Holding"
+    "notes": "Zerodha CNC Swing Holding",
+    "breakeven_ratcheted": true,
+    "ratcheted_at": "2026-11-17 13:59:40"
   },
   {
     "timestamp": "2026-11-02 09:15:00 IST",
@@ -302,9 +308,13 @@
     "price": 1792.95,
     "ltp": 2128.7,
     "exposure": 91440.45,
-    "stop_loss": 1746.0,
+    "stop_loss": 1796,
     "status": "PLACED",
-    "notes": "Zerodha CNC Swing Holding"
+    "notes": "Zerodha CNC Swing Holding",
+    "breakeven_ratcheted": true,
+    "ratcheted_at": "2026-11-18 09:15:53",
+    "sl_order_id": "342986108",
+    "sl_status": "PENDING"
   },
   {
     "timestamp": "2026-11-13 09:15:00 IST",
@@ -365,5 +375,108 @@
     "stop_loss": 786.42,
     "status": "PLACED",
     "notes": "Dhan MTF Swing Holding"
+  },
+  {
+    "timestamp": "2026-11-17 15:10:13 IST",
+    "symbol": "GRAPHITE",
+    "broker": "DHAN",
+    "product": "MTF",
+    "action": "SELL",
+    "quantity": 151,
+    "ltp": 793.2,
+    "exposure": 119773.2,
+    "stop_loss": 786,
+    "sl_order_id": "34132611171606",
+    "sl_status": "TRIGGERED",
+    "status": "TRIGGERED",
+    "notes": "SL Triggered at 785.43 on 2026-11-18 (Dhan MTF Closed)"
+  },
+  {
+    "timestamp": "2026-11-17 15:10:13 IST",
+    "symbol": "FEDFINA",
+    "broker": "ZERODHA",
+    "product": "MTF",
+    "action": "SELL",
+    "quantity": 501,
+    "ltp": 155.15,
+    "exposure": 77730.15,
+    "stop_loss": 154,
+    "sl_order_id": "345204229",
+    "sl_status": "PENDING",
+    "status": "REARMED",
+    "notes": "Overnight Auto-Rearm (Default 2.5% SL)"
+  },
+  {
+    "timestamp": "2026-11-18 09:58:19 IST",
+    "symbol": "KPL",
+    "broker": "DHAN",
+    "product": "MTF",
+    "action": "BUY",
+    "order_type": "LIMIT",
+    "limit_price": 4126.25,
+    "quantity": 12,
+    "ltp": 4113.9,
+    "exposure": 49366.8,
+    "stop_loss": 3979,
+    "sl_order_id": "23126111823503",
+    "sl_status": "PLACED",
+    "risk_pct": 3.28,
+    "total_risk_inr": 1618.8,
+    "mode": "Conservative (\u20b950K)",
+    "status": "EXITED",
+    "order_id": "221261118300103 (TRANSIT)",
+    "error": null,
+    "notes": "Auto-reconciled: position closed on DHAN broker"
+  },
+  {
+    "timestamp": "2026-11-18 11:16:43 IST",
+    "symbol": "DRREDDY",
+    "broker": "DHAN",
+    "product": "MTF",
+    "action": "BUY",
+    "order_type": "LIMIT",
+    "limit_price": 1391.55,
+    "quantity": 36,
+    "ltp": 1387.4,
+    "exposure": 49946.4,
+    "stop_loss": 1375,
+    "sl_order_id": "34126111841203",
+    "sl_status": "PLACED",
+    "risk_pct": 0.89,
+    "total_risk_inr": 446.4,
+    "mode": "Conservative (\u20b950K)",
+    "status": "PLACED",
+    "order_id": "34126111841103 (TRANSIT)",
+    "error": null
+  },
+  {
+    "timestamp": "2026-11-18 15:20:14 IST",
+    "symbol": "SAGILITY",
+    "broker": "DHAN",
+    "product": "MTF",
+    "action": "SELL",
+    "quantity": 1001,
+    "ltp": 45.2,
+    "exposure": 45245.2,
+    "stop_loss": 44,
+    "sl_order_id": "34132611181581",
+    "sl_status": "PENDING",
+    "status": "REARMED",
+    "notes": "Overnight Auto-Rearm (Default 2.5% SL)"
+  },
+  {
+    "timestamp": "2026-11-18 15:20:14 IST",
+    "symbol": "DRREDDY",
+    "broker": "DHAN",
+    "product": "MTF",
+    "action": "SELL",
+    "quantity": 40,
+    "ltp": 1395.0,
+    "exposure": 55800.0,
+    "stop_loss": 1375,
+    "sl_order_id": "22132611182534",
+    "sl_status": "PENDING",
+    "status": "REARMED",
+    "notes": "Overnight Auto-Rearm (Tracked Holdings)"
   }
 ]
