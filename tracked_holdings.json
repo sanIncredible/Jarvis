@@ -69,16 +69,6 @@
     "entry_date": "2026-10-22",
     "notes": "Dhan MTF Holding"
   },
-  "GRAPHITE": {
-    "broker": "DHAN",
-    "product": "MTF",
-    "qty": 151,
-    "entry_price": 806.58,
-    "sl": 786.42,
-    "target": 846.91,
-    "entry_date": "2026-11-17",
-    "notes": "Dhan MTF Position"
-  },
   "INDGN": {
     "broker": "DHAN",
     "product": "MTF",
