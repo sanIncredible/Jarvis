@@ -2533,7 +2533,7 @@
       stk.ema10 = ema10 ? Number(ema10.toFixed(2)) : null;
       const ltpVal = Number(stk.ltp) || 0;
       stk.stretch_pct = (ema10 && ltpVal > 0) ? (((ltpVal - ema10) / ema10) * 100) : null;
-      stk.is_prime = (stk.stretch_pct !== null && stk.stretch_pct >= 0 && stk.stretch_pct <= 0.45);
+      stk.is_prime = (stk.stretch_pct !== null && stk.stretch_pct >= 0 && stk.stretch_pct <= 0.6);
       if (stk.is_prime) primeCount++;
 
       // Gap-Up Detection & Client Normalization
@@ -3085,27 +3085,27 @@
     } else if (stretch < 0) {
       statusPill = `<span class="stretch-pill stretch-sub">${isStealthMode ? 'BUFFER: SUB-PAR' : '▼ SUB-10 EMA'} (${stretchStr})</span>`;
       adviceHtml = `<span>${isStealthMode ? 'Sub-baseline routing. Ingress filter active.' : 'Active pullback below 10 EMA. Avoid long breakout entries until price reclaims 10 EMA.'}</span>`;
-    } else if (stretch <= 0.45) {
+    } else if (stretch <= 0.6) {
       statusPill = `<span class="stretch-pill stretch-prime">${isStealthMode ? 'BUFFER: OPTIMAL' : '🟢 PRIME COIL'} (${stretchStr})</span>`;
       const tightSL = ema10 ? `₹${(ema10 * 0.996).toFixed(1)}` : `₹${(boLevel * 0.995).toFixed(1)}`;
       adviceHtml = isBreakout
         ? `<span>${isStealthMode ? 'Direct ingress clearance confirmed. Risk profile tight.' : '✅ <strong>Prime Coil Breakout:</strong> Tight to 10 EMA. Safe entry with micro SL below 10 EMA (' + tightSL + ').'}</span>`
         : `<span>${isStealthMode ? 'Base structure consolidating near baseline.' : 'Stock coiling right at 10 EMA. Watch for ORB High / PDH breakout.'}</span>`;
-    } else if (stretch <= 1.0) {
+    } else if (stretch <= 1.5) {
       statusPill = `<span class="stretch-pill stretch-normal">${isStealthMode ? 'BUFFER: NOMINAL' : '⚪ NORMAL'} (${stretchStr})</span>`;
       const pullbackTarget = ema10 ? `₹${ema10.toFixed(1)}` : `₹${(boLevel * 0.998).toFixed(1)}`;
       const tightSL = ema10 ? `₹${(ema10 * 0.995).toFixed(1)}` : `₹${(boLevel * 0.994).toFixed(1)}`;
       adviceHtml = isBreakout
-        ? `<span>${isStealthMode ? 'Nominal bandwidth. Trailing baseline.' : 'Moderate extension. Best risk/reward on small dip toward 10 EMA (<strong>' + pullbackTarget + '</strong>, SL: ' + tightSL + ').'}</span>`
+        ? `<span>${isStealthMode ? 'Nominal bandwidth. Trailing baseline.' : 'Healthy momentum expansion near 10 EMA (Target pullback: <strong>' + pullbackTarget + '</strong>, SL: ' + tightSL + ').'}</span>`
         : `<span>Trading above 10 EMA. Moving towards upper range.</span>`;
     } else {
-      // Overextended (> 1.0% from 10 EMA)
+      // Overextended (> 1.5% from 10 EMA)
       statusPill = `<span class="stretch-pill stretch-extended">${isStealthMode ? '⚠️ BUFFER: SATURATED' : '⚠️ EXTENDED'} (${stretchStr})</span>`;
       const pullbackTarget = ema10 ? `₹${ema10.toFixed(1)}` : `₹${(boLevel * 0.998).toFixed(1)}`;
       const tightSL = ema10 ? `₹${(ema10 * 0.995).toFixed(1)}` : `₹${(boLevel * 0.994).toFixed(1)}`;
       adviceHtml = `<span>${isStealthMode 
         ? 'High latency risk! Defer allocation. Await re-entry convergence near baseline (' + (ema10 ? ema10.toFixed(1) : '--') + ').' 
-        : '🛑 <strong>DO NOT CHASE!</strong> Price is stretched ' + stretchStr + ' above 10 EMA. Wait for pullback to 10 EMA (<strong>' + pullbackTarget + '</strong>, SL: ' + tightSL + ') to avoid getting trapped.'}</span>`;
+        : '🛑 <strong>DO NOT CHASE!</strong> Price is stretched ' + stretchStr + ' above 10 EMA (>1.5% threshold). Wait for pullback to 10 EMA (<strong>' + pullbackTarget + '</strong>, SL: ' + tightSL + ') to avoid getting trapped.'}</span>`;
     }
 
     let lodPill = '';
@@ -3561,7 +3561,7 @@
         const lastEma = emaSeries[emaSeries.length - 1];
         const lastStretch = (((last.c - lastEma) / lastEma) * 100);
         const sSign = lastStretch >= 0 ? '+' : '';
-        let guardBadge = (lastStretch > 1.0) ? (isStealthMode ? ' [SATURATED]' : ' [⚠️ EXTENDED]') : (lastStretch >= 0 && lastStretch <= 0.45) ? (isStealthMode ? ' [OPTIMAL]' : ' [🟢 PRIME]') : '';
+        let guardBadge = (lastStretch > 1.5) ? (isStealthMode ? ' [SATURATED]' : ' [⚠️ EXTENDED]') : (lastStretch >= 0 && lastStretch <= 0.6) ? (isStealthMode ? ' [OPTIMAL]' : ' [🟢 PRIME]') : '';
         emaHud = ` | ${isStealthMode ? '10-MA' : '10 EMA'}: ${lastEma.toFixed(2)} (${sSign}${lastStretch.toFixed(1)}%${guardBadge})`;
       }
 
