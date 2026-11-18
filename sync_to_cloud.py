@@ -185,6 +185,20 @@ def main():
                 sync_file_to_github_api(gh_cfg, "master_registry.py", "Update master symbol registry engine")
             if (BASE_DIR / "master_symbol_registry.json").is_file():
                 sync_file_to_github_api(gh_cfg, "master_symbol_registry.json", "Update master symbol registry data")
+            if (BASE_DIR / "scan_ems.py").is_file():
+                sync_file_to_github_api(gh_cfg, "scan_ems.py", "Update Easy Money Scan (EMS) engine")
+            if (BASE_DIR / "candidates_ems.json").is_file():
+                sync_file_to_github_api(gh_cfg, "candidates_ems.json", "Update EMS candidates json")
+            if (BASE_DIR / "candidates_ems.txt").is_file():
+                sync_file_to_github_api(gh_cfg, "candidates_ems.txt", "Update EMS candidates txt")
+            if (BASE_DIR / "candidate_schema.py").is_file():
+                sync_file_to_github_api(gh_cfg, "candidate_schema.py", "Update unified candidate schema")
+            if (BASE_DIR / "enrich_candidates.py").is_file():
+                sync_file_to_github_api(gh_cfg, "enrich_candidates.py", "Update candidate enrichment & dedup engine")
+            if (BASE_DIR / "candidates_merged.json").is_file():
+                sync_file_to_github_api(gh_cfg, "candidates_merged.json", "Update unified merged candidates json")
+            if (BASE_DIR / "candidates_merged.txt").is_file():
+                sync_file_to_github_api(gh_cfg, "candidates_merged.txt", "Update unified merged candidates txt")
             if ok_w and ok_j:
                 print("   ✅ GitHub Cloud Sync: SUCCESS! (watchlist, data.json, dashboard & index.html live)")
                 github_ok = True
@@ -295,6 +309,20 @@ def main():
             scp_files.append(str(BASE_DIR / "candidates.txt"))
         if (BASE_DIR / "candidates.json").is_file():
             scp_files.append(str(BASE_DIR / "candidates.json"))
+        if (BASE_DIR / "scan_ems.py").is_file():
+            scp_files.append(str(BASE_DIR / "scan_ems.py"))
+        if (BASE_DIR / "candidates_ems.json").is_file():
+            scp_files.append(str(BASE_DIR / "candidates_ems.json"))
+        if (BASE_DIR / "candidates_ems.txt").is_file():
+            scp_files.append(str(BASE_DIR / "candidates_ems.txt"))
+        if (BASE_DIR / "candidate_schema.py").is_file():
+            scp_files.append(str(BASE_DIR / "candidate_schema.py"))
+        if (BASE_DIR / "enrich_candidates.py").is_file():
+            scp_files.append(str(BASE_DIR / "enrich_candidates.py"))
+        if (BASE_DIR / "candidates_merged.json").is_file():
+            scp_files.append(str(BASE_DIR / "candidates_merged.json"))
+        if (BASE_DIR / "candidates_merged.txt").is_file():
+            scp_files.append(str(BASE_DIR / "candidates_merged.txt"))
         if (BASE_DIR / "tracked_holdings.json").is_file():
             scp_files.append(str(BASE_DIR / "tracked_holdings.json"))
         if (BASE_DIR / "nifty500_constituents.json").is_file():
