@@ -1242,6 +1242,19 @@ def run_eod_sync():
     fills_by_sym = aggregate_fills_by_symbol(all_fills)
     summary = reconcile_journal(fills_by_sym, all_orders, live_positions=live_pos, broker_status=b_stat)
 
+    # 4.5 Maintain exited stocks list and analyze EOD re-entry candidate eligibility
+    try:
+        from exited_stocks_manager import sync_exited_stocks, analyze_exited_stocks_eod, promote_exited_to_candidates
+        print("\n[5/5] Auditing Past Exited Stocks for Candidate Re-Entry...")
+        sync_exited_stocks()
+        ex_audit = analyze_exited_stocks_eod()
+        promoted = promote_exited_to_candidates(ex_audit.get("qualified", []))
+        print(f"      Audited {ex_audit.get('total_exited', 0)} past exited positions -> {ex_audit.get('qualified_count', 0)} qualified for re-entry.")
+        if promoted:
+            print(f"      Promoted {len(promoted)} ex-holdings to candidates: {', '.join(promoted)}")
+    except Exception as ex_err:
+        print(f"      ⚠️ Exited stocks audit notice: {ex_err}")
+
     # 5. Send Telegram Report
     if summary.get("status") == "success":
         send_telegram_eod_card(summary, config)
