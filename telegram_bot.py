@@ -689,13 +689,22 @@ def handle_remove_command(args_text):
 
 
 def handle_watchlist_command():
-    """Handles /watchlist or /list"""
+    """Handles /watchlist, /list, or /telegram with 1-tap interactive remove buttons."""
     syms = read_watchlist_symbols()
     if not syms:
-        return "📋 <b>Watchlist is currently empty.</b>\nAdd symbols using <code>/add &lt;SYMBOL&gt;</code>"
+        empty_text = (
+            "📋 <b>Watchlist is currently empty.</b>\n"
+            "Add symbols using <code>/add &lt;SYMBOL&gt;</code> or tap below to scan Nifty 500 candidates."
+        )
+        empty_markup = {
+            "inline_keyboard": [
+                [{"text": "🎯 Scan Nifty 500 Candidates", "callback_data": "cand_refresh"}]
+            ]
+        }
+        return empty_text, empty_markup
 
     lines = [
-        f"📋 <b>ACTIVE WATCHLIST ({len(syms)} Stocks)</b>",
+        f"📋 <b>ACTIVE 3M ORB WATCHLIST ({len(syms)} Stocks)</b>",
         "━━━━━━━━━━━━━━━━━━━━━━"
     ]
     for idx, s in enumerate(syms, 1):
@@ -703,9 +712,26 @@ def handle_watchlist_command():
         lines.append(f"<b>{idx}.</b> <a href='{tv_link}'>{s}</a>")
 
     lines.append("━━━━━━━━━━━━━━━━━━━━━━")
-    lines.append("💡 <i>Use /add &lt;SYM&gt; to add or /remove &lt;SYM&gt; to delete.</i>")
+    lines.append("💡 <i>Tap any ❌ button below to instantly remove a stock:</i>")
     lines.append("📊 <a href='https://sanincredible.github.io/Jarvis/'>Open Live Dashboard</a>")
-    return "\n".join(lines)
+
+    # Build interactive 1-tap remove buttons (2 per row, matching candidate add buttons)
+    kb_rows = []
+    btn_row = []
+    for s in syms:
+        btn_row.append({"text": f"❌ Remove {s}", "callback_data": f"wl_rm:{s}"})
+        if len(btn_row) == 2:
+            kb_rows.append(btn_row)
+            btn_row = []
+    if btn_row:
+        kb_rows.append(btn_row)
+
+    kb_rows.append([
+        {"text": "🔄 Refresh Watchlist", "callback_data": "wl_show"},
+        {"text": "🎯 Scan Candidates", "callback_data": "cand_refresh"}
+    ])
+
+    return "\n".join(lines), {"inline_keyboard": kb_rows}
 
 
 def handle_candidates_command():
@@ -2207,9 +2233,23 @@ def handle_callback_query(cq):
         edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
 
     elif cq_data == "wl_show":
-        answer_callback_query(cq_id, "Opening watchlist...")
-        text = handle_watchlist_command()
-        send_telegram_msg(chat_id, text, thread_id=thread_id)
+        answer_callback_query(cq_id, "Refreshing watchlist...")
+        text, markup = handle_watchlist_command()
+        edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
+
+    elif cq_data.startswith("wl_rm:"):
+        sym = cq_data.split(":")[1].upper()
+        curr_syms = read_watchlist_symbols()
+        if sym not in curr_syms:
+            answer_callback_query(cq_id, f"{sym} is not in your watchlist!", show_alert=True)
+        else:
+            curr_syms = [s for s in curr_syms if s != sym]
+            write_watchlist_symbols(curr_syms)
+            push_watchlist_to_github()
+            answer_callback_query(cq_id, f"🗑️ Removed {sym} from Watchlist!")
+            threading.Thread(target=trigger_immediate_rescan, daemon=True).start()
+            text, markup = handle_watchlist_command()
+            edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
 
     elif cq_data.startswith("trail_be:"):
         parts = cq_data.split(":")
@@ -2352,7 +2392,7 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_add_command(args)
     elif cmd in ("/remove", "/del", "/rm", "/delete", "remove", "del", "rm", "delete"):
         return handle_remove_command(args)
-    elif cmd in ("/watchlist", "/list", "/stocks", "watchlist", "list", "stocks"):
+    elif cmd in ("/watchlist", "/list", "/stocks", "/wl", "/telegram", "watchlist", "list", "stocks", "wl", "telegram"):
         return handle_watchlist_command()
     elif cmd in ("/candidates", "/cand", "/screen", "/screener", "/eodscan", "/briefing", "candidates", "cand", "screen", "briefing"):
         return handle_candidates_command()
