@@ -1611,6 +1611,11 @@ def handle_exit_command(args):
         success, res = execute_broker_exit(sym, broker=broker, qty_ratio=ratio)
         if success:
             rem = res.get("remaining_qty", 0)
+            if rem <= 0:
+                # Suppress trailing and danger SL alerts for closed symbol
+                _sent_trailing_alerts[(sym.upper(), "DANGER_SL")] = time.time() + 86400
+                _sent_trailing_alerts[(sym.upper(), "AUTO_BREAKEVEN")] = time.time() + 86400
+                _sent_trailing_alerts[(sym.upper(), "BOOK_3R")] = time.time() + 86400
             rem_str = f"• <b>Remaining Qty:</b> {rem} shares\n" if rem > 0 else "• <b>Status:</b> Position Fully Closed (0 shares)\n"
             receipt = (
                 f"🎉 <b>POSITION EXITED ON {res['broker']}!</b>\n"
@@ -2066,6 +2071,11 @@ def handle_callback_query(cq):
         success, res = execute_broker_exit(sym, broker=b_name, qty_ratio=ratio)
         if success:
             rem = res.get("remaining_qty", 0)
+            if rem <= 0:
+                # Suppress trailing and danger SL alerts for closed symbol
+                _sent_trailing_alerts[(sym.upper(), "DANGER_SL")] = time.time() + 86400
+                _sent_trailing_alerts[(sym.upper(), "AUTO_BREAKEVEN")] = time.time() + 86400
+                _sent_trailing_alerts[(sym.upper(), "BOOK_3R")] = time.time() + 86400
             rem_str = f"• <b>Remaining Qty:</b> {rem} shares\n" if rem > 0 else "• <b>Status:</b> Position Fully Closed (0 shares)\n"
             sl_cancel_note = ""
             if res.get("cancelled_sl_orders"):
@@ -2585,8 +2595,8 @@ def run_trailing_surveillance_worker():
                         if (dist_sl <= 0.85 or ltp <= sl or "SL HIT" in badge or "NEAR SL" in badge) and sl > 0 and ltp > 0:
                             alert_key = (sym, "DANGER_SL")
                             last_sent = _sent_trailing_alerts.get(alert_key, 0)
-                            # Cooldown: 15 minutes unless SL breached
-                            if (now_ts - last_sent > 900) or (ltp <= sl and now_ts - last_sent > 300):
+                            # Cooldown: 30 minutes (1800s) for Danger SL / Breached SL to prevent relentless bombardment
+                            if now_ts - last_sent > 1800:
                                 is_hit = ltp <= sl
                                 title = f"🔴 <b>STOP-LOSS BREACHED: {sym}!</b>" if is_hit else f"🚨 <b>RISK DANGER: {sym} NEAR SL!</b>"
                                 status_desc = f"<b>CRITICAL:</b> LTP ₹{ltp:,.2f} is below Stop-Loss ₹{sl:,.0f}!" if is_hit else f"Price is only <b>{dist_sl:.2f}%</b> (₹{abs(ltp-sl):,.2f}) away from Stop-Loss ₹{sl:,.0f}."
