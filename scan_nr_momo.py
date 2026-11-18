@@ -51,13 +51,17 @@ def fetch_daily_candles(symbol: str) -> Optional[List[Dict[str, float]]]:
             candles = []
             for h, l, c, v in zip(highs, lows, closes, volumes):
                 if h is not None and l is not None and c is not None and c > 0:
-                    candles.append({
-                        "high": float(h),
-                        "low": float(l),
-                        "close": float(c),
-                        "volume": float(v) if v else 0.0,
-                        "range": float(h) - float(l)
-                    })
+                    h_val, l_val, c_val = float(h), float(l), float(c)
+                    rng = h_val - l_val
+                    # Filter out zero-range, flat, or pre-market unformed bars
+                    if rng > 0 and (rng / c_val) >= 0.002:
+                        candles.append({
+                            "high": h_val,
+                            "low": l_val,
+                            "close": c_val,
+                            "volume": float(v) if v else 0.0,
+                            "range": rng
+                        })
             return candles
     except Exception:
         return None
@@ -77,10 +81,13 @@ def analyze_nr_setup(candidate: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     prev = candles[-2]
     curr_range = curr["range"]
     curr_close = curr["close"]
-    if curr_close <= 0:
+    if curr_close <= 0 or curr_range <= 0:
         return None
 
     range_pct = round((curr_range / curr_close) * 100.0, 2)
+    # A genuine narrow range must have real trading activity (at least 0.25% daily range)
+    if range_pct < 0.25:
+        return None
 
     ranges = [c["range"] for c in candles]
 
@@ -90,8 +97,8 @@ def analyze_nr_setup(candidate: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     is_nr7 = curr_range <= min(ranges[-7:])
     # Inside Day: Today's High <= Prev High and Today's Low >= Prev Low
     is_inside = (curr["high"] <= prev["high"] * 1.001) and (curr["low"] >= prev["low"] * 0.999)
-    # Tight Range: Range <= 2.2%
-    is_tight = range_pct <= 2.20
+    # Tight Range: Range <= 2.2% (and >= 0.25%)
+    is_tight = 0.25 <= range_pct <= 2.20
 
     if not (is_nr4 or is_nr7 or is_inside or is_tight):
         return None
