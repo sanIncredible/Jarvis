@@ -886,6 +886,20 @@ def handle_nr_command(args=""):
         return f"⚠️ <b>NR Scan Error:</b> {e}", None
 
 
+def handle_nifty_ipo_command(args=""):
+    """
+    Handles /ipo, /niftyipo, or /ipos:
+    Scans the official Nifty IPO Index for Toby Crabel NR Contractions & ATH Doorsteps.
+    """
+    try:
+        from scan_nifty_ipo import scan_nifty_ipo_candidates, format_ipo_telegram_card
+        summary = scan_nifty_ipo_candidates()
+        text, markup = format_ipo_telegram_card(summary)
+        return text, markup
+    except Exception as e:
+        return f"⚠️ <b>Nifty IPO Screener Error:</b> {e}", None
+
+
 def handle_token_status_command():
     """Handles /token, /tokens, or /status"""
     cfg = load_config()
@@ -1100,6 +1114,7 @@ def handle_help_command():
         "• <code>/candidates</code> or <code>/screen</code> — Scan Nifty 500 swing setups (saves to candidates.txt)\n"
         "• <code>/momo90</code> or <code>/broadmomo</code> — Breadth Ledger 90D/30% Candidates (1-tap add)\n"
         "• <code>/nr</code> or <code>/momo_nr</code> — Narrow Range (NR4/NR7/Inside Day) Coils (Sniper List)\n"
+        "• <code>/ipo</code> or <code>/niftyipo</code> — Official Nifty IPO Index High-Tight &amp; NR Contractions\n"
         "• <code>/exited</code> or <code>/reentry</code> — Audit past exited stocks for candidate re-entry\n"
         "• <code>/hindsight</code> or <code>/sim</code> — EOD Multi-Trade Simulation & Strict Audit\n"
         "• <code>/add &lt;SYMBOL...&gt;</code> — Add stock(s) to scanner watchlist\n"
@@ -2400,6 +2415,8 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_momo90_command(args)
     elif cmd in ("/nr", "/momo_nr", "/nrmomo", "nr", "momo_nr", "nrmomo"):
         return handle_nr_command(args)
+    elif cmd in ("/ipo", "/niftyipo", "/ipos", "ipo", "niftyipo", "ipos"):
+        return handle_nifty_ipo_command(args)
     elif cmd in ("/exited", "/reentry", "/exholdings", "exited", "reentry"):
         return handle_exited_command()
     elif cmd in ("/positions", "/pos", "/portfolio", "/pnl", "/holdings", "positions", "pos", "pnl"):
