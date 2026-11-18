@@ -66,9 +66,13 @@ class Candidate:
     ema20: Optional[float] = None
     ema50: Optional[float] = None
 
-    # --- Convenience ---
+    # --- Convenience & Classification ---
     score: Optional[float] = None           # original EOD score field
     priority_score: Optional[float] = None   # original NR90/IPO score field
+    is_blue_sky: bool = False               # within <=3.5% of 52W High / ATH
+    is_coiled: bool = False                 # tight range <= 2.2% or NR4/NR7/Inside Day/VDU
+    is_sniper: bool = False                 # satisfies 3-Check Rule (Momentum + Blue Sky + Contraction)
+    grade: str = "B"                        # "A+" for Sniper setups, "A" for Tier 1, "B" for standard
 
     def to_dict(self) -> dict:
         """Serialises to a dict suitable for JSON output."""
