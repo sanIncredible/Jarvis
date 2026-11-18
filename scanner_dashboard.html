@@ -1300,6 +1300,22 @@
       <span class="tab-icon">🎯</span> <span id="txt-tab-cand">EOD Candidates</span> 
       <span id="tab-badge-cand" class="tab-badge">25</span>
     </button>
+    <button id="tab-btn-momo" class="main-tab-btn" onclick="switchMainView('momo')" title="View 90D/30% Narrow Range (NR) Momentum Setups">
+      <span class="tab-icon">🎯</span> <span id="txt-tab-momo">90D Momo (NR)</span> 
+      <span id="tab-badge-momo" class="tab-badge">0</span>
+    </button>
+    <button id="tab-btn-ipo" class="main-tab-btn" onclick="switchMainView('ipo')" title="View Nifty IPO Index Filtered Candidates">
+      <span class="tab-icon">🚀</span> <span id="txt-tab-ipo">Nifty IPO (NR)</span> 
+      <span id="tab-badge-ipo" class="tab-badge">0</span>
+    </button>
+    <button id="tab-btn-ems" class="main-tab-btn" onclick="switchMainView('ems')" title="View Chirag Kedia Easy Money Scan (EMS) Momentum Leaders">
+      <span class="tab-icon">⚡</span> <span id="txt-tab-ems">Easy Money (EMS)</span> 
+      <span id="tab-badge-ems" class="tab-badge">0</span>
+    </button>
+    <button id="tab-btn-merged" class="main-tab-btn" onclick="switchMainView('merged')" title="View Unified Confluence Candidates across all 4 scanners">
+      <span class="tab-icon">🏆</span> <span id="txt-tab-merged">Top Confluence</span> 
+      <span id="tab-badge-merged" class="tab-badge">0</span>
+    </button>
   </div>
 
   <!-- VIEW 1: 3m ORB Live Scanner View -->
@@ -1523,6 +1539,260 @@
 
   </div> <!-- /#view-candidates -->
 
+  <!-- VIEW 3: 90D/30% Narrow Range (NR) Momentum Setups (Doorstep, Launchpad & Base Coils) -->
+  <div id="view-momo" style="display:none;" class="cand-view-container">
+
+    <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:12px 18px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <div style="font-size:14px; font-weight:800; color:#34d399; display:flex; align-items:center; gap:8px;">
+          <span>🎯 90D MOMENTUM NARROW RANGE (NR) COIL RADAR</span>
+        </div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+          Institutional High-Tight Flags &amp; Volatility Squeezes (NR7 / NR4 / Inside Day / Range &le; 2.2%) with &ge;30% 90D Momentum &bull; Minimal LOD Stop-Loss Risk
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; font-size:11px; font-weight:700;">
+        <span style="color:#10b981; background:rgba(16,185,129,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.4);">🎯 NR7 Squeeze</span>
+        <span style="color:#38bdf8; background:rgba(56,189,248,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(56,189,248,0.4);">⚡ NR4 Coil</span>
+        <span style="color:#c084fc; background:rgba(192,132,252,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(192,132,252,0.4);">📦 Inside Day</span>
+      </div>
+    </div>
+
+    <!-- TIER 1: PIVOT DOORSTEP -->
+    <div class="tier-card tier-1a-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1a-title">🎯 <span id="txt-momo-t1-title">TIER 1: 🚪 PIVOT DOORSTEP NR COILS (&le;3.0% from 52W High / Fresh 3M High)</span></span>
+          <span id="momo-cnt-tier1" class="tier-badge-pill tier-1a-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-momo-t1-sub">Immediate Breakout Doorsteps coiling in NR4 / NR7 / Inside Day contractions sitting on doorstep of 52W or Fresh 3M High &bull; Zero overhead supply &bull; Tightest LOD Risk</div>
+      </div>
+      <div id="momo-grid-tier1" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 2: COIL LAUNCHPAD -->
+    <div class="tier-card tier-2-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-2-title">🚀 <span id="txt-momo-t2-title">TIER 2: COIL LAUNCHPAD NR COILS (3.0% &ndash; 7.0% from 52W High)</span></span>
+          <span id="momo-cnt-tier2" class="tier-badge-pill tier-2-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-momo-t2-sub">Consolidated Base Launchpads coiled in NR contractions near 10/20 EMA support with proven 90D momentum (&ge;30% thrust)</div>
+      </div>
+      <div id="momo-grid-tier2" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 3: BASE RUNWAY -->
+    <div class="tier-card tier-3-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-3-title">📦 <span id="txt-momo-t3-title">TIER 3: BASE RUNWAY NR COILS (7.0% &ndash; 12.0% from 52W High)</span></span>
+          <span id="momo-cnt-tier3" class="tier-badge-pill tier-3-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-momo-t3-sub">Stage-2 Intermediate Base Formations &bull; High velocity 90D momentum resting 7&ndash;12% below peak in tight contractions</div>
+      </div>
+      <div id="momo-grid-tier3" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+  </div> <!-- /#view-momo -->
+
+  <!-- VIEW 4: Nifty IPO Index Filtered Candidates -->
+  <div id="view-ipo" style="display:none;" class="cand-view-container">
+
+    <div style="background:rgba(245, 158, 11, 0.08); border:1px solid rgba(245, 158, 11, 0.3); border-radius:10px; padding:12px 18px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <div style="font-size:14px; font-weight:800; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+          <span>🚀 NIFTY IPO INDEX: HIGH-TIGHT &amp; NR CONTRACTION COIL RADAR</span>
+        </div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+          Official Nifty IPO Index Constituents screened for Stage 1/2 IPO Bases, NR Contractions (NR7 / NR4 / Inside Day / Tight Range) &amp; ATH Doorsteps &bull; Zero Overhead Supply
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; font-size:11px; font-weight:700;">
+        <span style="color:#10b981; background:rgba(16,185,129,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.4);">🎯 NR7 Squeeze</span>
+        <span style="color:#38bdf8; background:rgba(56,189,248,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(56,189,248,0.4);">⚡ NR4 Coil</span>
+        <span style="color:#c084fc; background:rgba(192,132,252,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(192,132,252,0.4);">📦 Inside Day</span>
+      </div>
+    </div>
+
+    <!-- TIER 1: IPO PIVOT DOORSTEP -->
+    <div class="tier-card tier-1a-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1a-title">🔥 <span id="txt-ipo-t1-title">TIER 1: 👑 IPO PIVOT DOORSTEP (≤3.5% from All-Time High / 3M High)</span></span>
+          <span id="ipo-cnt-tier1" class="tier-badge-pill tier-1a-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-ipo-t1-sub">Fresh IPO leaders sitting right on the doorstep of All-Time High &bull; Squeezed in NR7 / NR4 / Inside Day &bull; Immediate blue-sky ignition</div>
+      </div>
+      <div id="ipo-grid-tier1" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 2: IPO LAUNCHPAD BASE -->
+    <div class="tier-card tier-1b-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1b-title">🚀 <span id="txt-ipo-t2-title">TIER 2: 🎯 IPO LAUNCHPAD BASE (3.5% to 8.0% from ATH)</span></span>
+          <span id="ipo-cnt-tier2" class="tier-badge-pill tier-1b-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-ipo-t2-sub">Secondary IPO base consolidation resting on 10/20 EMA cushion &bull; Multi-day volatility compression &bull; Asymmetrical upside runway</div>
+      </div>
+      <div id="ipo-grid-tier2" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 3: IPO BASE COIL -->
+    <div class="tier-card tier-3-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-3-title">📦 <span id="txt-ipo-t3-title">TIER 3: 🧱 IPO BASE ACCUMULATION (8% to 18% from ATH)</span></span>
+          <span id="ipo-cnt-tier3" class="tier-badge-pill tier-3-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-ipo-t3-sub">Constructive Stage 1 IPO base building &bull; Multi-week accumulation coils preparing for primary breakout</div>
+      </div>
+      <div id="ipo-grid-tier3" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+  </div> <!-- /#view-ipo -->
+
+  <!-- VIEW 5: Chirag Kedia Easy Money Scan (EMS) Candidates -->
+  <div id="view-ems" style="display:none;" class="cand-view-container">
+
+    <div style="background:rgba(16, 185, 129, 0.08); border:1px solid rgba(16, 185, 129, 0.3); border-radius:10px; padding:12px 18px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <div style="font-size:14px; font-weight:800; color:#34d399; display:flex; align-items:center; gap:8px;">
+          <span>⚡ CHIRAG KEDIA EASY MONEY SCAN (EMS) RADAR</span>
+        </div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+          Sourced from Manas Arora Breadth Ledger &bull; 1W &ge; 20% &bull; 1M &ge; 25% &bull; 1Q &ge; 35% &bull; 6M &ge; 50% &bull; Multi-Timeframe Momentum Leaders
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; font-size:11px; font-weight:700;">
+        <span style="color:#f59e0b; background:rgba(245,158,11,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(245,158,11,0.4);">🔥 1W +20%</span>
+        <span style="color:#38bdf8; background:rgba(56,189,248,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(56,189,248,0.4);">🚀 1M +25%</span>
+        <span style="color:#a855f7; background:rgba(168,85,247,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(168,85,247,0.4);">🎯 1Q +35%</span>
+        <span style="color:#10b981; background:rgba(16,185,129,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.4);">💎 6M +50%</span>
+      </div>
+    </div>
+
+    <!-- TIER 1: MULTI-TIMEFRAME THRUST -->
+    <div class="tier-card tier-1a-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1a-title">🔥 <span id="txt-ems-t1-title">TIER 1: 👑 MULTI-TIMEFRAME THRUST (2+ Triggers)</span></span>
+          <span id="ems-cnt-tier1" class="tier-badge-pill tier-1a-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-ems-t1-sub">Elite institutional runners satisfying multiple momentum hurdles simultaneously &bull; Highest conviction velocity</div>
+      </div>
+      <div id="ems-grid-tier1" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 2: SHORT-TERM MOMENTUM BURST -->
+    <div class="tier-card tier-1b-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1b-title">🚀 <span id="txt-ems-t2-title">TIER 2: 🎯 SHORT-TERM MOMO IGNITION (1W ≥20% / 1M ≥25%)</span></span>
+          <span id="ems-cnt-tier2" class="tier-badge-pill tier-1b-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-ems-t2-sub">Fresh explosive momentum burst &bull; High velocity short-term acceleration</div>
+      </div>
+      <div id="ems-grid-tier2" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 3: STRUCTURAL TREND LEADERS -->
+    <div class="tier-card tier-3-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-3-title">📦 <span id="txt-ems-t3-title">TIER 3: 🧱 STRUCTURAL TREND LEADERS (1Q ≥35% / 6M ≥50%)</span></span>
+          <span id="ems-cnt-tier3" class="tier-badge-pill tier-3-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-ems-t3-sub">Sustained multi-month institutional accumulation leaders &bull; Strong primary trend runners</div>
+      </div>
+      <div id="ems-grid-tier3" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+  </div> <!-- /#view-ems -->
+
+  <!-- VIEW 6: Unified Candidate Confluence (Merged Across All Scanners) -->
+  <div id="view-merged" style="display:none;" class="cand-view-container">
+
+    <div style="background:rgba(234, 179, 8, 0.08); border:1px solid rgba(234, 179, 8, 0.35); border-radius:10px; padding:12px 18px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <div style="font-size:14px; font-weight:800; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+          <span>🏆 UNIFIED CANDIDATE CONFLUENCE RADAR</span>
+        </div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+          Cross-list deduplication &amp; confluence ranking across EOD Swing (VCP), 90D MOMO, Nifty IPO &amp; Easy Money (EMS) &bull; Stocks with multi-scanner confirmation receive +10 confluence bonuses
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; font-size:11px; font-weight:700;">
+        <span style="color:#10b981; background:rgba(16,185,129,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.4);">🔥 EOD Swing</span>
+        <span style="color:#38bdf8; background:rgba(56,189,248,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(56,189,248,0.4);">📊 90D MOMO</span>
+        <span style="color:#f59e0b; background:rgba(245,158,11,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(245,158,11,0.4);">🚀 Nifty IPO</span>
+        <span style="color:#c084fc; background:rgba(192,132,252,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(192,132,252,0.4);">⚡ Easy Money</span>
+      </div>
+    </div>
+
+    <!-- TIER 1: HIGH CONFLUENCE & BREAKOUT DOORSTEPS -->
+    <div class="tier-card tier-1a-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1a-title">🔥 <span id="txt-merged-t1-title">TIER 1: 👑 MULTI-LIST CONFLUENCE &amp; PIVOT DOORSTEPS</span></span>
+          <span id="merged-cnt-tier1" class="tier-badge-pill tier-1a-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-merged-t1-sub">Highest conviction setups confirmed across multiple scanners or sitting directly at 52W/20D breakout ignition points</div>
+      </div>
+      <div id="merged-grid-tier1" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 2: MOMENTUM LAUNCHPADS -->
+    <div class="tier-card tier-1b-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1b-title">🚀 <span id="txt-merged-t2-title">TIER 2: 🎯 BASE LAUNCHPADS &amp; SHORT-TERM BURSTS</span></span>
+          <span id="merged-cnt-tier2" class="tier-badge-pill tier-1b-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-merged-t2-sub">Active momentum coils and pocket pivot setups coiled off key moving average shelves</div>
+      </div>
+      <div id="merged-grid-tier2" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 3: STRUCTURAL BASES -->
+    <div class="tier-card tier-3-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-3-title">📦 <span id="txt-merged-t3-title">TIER 3: 🧱 BASE CONTRACTIONS &amp; STRUCTURAL RUNNERS</span></span>
+          <span id="merged-cnt-tier3" class="tier-badge-pill tier-3-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle" id="txt-merged-t3-sub">Developing base consolidations and long-term momentum leaders building potential breakout shelves</div>
+      </div>
+      <div id="merged-grid-tier3" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+  </div> <!-- /#view-merged -->
+
 
   <div id="page-footer" class="footer">
     Cluster Telemetry &amp; Node Observer Daemon • Distributed Ingress Telemetry Pipeline • High-Throughput Stream • Press [?] for Diagnostics
@@ -1617,25 +1887,50 @@
 
   let currentMainView = 'orb';
   let RAW_CANDIDATES = [];
+  let RAW_MOMO = [];
+  let RAW_IPO = [];
+  let RAW_EMS = [];
+  let RAW_MERGED = [];
 
   function switchMainView(viewName) {
     currentMainView = viewName;
     const btnOrb = document.getElementById('tab-btn-orb');
     const btnCand = document.getElementById('tab-btn-cand');
+    const btnMomo = document.getElementById('tab-btn-momo');
+    const btnIpo = document.getElementById('tab-btn-ipo');
+    const btnEms = document.getElementById('tab-btn-ems');
+    const btnMerged = document.getElementById('tab-btn-merged');
     const viewOrb = document.getElementById('view-orb');
     const viewCand = document.getElementById('view-candidates');
+    const viewMomo = document.getElementById('view-momo');
+    const viewIpo = document.getElementById('view-ipo');
+    const viewEms = document.getElementById('view-ems');
+    const viewMerged = document.getElementById('view-merged');
+
+    if (btnOrb) btnOrb.classList.toggle('active', viewName === 'orb');
+    if (btnCand) btnCand.classList.toggle('active', viewName === 'candidates');
+    if (btnMomo) btnMomo.classList.toggle('active', viewName === 'momo');
+    if (btnIpo) btnIpo.classList.toggle('active', viewName === 'ipo');
+    if (btnEms) btnEms.classList.toggle('active', viewName === 'ems');
+    if (btnMerged) btnMerged.classList.toggle('active', viewName === 'merged');
+
+    if (viewOrb) viewOrb.style.display = (viewName === 'orb') ? 'block' : 'none';
+    if (viewCand) viewCand.style.display = (viewName === 'candidates') ? 'flex' : 'none';
+    if (viewMomo) viewMomo.style.display = (viewName === 'momo') ? 'flex' : 'none';
+    if (viewIpo) viewIpo.style.display = (viewName === 'ipo') ? 'flex' : 'none';
+    if (viewEms) viewEms.style.display = (viewName === 'ems') ? 'flex' : 'none';
+    if (viewMerged) viewMerged.style.display = (viewName === 'merged') ? 'flex' : 'none';
 
     if (viewName === 'candidates') {
-      if (btnOrb) btnOrb.classList.remove('active');
-      if (btnCand) btnCand.classList.add('active');
-      if (viewOrb) viewOrb.style.display = 'none';
-      if (viewCand) viewCand.style.display = 'flex';
       renderCandidatesView();
-    } else {
-      if (btnCand) btnCand.classList.remove('active');
-      if (btnOrb) btnOrb.classList.add('active');
-      if (viewCand) viewCand.style.display = 'none';
-      if (viewOrb) viewOrb.style.display = 'block';
+    } else if (viewName === 'momo') {
+      renderMomoView();
+    } else if (viewName === 'ipo') {
+      renderIpoView();
+    } else if (viewName === 'ems') {
+      renderEmsView();
+    } else if (viewName === 'merged') {
+      renderMergedView();
     }
   }
 
@@ -1702,6 +1997,473 @@
       `;
     });
     container.innerHTML = html;
+  }
+
+  function renderMomoView() {
+    if (!RAW_MOMO.length) {
+      fetchMomoFallback();
+      return;
+    }
+    // Only display genuine Narrow Range (NR) Momentum setups:
+    // Must satisfy at least one NR condition (NR7, NR4, Inside Day, Tight Range) AND have legitimate daily range >= 0.25%
+    const isNR = c => ((c.is_nr7 || c.is_nr4 || c.is_inside || c.is_tight) && ((c.daily_range_pct || 0) >= 0.25 || (c.nr_tags && c.nr_tags.length > 0)));
+    const nrCandidates = RAW_MOMO.filter(isNR);
+
+    const t1 = nrCandidates.filter(c => c.tier === 'TIER_1_DOORSTEP' || c.tier_order === 1);
+    const t2 = nrCandidates.filter(c => c.tier === 'TIER_2_LAUNCHPAD' || c.tier_order === 2);
+    const t3 = nrCandidates.filter(c => c.tier === 'TIER_3_BASE' || c.tier_order === 3);
+
+    const totalNR = t1.length + t2.length + t3.length;
+    const badge = document.getElementById('tab-badge-momo');
+    if (badge) badge.innerText = totalNR;
+
+    let r = 1;
+    renderMomoTierGrid('momo-grid-tier1', t1, r); r += t1.length;
+    renderMomoTierGrid('momo-grid-tier2', t2, r); r += t2.length;
+    renderMomoTierGrid('momo-grid-tier3', t3, r);
+
+    const c1 = document.getElementById('momo-cnt-tier1');
+    if (c1) c1.innerText = `${t1.length} Coils`;
+    const c2 = document.getElementById('momo-cnt-tier2');
+    if (c2) c2.innerText = `${t2.length} Coils`;
+    const c3 = document.getElementById('momo-cnt-tier3');
+    if (c3) c3.innerText = `${t3.length} Coils`;
+  }
+
+  function renderMomoTierGrid(containerId, list, startRank) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!list || !list.length) {
+      container.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:10px;">No setups in this tier.</div>';
+      return;
+    }
+    let html = '';
+    list.forEach((c, idx) => {
+      const sym = c.symbol;
+      const rank = startRank + idx;
+      const tvUrl = `https://in.tradingview.com/chart/?symbol=NSE:${sym}`;
+      const displaySym = isStealthMode ? formatNodeName(sym) : sym;
+      const distStr = (c.dist_52w_pct !== null && c.dist_52w_pct !== undefined) 
+        ? (c.dist_52w_pct === 0 ? '3M High' : `-${Math.abs(c.dist_52w_pct).toFixed(1)}%`) 
+        : 'At High';
+
+      let badgesHtml = '';
+      if (c.is_nr7) {
+        badgesHtml += '<span style="font-size:10px; font-weight:800; color:#10b981; background:rgba(16,185,129,0.18); border:1px solid rgba(16,185,129,0.4); padding:1px 5px; border-radius:4px;">🎯 NR7</span>';
+      } else if (c.is_nr4) {
+        badgesHtml += '<span style="font-size:10px; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); padding:1px 5px; border-radius:4px;">⚡ NR4</span>';
+      }
+      if (c.is_inside) {
+        badgesHtml += '<span style="font-size:10px; font-weight:800; color:#c084fc; background:rgba(192,132,252,0.18); border:1px solid rgba(192,132,252,0.4); padding:1px 5px; border-radius:4px;">📦 Inside</span>';
+      }
+      if (c.daily_range_pct) {
+        badgesHtml += `<span style="font-size:10px; color:#fde047; background:rgba(234,179,8,0.15); padding:1px 5px; border-radius:4px;">${c.daily_range_pct.toFixed(1)}% rng</span>`;
+      }
+
+      html += `
+        <a href="${tvUrl}" target="_blank" class="cand-link-btn" title="Open ${sym} chart on TradingView" style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px; gap:8px;">
+          <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span class="cand-rank">#${rank}</span>
+              <span class="cand-sym" style="font-size:13px; font-weight:800;">📈 ${displaySym}</span>
+              ${c.is_fresh_3m ? '<span style="font-size:11px;" title="Fresh 3M High Today">👑</span>' : ''}
+              ${badgesHtml}
+            </div>
+            <div style="font-size:10px; color:var(--text-muted); display:flex; gap:5px; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              <span style="color:#38bdf8; font-weight:700;">${distStr}</span>
+              <span>•</span>
+              <span style="max-width:120px; overflow:hidden; text-overflow:ellipsis;">${c.industry || 'Equity'}</span>
+              <span>•</span>
+              <span style="color:#34d399; font-weight:700;">${c.gain_tier || '≥30%'}</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+            <span class="cand-tv-icon" style="font-size:12px;">↗</span>
+          </div>
+        </a>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
+  async function fetchMomoFallback() {
+    const endpoints = [
+      'candidates_90d_nr.json',
+      'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/candidates_90d_nr.json',
+      'https://raw.githubusercontent.com/sanIncredible/Jarvis/main/candidates_90d_nr.json'
+    ];
+    for (const url of endpoints) {
+      try {
+        const res = await fetchWithTimeout(url, { cache: 'no-store' }, 3000);
+        if (!res.ok) continue;
+        const d = await res.json();
+        let list = [];
+        if (d.tier1_candidates || d.tier2_candidates) {
+          list = [
+            ...(d.tier1_candidates || []),
+            ...(d.tier2_candidates || []),
+            ...(d.tier3_candidates || [])
+          ];
+        } else if (Array.isArray(d.candidates)) {
+          list = d.candidates.filter(c => (c.is_nr7 || c.is_nr4 || c.is_inside || c.is_tight) && ((c.daily_range_pct || 0) >= 0.25));
+        } else if (Array.isArray(d)) {
+          list = d.filter(c => (c.is_nr7 || c.is_nr4 || c.is_inside || c.is_tight) && ((c.daily_range_pct || 0) >= 0.25));
+        }
+        if (list.length) {
+          RAW_MOMO = list;
+          renderMomoView();
+          break;
+        }
+      } catch (e) {
+        // continue
+      }
+    }
+  }
+
+  function renderIpoView() {
+    if (!RAW_IPO.length) {
+      fetchIpoFallback();
+      return;
+    }
+    const t1 = RAW_IPO.filter(c => c.tier_order === 1 || (c.tier || '').toUpperCase().includes('TIER 1') || c.tier === 'TIER_1_DOORSTEP');
+    const t2 = RAW_IPO.filter(c => c.tier_order === 2 || (c.tier || '').toUpperCase().includes('TIER 2') || c.tier === 'TIER_2_LAUNCHPAD');
+    const t3 = RAW_IPO.filter(c => c.tier_order === 3 || (c.tier || '').toUpperCase().includes('TIER 3') || c.tier === 'TIER_3_BASE');
+
+    const totalIPO = t1.length + t2.length + t3.length;
+    const badge = document.getElementById('tab-badge-ipo');
+    if (badge) badge.innerText = totalIPO;
+
+    let r = 1;
+    renderIpoTierGrid('ipo-grid-tier1', t1, r); r += t1.length;
+    renderIpoTierGrid('ipo-grid-tier2', t2, r); r += t2.length;
+    renderIpoTierGrid('ipo-grid-tier3', t3, r);
+
+    const c1 = document.getElementById('ipo-cnt-tier1');
+    if (c1) c1.innerText = `${t1.length} Setups`;
+    const c2 = document.getElementById('ipo-cnt-tier2');
+    if (c2) c2.innerText = `${t2.length} Setups`;
+    const c3 = document.getElementById('ipo-cnt-tier3');
+    if (c3) c3.innerText = `${t3.length} Setups`;
+  }
+
+  function renderIpoTierGrid(containerId, list, startRank) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!list || !list.length) {
+      container.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:10px;">No setups in this tier.</div>';
+      return;
+    }
+    let html = '';
+    list.forEach((c, idx) => {
+      const sym = c.symbol;
+      const rank = startRank + idx;
+      const tvUrl = `https://in.tradingview.com/chart/?symbol=NSE:${sym}`;
+      const displaySym = isStealthMode ? formatNodeName(sym) : sym;
+      const distVal = (c.dist_ath_pct !== undefined && c.dist_ath_pct !== null) ? c.dist_ath_pct : c.dist_52w_pct;
+      const distStr = (distVal !== null && distVal !== undefined) 
+        ? (distVal <= 0 ? 'ATH Doorstep' : `-${Math.abs(distVal).toFixed(1)}%`) 
+        : 'At High';
+
+      let badgesHtml = '';
+      if (c.is_nr7) {
+        badgesHtml += '<span style="font-size:10px; font-weight:800; color:#10b981; background:rgba(16,185,129,0.18); border:1px solid rgba(16,185,129,0.4); padding:1px 5px; border-radius:4px;">🎯 NR7</span>';
+      } else if (c.is_nr4) {
+        badgesHtml += '<span style="font-size:10px; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); padding:1px 5px; border-radius:4px;">⚡ NR4</span>';
+      }
+      if (c.is_inside) {
+        badgesHtml += '<span style="font-size:10px; font-weight:800; color:#c084fc; background:rgba(192,132,252,0.18); border:1px solid rgba(192,132,252,0.4); padding:1px 5px; border-radius:4px;">📦 Inside</span>';
+      }
+      if (c.daily_range_pct) {
+        badgesHtml += `<span style="font-size:10px; color:#fde047; background:rgba(234,179,8,0.15); padding:1px 5px; border-radius:4px;">${c.daily_range_pct.toFixed(1)}% rng</span>`;
+      }
+
+      const ltpStr = c.ltp ? `₹${c.ltp}` : '';
+      const chgStr = c.change_pct !== undefined && c.change_pct !== null ? `${c.change_pct >= 0 ? '+' : ''}${c.change_pct.toFixed(1)}%` : '';
+      const chgColor = (c.change_pct || 0) >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+
+      html += `
+        <a href="${tvUrl}" target="_blank" class="cand-link-btn" title="Open ${sym} chart on TradingView" style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px; gap:8px;">
+          <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span class="cand-rank">#${rank}</span>
+              <span class="cand-sym" style="font-size:13px; font-weight:800;">🚀 ${displaySym}</span>
+              ${ltpStr ? `<span style="font-size:11px; font-weight:700; color:var(--text-main);">${ltpStr}</span>` : ''}
+              ${chgStr ? `<span style="font-size:10px; font-weight:700; color:${chgColor};">${chgStr}</span>` : ''}
+              ${badgesHtml}
+            </div>
+            <div style="font-size:10px; color:var(--text-muted); display:flex; gap:5px; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              <span style="color:#fbbf24; font-weight:700;">${distStr}</span>
+              <span>•</span>
+              <span style="max-width:140px; overflow:hidden; text-overflow:ellipsis;">${c.industry || 'IPO'}</span>
+              <span>•</span>
+              <span style="color:#94a3b8; overflow:hidden; text-overflow:ellipsis; max-width:160px;">${c.name || sym}</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+            <span class="cand-tv-icon" style="font-size:12px;">↗</span>
+          </div>
+        </a>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
+  async function fetchIpoFallback() {
+    const endpoints = [
+      'candidates_nifty_ipo.json',
+      'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/candidates_nifty_ipo.json',
+      'https://raw.githubusercontent.com/sanIncredible/Jarvis/main/candidates_nifty_ipo.json'
+    ];
+    for (const url of endpoints) {
+      try {
+        const res = await fetchWithTimeout(url, { cache: 'no-store' }, 3000);
+        if (!res.ok) continue;
+        const d = await res.json();
+        let list = [];
+        if (d.tier1_candidates || d.tier2_candidates) {
+          list = [
+            ...(d.tier1_candidates || []),
+            ...(d.tier2_candidates || []),
+            ...(d.tier3_candidates || [])
+          ];
+        } else if (Array.isArray(d.all_candidates)) {
+          list = d.all_candidates;
+        } else if (Array.isArray(d)) {
+          list = d;
+        }
+        if (list.length) {
+          RAW_IPO = list;
+          renderIpoView();
+          break;
+        }
+      } catch (e) {
+        // continue
+      }
+    }
+  }
+
+  function renderEmsView() {
+    if (!RAW_EMS.length) {
+      fetchEmsFallback();
+      return;
+    }
+    const t1 = RAW_EMS.filter(c => c.tier_order === 1 || (c.tier || '').toUpperCase().includes('TIER 1') || c.tier === 'TIER_1_MULTI');
+    const t2 = RAW_EMS.filter(c => c.tier_order === 2 || (c.tier || '').toUpperCase().includes('TIER 2') || c.tier === 'TIER_2_SHORT');
+    const t3 = RAW_EMS.filter(c => c.tier_order === 3 || (c.tier || '').toUpperCase().includes('TIER 3') || c.tier === 'TIER_3_STRUCT');
+
+    const totalEMS = t1.length + t2.length + t3.length;
+    const badge = document.getElementById('tab-badge-ems');
+    if (badge) badge.innerText = totalEMS;
+
+    let r = 1;
+    renderEmsTierGrid('ems-grid-tier1', t1, r); r += t1.length;
+    renderEmsTierGrid('ems-grid-tier2', t2, r); r += t2.length;
+    renderEmsTierGrid('ems-grid-tier3', t3, r);
+
+    const c1 = document.getElementById('ems-cnt-tier1');
+    if (c1) c1.innerText = `${t1.length} Setups`;
+    const c2 = document.getElementById('ems-cnt-tier2');
+    if (c2) c2.innerText = `${t2.length} Setups`;
+    const c3 = document.getElementById('ems-cnt-tier3');
+    if (c3) c3.innerText = `${t3.length} Setups`;
+  }
+
+  function renderEmsTierGrid(containerId, list, startRank) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!list || !list.length) {
+      container.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:10px;">No setups in this tier.</div>';
+      return;
+    }
+    let html = '';
+    list.forEach((c, idx) => {
+      const sym = c.symbol;
+      const rank = startRank + idx;
+      const tvUrl = `https://in.tradingview.com/chart/?symbol=NSE:${sym}`;
+      const displaySym = isStealthMode ? formatNodeName(sym) : sym;
+      const distVal = c.dist_52w_pct;
+      const distStr = (distVal !== null && distVal !== undefined) 
+        ? (distVal >= 0 ? '52W High' : `${distVal.toFixed(1)}% 52W`) 
+        : 'Near High';
+
+      let badgesHtml = '';
+      if (c.rs_rating) {
+        badgesHtml += `<span style="font-size:10px; font-weight:800; color:#34d399; background:rgba(52,211,153,0.18); border:1px solid rgba(52,211,153,0.4); padding:1px 5px; border-radius:4px;">RS:${c.rs_rating}</span>`;
+      }
+      (c.trigger_badges || c.triggers || []).forEach(tg => {
+        const color = tg.includes('1W') ? '#f59e0b' : (tg.includes('1M') ? '#38bdf8' : (tg.includes('1Q') ? '#a855f7' : '#10b981'));
+        const bg = tg.includes('1W') ? 'rgba(245,158,11,0.16)' : (tg.includes('1M') ? 'rgba(56,189,248,0.16)' : (tg.includes('1Q') ? 'rgba(168,85,247,0.16)' : 'rgba(16,185,129,0.16)'));
+        badgesHtml += `<span style="font-size:10px; font-weight:700; color:${color}; background:${bg}; padding:1px 5px; border-radius:4px;">${tg}</span>`;
+      });
+
+      html += `
+        <a href="${tvUrl}" target="_blank" class="cand-link-btn" title="Open ${sym} chart on TradingView" style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px; gap:8px;">
+          <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span class="cand-rank">#${rank}</span>
+              <span class="cand-sym" style="font-size:13px; font-weight:800;">⚡ ${displaySym}</span>
+              ${badgesHtml}
+            </div>
+            <div style="font-size:10px; color:var(--text-muted); display:flex; gap:5px; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              <span style="color:#fbbf24; font-weight:700;">${distStr}</span>
+              <span>•</span>
+              <span style="max-width:140px; overflow:hidden; text-overflow:ellipsis;">${c.industry || 'Momentum'}</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+            <span class="cand-tv-icon" style="font-size:12px;">↗</span>
+          </div>
+        </a>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
+  async function fetchEmsFallback() {
+    const endpoints = [
+      'candidates_ems.json',
+      'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/candidates_ems.json',
+      'https://raw.githubusercontent.com/sanIncredible/Jarvis/main/candidates_ems.json'
+    ];
+    for (const url of endpoints) {
+      try {
+        const res = await fetchWithTimeout(url, { cache: 'no-store' }, 3000);
+        if (!res.ok) continue;
+        const d = await res.json();
+        let list = [];
+        if (d.tier1_candidates || d.tier2_candidates) {
+          list = [
+            ...(d.tier1_candidates || []),
+            ...(d.tier2_candidates || []),
+            ...(d.tier3_candidates || [])
+          ];
+        } else if (Array.isArray(d.all_candidates)) {
+          list = d.all_candidates;
+        } else if (Array.isArray(d)) {
+          list = d;
+        }
+        if (list.length) {
+          RAW_EMS = list;
+          renderEmsView();
+          break;
+        }
+      } catch (e) {
+        // continue
+      }
+    }
+  }
+
+  function renderMergedView() {
+    if (!RAW_MERGED.length) {
+      fetchMergedFallback();
+      return;
+    }
+    const t1 = RAW_MERGED.filter(c => c.tier_order === 1 || (c.tier || '').toUpperCase().includes('TIER 1') || (c.sources && c.sources.length >= 2));
+    const t2 = RAW_MERGED.filter(c => (c.tier_order === 2 || (c.tier || '').toUpperCase().includes('TIER 2')) && !t1.includes(c));
+    const t3 = RAW_MERGED.filter(c => !t1.includes(c) && !t2.includes(c));
+
+    const totalMerged = RAW_MERGED.length;
+    const badge = document.getElementById('tab-badge-merged');
+    if (badge) badge.innerText = totalMerged;
+
+    let r = 1;
+    renderMergedTierGrid('merged-grid-tier1', t1, r); r += t1.length;
+    renderMergedTierGrid('merged-grid-tier2', t2, r); r += t2.length;
+    renderMergedTierGrid('merged-grid-tier3', t3, r);
+
+    const c1 = document.getElementById('merged-cnt-tier1');
+    if (c1) c1.innerText = `${t1.length} Setups`;
+    const c2 = document.getElementById('merged-cnt-tier2');
+    if (c2) c2.innerText = `${t2.length} Setups`;
+    const c3 = document.getElementById('merged-cnt-tier3');
+    if (c3) c3.innerText = `${t3.length} Setups`;
+  }
+
+  function renderMergedTierGrid(containerId, list, startRank) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!list || !list.length) {
+      container.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:10px;">No setups in this tier.</div>';
+      return;
+    }
+    let html = '';
+    list.forEach((c, idx) => {
+      const sym = c.symbol;
+      const rank = startRank + idx;
+      const tvUrl = `https://in.tradingview.com/chart/?symbol=NSE:${sym}`;
+      const displaySym = isStealthMode ? formatNodeName(sym) : sym;
+      const distVal = c.dist_52w_pct;
+      const distStr = (distVal !== null && distVal !== undefined)
+        ? (distVal >= 0 ? '52W High' : `${distVal.toFixed(1)}% 52W`)
+        : (c.dist_from_high_pct !== null && c.dist_from_high_pct !== undefined ? `${c.dist_from_high_pct}% High` : 'Near High');
+
+      let sourceBadges = '';
+      const srcColors = {
+        eod: { color: '#10b981', bg: 'rgba(16,185,129,0.18)', border: 'rgba(16,185,129,0.4)', label: 'EOD' },
+        nr90: { color: '#38bdf8', bg: 'rgba(56,189,248,0.18)', border: 'rgba(56,189,248,0.4)', label: 'MOMO' },
+        ipo: { color: '#f59e0b', bg: 'rgba(245,158,11,0.18)', border: 'rgba(245,158,11,0.4)', label: 'IPO' },
+        ems: { color: '#c084fc', bg: 'rgba(192,132,252,0.18)', border: 'rgba(192,132,252,0.4)', label: 'EMS' }
+      };
+
+      (c.sources || [c.source || 'eod']).forEach(s => {
+        const conf = srcColors[s.toLowerCase()] || { color: '#94a3b8', bg: 'rgba(148,163,184,0.18)', border: 'rgba(148,163,184,0.4)', label: s.toUpperCase() };
+        sourceBadges += `<span style="font-size:10px; font-weight:800; color:${conf.color}; background:${conf.bg}; border:1px solid ${conf.border}; padding:1px 5px; border-radius:4px;">${conf.label}</span>`;
+      });
+
+      let bonusBadge = '';
+      if (c.cross_list_bonus && c.cross_list_bonus > 0) {
+        bonusBadge = `<span style="font-size:10px; font-weight:800; color:#fbbf24; background:rgba(251,191,36,0.2); border:1px solid rgba(251,191,36,0.5); padding:1px 5px; border-radius:4px;">⚡+${Math.round(c.cross_list_bonus)} Confluence</span>`;
+      }
+
+      const scoreVal = c.total_score || c.score || c.priority_score || 0;
+
+      html += `
+        <a href="${tvUrl}" target="_blank" class="cand-link-btn" title="Open ${sym} chart on TradingView" style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px; gap:8px;">
+          <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span class="cand-rank">#${rank}</span>
+              <span class="cand-sym" style="font-size:13px; font-weight:800;">🏆 ${displaySym}</span>
+              ${sourceBadges}
+              ${bonusBadge}
+            </div>
+            <div style="font-size:10px; color:var(--text-muted); display:flex; gap:5px; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              <span style="color:#10b981; font-weight:800;">${scoreVal.toFixed(1)} pts</span>
+              <span>•</span>
+              <span style="color:#fbbf24; font-weight:700;">${distStr}</span>
+              <span>•</span>
+              <span style="max-width:130px; overflow:hidden; text-overflow:ellipsis;">${c.industry || 'Momentum'}</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+            <span class="cand-tv-icon" style="font-size:12px;">↗</span>
+          </div>
+        </a>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
+  async function fetchMergedFallback() {
+    const endpoints = [
+      'candidates_merged.json',
+      'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/candidates_merged.json',
+      'https://raw.githubusercontent.com/sanIncredible/Jarvis/main/candidates_merged.json'
+    ];
+    for (const url of endpoints) {
+      try {
+        const res = await fetchWithTimeout(url, { cache: 'no-store' }, 3000);
+        if (!res.ok) continue;
+        const d = await res.json();
+        const list = d.candidates || d;
+        if (Array.isArray(list) && list.length) {
+          RAW_MERGED = list;
+          renderMergedView();
+          break;
+        }
+      } catch (e) {
+        // continue
+      }
+    }
   }
 
   async function fetchCandidatesFallback() {
@@ -1779,6 +2541,9 @@
     const txtTabOrb = document.getElementById('txt-tab-orb');
     if (txtTabOrb) txtTabOrb.innerText = isStealthMode ? 'Telemetry Nodes' : '3m ORB Triggers';
     if (currentMainView === 'candidates') renderCandidatesView();
+    if (currentMainView === 'momo') renderMomoView();
+    if (currentMainView === 'ipo') renderIpoView();
+    if (currentMainView === 'ems') renderEmsView();
 
     const pageTitle = document.getElementById('page-title');
     const txtBrandTitle = document.getElementById('txt-brand-title');
@@ -2080,7 +2845,7 @@
     }
     const t = Date.now();
 
-    // Prepare candidate endpoints
+        // Prepare candidate endpoints in strict priority order
     const targets = [];
     if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
       let path = window.location.pathname || '/';
@@ -2089,26 +2854,29 @@
       } else if (!path.endsWith('/')) {
         path += '/';
       }
-      targets.push({ url: window.location.origin + path + 'data.json?_t=' + t, name: 'Local Edge' });
+      targets.push({ url: window.location.origin + path + 'data.json?_t=' + t, name: 'Local Edge', priority: 1 });
     }
-    // High-speed edge CDN (Cloudflare/Fastly - bypasses ISP blocks & CORS issues)
-    targets.push({ url: `${JSDELIVR_URL}?_t=${t}`, name: 'Edge CDN' });
-    // Raw GitHub Stream
-    targets.push({ url: `${RAW_GITHUB_URL}?_t=${t}`, name: 'GitHub Raw' });
+    // Raw GitHub Stream (bypasses CDN cache directly from GitHub git origin)
+    targets.push({ url: `${RAW_GITHUB_URL}?_t=${t}`, name: 'GitHub Raw', priority: 2 });
+    // High-speed edge CDN (Cloudflare/Fastly) as backup
+    targets.push({ url: `${JSDELIVR_URL}?_t=${t}`, name: 'Edge CDN', priority: 3 });
 
-    // Concurrently fetch candidate endpoints and select the freshest & most complete payload
+    // Concurrently fetch candidate endpoints and select the freshest payload
     try {
       const settled = await Promise.allSettled(targets.map(async (target) => {
-        const res = await fetchWithTimeout(target.url, { cache: 'no-store' }, 3500);
+        const res = await fetchWithTimeout(target.url, { 
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+        }, 3500);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (!data || !data.stocks || !data.stocks.length) throw new Error('Empty payload');
-        return { data, name: target.name };
+        return { data, name: target.name, priority: target.priority };
       }));
 
       const successful = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
       if (successful.length > 0) {
-        // Sort: prefer freshest payload (updated_ts or parsed updated_at)
+        // Sort: strictly prefer freshest epoch timestamp
         successful.sort((a, b) => {
           const tsA = a.data.updated_ts || 0;
           const tsB = b.data.updated_ts || 0;
@@ -2127,7 +2895,8 @@
             return secB - secA; // Freshest IST time wins
           }
 
-          return (b.data.stocks?.length || 0) - (a.data.stocks?.length || 0);
+          // In case of exact timestamp match, prefer higher priority source (Local Edge > GitHub Raw > Edge CDN)
+          return (a.priority || 99) - (b.priority || 99);
         });
         const best = successful[0];
         processIncomingData(best.data, best.name);
@@ -2296,6 +3065,34 @@
     } else if (!RAW_CANDIDATES.length) {
       fetchCandidatesFallback();
     }
+
+    if (data.momo_candidates && Array.isArray(data.momo_candidates) && data.momo_candidates.length) {
+      RAW_MOMO = data.momo_candidates;
+      renderMomoView();
+    } else if (!RAW_MOMO.length) {
+      fetchMomoFallback();
+    }
+
+    if (data.ipo_candidates && Array.isArray(data.ipo_candidates) && data.ipo_candidates.length) {
+      RAW_IPO = data.ipo_candidates;
+      renderIpoView();
+    } else if (!RAW_IPO.length) {
+      fetchIpoFallback();
+    }
+
+    if (data.ems_candidates && Array.isArray(data.ems_candidates) && data.ems_candidates.length) {
+      RAW_EMS = data.ems_candidates;
+      renderEmsView();
+    } else if (!RAW_EMS.length) {
+      fetchEmsFallback();
+    }
+
+    if (data.merged_candidates && Array.isArray(data.merged_candidates) && data.merged_candidates.length) {
+      RAW_MERGED = data.merged_candidates;
+      renderMergedView();
+    } else if (!RAW_MERGED.length) {
+      fetchMergedFallback();
+    }
     const tabBadgeOrb = document.getElementById('tab-badge-orb');
     if (tabBadgeOrb && data.stocks) tabBadgeOrb.innerText = data.stocks.length;
 
@@ -2330,7 +3127,7 @@
       stk.ema10 = ema10 ? Number(ema10.toFixed(2)) : null;
       const ltpVal = Number(stk.ltp) || 0;
       stk.stretch_pct = (ema10 && ltpVal > 0) ? (((ltpVal - ema10) / ema10) * 100) : null;
-      stk.is_prime = (stk.stretch_pct !== null && stk.stretch_pct >= 0 && stk.stretch_pct <= 0.45);
+      stk.is_prime = (stk.stretch_pct !== null && stk.stretch_pct >= 0 && stk.stretch_pct <= 0.6);
       if (stk.is_prime) primeCount++;
 
       // Gap-Up Detection & Client Normalization
@@ -2882,27 +3679,27 @@
     } else if (stretch < 0) {
       statusPill = `<span class="stretch-pill stretch-sub">${isStealthMode ? 'BUFFER: SUB-PAR' : '▼ SUB-10 EMA'} (${stretchStr})</span>`;
       adviceHtml = `<span>${isStealthMode ? 'Sub-baseline routing. Ingress filter active.' : 'Active pullback below 10 EMA. Avoid long breakout entries until price reclaims 10 EMA.'}</span>`;
-    } else if (stretch <= 0.45) {
+    } else if (stretch <= 0.6) {
       statusPill = `<span class="stretch-pill stretch-prime">${isStealthMode ? 'BUFFER: OPTIMAL' : '🟢 PRIME COIL'} (${stretchStr})</span>`;
       const tightSL = ema10 ? `₹${(ema10 * 0.996).toFixed(1)}` : `₹${(boLevel * 0.995).toFixed(1)}`;
       adviceHtml = isBreakout
         ? `<span>${isStealthMode ? 'Direct ingress clearance confirmed. Risk profile tight.' : '✅ <strong>Prime Coil Breakout:</strong> Tight to 10 EMA. Safe entry with micro SL below 10 EMA (' + tightSL + ').'}</span>`
         : `<span>${isStealthMode ? 'Base structure consolidating near baseline.' : 'Stock coiling right at 10 EMA. Watch for ORB High / PDH breakout.'}</span>`;
-    } else if (stretch <= 1.0) {
+    } else if (stretch <= 1.5) {
       statusPill = `<span class="stretch-pill stretch-normal">${isStealthMode ? 'BUFFER: NOMINAL' : '⚪ NORMAL'} (${stretchStr})</span>`;
       const pullbackTarget = ema10 ? `₹${ema10.toFixed(1)}` : `₹${(boLevel * 0.998).toFixed(1)}`;
       const tightSL = ema10 ? `₹${(ema10 * 0.995).toFixed(1)}` : `₹${(boLevel * 0.994).toFixed(1)}`;
       adviceHtml = isBreakout
-        ? `<span>${isStealthMode ? 'Nominal bandwidth. Trailing baseline.' : 'Moderate extension. Best risk/reward on small dip toward 10 EMA (<strong>' + pullbackTarget + '</strong>, SL: ' + tightSL + ').'}</span>`
+        ? `<span>${isStealthMode ? 'Nominal bandwidth. Trailing baseline.' : 'Healthy momentum expansion near 10 EMA (Target pullback: <strong>' + pullbackTarget + '</strong>, SL: ' + tightSL + ').'}</span>`
         : `<span>Trading above 10 EMA. Moving towards upper range.</span>`;
     } else {
-      // Overextended (> 1.0% from 10 EMA)
+      // Overextended (> 1.5% from 10 EMA)
       statusPill = `<span class="stretch-pill stretch-extended">${isStealthMode ? '⚠️ BUFFER: SATURATED' : '⚠️ EXTENDED'} (${stretchStr})</span>`;
       const pullbackTarget = ema10 ? `₹${ema10.toFixed(1)}` : `₹${(boLevel * 0.998).toFixed(1)}`;
       const tightSL = ema10 ? `₹${(ema10 * 0.995).toFixed(1)}` : `₹${(boLevel * 0.994).toFixed(1)}`;
       adviceHtml = `<span>${isStealthMode 
         ? 'High latency risk! Defer allocation. Await re-entry convergence near baseline (' + (ema10 ? ema10.toFixed(1) : '--') + ').' 
-        : '🛑 <strong>DO NOT CHASE!</strong> Price is stretched ' + stretchStr + ' above 10 EMA. Wait for pullback to 10 EMA (<strong>' + pullbackTarget + '</strong>, SL: ' + tightSL + ') to avoid getting trapped.'}</span>`;
+        : '🛑 <strong>DO NOT CHASE!</strong> Price is stretched ' + stretchStr + ' above 10 EMA (>1.5% threshold). Wait for pullback to 10 EMA (<strong>' + pullbackTarget + '</strong>, SL: ' + tightSL + ') to avoid getting trapped.'}</span>`;
     }
 
     let lodPill = '';
@@ -3358,7 +4155,7 @@
         const lastEma = emaSeries[emaSeries.length - 1];
         const lastStretch = (((last.c - lastEma) / lastEma) * 100);
         const sSign = lastStretch >= 0 ? '+' : '';
-        let guardBadge = (lastStretch > 1.0) ? (isStealthMode ? ' [SATURATED]' : ' [⚠️ EXTENDED]') : (lastStretch >= 0 && lastStretch <= 0.45) ? (isStealthMode ? ' [OPTIMAL]' : ' [🟢 PRIME]') : '';
+        let guardBadge = (lastStretch > 1.5) ? (isStealthMode ? ' [SATURATED]' : ' [⚠️ EXTENDED]') : (lastStretch >= 0 && lastStretch <= 0.6) ? (isStealthMode ? ' [OPTIMAL]' : ' [🟢 PRIME]') : '';
         emaHud = ` | ${isStealthMode ? '10-MA' : '10 EMA'}: ${lastEma.toFixed(2)} (${sSign}${lastStretch.toFixed(1)}%${guardBadge})`;
       }
 
