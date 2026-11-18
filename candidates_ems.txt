@@ -1,0 +1,137 @@
+# JARVIS CHIRAG KEDIA EASY MONEY SCAN (EMS) CANDIDATES — 2026-11-18 20:58:22 IST
+# Rules: 1W >= 20% | 1M >= 25% | 1Q >= 35% | 6M >= 50%
+# Total Unique EMS Candidates: 128 (Tier 1: 64, Tier 2: 8, Tier 3: 56)
+
+## TIER 1: MULTI-TIMEFRAME THRUST (2+ Triggers)
+GREAVESCOT     | RS:91  | -1.9% 52W  | Auto Ancilaries           | 1W ≥ 20%, 1M ≥ 30%, 1Q ≥ 30%, 6M ≥ 50%
+ATHERENERG     | RS:98  | -6.0% 52W  | Auto Manufacturers        | 1M ≥ 30%, 1Q ≥ 50%, 6M ≥ 100%
+SSWL           | RS:98  | -7.3% 52W  | Auto Ancilaries           | 1M ≥ 30%, 1Q ≥ 100%, 6M ≥ 100%
+SGMART         | RS:97  | -2.1% 52W  | Civil Construction        | 1M ≥ 30%, 1Q ≥ 50%, 6M ≥ 50%
+KDDL           | RS:96  | -6.2% 52W  | Jewellery                 | 1M ≥ 30%, 1Q ≥ 50%, 6M ≥ 75%
+ICIL           | RS:95  | -0.8% 52W  | Textiles                  | 1M ≥ 40%, 1Q ≥ 30%, 6M ≥ 75%
+ENTERO         | RS:94  | -7.1% 52W  | Pharmaceuticals           | 1M ≥ 30%, 1Q ≥ 50%, 6M ≥ 50%
+SAILIFE        | RS:94  | -8.5% 52W  | Pharmaceuticals           | 1M ≥ 25%, 1Q ≥ 40%, 6M ≥ 50%
+TBZ            | RS:99  | -24.8% 52W | Jewellery                 | 1Q ≥ 100%, 6M ≥ 100%
+BODALCHEM      | RS:99  | -27.8% 52W | Chemicals Specialty       | 1Q ≥ 100%, 6M ≥ 100%
+CUPID          | RS:99  | N/A        | Personal Care             | 1Q ≥ 50%, 6M ≥ 100%
+GCSL           | RS:98  | -0.5% 52W  | Investment Banking & Broking | 1Q ≥ 50%, 6M ≥ 100%
+TFCILTD        | RS:98  | -1.3% 52W  | Financial Services-Specialty | 1Q ≥ 100%, 6M ≥ 100%
+SHREEJISPG     | RS:98  | -2.6% 52W  | Ship building & Allied services | 1Q ≥ 50%, 6M ≥ 100%
+RATNAVEER      | RS:98  | -5.0% 52W  | Iron & Steel              | 1Q ≥ 100%, 6M ≥ 100%
+RAYMOND        | RS:98  | -9.6% 52W  | Textiles                  | 1Q ≥ 75%, 6M ≥ 100%
+INDSWFTLAB     | RS:98  | -21.1% 52W | Pharmaceuticals           | 1Q ≥ 30%, 6M ≥ 100%
+KMEW           | RS:97  | -5.3% 52W  | Ship building & Allied services | 1Q ≥ 50%, 6M ≥ 75%
+RPEL           | RS:97  | -6.7% 52W  | Industrial Products & Manufacturing | 1Q ≥ 40%, 6M ≥ 100%
+SANSERA        | RS:97  | -7.2% 52W  | Auto Ancilaries           | 1Q ≥ 30%, 6M ≥ 75%
+FILATEX        | RS:97  | -7.8% 52W  | Textiles                  | 1Q ≥ 75%, 6M ≥ 100%
+DIACABS        | RS:97  | -10.1% 52W | Electrical - Power Equipment | 1Q ≥ 50%, 6M ≥ 75%
+SKYGOLD        | RS:97  | -14.8% 52W | Jewellery                 | 1Q ≥ 40%, 6M ≥ 75%
+SHILPAMED      | RS:97  | -16.4% 52W | Medical-Diversified       | 1Q ≥ 40%, 6M ≥ 75%
+WELCORP        | RS:97  | -23.3% 52W | Iron & Steel              | 1Q ≥ 30%, 6M ≥ 50%
+LAURUSLABS     | RS:96  | -6.7% 52W  | Medical-Diversified       | 1Q ≥ 50%, 6M ≥ 50%
+MBAPL          | RS:96  | -7.7% 52W  | Agro chemicals            | 1Q ≥ 40%, 6M ≥ 75%
+ROSSTECH       | RS:96  | -9.9% 52W  | Aerospace & Defense       | 1Q ≥ 50%, 6M ≥ 50%
+MOREPENLAB     | RS:96  | N/A        | Medical-Diversified       | 1Q ≥ 50%, 6M ≥ 100%
+AHCL           | RS:96  | N/A        | Pharmaceuticals           | 1Q ≥ 75%, 6M ≥ 75%
+SGFIN          | RS:95  | -0.7% 52W  | Finance & Investment      | 1M ≥ 30%, 1Q ≥ 30%
+NEOGEN         | RS:95  | -3.3% 52W  | Chemicals Specialty       | 1Q ≥ 30%, 6M ≥ 50%
+WELSPUNLIV     | RS:95  | -4.3% 52W  | Textiles                  | 1Q ≥ 50%, 6M ≥ 75%
+KOPRAN         | RS:95  | -10.1% 52W | Medical-Diversified       | 1Q ≥ 30%, 6M ≥ 50%
+CYIENTDLM      | RS:95  | -22.8% 52W | EMS                       | 1Q ≥ 50%, 6M ≥ 75%
+SHADOWFAX      | RS:94  | -1.8% 52W  | Logistics                 | 1Q ≥ 30%, 6M ≥ 50%
+TIMEX          | RS:94  | -3.4% 52W  | Diversified Retail        | 1Q ≥ 30%, 6M ≥ 100%
+UNIMECH        | RS:94  | -11.3% 52W | Aerospace & Defense       | 1Q ≥ 50%, 6M ≥ 75%
+MARINE         | RS:94  | -15.5% 52W | EMS                       | 1Q ≥ 50%, 6M ≥ 75%
+KPL            | RS:93  | -0.6% 52W  | Pharmaceuticals           | 1Q ≥ 50%, 6M ≥ 100%
+PGIL           | RS:93  | -2.4% 52W  | Textiles                  | 1Q ≥ 40%, 6M ≥ 75%
+ORIENTHOT      | RS:93  | -4.3% 52W  | Hotels                    | 1Q ≥ 30%, 6M ≥ 75%
+DIVISLAB       | RS:93  | -6.6% 52W  | Pharmaceuticals           | 1Q ≥ 50%, 6M ≥ 50%
+FEDDERSHOL     | RS:93  | -22.1% 52W | NBFC                      | 1Q ≥ 40%, 6M ≥ 75%
+PCJEWELLER     | RS:93  | -26.7% 52W | Jewellery                 | 1Q ≥ 40%, 6M ≥ 75%
+THELEELA       | RS:92  | -2.5% 52W  | Hotels                    | 1Q ≥ 30%, 6M ≥ 50%
+SOUTHBANK      | RS:92  | -2.5% 52W  | Private Banks             | 1M ≥ 25%, 1Q ≥ 30%
+LOTUSDEV       | RS:92  | -6.2% 52W  | Real Estate               | 1Q ≥ 50%, 6M ≥ 50%
+SYNCOMF        | RS:92  | -19.7% 52W | Medical-Diversified       | 1Q ≥ 50%, 6M ≥ 50%
+DPABHUSHAN     | RS:92  | -24.7% 52W | Jewellery                 | 1Q ≥ 50%, 6M ≥ 100%
+NAVINFLUOR     | RS:91  | -0.2% 52W  | Chemicals Specialty       | 1M ≥ 25%, 1Q ≥ 30%
+SONACOMS       | RS:91  | -4.9% 52W  | Auto Ancilaries           | 1Q ≥ 30%, 6M ≥ 50%
+MARSONS        | RS:91  | -6.1% 52W  | Electrical - Power Equipment | 1M ≥ 30%, 1Q ≥ 30%
+SUDEEPPHRM     | RS:91  | -12.8% 52W | Pharmaceuticals           | 1Q ≥ 40%, 6M ≥ 75%
+PAYTM          | RS:90  | -3.6% 52W  | Financial Services-Specialty | 1Q ≥ 40%, 6M ≥ 50%
+LENSKART       | RS:90  | -4.0% 52W  | E- Commerce               | 1Q ≥ 30%, 6M ≥ 50%
+LUMAXTECH      | RS:89  | -7.5% 52W  | Auto Ancilaries           | 1M ≥ 25%, 1Q ≥ 50%
+ROLEXRINGS     | RS:89  | -7.7% 52W  | Industrial Products & Manufacturing | 1M ≥ 25%, 1Q ≥ 40%
+KALYANKJIL     | RS:89  | -10.9% 52W | Jewellery                 | 1Q ≥ 30%, 6M ≥ 75%
+IGIL           | RS:87  | -2.1% 52W  | Financial Services-Specialty | 1M ≥ 30%, 1Q ≥ 30%
+PNB            | RS:85  | -2.0% 52W  | PSU Banks                 | 1M ≥ 30%, 1Q ≥ 40%
+PTCIL          | RS:85  | -9.0% 52W  | Iron & Steel              | 1Q ≥ 30%, 6M ≥ 50%
+URBANCO        | RS:84  | -6.1% 52W  | Diversified Commercial Services | 1M ≥ 25%, 1Q ≥ 30%
+JYOTICNC       | RS:79  | -7.5% 52W  | Industrial Products & Manufacturing | 1Q ≥ 30%, 6M ≥ 50%
+
+## TIER 2: SHORT-TERM MOMENTUM (1W / 1M)
+ACUTAAS        | RS:94  | -3.4% 52W  | Chemicals Specialty       | 1M ≥ 25%
+EMCURE         | RS:90  | -3.9% 52W  | Pharmaceuticals           | 1M ≥ 30%
+TANLA          | RS:84  | -5.5% 52W  | Software Products         | 1M ≥ 40%
+UNOMINDA       | RS:70  | -2.6% 52W  | Auto Ancilaries           | 1M ≥ 25%
+LTTS           | RS:70  | -14.4% 52W | Software Services         | 1M ≥ 25%
+AGIIL          | RS:66  | -28.5% 52W | Civil Construction        | 1M ≥ 30%
+STEAMHOUSE     | RS:0   | -1.0% 52W  | Civil Construction        | 1M ≥ 30%
+SYMBIOTEC      | RS:0   | -2.6% 52W  | Pharmaceuticals           | 1M ≥ 40%
+
+## TIER 3: STRUCTURAL RUNNERS (1Q / 6M)
+BLISSGVS       | RS:99  | -8.0% 52W  | Pharmaceuticals           | 6M ≥ 100%
+SHUKRAPHAR     | RS:98  | -3.1% 52W  | Pharmaceuticals           | 1Q ≥ 75%
+SETL           | RS:98  | -21.7% 52W | Industrial Products & Manufacturing | 6M ≥ 100%
+WHEELS         | RS:97  | -10.0% 52W | Auto Ancilaries           | 1Q ≥ 50%
+RAMBHAJO       | RS:97  | -20.5% 52W | Jewellery                 | 1Q ≥ 75%
+KRISHANA       | RS:97  | N/A        | Chemicals Specialty       | 1Q ≥ 50%
+CPPLUS         | RS:96  | -14.7% 52W | Industrial Products & Manufacturing | 6M ≥ 50%
+IOLCP          | RS:96  | -15.3% 52W | Chemicals Specialty       | 6M ≥ 50%
+YASHO          | RS:96  | -25.1% 52W | Chemicals Specialty       | 6M ≥ 75%
+MILKYMIST      | RS:95  | -11.3% 52W | Food Products             | 1Q ≥ 50%
+KSHINTL        | RS:95  | -11.8% 52W | Mining_Minerals           | 6M ≥ 50%
+PAISALO        | RS:95  | -20.4% 52W | NBFC                      | 6M ≥ 50%
+CENTUM         | RS:94  | -10.1% 52W | EMS                       | 1Q ≥ 30%
+RUBICON        | RS:94  | -12.7% 52W | Pharmaceuticals           | 6M ≥ 50%
+IBULLSLTD      | RS:94  | -25.9% 52W | Software Services         | 6M ≥ 50%
+TECHNOCRAF     | RS:93  | -16.6% 52W | Civil Construction        | 1Q ≥ 40%
+CEMPRO         | RS:92  | -17.9% 52W | Civil Construction        | 6M ≥ 50%
+GLAND          | RS:91  | -5.8% 52W  | Pharmaceuticals           | 1Q ≥ 30%
+SAMBHV         | RS:91  | -10.0% 52W | Iron & Steel              | 1Q ≥ 30%
+KROSS          | RS:91  | -12.3% 52W | Auto Ancilaries           | 1Q ≥ 50%
+MCX            | RS:90  | -4.1% 52W  | Financial Services-Specialty | 1Q ≥ 30%
+SHYAMMETL      | RS:90  | -4.7% 52W  | Iron & Steel              | 1Q ≥ 30%
+PARAS          | RS:90  | -21.5% 52W | Aerospace & Defense       | 6M ≥ 50%
+XTRANET        | RS:90  | N/A        | Software Services         | 1Q ≥ 40%
+MEESHO         | RS:89  | -2.9% 52W  | E- Commerce               | 1Q ≥ 30%
+AETHER         | RS:89  | -9.2% 52W  | Chemicals Specialty       | 6M ≥ 50%
+E2E            | RS:89  | N/A        | Software Services         | 1Q ≥ 30%
+NAZARA         | RS:88  | -4.5% 52W  | Software Services         | 1Q ≥ 30%
+ABDL           | RS:88  | -6.6% 52W  | Breweries & Distilleries  | 1Q ≥ 30%
+YATHARTH       | RS:88  | -7.8% 52W  | Hospitals                 | 1Q ≥ 30%
+SMSPHARMA      | RS:88  | -10.9% 52W | Pharmaceuticals           | 1Q ≥ 30%
+MVELECTRO      | RS:88  | -23.1% 52W | Electrical - Power Equipment | 1Q ≥ 30%
+QUADFUTURE     | RS:88  | -24.8% 52W | Electrical - Power Equipment | 6M ≥ 50%
+MOLBIO         | RS:87  | -11.2% 52W | Hospitals                 | 1Q ≥ 30%
+QUESS          | RS:87  | -15.8% 52W | Diversified Commercial Services | 6M ≥ 50%
+AEGISLOG       | RS:87  | -23.0% 52W | Logistics                 | 6M ≥ 50%
+AARTIPHARM     | RS:86  | -3.2% 52W  | Pharmaceuticals           | 1Q ≥ 40%
+ONEPOINT       | RS:86  | -16.7% 52W | Software Services         | 1Q ≥ 30%
+SMLMAH         | RS:86  | -19.5% 52W | Auto Manufacturers        | 1Q ≥ 30%
+63MOONS        | RS:85  | -5.6% 52W  | Financial Services-Specialty | 1Q ≥ 30%
+MSTCLTD        | RS:85  | -13.9% 52W | E- Commerce               | 6M ≥ 50%
+GNA            | RS:85  | -14.2% 52W | Auto Ancilaries           | 6M ≥ 50%
+COFORGE        | RS:84  | -3.7% 52W  | Software Services         | 1Q ≥ 30%
+KWIL           | RS:84  | -18.0% 52W | Food Products             | 6M ≥ 50%
+ETERNAL        | RS:83  | -3.2% 52W  | E- Commerce               | 6M ≥ 50%
+PPLPHARMA      | RS:83  | -5.9% 52W  | Medical-Diversified       | 1Q ≥ 30%
+INDOMIM        | RS:83  | -12.3% 52W | Industrial Products & Manufacturing | 1Q ≥ 30%
+JINDWORLD      | RS:83  | N/A        | Textiles                  | 1Q ≥ 30%
+HLEGLAS        | RS:82  | -13.4% 52W | Industrial Products & Manufacturing | 1Q ≥ 30%
+KOTAKBANK      | RS:80  | -1.6% 52W  | Private Banks             | 1Q ≥ 30%
+BLUESTONE      | RS:80  | -28.1% 52W | Jewellery                 | 6M ≥ 50%
+RKFORGE        | RS:79  | -5.6% 52W  | Iron & Steel              | 1Q ≥ 30%
+ASKAUTOLTD     | RS:79  | -8.4% 52W  | Auto Ancilaries           | 1Q ≥ 30%
+PNGSREVA       | RS:79  | -20.2% 52W | Jewellery                 | 1Q ≥ 30%
+GMMPFAUDLR     | RS:74  | -22.4% 52W | Industrial Products & Manufacturing | 1Q ≥ 50%
+ARIS           | RS:71  | -8.1% 52W  | Civil Construction        | 1Q ≥ 30%
