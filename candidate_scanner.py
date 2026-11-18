@@ -875,6 +875,13 @@ if __name__ == "__main__":
             # Auto-dispatch EOD Telegram card if market closed or notified
             send_eod_candidate_card(res)
 
+            # Auto-enrich and merge candidates universe across all 4 scanners
+            try:
+                from enrich_candidates import main as enrich_main
+                enrich_main()
+            except Exception as e:
+                print(f"ℹ️ Auto-enrichment notice: {e}")
+
             for i, c in enumerate(res["candidates"], 1):
                 print(
                     f"{i:<2}. {c['symbol']:<12} ₹{c['ltp']:<9.2f} | [{c['tier']}] {c['coil_tag']:<18} | 20D Dist: {c['dist_pivot_20d_pct']:>+5.2f}% ({c['dist_pivot_atr']}x ATR) | "
