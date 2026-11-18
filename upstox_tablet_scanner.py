@@ -3101,7 +3101,11 @@ def export_static_html(results, now_str, port):
                                 "change_pct": c.get("change_pct"),
                                 "coil_tag": c.get("coil_tag"),
                                 "vol_tag": c.get("vol_tag"),
-                                "flags": c.get("flags", [])
+                                "flags": c.get("flags", []),
+                                "is_sniper": c.get("is_sniper", False),
+                                "is_blue_sky": c.get("is_blue_sky", False),
+                                "grade": c.get("grade", "B"),
+                                "daily_range_pct": c.get("daily_range_pct")
                             })
                     if merged_payload:
                         break
@@ -3119,6 +3123,7 @@ def export_static_html(results, now_str, port):
             "ipo_candidates": ipo_payload,
             "ems_candidates": ems_payload,
             "merged_candidates": merged_payload,
+            "sniper_candidates": [c for c in merged_payload if c.get("is_sniper")],
             "stocks": stocks_payload
         }
 
