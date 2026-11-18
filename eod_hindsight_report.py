@@ -45,6 +45,18 @@ def round_to_clean_int(val):
         return 0
 
 
+def extract_time_str(val):
+    """Extracts 'HH:MM' string from candle timestamp or ISO string."""
+    if not val:
+        return ""
+    s = str(val).strip()
+    if len(s) >= 16 and "T" in s:
+        return s[11:16]
+    if len(s) >= 5 and ":" in s[:5]:
+        return s[:5]
+    return s
+
+
 def load_config():
     if CONFIG_FILE.is_file():
         try:
@@ -138,9 +150,15 @@ def simulate_stock_trade(s):
 
     # Candle 0 is the 09:15 - 09:18 ORB candle.
     # Scan subsequent candles for breakout trigger.
+    # USER STRATEGY MANDATE: Entry timing is ALWAYS after 09:30 AM (filters morning chop / whipsaws)
     trig_idx = None
     for i in range(1, len(candles)):
         c = candles[i]
+        t_str = extract_time_str(c[0])
+        # Skip all candles prior to 09:30 AM
+        if t_str and t_str < "09:30":
+            continue
+
         c_high = float(c[2])
         if c_high > orb_h:
             trig_idx = i
@@ -812,7 +830,7 @@ def format_hindsight_report(data):
 
     lines.extend([
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        "💡 <i>Standard Sizing: ₹1,00,000 capital per trade | Risk: LOD Stop / 2.5% max</i>",
+        "💡 <i>Standard Sizing: ₹1,00,000 capital per trade | Risk: LOD Stop / 2.5% max | Entry: Strictly after 09:30 AM</i>",
         "🤖 <i>Jarvis Autonomous Quantitative Strategy Engine</i>"
     ])
 
