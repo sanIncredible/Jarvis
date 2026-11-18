@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-11-17 13:21:07 IST",
-  "count": 27,
+  "updated_at": "2026-11-18 23:29:40 IST",
+  "count": 28,
   "symbols": [
     "ABDL",
     "ANTHEM",
@@ -13,6 +13,7 @@
     "COHANCE",
     "CYIENT",
     "FDC",
+    "GRAPHITE",
     "HBLENGINE",
     "HONASA",
     "INOXWIND",
@@ -273,6 +274,15 @@
       "realized_pnl": -1667.35,
       "status": "CLOSED",
       "notes": ""
+    },
+    "GRAPHITE": {
+      "symbol": "GRAPHITE",
+      "last_exit_date": "2026-11-18",
+      "last_exit_price": 785.43,
+      "last_entry_price": 806.58,
+      "realized_pnl": -3270.5,
+      "status": "CLOSED",
+      "notes": "Stop Loss Hit at 785.43 | Dhan MTF Holding"
     }
   }
 }
