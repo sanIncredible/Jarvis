@@ -618,35 +618,35 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
             })
             warnings.append(f"Wide Stop-Loss: Distance to Day Low is {risk_pct:.1f}% (over 4.0% optimal threshold). High drawdown risk.")
 
-    # 7. 10 EMA Stretch / Overextension (Aligned with Dashboard: Prime <= 0.45%, Normal <= 1.0%, Extended > 1.0%)
+    # 7. 10 EMA Stretch / Overextension (Institutional Calibration: Prime <= 0.6%, Normal <= 1.5%, Extended > 1.5%)
     stretch_pct = sc_data.get("stretch_pct") if sc_data else None
     if stretch_pct is not None:
         sign = "+" if stretch_pct >= 0 else ""
-        if stretch_pct <= 0.45:
+        if stretch_pct <= 0.6:
             checklist.append({
                 "rule": "10 EMA Stretch",
                 "passed": True,
                 "badge": "🟢",
                 "text": f"🟢 <b>10 EMA Stretch:</b> {sign}{stretch_pct:.1f}% (Prime Coil)",
-                "detail": "Tight base coiling right at 10 EMA"
+                "detail": "Tight base coiling right at 10 EMA - Micro-risk entry"
             })
-        elif stretch_pct <= 1.0:
+        elif stretch_pct <= 1.5:
             checklist.append({
                 "rule": "10 EMA Stretch",
                 "passed": True,
                 "badge": "⚪",
                 "text": f"⚪ <b>10 EMA Stretch:</b> {sign}{stretch_pct:.1f}% (Normal)",
-                "detail": "Healthy entry near 10 EMA"
+                "detail": "Healthy 3m momentum expansion near 10 EMA"
             })
         else:
             checklist.append({
                 "rule": "10 EMA Stretch",
                 "passed": False,
                 "badge": "⚠️",
-                "text": f"⚠️ <b>10 EMA Stretch:</b> {sign}{stretch_pct:.1f}% (Extended > 1.0%)",
+                "text": f"⚠️ <b>10 EMA Stretch:</b> {sign}{stretch_pct:.1f}% (Extended > 1.5%)",
                 "detail": "Price overextended from 10 EMA - High trap / chase risk"
             })
-            warnings.append(f"Overextended: Price is stretched {sign}{stretch_pct:.1f}% above 10 EMA (>1.0% limit). High trap / pullback risk.")
+            warnings.append(f"Overextended: Price is stretched {sign}{stretch_pct:.1f}% above 10 EMA (>1.5% limit). High trap / pullback risk.")
 
     # 8. Previous Day Narrow Range (NR) & Volatility Contraction
     prev_range_ratio = sc_data.get("prev_range_ratio") if sc_data else None
