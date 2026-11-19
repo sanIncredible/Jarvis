@@ -1308,11 +1308,7 @@
       <span class="tab-icon">🚀</span> <span id="txt-tab-ipo">Nifty IPO (NR)</span> 
       <span id="tab-badge-ipo" class="tab-badge">0</span>
     </button>
-    <button id="tab-btn-ems" class="main-tab-btn" onclick="switchMainView('ems')" title="View Chirag Kedia Easy Money Scan (EMS) Momentum Leaders">
-      <span class="tab-icon">⚡</span> <span id="txt-tab-ems">Easy Money (EMS)</span> 
-      <span id="tab-badge-ems" class="tab-badge">0</span>
-    </button>
-    <button id="tab-btn-merged" class="main-tab-btn" onclick="switchMainView('merged')" title="View Unified Confluence Candidates across all 4 scanners">
+    <button id="tab-btn-merged" class="main-tab-btn" onclick="switchMainView('merged')" title="View Unified Confluence Candidates across all scanners">
       <span class="tab-icon">🏆</span> <span id="txt-tab-merged">Top Confluence</span> 
       <span id="tab-badge-merged" class="tab-badge">0</span>
     </button>
@@ -1746,6 +1742,7 @@
         <button id="btn-mrg-all" class="pill-btn active" onclick="setMergedFilter('all')" style="font-size:11px; padding:3px 10px; cursor:pointer; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#fff; font-weight:700;">All (<span id="cnt-mrg-all">0</span>)</button>
         <button id="btn-mrg-sniper" class="pill-btn" onclick="setMergedFilter('sniper')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#ef4444; border:1px solid rgba(239,68,68,0.5); background:rgba(239,68,68,0.12); border-radius:4px; font-weight:800;">🎯 A+ Sniper (<span id="cnt-mrg-sniper">0</span>)</button>
         <button id="btn-mrg-qm" class="pill-btn" onclick="setMergedFilter('qm')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#38bdf8; border:1px solid rgba(56,189,248,0.5); background:rgba(56,189,248,0.14); border-radius:4px; font-weight:800; opacity:0.6;">🌀 QM Coils (<span id="cnt-mrg-qm">0</span>)</button>
+        <button id="btn-mrg-ems" class="pill-btn" onclick="setMergedFilter('ems')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#c084fc; border:1px solid rgba(192,132,252,0.5); background:rgba(192,132,252,0.14); border-radius:4px; font-weight:800; opacity:0.6;">⚡ EMS (<span id="cnt-mrg-ems">0</span>)</button>
         <button id="btn-mrg-bluesky" class="pill-btn" onclick="setMergedFilter('bluesky')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#fbbf24; border:1px solid rgba(251,191,36,0.5); background:rgba(251,191,36,0.12); border-radius:4px; font-weight:700;">👑 Blue Sky (<span id="cnt-mrg-bluesky">0</span>)</button>
       </div>
     </div>
@@ -1894,6 +1891,11 @@
   let RAW_MERGED = [];
 
   function switchMainView(viewName) {
+    if (viewName === 'ems') {
+      switchMainView('merged');
+      setMergedFilter('ems');
+      return;
+    }
     currentMainView = viewName;
     const btnOrb = document.getElementById('tab-btn-orb');
     const btnCand = document.getElementById('tab-btn-cand');
@@ -2386,10 +2388,12 @@
     const bAll = document.getElementById('btn-mrg-all');
     const bSniper = document.getElementById('btn-mrg-sniper');
     const bQm = document.getElementById('btn-mrg-qm');
+    const bEms = document.getElementById('btn-mrg-ems');
     const bBlue = document.getElementById('btn-mrg-bluesky');
     if (bAll) bAll.style.opacity = (mode === 'all') ? '1' : '0.6';
     if (bSniper) bSniper.style.opacity = (mode === 'sniper') ? '1' : '0.6';
     if (bQm) bQm.style.opacity = (mode === 'qm') ? '1' : '0.6';
+    if (bEms) bEms.style.opacity = (mode === 'ems') ? '1' : '0.6';
     if (bBlue) bBlue.style.opacity = (mode === 'bluesky') ? '1' : '0.6';
     renderMergedView();
   }
@@ -2403,14 +2407,17 @@
     const cntAll = RAW_MERGED.length;
     const cntSniper = RAW_MERGED.filter(c => c.is_sniper || c.grade === 'A+').length;
     const cntQm = RAW_MERGED.filter(c => c.is_qm_coil).length;
+    const cntEms = RAW_MERGED.filter(c => (c.sources && c.sources.some(s => s.toLowerCase() === 'ems')) || c.source === 'ems').length;
     const cntBlue = RAW_MERGED.filter(c => c.is_blue_sky).length;
     const elAll = document.getElementById('cnt-mrg-all');
     const elSniper = document.getElementById('cnt-mrg-sniper');
     const elQm = document.getElementById('cnt-mrg-qm');
+    const elEms = document.getElementById('cnt-mrg-ems');
     const elBlue = document.getElementById('cnt-mrg-bluesky');
     if (elAll) elAll.innerText = cntAll;
     if (elSniper) elSniper.innerText = cntSniper;
     if (elQm) elQm.innerText = cntQm;
+    if (elEms) elEms.innerText = cntEms;
     if (elBlue) elBlue.innerText = cntBlue;
 
     let filtered = RAW_MERGED;
@@ -2418,6 +2425,8 @@
       filtered = RAW_MERGED.filter(c => c.is_sniper || c.grade === 'A+');
     } else if (MERGED_FILTER_MODE === 'qm') {
       filtered = RAW_MERGED.filter(c => c.is_qm_coil);
+    } else if (MERGED_FILTER_MODE === 'ems') {
+      filtered = RAW_MERGED.filter(c => (c.sources && c.sources.some(s => s.toLowerCase() === 'ems')) || c.source === 'ems');
     } else if (MERGED_FILTER_MODE === 'bluesky') {
       filtered = RAW_MERGED.filter(c => c.is_blue_sky);
     }
