@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-11-18 23:29:40 IST",
-  "count": 28,
+  "updated_at": "2026-11-19 10:53:13 IST",
+  "count": 32,
   "symbols": [
     "ABDL",
     "ANTHEM",
@@ -13,12 +13,15 @@
     "COHANCE",
     "CYIENT",
     "FDC",
+    "FEDFINA",
     "GRAPHITE",
     "HBLENGINE",
+    "HEGAM",
     "HONASA",
     "INOXWIND",
     "JYOTICNC",
     "KOPRAN",
+    "KPL",
     "KROSS",
     "LICHSGFIN",
     "PCJEWELLER",
@@ -29,7 +32,8 @@
     "TRITURBINE",
     "URBANCO",
     "VIJAYA",
-    "WESTLIFE"
+    "WESTLIFE",
+    "WEWORK"
   ],
   "history": {
     "VIJAYA": {
@@ -282,7 +286,43 @@
       "last_entry_price": 806.58,
       "realized_pnl": -3270.5,
       "status": "CLOSED",
-      "notes": "Stop Loss Hit at 785.43 | Dhan MTF Holding"
+      "notes": "Broker: DHAN | MTF Holding"
+    },
+    "WEWORK": {
+      "symbol": "WEWORK",
+      "last_exit_date": "2026-11-18",
+      "last_exit_price": 682.05,
+      "last_entry_price": 696.14,
+      "realized_pnl": -917.09,
+      "status": "CLOSED",
+      "notes": "Broker: ZERODHA | CNC Holding"
+    },
+    "HEGAM": {
+      "symbol": "HEGAM",
+      "last_exit_date": "2026-11-18",
+      "last_exit_price": 268.74,
+      "last_entry_price": 282.88,
+      "realized_pnl": -7165.0,
+      "status": "CLOSED",
+      "notes": "Broker: ZERODHA | CNC Holding"
+    },
+    "FEDFINA": {
+      "symbol": "FEDFINA",
+      "last_exit_date": "2026-11-18",
+      "last_exit_price": 153.61,
+      "last_entry_price": 158.39,
+      "realized_pnl": -2461.22,
+      "status": "CLOSED",
+      "notes": "Live sync from ZERODHA (MTF)"
+    },
+    "KPL": {
+      "symbol": "KPL",
+      "last_exit_date": "2026-11-18",
+      "last_exit_price": 0.0,
+      "last_entry_price": 0.0,
+      "realized_pnl": 0.0,
+      "status": "CLOSED",
+      "notes": "Synced from orders_log.json"
     }
   }
 }
