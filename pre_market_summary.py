@@ -721,6 +721,18 @@ def classify_pre_open_gaps(candidate_symbols: Optional[List[str]] = None) -> Dic
                 "action": action,
                 "source": src
             })
+        else:
+            results.append({
+                "symbol": sym_u,
+                "ltp": 0.0,
+                "prev_close": 0.0,
+                "gap_pct": 0.0,
+                "zone": "CONSTRUCTIVE",
+                "badge": "⚪ AWAITING PRINT",
+                "tag": "Pre-open quote pending",
+                "action": "Awaiting market quote",
+                "source": "Pending"
+            })
 
     # Sort results: Ignition first, then Constructive, then Undershoot, then Extended
     zone_order = {"IGNITION": 1, "CONSTRUCTIVE": 2, "UNDERSHOOT": 3, "EXTENDED": 4}
