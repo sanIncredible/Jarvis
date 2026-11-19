@@ -564,6 +564,7 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                 holding_info = open_holdings.get(sym)
                 is_pyramid = holding_info is not None
 
+                day_high_raw = float(d.get("day_high") or d.get("high") or ltp)
                 new_breakouts.append({
                     "sym": sym,
                     "ltp": float(ltp),
@@ -574,6 +575,7 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                     "holding_info": holding_info,
                     "prev_range_ratio": d.get("prev_range_ratio"),
                     "is_inside_day": bool(d.get("is_inside_day")),
+                    "day_high": day_high_raw,
                     "day_low": float(day_low) if day_low else None,
                     "risk_pct": risk_pct,
                     "lod_dist": lod_dist,
@@ -764,6 +766,15 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
             struct_parts.append(f"⚡ {b['trigger']}")
 
         lines.append("├ " + " • ".join(struct_parts))
+
+        # Upper Wick Quality Check
+        day_h_val = b.get("day_high")
+        if day_h_val and day_low and day_h_val > day_low:
+            u_wick = max(0.0, day_h_val - ltp)
+            c_rng = day_h_val - day_low
+            w_pct = (u_wick / c_rng) * 100.0 if c_rng > 0 else 0.0
+            if w_pct > 40.0:
+                lines.append(f"├ ⚠️ <b>Upper Wick: {w_pct:.0f}%</b> (Rejection risk! Wait for high reclaim)")
 
         # 4. Risk, LoD Distance & 10 EMA Pills
         risk_parts = []
