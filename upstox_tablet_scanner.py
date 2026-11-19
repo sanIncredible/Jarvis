@@ -912,6 +912,26 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
     full_msg = "\n".join(lines)
     send_telegram_alert_async(full_msg, reply_markup=reply_markup)
 
+    # Phase 1 Autonomous Shadow Execution Engine Trigger Hook (09:30 - 10:15 AM)
+    if new_breakouts:
+        try:
+            from shadow_execution_engine import evaluate_and_record_shadow_entry
+            for b in new_breakouts:
+                sym_b = b.get("sym")
+                ltp_b = b.get("ltp")
+                dl_b = b.get("day_low")
+                trig_b = b.get("trigger", "ORB Breakout")
+                evaluate_and_record_shadow_entry(
+                    symbol=sym_b,
+                    quote_data={"ltp": ltp_b, "day_low": dl_b},
+                    trigger_price=ltp_b,
+                    day_low=dl_b,
+                    regime_code="DEFENSIVE" if is_defensive else "EXPANSION",
+                    trigger_name=trig_b
+                )
+        except Exception as shadow_err:
+            print(f"Notice on Phase 1 shadow entry: {shadow_err}")
+
 
 def get_instrument_key(symbol):
     """Resolves instrument key for Upstox API queries (stocks & indices)."""
@@ -3585,6 +3605,26 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                 except Exception:
                     pass
 
+    _last_phase1_eod_date = [None]
+
+    def check_and_run_phase1_eod_report(curr_now=None):
+        """
+        Automated 15:35 PM IST Phase 1 Autonomous Shadow Engine EOD Report:
+        Dispatches full 30-day scoreboard, open runners, entries, and exits to Topic 11 ('reports').
+        """
+        if curr_now is None:
+            curr_now = get_ist_now()
+        if curr_now.weekday() < 5 and curr_now.hour == 15 and 35 <= curr_now.minute <= 45:
+            today_str = curr_now.strftime('%Y-%m-%d')
+            if _last_phase1_eod_date[0] != today_str:
+                _last_phase1_eod_date[0] = today_str
+                try:
+                    from shadow_execution_engine import generate_and_send_phase1_eod_report
+                    print(f"\n{YELLOW}🕒 15:35 PM IST: Generating Phase 1 Autonomous EOD Report...{RESET}")
+                    generate_and_send_phase1_eod_report(notify=True)
+                except Exception as e:
+                    print(f"Notice: Phase 1 EOD report exception: {e}")
+
     def periodic_scanner():
         global latest_results, last_scan_time, next_refresh_timestamp, current_market_event, ACTIVE_WS_FEED
         last_wl_mtime = 0.0
@@ -3601,6 +3641,12 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                 now = get_ist_now()
                 check_and_run_orphan_sentry(now)
                 check_and_run_auto_gtt_rearm(now)
+                check_and_run_phase1_eod_report(now)
+                try:
+                    from shadow_execution_engine import update_shadow_trailing_and_exits
+                    update_shadow_trailing_and_exits()
+                except Exception:
+                    pass
                 evt, target, wait = get_next_market_event(now)
                 current_market_event = evt
                 next_refresh_timestamp = time.time() + wait
