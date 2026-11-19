@@ -302,8 +302,8 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     try:
         from order_engine import evaluate_strategy_checklist
         ck = evaluate_strategy_checklist(sym, quote_data=quote_data, calc_data={"ltp": fill_price, "day_low": initial_sl, "risk_pct": risk_pct})
-        score = ck.get("passed_rules", 0)
-        total = ck.get("total_rules", 11)
+        score = ck.get("passed_count") or ck.get("passed_rules") or 0
+        total = ck.get("total_count") or ck.get("total_rules") or 11
         ck_note = f"Checklist {score}/{total} Passed"
         if score < 7:
             return False, f"Checklist score insufficient ({score}/{total})"
@@ -443,36 +443,54 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 if ema5 <= 0:
                     ema5 = float(c_meta.get("ema5") or 0.0)
 
-        # Trailing Rule Hierarchy:
-        # 1. 🛡️ 30% PROFIT CAP
+        # Multi-Stage Swing Trailing Stop Hierarchy (NO premature choking / NO premature liquidation)
+        # 1. 🛡️ 30% PROFIT CAP (Milestone: +28% gain or 8.0R reached -> lock +25% profit)
         if peak_gain_pct >= 28.0 or highest_r >= 8.0:
             rec_sl = round_to_clean_int(entry_p * 1.25)
             if rec_sl > new_sl:
                 new_sl = rec_sl
                 new_rule = "🛡️ 30% PROFIT CAP (Lock +25% Gains)"
 
-        # 2. ⚡ PARABOLIC 5 EMA (Locks aggressive gains on vertical runs)
+        # 2. ⚡ PARABOLIC 5 EMA (Vertical Momentum: R >= 4.0 -> trail closely under 5 EMA)
         elif highest_r >= 4.0 and ema5 > 0:
             rec_sl = round_to_clean_int(ema5 * 0.995)
             if rec_sl > new_sl:
                 new_sl = rec_sl
                 new_rule = "⚡ PARABOLIC 5 EMA TRAIL"
 
-        # 3. 🚀 DAY-1 SPURT SHIELD (Triggers after +4.5% surge on Day 1)
+        # 3. 🎯 STAGE 4: R >= 3.0 (Lock at least +2.0R guaranteed profit while riding 10 EMA)
+        elif highest_r >= 3.0:
+            floor_2r = round_to_clean_int(entry_p + (2.0 * risk_per_share))
+            ema10_trail = round_to_clean_int(ema10 * 0.992) if ema10 > 0 else 0
+            rec_sl = max(floor_2r, ema10_trail)
+            if rec_sl > new_sl:
+                new_sl = rec_sl
+                new_rule = "🎯 STAGE 4: +2.0R LOCKED (Riding 10 EMA)"
+
+        # 4. 🎯 STAGE 3: R >= 2.0 (Lock at least +1.0R guaranteed profit on the orderbook)
+        elif highest_r >= 2.0:
+            floor_1r = round_to_clean_int(entry_p + (1.0 * risk_per_share))
+            ema10_trail = round_to_clean_int(ema10 * 0.992) if ema10 > 0 else 0
+            rec_sl = max(floor_1r, ema10_trail)
+            if rec_sl > new_sl:
+                new_sl = rec_sl
+                new_rule = "🎯 STAGE 3: +1.0R LOCKED (Swing Runner Protected)"
+
+        # 5. 🚀 DAY-1 SPURT SHIELD (Surge of +4.5% on Day 1 -> ratchet to breakeven +0.2%)
         elif holding_days == 1 and peak_gain_pct >= 4.5:
             rec_sl = round_to_clean_int(entry_p * 1.002)
             if rec_sl > new_sl:
                 new_sl = rec_sl
                 new_rule = "🚀 DAY-1 SPURT SHIELD (+4.5% Surge -> Breakeven)"
 
-        # 4. 🟢 10 EMA TRAIL (Day 2+ trending position with full breathing room)
+        # 6. 🟢 10 EMA SWING TRAIL (Day 2+ trending position with R >= 1.5)
         elif holding_days >= 2 and highest_r >= 1.5 and ema10 > 0:
             rec_sl = round_to_clean_int(ema10 * 0.992)
             if rec_sl > new_sl:
                 new_sl = rec_sl
                 new_rule = "🟢 10 EMA SWING TRAIL"
 
-        # 5. 🟢 20 EMA TRAIL (Day 3+ wider base runner)
+        # 7. 🟢 20 EMA STRUCTURAL TRAIL (Day 3+ wider base runner with R >= 1.0)
         elif holding_days >= 3 and highest_r >= 1.0 and ema20 > 0:
             rec_sl = round_to_clean_int(ema20 * 0.990)
             if rec_sl > new_sl:
@@ -489,7 +507,7 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         exit_price = ltp
         exit_reason = ""
 
-        # Breach 1: Stop-Loss Breach (Intraday Low breached trailed stop)
+        # Structural Exit: Low breached the current trailed stop-loss
         if day_low <= pos["current_sl"]:
             exit_triggered = True
             # Edge Case Guard 6: Realistic Overnight Gap-Down Slippage
@@ -498,12 +516,6 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
             else:
                 exit_price = round_to_clean_int(min(pos["current_sl"], ltp * 0.9985))
             exit_reason = pos["last_trail_rule"]
-
-        # Breach 2: Target Reached (Intraday High touched 2.0R target)
-        elif day_high >= target_p:
-            exit_triggered = True
-            exit_price = target_p
-            exit_reason = "🎯 2.0R TARGET HIT"
 
         if exit_triggered:
             realized_pnl = round_to_clean_int((exit_price - entry_p) * qty)
