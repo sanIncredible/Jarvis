@@ -779,6 +779,31 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
                 "detail": "Healthy opening within 2.5% trigger threshold"
             })
 
+    # 10. Candle Range Quality / Upper Wick Trap Check
+    day_high_val = float(quote_data.get("day_high") or (calc_data or {}).get("day_high", 0) or 0)
+    day_low_val = float(day_low or 0)
+    if day_high_val > day_low_val and ltp > 0:
+        total_candle_range = day_high_val - day_low_val
+        upper_wick = max(0.0, day_high_val - ltp)
+        upper_wick_pct = (upper_wick / total_candle_range) * 100.0 if total_candle_range > 0 else 0.0
+        if upper_wick_pct > 40.0:
+            checklist.append({
+                "rule": "Candle Quality",
+                "passed": False,
+                "badge": "⚠️",
+                "text": f"⚠️ <b>Candle Quality:</b> Upper Wick {upper_wick_pct:.0f}% (Rejection Risk)",
+                "detail": "Price rejected from high by > 40% of range. Risk of false breakout / bull trap."
+            })
+            warnings.append(f"Upper Wick Trap: Rejection wick is {upper_wick_pct:.0f}% of range. Ensure price reclaims high before entry.")
+        else:
+            checklist.append({
+                "rule": "Candle Quality",
+                "passed": True,
+                "badge": "✅",
+                "text": f"✅ <b>Candle Quality:</b> Solid Close (Upper Wick: {upper_wick_pct:.0f}%)",
+                "detail": "Price trading near the top of its range (controlled upper shadow <= 40%)"
+            })
+
     passed_count = sum(1 for c in checklist if c.get("passed"))
     total_count = len(checklist)
 
@@ -3820,10 +3845,13 @@ def get_daily_emas_and_atr(symbol, token=None):
         return _DAILY_EMA_ATR_CACHE[cache_key]
 
     res = {
+        "ema5": None,
         "ema10": None,
         "ema20": None,
         "sma50": None,
-        "atr14": None
+        "atr14": None,
+        "prev_day_low": None,
+        "prev_day_close": None
     }
 
     try:
@@ -3867,6 +3895,7 @@ def get_daily_emas_and_atr(symbol, token=None):
                     e = (v * k) + (e * (1.0 - k))
                 return e
 
+            ema5 = _calc_ema(closes, 5)
             ema10 = _calc_ema(closes, 10)
             ema20 = _calc_ema(closes, 20)
             sma50 = sum(closes[-50:]) / min(len(closes), 50) if closes else None
@@ -3880,10 +3909,13 @@ def get_daily_emas_and_atr(symbol, token=None):
                 trs.append(tr)
             atr14 = sum(trs[-14:]) / min(len(trs), 14) if trs else None
 
+            res["ema5"] = round(ema5, 2) if ema5 is not None else None
             res["ema10"] = round(ema10, 2) if ema10 is not None else None
             res["ema20"] = round(ema20, 2) if ema20 is not None else None
             res["sma50"] = round(sma50, 2) if sma50 is not None else None
             res["atr14"] = round(atr14, 2) if atr14 is not None else None
+            res["prev_day_low"] = float(chronological[-2][3]) if len(chronological) >= 2 else (float(chronological[-1][3]) if chronological else None)
+            res["prev_day_close"] = float(chronological[-2][4]) if len(chronological) >= 2 else (float(chronological[-1][4]) if chronological else None)
 
             _DAILY_EMA_ATR_CACHE[cache_key] = res
     except Exception:
@@ -4101,11 +4133,24 @@ def rearm_overnight_stop_losses(notify=True, force=False):
 
     rearmed = []
     already_protected = []
+    trailed_up = []
     critical_alerts = []
     failed = []
     audit_only = []
 
     now_str = get_ist_now().strftime("%d %b %Y, %H:%M:%S IST")
+
+    # Fetch dynamic trailing recommendations from trailing engine
+    trailing_recommendations = {}
+    try:
+        enriched_pos = get_all_open_positions_with_trailing_sl()
+        for ep in enriched_pos:
+            ep_sym = str(ep.get("symbol", "")).upper()
+            ep_rec = float(ep.get("recommended_sl", 0.0) or 0.0)
+            if ep_sym and ep_rec > 0:
+                trailing_recommendations[ep_sym] = ep_rec
+    except Exception as e:
+        print(f"Notice fetching trailing recommendations for rearm: {e}")
 
     cfg_rearm = load_config()
     ignored_symbols_rearm = set(s.upper() for s in cfg_rearm.get("ignored_symbols", ["MOTHERSON"]))
@@ -4124,23 +4169,13 @@ def rearm_overnight_stop_losses(notify=True, force=False):
         prod = p.get("product", "CNC" if broker == "ZERODHA" else "MTF")
         tx_type = "SELL" if not is_short else "BUY"
 
-        # Check if already has an active pending Stop-Loss order on broker
-        pending_sl = get_pending_stop_loss_order(sym, broker=broker)
-        if pending_sl:
-            already_protected.append({
-                "symbol": sym,
-                "broker": broker,
-                "qty": pending_sl.get("quantity", abs_qty),
-                "sl": pending_sl.get("trigger_price", 0.0),
-                "order_id": pending_sl.get("order_id", "N/A"),
-                "status": pending_sl.get("status", "PENDING")
-            })
-            continue
-
-        # Determine target SL
+        # Determine target SL from trailing engine, tracked holdings, or log
         target_sl = 0.0
         source_desc = "Structural"
-        if sym in tracked_holdings and tracked_holdings[sym].get("sl"):
+        if sym in trailing_recommendations and trailing_recommendations[sym] > 0:
+            target_sl = trailing_recommendations[sym]
+            source_desc = "Trailing Engine"
+        elif sym in tracked_holdings and tracked_holdings[sym].get("sl"):
             target_sl = float(tracked_holdings[sym]["sl"])
             source_desc = "Tracked Holdings"
         if target_sl <= 0:
@@ -4179,6 +4214,68 @@ def rearm_overnight_stop_losses(notify=True, force=False):
                 "reason": f"LTP (₹{ltp:,.2f}) >= SL Trigger (₹{target_sl:,.2f}). Short position is underwater past Stop-Loss!"
             })
             continue
+
+        # Check if already has an active pending Stop-Loss order on broker
+        pending_sl = get_pending_stop_loss_order(sym, broker=broker)
+        if pending_sl:
+            curr_sl = float(pending_sl.get("trigger_price", 0.0) or 0.0)
+            # If target trailing SL has advanced higher than active broker SL, automatically ratchet and modify!
+            if (not is_short and target_sl > curr_sl + 1.0) or (is_short and target_sl < curr_sl - 1.0):
+                ratchet_ok, r_res = ratchet_broker_stop_loss(
+                    broker=broker,
+                    symbol=sym,
+                    quantity=abs_qty,
+                    new_sl_price=target_sl,
+                    entry_price=avg_p,
+                    product=prod,
+                    ltp=ltp
+                )
+                if ratchet_ok:
+                    trailed_up.append({
+                        "symbol": sym,
+                        "broker": broker,
+                        "qty": abs_qty,
+                        "old_sl": curr_sl,
+                        "new_sl": target_sl,
+                        "order_id": pending_sl.get("order_id", "N/A"),
+                        "source": source_desc
+                    })
+                    try:
+                        th_f = SCRIPT_DIR / "tracked_holdings.json"
+                        if th_f.is_file():
+                            with open(th_f, "r", encoding="utf-8") as f:
+                                th_data = json.load(f)
+                        else:
+                            th_data = {}
+                        if sym not in th_data:
+                            th_data[sym] = {"broker": broker}
+                        th_data[sym]["sl"] = target_sl
+                        th_data[sym]["notes"] = f"{broker} Holding | Trailed GTT Stop (SL: ₹{target_sl:,.0f})"
+                        with open(th_f, "w", encoding="utf-8") as f:
+                            json.dump(th_data, f, indent=2)
+                    except Exception:
+                        pass
+                    continue
+                else:
+                    already_protected.append({
+                        "symbol": sym,
+                        "broker": broker,
+                        "qty": pending_sl.get("quantity", abs_qty),
+                        "sl": curr_sl,
+                        "order_id": pending_sl.get("order_id", "N/A"),
+                        "status": pending_sl.get("status", "PENDING")
+                    })
+                    continue
+            else:
+                already_protected.append({
+                    "symbol": sym,
+                    "broker": broker,
+                    "qty": pending_sl.get("quantity", abs_qty),
+                    "sl": curr_sl,
+                    "order_id": pending_sl.get("order_id", "N/A"),
+                    "status": pending_sl.get("status", "PENDING")
+                })
+                continue
 
         # GTT Advantage: GTT/Forever orders can be submitted 24/7 even when market is closed!
         # Place fresh GTT Stop-Loss directly on broker (valid for 1 year)
@@ -4273,6 +4370,12 @@ def rearm_overnight_stop_losses(notify=True, force=False):
         "<i>Orders remain active 24/7 on broker cloud servers. Zero daily 15:30 expiration!</i>\n"
     ]
 
+    if trailed_up:
+        lines.append(f"📈 <b>Auto-Trailed Higher GTT Stops ({len(trailed_up)}):</b>")
+        for tu in trailed_up:
+            lines.append(f"• <b>{tu['symbol']}</b> ({tu['broker']}): Qty {tu['qty']} | SL raised: ₹{tu['old_sl']:,.0f} ➔ <b>₹{tu['new_sl']:,.0f}</b> | GTT ID <code>{tu['order_id']}</code> (<i>{tu['source']}</i>)")
+        lines.append("")
+
     if rearmed:
         lines.append(f"🔄 <b>Newly Placed Permanent GTT Orders ({len(rearmed)}):</b>")
         for r in rearmed:
@@ -4297,12 +4400,12 @@ def rearm_overnight_stop_losses(notify=True, force=False):
             lines.append(f"• <b>{fld['symbol']}</b> ({fld['broker']}): ⚠️ {fld['error']}")
         lines.append("")
 
-    if not rearmed and not audit_only and not already_protected and not failed and not critical_alerts:
+    if not rearmed and not trailed_up and not audit_only and not already_protected and not failed and not critical_alerts:
         lines.append("💤 <b>No open swing positions detected across all configured brokers.</b>")
     else:
-        tot_protected = len(rearmed) + len(already_protected)
+        tot_protected = len(rearmed) + len(already_protected) + len(trailed_up)
         tot_positions = len(all_pos)
-        lines.append(f"💼 <b>Total Positions:</b> {tot_positions} | <b>Protected:</b> {tot_protected} | <b>Pending Open:</b> {len(audit_only)}")
+        lines.append(f"💼 <b>Total Positions:</b> {tot_positions} | <b>Protected:</b> {tot_protected} | <b>Trailed Up:</b> {len(trailed_up)} | <b>Pending Open:</b> {len(audit_only)}")
 
     report_text = "\n".join(lines)
 
@@ -4318,6 +4421,7 @@ def rearm_overnight_stop_losses(notify=True, force=False):
         "status": "success",
         "market_open": market_open,
         "rearmed": rearmed,
+        "trailed_up": trailed_up,
         "audit_only": audit_only,
         "already_protected": already_protected,
         "critical_alerts": critical_alerts,
@@ -4519,6 +4623,15 @@ def get_all_open_positions_with_trailing_sl():
     except Exception:
         pass
     logged_trades = get_open_trades_from_logs()
+    th_file = SCRIPT_DIR / "tracked_holdings.json"
+    tracked_holdings = {}
+    if th_file.is_file():
+        try:
+            with open(th_file, "r", encoding="utf-8") as f:
+                tracked_holdings = json.load(f)
+        except Exception:
+            tracked_holdings = {}
+    th_dirty = False
 
     seen_symbols = set()
     enriched = []
@@ -4570,6 +4683,20 @@ def get_all_open_positions_with_trailing_sl():
         dist_ema10_pct = round(((ltp - ema10) / ema10) * 100.0, 2) if ema10 and ltp else None
         dist_ema20_pct = round(((ltp - ema20) / ema20) * 100.0, 2) if ema20 and ltp else None
         atr_stretch = round((ltp - sma50) / atr14, 1) if sma50 and atr14 and atr14 > 0 and ltp else None
+
+        # Peak Price & R-Multiple Tracking (for 30% Give-Back Cap)
+        th_entry = tracked_holdings.get(sym, {})
+        highest_ltp = float(th_entry.get("highest_ltp", 0.0) or entry_p or ltp)
+        if ltp > highest_ltp:
+            highest_ltp = ltp
+            if sym not in tracked_holdings:
+                tracked_holdings[sym] = {"broker": broker, "qty": qty, "entry_price": entry_p}
+            tracked_holdings[sym]["highest_ltp"] = round(highest_ltp, 2)
+            tracked_holdings[sym]["highest_r"] = round(max(0.0, highest_ltp - entry_p) / risk_per_share, 2) if risk_per_share > 0 else 0.0
+            th_dirty = True
+
+        peak_gain = max(0.0, highest_ltp - entry_p)
+        peak_r = round(peak_gain / risk_per_share, 2) if risk_per_share > 0 else 0.0
 
         # Determine recommended trailing stop loss
         is_option = "CE" in sym or "PE" in sym or "NIFTY" in sym
@@ -4659,6 +4786,39 @@ def get_all_open_positions_with_trailing_sl():
                 action_badge = "🟢 TRAIL TO BREAKEVEN"
                 action_text = f"Target milestone (+{r_multiple:.1f}R)! Move SL to Breakeven ₹{breakeven_p:,.0f} (Risk-Free!)"
 
+        # Rule A: 30% Peak Give-Back Cap (Guarantees locking 70% of peak gains once peak_r >= 2.5)
+        if peak_r >= 2.5 and not is_option and not is_short:
+            give_back_sl = round_to_clean_int(entry_p + (peak_gain * 0.70))
+            if give_back_sl >= ltp:
+                give_back_sl = round_to_clean_int(ltp * 0.985)
+            if give_back_sl > recommended_sl:
+                recommended_sl = give_back_sl
+                action_badge = "🛡️ 30% PROFIT CAP"
+                action_text = f"Peak reached +{peak_r:.1f}R (₹{highest_ltp:,.2f})! Locking 70% of peak gain (SL: ₹{give_back_sl:,.0f}). No give-back!"
+
+        # Rule B: Parabolic Climax Switch (Tighten trail to 5 EMA when stretched >= 8.0% above 10 EMA)
+        ema5 = ema_info.get("ema5")
+        if not is_option and not is_short and dist_ema10_pct is not None and dist_ema10_pct >= 8.0 and ema5:
+            parabolic_sl = round_to_clean_int(ema5)
+            if parabolic_sl >= ltp:
+                parabolic_sl = round_to_clean_int(ltp * 0.985)
+            if parabolic_sl > recommended_sl:
+                recommended_sl = parabolic_sl
+                action_badge = "⚡ PARABOLIC 5 EMA TRAIL"
+                action_text = f"Parabolic surge (+{dist_ema10_pct:.1f}% above 10 EMA)! Trail tightened to 5 EMA (₹{recommended_sl:,.0f}) to secure climax gains."
+
+        # Rule C: Day-1 Spurt Shield (If entered today and intraday gain >= +2.5R, lock windfall into close)
+        entry_date = th_entry.get("entry_date", "")
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        if not is_option and not is_short and entry_date == today_str and r_multiple >= 2.5:
+            day1_sl = round_to_clean_int(entry_p + (risk_per_share * 1.5))
+            if day1_sl >= ltp:
+                day1_sl = round_to_clean_int(ltp * 0.985)
+            if day1_sl > recommended_sl:
+                recommended_sl = day1_sl
+                action_badge = "🚀 DAY-1 SPURT SHIELD"
+                action_text = f"Day-1 Surge (+{r_multiple:.1f}R)! Locking +1.5R windfall gain (SL: ₹{day1_sl:,.0f}) into close."
+
         # Value at Risk (Current SL vs Recommended SL)
         if is_short:
             if initial_sl <= entry_p and initial_sl > 0:
@@ -4720,6 +4880,9 @@ def get_all_open_positions_with_trailing_sl():
             "dist_ema10_pct": dist_ema10_pct,
             "dist_ema20_pct": dist_ema20_pct,
             "atr_stretch": atr_stretch,
+            "highest_ltp": highest_ltp,
+            "highest_r": peak_r,
+            "ema5": ema5,
             "jeff_badge": jeff_badge,
             "jeff_status": jeff_status
         })
@@ -4859,9 +5022,19 @@ def get_all_open_positions_with_trailing_sl():
             "dist_ema10_pct": dist_ema10_pct,
             "dist_ema20_pct": dist_ema20_pct,
             "atr_stretch": atr_stretch,
+            "highest_ltp": highest_ltp,
+            "highest_r": peak_r,
+            "ema5": ema5,
             "jeff_badge": jeff_badge,
             "jeff_status": jeff_status
         })
+
+    if th_dirty:
+        try:
+            with open(th_file, "w", encoding="utf-8") as f:
+                json.dump(tracked_holdings, f, indent=2)
+        except Exception:
+            pass
 
     return enriched
 
