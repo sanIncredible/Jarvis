@@ -5,9 +5,14 @@
     "qty": 101,
     "entry_price": 1632.95,
     "sl": 1608.0,
-    "target": 1715.0,
+    "target": 1715,
     "entry_date": "2026-11-04",
-    "notes": "Zerodha CNC Holding"
+    "notes": "Zerodha CNC Holding",
+    "highest_ltp": 1973.0,
+    "highest_r": 13.63,
+    "last_trail_rule": "\ud83d\ude80 RIDE 10 EMA (+2.0R TRAIL)",
+    "recommended_sl": 1923,
+    "initial_sl": 1608
   },
   "TATACONSUM": {
     "broker": "DHAN",
@@ -15,19 +20,29 @@
     "qty": 101,
     "entry_price": 1002.76,
     "sl": 1004.0,
-    "target": 1120.0,
+    "target": 1120,
     "entry_date": "2026-10-22",
-    "notes": "Dhan MTF Holding"
+    "notes": "Dhan MTF Holding",
+    "highest_ltp": 1144.0,
+    "highest_r": 113.9,
+    "last_trail_rule": "\ud83d\udee1\ufe0f 30% PROFIT CAP",
+    "recommended_sl": 1102,
+    "initial_sl": 1004
   },
   "NSE": {
     "broker": "ZERODHA",
     "product": "CNC",
     "qty": 51,
     "entry_price": 1792.95,
-    "sl": 1746.0,
-    "target": 1880.0,
+    "sl": 2070,
+    "target": 1880,
     "entry_date": "2026-11-02",
-    "notes": "Zerodha CNC Holding"
+    "notes": "ZERODHA Holding | Trailed GTT Stop (SL: \u20b92,070)",
+    "highest_ltp": 2188.3,
+    "highest_r": 8.42,
+    "last_trail_rule": "\ud83d\udd35 CUT RISK 50%",
+    "recommended_sl": 1796,
+    "initial_sl": 2070
   },
   "INDGN": {
     "broker": "DHAN",
@@ -35,19 +50,27 @@
     "qty": 151,
     "entry_price": 624.47,
     "sl": 609.0,
-    "target": 656.0,
+    "target": 656,
     "entry_date": "2026-11-08",
-    "notes": "Dhan MTF Holding"
+    "notes": "Dhan MTF Holding",
+    "highest_ltp": 645.4,
+    "highest_r": 1.35,
+    "last_trail_rule": "\ud83d\udd35 CUT RISK 50%",
+    "recommended_sl": 625,
+    "initial_sl": 609
   },
   "TIPSMUSIC": {
     "broker": "ZERODHA",
     "product": "CNC",
     "qty": 51,
     "entry_price": 817.0,
-    "sl": 805.0,
-    "target": 858.0,
+    "sl": 805,
+    "target": 858,
     "entry_date": "2026-11-13",
-    "notes": "Zerodha CNC Holding"
+    "notes": "ZERODHA Holding | Trailed GTT Stop (SL: \u20b9805)",
+    "last_trail_rule": "\ud83d\udfe1 DANGER \u2014 NEAR SL",
+    "recommended_sl": 805,
+    "initial_sl": 805
   },
   "ITC": {
     "broker": "ZERODHA",
@@ -55,8 +78,33 @@
     "qty": 401,
     "entry_price": 286.45,
     "sl": 282.0,
-    "target": 301.0,
+    "target": 301,
     "entry_date": "2026-11-16",
-    "notes": "Zerodha CNC Holding"
+    "notes": "Zerodha CNC Holding",
+    "last_trail_rule": "\u2705 HOLD \u2014 ON TRACK",
+    "recommended_sl": 282,
+    "initial_sl": 282
+  },
+  "MILKYMIST": {
+    "broker": "DHAN",
+    "qty": 201,
+    "entry_price": 309.75,
+    "highest_ltp": 316.75,
+    "highest_r": 0.9,
+    "last_trail_rule": "\u2705 HOLD \u2014 ON TRACK",
+    "recommended_sl": 302,
+    "initial_sl": 302,
+    "target": 325
+  },
+  "DRREDDY": {
+    "broker": "DHAN",
+    "qty": 40,
+    "entry_price": 1387.58,
+    "highest_ltp": 1400.9,
+    "highest_r": 0.65,
+    "last_trail_rule": "\u2705 HOLD \u2014 ON TRACK",
+    "recommended_sl": 1367,
+    "initial_sl": 1367,
+    "target": 1457
   }
 }
