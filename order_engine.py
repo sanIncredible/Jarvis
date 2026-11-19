@@ -45,6 +45,8 @@ REGIME_FILE = SCRIPT_DIR / "market_regime.json"
 POSITIONAL_REGIME_FILE = SCRIPT_DIR / "daily_positional_regime.json"
 DHAN_CACHE_FILE = SCRIPT_DIR / "dhan_nse_cache.json"
 DATA_FILE = SCRIPT_DIR / "data.json"
+TRADE_LOG_CSV = SCRIPT_DIR / "trade_log.csv"
+TRADE_LOG_JSON = SCRIPT_DIR / "trade_log.json"
 SERVER_IP = "80.225.210.222"
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -2654,8 +2656,8 @@ def update_tracked_holding_on_fill(symbol, broker, product, quantity, fill_price
         print(f"Error persisting tracked_holdings.json on fill: {e}")
 
 
-def update_tracked_holding_on_exit(symbol, remaining_qty):
-    """Updates or prunes symbol from tracked_holdings.json upon partial or full exit."""
+def update_tracked_holding_on_exit(symbol, remaining_qty, exit_price=None, exit_reason="🚨 MANUAL EXIT", broker=None, notes=None):
+    """Updates or prunes symbol from tracked_holdings.json upon partial or full exit and records post-mortem."""
     sym_u = (symbol or "").strip().upper()
     th_file = SCRIPT_DIR / "tracked_holdings.json"
     if th_file.is_file():
@@ -2663,11 +2665,27 @@ def update_tracked_holding_on_exit(symbol, remaining_qty):
             with open(th_file, "r", encoding="utf-8") as f:
                 th_data = json.load(f)
             if sym_u in th_data:
+                meta_saved = dict(th_data[sym_u])
                 if remaining_qty <= 0:
                     del th_data[sym_u]
+                    # Centralized Post-Mortem Logging on Exit
+                    try:
+                        from trade_post_mortem import record_trade_post_mortem
+                        ex_p = float(exit_price or meta_saved.get("sl") or meta_saved.get("recommended_sl") or meta_saved.get("entry_price") or 0.0)
+                        record_trade_post_mortem(
+                            symbol=sym_u,
+                            exit_price=ex_p,
+                            exit_qty=int(meta_saved.get("qty", 1)),
+                            exit_reason=exit_reason,
+                            broker=broker or meta_saved.get("broker"),
+                            notes=notes or "Position exited via execution engine",
+                            meta=meta_saved
+                        )
+                    except Exception as ex_pm:
+                        print(f"Notice logging post-mortem in update_tracked_holding_on_exit: {ex_pm}")
                 else:
                     th_data[sym_u]["qty"] = int(remaining_qty)
-                    th_data[sym_u]["notes"] += f" | Partial Exit ({remaining_qty} shs remaining)"
+                    th_data[sym_u]["notes"] = str(th_data[sym_u].get("notes", "")) + f" | Partial Exit ({remaining_qty} shs remaining)"
                 with open(th_file, "w", encoding="utf-8") as f:
                     json.dump(th_data, f, indent=2)
         except Exception as e:
@@ -3799,6 +3817,20 @@ def reconcile_and_prune_exited_holdings(live_pos, broker_status):
                 if b_key in broker_status and broker_status[b_key].startswith("OK"):
                     live_syms = live_symbols_by_broker.get(b, set())
                     if sym.upper() not in live_syms:
+                        try:
+                            from trade_post_mortem import record_trade_post_mortem
+                            ex_p = float(meta.get("sl") or meta.get("recommended_sl") or meta.get("entry_price") or 0.0)
+                            record_trade_post_mortem(
+                                symbol=sym,
+                                exit_price=ex_p,
+                                exit_qty=int(meta.get("qty", 1)),
+                                exit_reason=None,  # will resolve automatically from meta's last_trail_rule
+                                broker=b,
+                                notes=f"Auto-reconciled: GTT Stop-Loss executed on {b}",
+                                meta=meta
+                            )
+                        except Exception as ex_pm:
+                            print(f"Notice logging post-mortem in reconcile_and_prune_exited_holdings: {ex_pm}")
                         del th_data[sym]
                         modified = True
                         print(f"🧹 Auto-pruned exited holding {sym} ({b}) from tracked_holdings.json")
@@ -4948,6 +4980,16 @@ def get_all_open_positions_with_trailing_sl():
                 recommended_sl = day1_sl
                 action_badge = "🚀 DAY-1 SPURT SHIELD"
                 action_text = f"Day-1 Surge (+{r_multiple:.1f}R)! Locking +1.5R windfall gain (SL: ₹{day1_sl:,.0f}) into close."
+
+        # Persist trailing rule & stop metadata to tracked_holdings for post-mortem analytics
+        if sym in tracked_holdings:
+            tracked_holdings[sym]["last_trail_rule"] = action_badge
+            tracked_holdings[sym]["recommended_sl"] = recommended_sl
+            if initial_sl > 0:
+                tracked_holdings[sym]["initial_sl"] = initial_sl
+            if target_p > 0:
+                tracked_holdings[sym]["target"] = target_p
+            th_dirty = True
 
         # Value at Risk (Current SL vs Recommended SL)
         if is_short:
