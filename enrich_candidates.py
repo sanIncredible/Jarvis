@@ -183,6 +183,22 @@ def merge_candidates() -> Dict[str, Any]:
         "ems": len(ems_list),
     }
 
+    # Load auxiliary live quote cache to resolve missing ltp, turnover, pdh, pdl
+    cache_quotes: Dict[str, Dict[str, Any]] = {}
+    for aux_path in [BASE_DIR / "data.json", BASE_DIR / "dhan_nse_cache.json"]:
+        if aux_path.is_file():
+            try:
+                with open(aux_path, "r", encoding="utf-8") as f:
+                    aux_data = json.load(f)
+                    stocks_list = aux_data.get("stocks", []) if isinstance(aux_data, dict) else (aux_data if isinstance(aux_data, list) else [])
+                    for st in stocks_list:
+                        if isinstance(st, dict):
+                            s_key = (st.get("symbol") or st.get("trading_symbol") or "").upper().strip()
+                            if s_key and s_key not in cache_quotes:
+                                cache_quotes[s_key] = st
+            except Exception:
+                pass
+
     # Group by symbol
     by_symbol: Dict[str, List[Dict[str, Any]]] = {}
     for entry in all_entries:
@@ -203,9 +219,38 @@ def merge_candidates() -> Dict[str, Any]:
 
         # Merge key fields across sources if missing on best entry
         for other in entries:
-            for k in ["daily_range_pct", "dist_52w_pct", "rs_rating", "turnover_cr", "ltp", "change_pct", "industry", "name", "gain_tier", "is_fresh_3m", "is_nr7", "is_nr4", "is_inside", "is_vdu", "coil_tag", "vol_tag", "sector_tag"]:
+            for k in ["daily_range_pct", "dist_52w_pct", "dist_ath_pct", "rs_rating", "turnover_cr", "ltp", "change_pct", "industry", "name", "gain_tier", "is_fresh_3m", "is_nr7", "is_nr4", "is_inside", "is_vdu", "coil_tag", "vol_tag", "sector_tag", "day_high", "day_low", "prev_close", "curr_close", "curr_high", "curr_low"]:
                 if best.get(k) is None and other.get(k) is not None:
                     best[k] = other[k]
+
+        # Resolve from auxiliary live cache if missing
+        aux_q = cache_quotes.get(sym)
+        if aux_q:
+            if best.get("ltp") is None and aux_q.get("ltp"):
+                best["ltp"] = aux_q["ltp"]
+            if best.get("turnover_cr") is None and aux_q.get("turnover_cr"):
+                best["turnover_cr"] = aux_q["turnover_cr"]
+            if best.get("daily_range_pct") is None and aux_q.get("daily_range_pct"):
+                best["daily_range_pct"] = aux_q["daily_range_pct"]
+            if best.get("day_high") is None and (aux_q.get("day_high") or aux_q.get("high")):
+                best["day_high"] = aux_q.get("day_high") or aux_q.get("high")
+            if best.get("day_low") is None and (aux_q.get("day_low") or aux_q.get("low")):
+                best["day_low"] = aux_q.get("day_low") or aux_q.get("low")
+            if best.get("prev_close") is None and (aux_q.get("prev_close") or aux_q.get("close")):
+                best["prev_close"] = aux_q.get("prev_close") or aux_q.get("close")
+
+        # Fallback to curr_close from nr90 or ipo if ltp missing
+        if best.get("ltp") is None and best.get("curr_close"):
+            best["ltp"] = best["curr_close"]
+
+        # If turnover is missing but vol and ltp are present:
+        if best.get("turnover_cr") is None and best.get("vol") and best.get("ltp"):
+            try:
+                v = float(best["vol"])
+                p = float(best["ltp"])
+                best["turnover_cr"] = round((v * p) / 10000000.0, 2)
+            except Exception:
+                pass
 
         best["source"] = best.pop("_source", sources[0])
         best["sources"] = sources
@@ -232,14 +277,26 @@ def merge_candidates() -> Dict[str, Any]:
         best["check_momentum"] = momo_ok
 
         # ── 2. CHECK 2: STRUCTURE / BLUE SKY DOORSTEP ──
-        dist_52w = best.get("dist_52w_pct")
+        raw_dist_52w = best.get("dist_52w_pct")
+        if raw_dist_52w is None:
+            raw_dist_52w = best.get("dist_ath_pct")
+
+        abs_dist_52w = None
+        is_blue_sky = False
+        if raw_dist_52w is not None:
+            try:
+                abs_dist_52w = abs(float(raw_dist_52w))
+                # Normal threshold: within blue_sky_max% (default 3.5%) of 52W High / ATH
+                is_blue_sky = bool(abs_dist_52w <= blue_sky_max)
+            except (ValueError, TypeError):
+                is_blue_sky = False
+
         dist_pivot = best.get("dist_pivot_20d_pct")
         tier_str = str(best.get("tier") or "").upper()
 
-        is_blue_sky = (dist_52w is not None and dist_52w >= -abs(blue_sky_max))
         is_doorstep = (
             is_blue_sky or
-            (dist_pivot is not None and abs(dist_pivot) <= 2.2) or
+            (dist_pivot is not None and abs(float(dist_pivot)) <= 2.2) or
             ("DOORSTEP" in tier_str) or
             best.get("is_fresh_3m", False)
         )
@@ -249,20 +306,38 @@ def merge_candidates() -> Dict[str, Any]:
 
         # ── 3. CHECK 3: VOLATILITY CONTRACTION (COIL VS EXHAUSTION) ──
         rng = best.get("daily_range_pct")
-        is_tight = (rng is not None and rng <= tight_range_max)
+        is_tight = False
+        if rng is not None:
+            try:
+                is_tight = bool(float(rng) <= tight_range_max)
+            except (ValueError, TypeError):
+                is_tight = False
         is_nr = bool(best.get("is_nr7") or best.get("is_nr4") or best.get("is_inside") or best.get("is_vdu"))
         is_coiled = is_tight or is_nr
         best["is_coiled"] = is_coiled
         best["check_contraction"] = is_coiled
 
         # ── 4. INSTITUTIONAL LIQUIDITY FLOOR ──
+        # Strict: must have verified turnover >= min_turnover (default ₹10 Cr). No phantom passes!
         turnover = best.get("turnover_cr")
-        is_liquid = (turnover is None) or (turnover >= min_turnover)
+        is_liquid = False
+        if turnover is not None:
+            try:
+                is_liquid = bool(float(turnover) >= min_turnover)
+            except (ValueError, TypeError):
+                is_liquid = False
         best["is_liquid"] = is_liquid
 
-        # ── A+ SNIPER CRITERIA (THE 3-CHECK RULE) ──
-        # 1. Momentum Thrust + 2. Blue Sky/Doorstep + 3. Volatility Contraction + Liquidity
-        is_sniper = momo_ok and is_doorstep and is_coiled and is_liquid
+        # ── 5. REGIME-AWARE A+ SNIPER GATING ──
+        is_defensive = regime_state.get("is_defensive", False)
+        if is_defensive and defensive_strict:
+            # Defensive / Washout / Fakeout Risk Mode:
+            # Stricter Blue Sky Doorstep (<= 2.2% from high), strict contraction, verified liquidity
+            is_tight_doorstep = (abs_dist_52w is not None and abs_dist_52w <= 2.2) or ("DOORSTEP" in tier_str)
+            is_defensive_coiled = (is_nr or (rng is not None and float(rng) <= 1.8))
+            is_sniper = bool(momo_ok and is_tight_doorstep and is_defensive_coiled and is_liquid)
+        else:
+            is_sniper = bool(momo_ok and is_doorstep and is_coiled and is_liquid)
         best["is_sniper"] = is_sniper
 
         if is_sniper:
@@ -283,6 +358,33 @@ def merge_candidates() -> Dict[str, Any]:
 
         current_score = float(best.get("total_score", 0))
         best["total_score"] = round(current_score + bonus_score, 1)
+
+        # ── 6. 3m ORB EXECUTION PRIMITIVES INJECTION ──
+        ltp_val = float(best.get("ltp") or best.get("curr_close") or 0.0)
+        pdh_val = float(best.get("day_high") or best.get("curr_high") or best.get("pdh") or 0.0)
+        pdl_val = float(best.get("day_low") or best.get("curr_low") or best.get("pdl") or 0.0)
+
+        if ltp_val > 0:
+            best["ltp"] = round(ltp_val, 2)
+        if pdh_val > 0:
+            best["pdh"] = round(pdh_val, 2)
+        if pdl_val > 0:
+            best["pdl"] = round(pdl_val, 2)
+
+        if ltp_val > 0:
+            clean_ltp = int(round(ltp_val))
+            if pdl_val > 0 and pdl_val < ltp_val and ((ltp_val - pdl_val) / ltp_val) <= 0.035:
+                est_sl = int(round(pdl_val))
+                est_sl_pct = round(((clean_ltp - est_sl) / clean_ltp) * 100.0, 1)
+            else:
+                est_sl = int(round(clean_ltp * 0.975))
+                est_sl_pct = 2.5
+            risk_per_sh = max(1, clean_ltp - est_sl)
+            best["est_sl"] = est_sl
+            best["est_sl_pct"] = est_sl_pct
+            best["qty_risk_1k"] = max(1, int(1000 // risk_per_sh))
+            best["qty_risk_2k"] = max(1, int(2000 // risk_per_sh))
+            best["target_2r"] = clean_ltp + (2 * risk_per_sh)
 
         # Flags & Badges
         flags = list(best.get("flags", []))
@@ -306,6 +408,24 @@ def merge_candidates() -> Dict[str, Any]:
 
     # Sub-lists
     sniper_cands = [c for c in merged if c.get("is_sniper")]
+
+    # In defensive regimes, cap actionable A+ Snipers to Top 5 pristine setups to eliminate noise
+    is_defensive = regime_state.get("is_defensive", False)
+    if is_defensive and defensive_strict and len(sniper_cands) > 5:
+        for demoted in sniper_cands[5:]:
+            demoted["is_sniper"] = False
+            demoted["grade"] = "A"
+            if "🎯 A+ Sniper" in demoted.get("flags", []):
+                demoted["flags"].remove("🎯 A+ Sniper")
+        sniper_cands = sniper_cands[:5]
+    elif len(sniper_cands) > 10:
+        for demoted in sniper_cands[10:]:
+            demoted["is_sniper"] = False
+            demoted["grade"] = "A"
+            if "🎯 A+ Sniper" in demoted.get("flags", []):
+                demoted["flags"].remove("🎯 A+ Sniper")
+        sniper_cands = sniper_cands[:10]
+
     blue_sky_cands = [c for c in merged if c.get("is_blue_sky")]
 
     now_str = get_ist_now()
@@ -472,6 +592,13 @@ def format_sniper_telegram_card(payload: Dict[str, Any], max_display: int = 8) -
             uniq_btns.append(s)
 
     kb_rows = []
+    # 1-Tap Promote Top 5 Snipers directly to live Watchlist
+    if len(snipers) >= 1:
+        top_n = min(5, len(snipers))
+        kb_rows.append([
+            {"text": f"🚀 Promote Top {top_n} Snipers to Watchlist", "callback_data": "cand_add_top5"}
+        ])
+
     # 1-Tap Risk Order Buttons for Top 2 setups
     for s in uniq_btns[:2]:
         kb_rows.append([
@@ -538,9 +665,15 @@ def format_merged_telegram_card(payload: Dict[str, Any], max_display: int = 10) 
             uniq_btns.append(s)
 
     kb_rows = []
+    if len(snipers) >= 1:
+        top_n = min(5, len(snipers))
+        kb_rows.append([
+            {"text": f"🚀 Promote Top {top_n} Snipers to Watchlist", "callback_data": "cand_add_top5"}
+        ])
+
     for i in range(0, len(uniq_btns), 3):
         chunk = uniq_btns[i:i+3]
-        kb_rows.append([{"text": f"+ {s}", "callback_data": f"cand_add:{s}"} for s in chunk])
+        kb_rows.append([{"text": f"➕ {s}", "callback_data": f"cand_add:{s}"} for s in chunk])
 
     reply_markup = {"inline_keyboard": kb_rows} if kb_rows else None
     return "\n".join(lines), reply_markup
