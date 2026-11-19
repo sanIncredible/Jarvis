@@ -37,6 +37,13 @@ if hasattr(sys.stdout, 'reconfigure'):
     except Exception:
         pass
 
+try:
+    from upstox_websocket_feed import UpstoxWebSocketFeed
+    UPSTOX_WS_AVAILABLE = True
+except Exception:
+    UpstoxWebSocketFeed = None
+    UPSTOX_WS_AVAILABLE = False
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
 CONFIG_FILE = os.path.join(SCRIPT_DIR, "config_credentials.json")
 REFRESH_SECONDS = 180  # 3 minutes
@@ -3416,90 +3423,133 @@ def run_upstox_scanner(once=False, auto_open_web=False):
 
     def periodic_scanner():
         global latest_results, last_scan_time, next_refresh_timestamp, current_market_event
-        while not stop_scanner_event.is_set():
-            now = get_ist_now()
-            evt, target, wait = get_next_market_event(now)
-            current_market_event = evt
-            next_refresh_timestamp = time.time() + wait
+        active_ws_feed = [None]
+        try:
+            while not stop_scanner_event.is_set():
+                now = get_ist_now()
+                evt, target, wait = get_next_market_event(now)
+                current_market_event = evt
+                next_refresh_timestamp = time.time() + wait
 
-            # Dynamic window: strictly Mon-Fri 09:15:00 to 10:15:00 IST -> near-realtime 3s fast pulses
-            # After 10:15:00 IST -> 3-minute candle close polling
-            tok = load_upstox_token()
-            is_prime_window = (now.weekday() < 5 and ((now.hour == 9 and now.minute >= 15) or (now.hour == 10 and now.minute < 15)))
-            poll_step = 3.0 if is_prime_window else 60.0
+                # Dynamic window: strictly Mon-Fri 09:15:00 to 10:15:00 IST -> near-realtime WebSocket / fast pulses
+                # After 10:15:00 IST -> 3-minute candle close polling
+                tok = load_upstox_token()
+                is_prime_window = (now.weekday() < 5 and ((now.hour == 9 and now.minute >= 15) or (now.hour == 10 and now.minute < 15)))
+                poll_step = 2.0 if is_prime_window else 60.0
 
-            while wait > 0 and not stop_scanner_event.is_set():
-                sleep_sec = min(poll_step, max(1.0, wait))
-                time.sleep(sleep_sec)
+                # Manage WebSocket feed lifecycle for 09:15 - 10:15 AM prime window
+                if is_prime_window and tok and UPSTOX_WS_AVAILABLE:
+                    if active_ws_feed[0] is None or not active_ws_feed[0].is_running:
+                        try:
+                            print("⚡ [WebSocket] Launching Upstox V3 streaming market feed for prime window (09:15-10:15 IST)...")
+                            active_ws_feed[0] = UpstoxWebSocketFeed(get_active_watchlist())
+                            active_ws_feed[0].start()
+                        except Exception as ws_err:
+                            print(f"⚠️ [WebSocket] Streamer startup notice: {ws_err}")
+                            active_ws_feed[0] = None
+                elif not is_prime_window:
+                    if active_ws_feed[0] is not None and active_ws_feed[0].is_running:
+                        print("🔒 [WebSocket] 10:15 AM Prime window ended: stopping WebSocket streamer.")
+                        try:
+                            active_ws_feed[0].stop()
+                        except Exception:
+                            pass
+                        active_ws_feed[0] = None
+
+                while wait > 0 and not stop_scanner_event.is_set():
+                    sleep_sec = min(poll_step, max(1.0, wait))
+                    time.sleep(sleep_sec)
+                    check_and_run_auto_gtt_rearm()
+                    wait = (target - get_ist_now()).total_seconds()
+
+                    # Near-realtime quote pulse during 09:15 - 10:15 AM: check for instant breakouts, coils, and live chart update
+                    if is_prime_window and wait > 1.0:
+                        try:
+                            fast_quotes = {}
+                            # Tier 1: Check in-memory decoded protobuf ticks from WebSocket (sub-millisecond)
+                            if active_ws_feed[0] and active_ws_feed[0].is_healthy():
+                                fast_quotes = active_ws_feed[0].get_all_latest_quotes()
+
+                            # Tier 2: Resilient Fallback - if WS reconnecting/token refresh, fetch 3s bulk REST batch
+                            if not fast_quotes and tok:
+                                fast_quotes = fetch_upstox_bulk_quotes(get_active_watchlist(), tok)
+
+                            if fast_quotes and latest_results:
+                                updated_res = []
+                                has_price_move = False
+                                for score, d, m in latest_results:
+                                    sym = d["symbol"]
+                                    q = fast_quotes.get(sym.upper())
+                                    if q:
+                                        live_p = float(q.get("last_price") or q.get("ltp") or d.get("ltp") or 0.0)
+                                        old_p = float(d.get("ltp") or live_p)
+                                        if abs(live_p - old_p) >= 0.05:
+                                            has_price_move = True
+                                        d["ltp"] = live_p
+                                        # Update 3m candle live tick if available
+                                        c_3m = d.get("candles_3m") or d.get("candles") or []
+                                        if c_3m:
+                                            last_c = c_3m[-1]
+                                            if isinstance(last_c, dict):
+                                                last_c["c"] = live_p
+                                                last_c["h"] = max(last_c.get("h", live_p), live_p)
+                                                last_c["l"] = min(last_c.get("l", live_p), live_p)
+                                        new_m = compute_metrics(d)
+                                        new_score = compute_strength_score(d, new_m)
+                                        new_m["strength_score"] = new_score
+                                        updated_res.append((new_score, d, new_m))
+                                    else:
+                                        updated_res.append((score, d, m))
+
+                                if updated_res and has_price_move:
+                                    updated_res.sort(key=lambda x: x[0], reverse=True)
+                                    cur_t = get_ist_now().strftime('%H:%M:%S IST')
+                                    evaluate_and_dispatch_alerts(updated_res, cur_t)
+                                    with data_lock:
+                                        latest_results = updated_res
+                                        last_scan_time = cur_t
+                                    export_static_html(updated_res, cur_t, active_web_port)
+                        except Exception:
+                            pass
+
+                if stop_scanner_event.is_set():
+                    break
+
+                # Target reached: perform scan / warmup
+                new_res = scan_watchlist()
+                cur_time = get_ist_now().strftime('%H:%M:%S IST')
+                evaluate_and_dispatch_alerts(new_res, cur_time)
                 check_and_run_auto_gtt_rearm()
-                wait = (target - get_ist_now()).total_seconds()
 
-                # Near-realtime quote pulse during 09:15 - 10:15 AM: check for instant breakouts, coils, and live chart update
-                if is_prime_window and tok and wait > 1.5:
+                # Sync any newly added watchlist stocks to active WebSocket streamer
+                if active_ws_feed[0] and active_ws_feed[0].is_running:
                     try:
-                        fast_quotes = fetch_upstox_bulk_quotes(get_active_watchlist(), tok)
-                        if fast_quotes and latest_results:
-                            updated_res = []
-                            has_price_move = False
-                            for score, d, m in latest_results:
-                                sym = d["symbol"]
-                                q = fast_quotes.get(sym.upper())
-                                if q:
-                                    live_p = float(q.get("last_price") or d.get("ltp") or 0.0)
-                                    old_p = float(d.get("ltp") or live_p)
-                                    if abs(live_p - old_p) >= 0.05:
-                                        has_price_move = True
-                                    d["ltp"] = live_p
-                                    # Update 3m candle live tick if available
-                                    c_3m = d.get("candles_3m") or d.get("candles") or []
-                                    if c_3m:
-                                        last_c = c_3m[-1]
-                                        if isinstance(last_c, dict):
-                                            last_c["c"] = live_p
-                                            last_c["h"] = max(last_c.get("h", live_p), live_p)
-                                            last_c["l"] = min(last_c.get("l", live_p), live_p)
-                                    new_m = compute_metrics(d)
-                                    new_score = compute_strength_score(d, new_m)
-                                    new_m["strength_score"] = new_score
-                                    updated_res.append((new_score, d, new_m))
-                                else:
-                                    updated_res.append((score, d, m))
-
-                            if updated_res and has_price_move:
-                                updated_res.sort(key=lambda x: x[0], reverse=True)
-                                cur_t = get_ist_now().strftime('%H:%M:%S IST')
-                                evaluate_and_dispatch_alerts(updated_res, cur_t)
-                                with data_lock:
-                                    latest_results = updated_res
-                                    last_scan_time = cur_t
-                                export_static_html(updated_res, cur_t, active_web_port)
+                        active_ws_feed[0].update_symbols(get_active_watchlist())
                     except Exception:
                         pass
 
-            if stop_scanner_event.is_set():
-                break
+                # Determine next target event
+                nxt_now = get_ist_now()
+                nxt_evt, nxt_target, nxt_wait = get_next_market_event(nxt_now)
+                current_market_event = nxt_evt
+                next_refresh_timestamp = time.time() + nxt_wait
+                next_str = nxt_target.strftime('%H:%M:%S IST')
 
-            # Target reached: perform scan / warmup
-            new_res = scan_watchlist()
-            cur_time = get_ist_now().strftime('%H:%M:%S IST')
-            evaluate_and_dispatch_alerts(new_res, cur_time)
-            check_and_run_auto_gtt_rearm()
+                with data_lock:
+                    latest_results = new_res
+                    last_scan_time = cur_time
 
-            # Determine next target event
-            nxt_now = get_ist_now()
-            nxt_evt, nxt_target, nxt_wait = get_next_market_event(nxt_now)
-            current_market_event = nxt_evt
-            next_refresh_timestamp = time.time() + nxt_wait
-            next_str = nxt_target.strftime('%H:%M:%S IST')
+                export_static_html(new_res, cur_time, active_web_port)
 
-            with data_lock:
-                latest_results = new_res
-                last_scan_time = cur_time
-
-            export_static_html(new_res, cur_time, active_web_port)
-
-            clear_screen()
-            print_terminal_view(new_res, cur_time, active_web_port, next_str)
+                clear_screen()
+                print_terminal_view(new_res, cur_time, active_web_port, next_str)
+        finally:
+            if active_ws_feed[0] is not None and active_ws_feed[0].is_running:
+                try:
+                    active_ws_feed[0].stop()
+                except Exception:
+                    pass
+                active_ws_feed[0] = None
 
     scanner_thread = threading.Thread(target=periodic_scanner, daemon=True)
     scanner_thread.start()
