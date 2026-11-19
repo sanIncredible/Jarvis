@@ -131,8 +131,17 @@ def analyze_nr_setup(candidate: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if dist_52w is not None and dist_52w <= 1.5:
         priority_score += 15
 
+    vol_val = float(curr.get("volume", 0.0))
+    to_cr = round((vol_val * curr_close) / 10000000.0, 2) if curr_close > 0 else 0.0
+
     res = dict(candidate)
     res.update({
+        "ltp": round(curr_close, 2),
+        "vol": vol_val,
+        "turnover_cr": to_cr,
+        "day_high": round(curr["high"], 2),
+        "day_low": round(curr["low"], 2),
+        "prev_close": round(prev["close"], 2),
         "is_nr7": is_nr7,
         "is_nr4": is_nr4,
         "is_inside": is_inside,
