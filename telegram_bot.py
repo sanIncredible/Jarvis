@@ -2875,16 +2875,21 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         ok, data = check_portfolio_risk_capacity()
         if isinstance(data, dict):
             status_badge = "🟢 <b>WITHIN LIMITS</b>" if ok else "⚠️ <b>CAPACITY SATURATED</b>"
+            reg_code = data.get("regime_code", "NORMAL")
+            max_var_disp = data.get("max_var", 10000.0)
             return (
-                "🛡️ <b>PORTFOLIO HEAT & RISK CAPACITY</b>\n"
+                "🛡️ <b>PORTFOLIO HEAT & SA RISK SIEVE</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"• <b>Status:</b> {status_badge}\n"
-                f"• <b>Active Positions:</b> {data.get('open_count')}/{data.get('max_slots')} slots\n"
-                f"• <b>Open Value-at-Risk (VaR):</b> ₹{data.get('total_var', 0):,.0f} / ₹6,000 max\n"
-                f"• <b>Remaining Risk Capacity:</b> ₹{data.get('headroom_var', 0):,.0f}\n"
-                f"• <b>Regime Mode:</b> {'DEFENSIVE (3 slots)' if data.get('is_defensive') else 'NORMAL (5 slots)'}\n"
+                f"• <b>Total Holdings:</b> {data.get('open_count')}/{data.get('max_total_slots', 10)} slots\n"
+                f"• <b>Active Risk Under Fire:</b> {data.get('active_risk_count', 0)}/{data.get('max_risk_slots', 5)} ({reg_code} Limit)\n"
+                f"• <b>De-risked Runners:</b> {data.get('derisked_count', 0)} (Free-Roll / Cost Trailed)\n"
+                f"• <b>New Entries Today:</b> {data.get('entries_today_count', 0)}/{data.get('max_daily_entries', 2)} max/day\n"
+                f"• <b>Open Value-at-Risk (VaR):</b> ₹{data.get('total_var', 0):,.0f} / ₹{max_var_disp:,.0f} max\n"
+                f"• <b>Remaining Risk Headroom:</b> ₹{data.get('headroom_var', 0):,.0f}\n"
+                f"• <b>SA Market Regime:</b> {reg_code}\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 <i>Trades that ratchet to Breakeven (+0.15%) carry ₹0 VaR and free capacity automatically!</i>"
+                "💡 <i>Trades trailed to Breakeven (+0.15%) carry ₹0 VaR and unlock active risk capacity!</i>"
             )
         return f"Portfolio Capacity: {data}"
     elif cmd == "/settopic":
