@@ -433,14 +433,37 @@ def format_sniper_telegram_card(payload: Dict[str, Any], max_display: int = 8) -
         rng = c.get("daily_range_pct")
         rng_str = f"Rng: <code>{rng:.1f}%</code>" if rng is not None else ""
         tv_link = f"<a href='https://in.tradingview.com/chart/?symbol=NSE:{sym}'><b>{sym}</b></a>"
+        
+        # Risk-Normalized Sizing Calculation
+        ltp_val = float(c.get("ltp") or 0.0)
+        day_low_val = float(c.get("day_low") or 0.0)
+        sizing_str = ""
+        if ltp_val > 0:
+            clean_ltp = int(round(ltp_val))
+            if day_low_val > 0 and day_low_val < ltp_val and ((ltp_val - day_low_val) / ltp_val) <= 0.04:
+                sl_est = int(round(day_low_val))
+            else:
+                sl_est = int(round(ltp_val * 0.985))
+            if sl_est >= clean_ltp:
+                sl_est = max(1, clean_ltp - 1)
+            risk_per_sh = max(1, clean_ltp - sl_est)
+            q_1k = max(1, int(1000 // risk_per_sh))
+            q_2k = max(1, int(2000 // risk_per_sh))
+            c_1k = q_1k * clean_ltp
+            c_2k = q_2k * clean_ltp
+            c1_str = f"₹{c_1k/1000:.0f}k" if c_1k < 100000 else f"₹{c_1k/100000:.1f}L"
+            c2_str = f"₹{c_2k/1000:.0f}k" if c_2k < 100000 else f"₹{c_2k/100000:.1f}L"
+            sizing_str = f"\n   └ 🎯 <b>Sizing:</b> 1k Risk = <b>{q_1k} shs</b> ({c1_str}) | 2k Risk = <b>{q_2k} shs</b> ({c2_str}) [SL: ₹{sl_est:,}]"
+
         lines.append(
             f"<b>{idx}. {tv_link}</b> — Score: <b>{score:.1f}</b>\n"
             f"   └ <i>{src_str}</i> | {dist_str} • {rng_str} | {ind}"
+            f"{sizing_str}"
         )
 
-    lines.append("\n👉 <i>Tap any stock below to promote directly to your 3m Watchlist:</i>")
+    lines.append("\n👉 <i>Tap to add to Watchlist or 1-tap execute with normalized risk:</i>")
 
-    btn_stocks = [c["symbol"] for c in snipers[:9]]
+    btn_stocks = [c["symbol"] for c in snipers[:6]]
     seen_b = set()
     uniq_btns = []
     for s in btn_stocks:
@@ -449,9 +472,17 @@ def format_sniper_telegram_card(payload: Dict[str, Any], max_display: int = 8) -
             uniq_btns.append(s)
 
     kb_rows = []
+    # 1-Tap Risk Order Buttons for Top 2 setups
+    for s in uniq_btns[:2]:
+        kb_rows.append([
+            {"text": f"⚡ Buy 1k: {s}", "callback_data": f"buy_risk:{s}:1k"},
+            {"text": f"⚡ Buy 2k: {s}", "callback_data": f"buy_risk:{s}:2k"}
+        ])
+
+    # Watchlist promotion buttons
     for i in range(0, len(uniq_btns), 3):
         chunk = uniq_btns[i:i+3]
-        kb_rows.append([{"text": f"+ {s}", "callback_data": f"cand_add:{s}"} for s in chunk])
+        kb_rows.append([{"text": f"➕ {s}", "callback_data": f"cand_add:{s}"} for s in chunk])
 
     reply_markup = {"inline_keyboard": kb_rows} if kb_rows else None
     return "\n".join(lines), reply_markup
