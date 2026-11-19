@@ -2287,9 +2287,22 @@ def handle_callback_query(cq):
         edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
 
     elif cq_data == "cand_add_top5":
+        cand_merged_file = SCRIPT_DIR / "candidates_merged.json"
         cand_file = SCRIPT_DIR / "candidates.json"
         top5_syms = []
-        if cand_file.is_file():
+        if cand_merged_file.is_file():
+            try:
+                with open(cand_merged_file, "r", encoding="utf-8") as f:
+                    cmdata = json.load(f)
+                    snipers = cmdata.get("sniper_candidates", [])
+                    if snipers:
+                        top5_syms = [c["symbol"] for c in snipers[:5]]
+                    else:
+                        top5_syms = [c["symbol"] for c in cmdata.get("candidates", [])[:5]]
+            except Exception:
+                pass
+
+        if not top5_syms and cand_file.is_file():
             try:
                 with open(cand_file, "r", encoding="utf-8") as f:
                     cdata = json.load(f)
@@ -2301,7 +2314,7 @@ def handle_callback_query(cq):
                 pass
 
         if not top5_syms:
-            answer_callback_query(cq_id, "No candidates found in candidates.json!", show_alert=True)
+            answer_callback_query(cq_id, "No candidates found in candidates list!", show_alert=True)
         else:
             curr_syms = read_watchlist_symbols()
             added = []
