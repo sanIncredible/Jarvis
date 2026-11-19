@@ -31,6 +31,7 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_FILE = BASE_DIR / "data.json"
 WATCHLIST_FILE = BASE_DIR / "watchlist.txt"
 CONFIG_FILE = BASE_DIR / "config_credentials.json"
+HINDSIGHT_HISTORY_FILE = BASE_DIR / "hindsight_history.json"
 
 STANDARD_CAPITAL_PER_TRADE = 100000  # ₹1.0 Lakh default base exposure
 
@@ -643,6 +644,348 @@ def generate_hindsight_data():
     }
 
 
+def get_current_regime_label():
+    """Detects current market regime code from market_regime.json or positional_market_regime.json."""
+    for r_path in [
+        BASE_DIR / "market_regime.json",
+        BASE_DIR / "positional_market_regime.json"
+    ]:
+        if r_path.is_file():
+            try:
+                with open(r_path, "r", encoding="utf-8") as f:
+                    rdata = json.load(f)
+                    return str(rdata.get("state_code") or rdata.get("regime_code") or "NEUTRAL").upper()
+            except Exception:
+                pass
+    return "NEUTRAL"
+
+
+def update_expectancy_ledger(report_data):
+    """
+    Appends or updates today's session summary in hindsight_history.json.
+    Retains a rolling 60-day historical window.
+    """
+    date_str = report_data.get("date_str") or datetime.now().strftime("%Y-%m-%d")
+    updated_at = report_data.get("updated_at") or datetime.now().strftime("%H:%M:%S IST")
+    regime = get_current_regime_label()
+
+    qual_trades = report_data.get("qualified_trades", [])
+    strict_trades = report_data.get("strict_trades", [])
+    filt_trades = report_data.get("filtered_trades", [])
+    q_stats = report_data.get("qual_stats", {})
+    s_stats = report_data.get("strict_stats", {})
+    sniper_audit = report_data.get("sniper_audit", {})
+    sniper_syms = {t["symbol"] for t in sniper_audit.get("trades", [])} if sniper_audit else set()
+
+    session_trades = []
+    for t in qual_trades:
+        tier = "💎 STRICT" if t.get("is_strict_setup") else (
+            "🔄 REVERSAL" if "Reversal" in t.get("trigger_name", "") else (
+                "★ SS+ORB" if t.get("is_strong_start") else "⚡ ORB"
+            )
+        )
+        session_trades.append({
+            "symbol": t["symbol"],
+            "tier": tier,
+            "outcome": t["outcome"],
+            "r_mult": float(t.get("r_mult") or 0.0),
+            "pnl_inr": int(t.get("pnl_inr") or 0),
+            "pnl_pct": float(t.get("pnl_pct") or 0.0),
+            "mfe_pct": float(t.get("mfe_pct") or 0.0),
+            "regime": regime,
+            "is_sniper": (t["symbol"] in sniper_syms)
+        })
+
+    session_record = {
+        "date": date_str,
+        "updated_at": updated_at,
+        "regime": regime,
+        "total_universe": report_data.get("total_universe", 0),
+        "triggered_count": len(qual_trades) + len(filt_trades),
+        "qualified_count": len(qual_trades),
+        "strict_count": len(strict_trades),
+        "sniper_count": sniper_audit.get("total_snipers", 0),
+        "sniper_triggered": sniper_audit.get("triggered_count", 0),
+        "sniper_win_rate": sniper_audit.get("win_rate", 0.0),
+        "sniper_avg_r": sniper_audit.get("avg_r", 0.0),
+        "qual_stats": {
+            "winners": q_stats.get("winners", 0),
+            "losers": q_stats.get("losers", 0),
+            "runners": q_stats.get("runners", 0),
+            "win_rate": q_stats.get("win_rate", 0.0),
+            "total_pnl_inr": q_stats.get("total_pnl_inr", 0),
+            "total_r": q_stats.get("total_r", 0.0)
+        },
+        "strict_stats": {
+            "winners": s_stats.get("winners", 0),
+            "losers": s_stats.get("losers", 0),
+            "win_rate": s_stats.get("win_rate", 0.0),
+            "total_pnl_inr": s_stats.get("total_pnl_inr", 0),
+            "total_r": s_stats.get("total_r", 0.0)
+        },
+        "trades": session_trades
+    }
+
+    # Load existing history file
+    history = {"sessions": []}
+    if HINDSIGHT_HISTORY_FILE.is_file():
+        try:
+            with open(HINDSIGHT_HISTORY_FILE, "r", encoding="utf-8") as f:
+                history = json.load(f)
+                if not isinstance(history.get("sessions"), list):
+                    history = {"sessions": []}
+        except Exception:
+            history = {"sessions": []}
+
+    # Upsert session for date_str
+    existing_idx = None
+    for idx, s in enumerate(history["sessions"]):
+        if s.get("date") == date_str:
+            existing_idx = idx
+            break
+
+    if existing_idx is not None:
+        history["sessions"][existing_idx] = session_record
+    else:
+        history["sessions"].append(session_record)
+
+    # Sort sessions ascending by date and retain rolling 60 days
+    history["sessions"].sort(key=lambda x: x.get("date", ""))
+    if len(history["sessions"]) > 60:
+        history["sessions"] = history["sessions"][-60:]
+
+    history["last_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")
+
+    # Atomic write to prevent file corruption
+    tmp_path = BASE_DIR / "hindsight_history.json.tmp"
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(history, f, indent=2, ensure_ascii=False)
+        tmp_path.replace(HINDSIGHT_HISTORY_FILE)
+        print(f"📊 [Expectancy Ledger] Updated {HINDSIGHT_HISTORY_FILE.name} ({len(history['sessions'])} sessions logged).")
+    except Exception as e:
+        print(f"⚠️ [Expectancy Ledger] Error writing history: {e}")
+        if tmp_path.is_file():
+            try:
+                tmp_path.unlink()
+            except Exception:
+                pass
+    return history
+
+
+def compute_rolling_expectancy(days=30):
+    """
+    Computes rolling strategy expectancy over the last N sessions from hindsight_history.json.
+    Returns structured metrics including tier breakdown, regime breakdown, and statistical edge.
+    """
+    history = {"sessions": []}
+    if HINDSIGHT_HISTORY_FILE.is_file():
+        try:
+            with open(HINDSIGHT_HISTORY_FILE, "r", encoding="utf-8") as f:
+                history = json.load(f)
+        except Exception:
+            pass
+
+    sessions = history.get("sessions", [])
+    if not sessions:
+        # If no history file yet, dynamically generate today's data and update ledger
+        try:
+            today_data = generate_hindsight_data()
+            hist_res = update_expectancy_ledger(today_data)
+            sessions = hist_res.get("sessions", [])
+        except Exception:
+            pass
+
+    recent_sessions = sessions[-days:] if len(sessions) > days else sessions
+    session_count = len(recent_sessions)
+
+    all_trades = []
+    for s in recent_sessions:
+        for t in s.get("trades", []):
+            all_trades.append(t)
+
+    total_trades = len(all_trades)
+    if total_trades == 0:
+        return {
+            "session_count": session_count,
+            "total_trades": 0,
+            "winners": 0,
+            "losers": 0,
+            "runners": 0,
+            "win_rate": 0.0,
+            "strong_win_rate": 0.0,
+            "total_pnl_inr": 0,
+            "total_r": 0.0,
+            "avg_r": 0.0,
+            "profit_factor": 0.0,
+            "expectancy_r": 0.0,
+            "tiers": {},
+            "regimes": {},
+            "snipers": {"count": 0, "win_rate": 0.0, "total_r": 0.0, "avg_r": 0.0}
+        }
+
+    winners = [t for t in all_trades if t.get("pnl_inr", 0) > 0]
+    losers = [t for t in all_trades if t.get("pnl_inr", 0) < 0]
+    runners = [t for t in all_trades if t.get("outcome") == "OPEN_RUNNER"]
+    strong_winners = [t for t in all_trades if t.get("r_mult", 0.0) >= 1.5]
+
+    win_rate = round((len(winners) / total_trades) * 100.0, 1)
+    strong_win_rate = round((len(strong_winners) / total_trades) * 100.0, 1)
+
+    total_pnl_inr = sum(t.get("pnl_inr", 0) for t in all_trades)
+    total_r = round(sum(t.get("r_mult", 0.0) for t in all_trades), 2)
+    avg_r = round(total_r / total_trades, 2)
+
+    gross_profit = sum(t.get("pnl_inr", 0) for t in winners)
+    gross_loss = abs(sum(t.get("pnl_inr", 0) for t in losers))
+    profit_factor = round(gross_profit / max(1, gross_loss), 2) if gross_loss > 0 else (99.0 if gross_profit > 0 else 0.0)
+
+    avg_win_r = (sum(t.get("r_mult", 0.0) for t in winners) / len(winners)) if winners else 0.0
+    avg_loss_r = abs(sum(t.get("r_mult", 0.0) for t in losers) / len(losers)) if losers else 0.0
+    expectancy_r = round(((len(winners) / total_trades) * avg_win_r) - ((len(losers) / total_trades) * avg_loss_r), 2)
+
+    # Tier Breakdown
+    tiers = {}
+    for t in all_trades:
+        tier_name = t.get("tier", "⚡ ORB")
+        if tier_name not in tiers:
+            tiers[tier_name] = {"trades": [], "winners": 0, "total_r": 0.0, "total_pnl": 0}
+        tiers[tier_name]["trades"].append(t)
+        if t.get("pnl_inr", 0) > 0:
+            tiers[tier_name]["winners"] += 1
+        tiers[tier_name]["total_r"] += t.get("r_mult", 0.0)
+        tiers[tier_name]["total_pnl"] += t.get("pnl_inr", 0)
+
+    tier_summary = {}
+    for t_name, t_data in tiers.items():
+        cnt = len(t_data["trades"])
+        wr = round((t_data["winners"] / cnt) * 100.0, 1) if cnt > 0 else 0.0
+        tot_r = round(t_data["total_r"], 2)
+        av_r = round(tot_r / cnt, 2) if cnt > 0 else 0.0
+        tier_summary[t_name] = {
+            "count": cnt,
+            "win_rate": wr,
+            "total_r": tot_r,
+            "avg_r": av_r,
+            "total_pnl": t_data["total_pnl"]
+        }
+
+    # Regime Breakdown
+    regimes = {}
+    for t in all_trades:
+        reg_name = t.get("regime", "NEUTRAL")
+        if reg_name not in regimes:
+            regimes[reg_name] = {"trades": [], "winners": 0, "total_r": 0.0, "total_pnl": 0}
+        regimes[reg_name]["trades"].append(t)
+        if t.get("pnl_inr", 0) > 0:
+            regimes[reg_name]["winners"] += 1
+        regimes[reg_name]["total_r"] += t.get("r_mult", 0.0)
+        regimes[reg_name]["total_pnl"] += t.get("pnl_inr", 0)
+
+    regime_summary = {}
+    for r_name, r_data in regimes.items():
+        cnt = len(r_data["trades"])
+        wr = round((r_data["winners"] / cnt) * 100.0, 1) if cnt > 0 else 0.0
+        tot_r = round(r_data["total_r"], 2)
+        av_r = round(tot_r / cnt, 2) if cnt > 0 else 0.0
+        regime_summary[r_name] = {
+            "count": cnt,
+            "win_rate": wr,
+            "total_r": tot_r,
+            "avg_r": av_r,
+            "total_pnl": r_data["total_pnl"]
+        }
+
+    # Sniper Performance
+    sniper_trades = [t for t in all_trades if t.get("is_sniper")]
+    sniper_winners = [t for t in sniper_trades if t.get("pnl_inr", 0) > 0]
+    s_cnt = len(sniper_trades)
+    s_wr = round((len(sniper_winners) / s_cnt) * 100.0, 1) if s_cnt > 0 else 0.0
+    s_tot_r = round(sum(t.get("r_mult", 0.0) for t in sniper_trades), 2)
+    s_avg_r = round(s_tot_r / s_cnt, 2) if s_cnt > 0 else 0.0
+
+    return {
+        "session_count": session_count,
+        "total_trades": total_trades,
+        "winners": len(winners),
+        "losers": len(losers),
+        "runners": len(runners),
+        "win_rate": win_rate,
+        "strong_win_rate": strong_win_rate,
+        "total_pnl_inr": total_pnl_inr,
+        "total_r": total_r,
+        "avg_r": avg_r,
+        "profit_factor": profit_factor,
+        "expectancy_r": expectancy_r,
+        "tiers": tier_summary,
+        "regimes": regime_summary,
+        "snipers": {
+            "count": s_cnt,
+            "win_rate": s_wr,
+            "total_r": s_tot_r,
+            "avg_r": s_avg_r
+        }
+    }
+
+
+def format_rolling_expectancy_card(exp, days=30):
+    """Formats cumulative expectancy metrics into an HTML card for Telegram / EOD Report."""
+    sess_cnt = exp.get("session_count", 0)
+    tr_cnt = exp.get("total_trades", 0)
+
+    if tr_cnt == 0:
+        return (
+            f"📊 <b>CUMULATIVE {days}-DAY STRATEGY EXPECTANCY</b>\n"
+            f"• <i>No qualifying trades logged in past {sess_cnt} sessions.</i>"
+        )
+
+    pnl_s = "+" if exp["total_pnl_inr"] >= 0 else ""
+    r_s = "+" if exp["total_r"] >= 0 else ""
+    exp_r_s = "+" if exp["expectancy_r"] >= 0 else ""
+
+    lines = [
+        f"📊 <b>CUMULATIVE {days}-DAY STRATEGY EXPECTANCY ({sess_cnt} Sessions)</b>",
+        f"• <b>Total Qualified Trades:</b> {tr_cnt} | <b>Win Rate:</b> {exp['win_rate']:.0f}% ({exp['winners']}W / {exp['losers']}L / {exp['runners']} Runners)",
+        f"• <b>Cumulative Realized Alpha:</b> <b>{r_s}{exp['total_r']:.1f}R</b> (₹{pnl_s}{exp['total_pnl_inr']:,})",
+        f"• <b>Expectancy / Trade:</b> <b>{exp_r_s}{exp['expectancy_r']:.2f}R</b> | <b>Profit Factor:</b> {exp['profit_factor']:.2f}",
+        f"• <b>High Alpha Win Rate (≥1.5R):</b> {exp['strong_win_rate']:.0f}%",
+        "",
+        "🎯 <b>Alpha by Setup Tier:</b>"
+    ]
+
+    tier_order = ["💎 STRICT", "🔄 REVERSAL", "★ SS+ORB", "⚡ ORB"]
+    tiers = exp.get("tiers", {})
+    for t_key in tier_order:
+        t_data = tiers.get(t_key)
+        if t_data:
+            tr_s = "+" if t_data['total_r'] >= 0 else ""
+            ar_s = "+" if t_data['avg_r'] >= 0 else ""
+            lines.append(
+                f"• {t_key}: <b>{t_data['count']} trades</b> | <b>{t_data['win_rate']:.0f}% WR</b> | {tr_s}{t_data['total_r']:.1f}R (Avg {ar_s}{t_data['avg_r']:.2f}R)"
+            )
+
+    regimes = exp.get("regimes", {})
+    if regimes:
+        lines.append("")
+        lines.append("🌐 <b>Edge by Market Regime:</b>")
+        for r_key, r_data in sorted(regimes.items(), key=lambda x: x[1]["total_r"], reverse=True):
+            rr_s = "+" if r_data['total_r'] >= 0 else ""
+            rar_s = "+" if r_data['avg_r'] >= 0 else ""
+            lines.append(
+                f"• {r_key}: <b>{r_data['count']} trades</b> | <b>{r_data['win_rate']:.0f}% WR</b> | {rr_s}{r_data['total_r']:.1f}R (Avg {rar_s}{r_data['avg_r']:.2f}R)"
+            )
+
+    snipers = exp.get("snipers", {})
+    if snipers.get("count", 0) > 0:
+        lines.append("")
+        sr_s = "+" if snipers['total_r'] >= 0 else ""
+        lines.append(
+            f"🎯 <b>A+ Snipers:</b> <b>{snipers['count']} trades</b> | <b>{snipers['win_rate']:.0f}% WR</b> | {sr_s}{snipers['total_r']:.1f}R (Avg {snipers['avg_r']:+.2f}R)"
+        )
+
+    return "\n".join(lines)
+
+
 def format_hindsight_report(data):
     """
     Formats the EOD Hindsight Report into clean, beautiful HTML messages for Telegram.
@@ -749,6 +1092,15 @@ def format_hindsight_report(data):
                 lines.append(f"• Top Sniper Alpha: <b>{top_p['symbol']}</b> ({top_p['r_mult']:+.1f}R | MFE +{top_p['mfe_pct']}%)")
         else:
             lines.append("• <i>Tracked snipers stayed within opening ranges (0 false-breakout losses).</i>")
+
+    # Section 0.7: 30-Day Rolling Strategy Expectancy
+    try:
+        exp_data = compute_rolling_expectancy(days=30)
+        if exp_data and exp_data.get("total_trades", 0) > 0:
+            lines.append("")
+            lines.append(format_rolling_expectancy_card(exp_data, days=30))
+    except Exception:
+        pass
 
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
@@ -1036,6 +1388,10 @@ def generate_eod_hindsight_report(notify=False, dry_run=False):
     Returns (data, formatted_messages, success_bool).
     """
     data = generate_hindsight_data()
+    try:
+        update_expectancy_ledger(data)
+    except Exception as e:
+        print(f"⚠️ [Expectancy Ledger] Notice: {e}")
     messages = format_hindsight_report(data)
 
     if dry_run or not notify:
