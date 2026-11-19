@@ -535,9 +535,23 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
 
                 stretch_pct = m.get("stretch_pct")
 
+                # P2 Adaptive LOD Stop Buffer (3m ATR)
                 risk_pct = None
+                sl_calc = day_low
                 if day_low and ltp and float(ltp) > 0:
-                    risk_pct = round(((float(ltp) - float(day_low)) / float(ltp)) * 100.0, 1)
+                    atr_val = atr14 or d.get("atr")
+                    if atr_val and float(atr_val) > 0:
+                        atr_f = float(atr_val)
+                        atr_3m_approx = atr_f / 6.0 if atr_f > (float(ltp) * 0.015) else atr_f
+                        adaptive_buf = max(1.0, round(atr_3m_approx * 0.25, 2))
+                    else:
+                        adaptive_buf = max(1.0, round(float(day_low) * 0.0020, 2))
+
+                    stop_buffer = max(1.0, round(max(adaptive_buf, float(day_low) * 0.0015)))
+                    sl_calc = round(float(day_low) - stop_buffer, 2)
+                    if sl_calc >= float(ltp):
+                        sl_calc = round(float(ltp) * 0.985, 2)
+                    risk_pct = round(((float(ltp) - sl_calc) / float(ltp)) * 100.0, 1)
 
                 is_gap_up = bool(m.get("is_gap_up") or d.get("is_gap_up"))
                 gap_pct = m.get("gap_pct") if m.get("gap_pct") is not None else d.get("gap_pct")
@@ -799,20 +813,20 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
             if is_pyr:
                 kb_buttons.append([
                     {"text": f"🔺 Pyramid {sym} (Risk-Free)", "callback_data": f"buy_prep:{sym}:rf:lod:default"},
-                    {"text": f"🔺 Pyramid {sym} (1.0L)", "callback_data": f"buy_prep:{sym}:mod:lod:default"}
+                    {"text": f"🔺 Pyramid {sym} (1k Risk)", "callback_data": f"buy_prep:{sym}:r1k:lod:default"}
                 ])
             elif is_defensive:
                 kb_buttons.append([
-                    {"text": f"🛡️ Scalp {sym} (50k)", "callback_data": f"buy_prep:{sym}:50k:regime:default"},
-                    {"text": f"🛡️ Scalp {sym} (25k)", "callback_data": f"buy_prep:{sym}:25k:regime:default"}
+                    {"text": f"🛡️ Scalp {sym} (1k Risk)", "callback_data": f"buy_prep:{sym}:r1k:lod:default"},
+                    {"text": f"🛡️ Scalp {sym} (500 Risk)", "callback_data": f"buy_prep:{sym}:r500:lod:default"}
                 ])
             else:
                 kb_buttons.append([
-                    {"text": f"🎯 Buy {sym} (1k Risk)", "callback_data": f"buy_risk:{sym}:1k"},
-                    {"text": f"🎯 Buy {sym} (2k Risk)", "callback_data": f"buy_risk:{sym}:2k"}
+                    {"text": f"🎯 Buy {sym} (1k Risk)", "callback_data": f"buy_prep:{sym}:r1k:lod:default"},
+                    {"text": f"🎯 Buy {sym} (2k Risk)", "callback_data": f"buy_prep:{sym}:r2k:lod:default"}
                 ])
                 kb_buttons.append([
-                    {"text": f"🛒 Buy {sym} (1.0L)", "callback_data": f"buy_prep:{sym}:mod:lod:default"},
+                    {"text": f"🛒 Buy {sym} (1.0L)", "callback_data": f"buy_prep:{sym}:1.0L:lod:default"},
                     {"text": f"🛒 Buy {sym} (50k)", "callback_data": f"buy_prep:{sym}:50k:lod:default"}
                 ])
     reply_markup = {"inline_keyboard": kb_buttons} if kb_buttons else None
