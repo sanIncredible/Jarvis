@@ -198,17 +198,20 @@ def load_market_regime():
 
 def parse_size_mode(mode_arg):
     """
-    Parses mode argument to exposure amount in INR.
-    Supports 'agg', 'mod', 'low', '1.5L', '1L', '50k', '75k', or raw numbers.
+    Parses mode argument to exposure or risk target amount in INR.
+    Defaults to Institutional Risk-Normalized Sizing (₹1,000 Risk Target).
+    Supports 'r500', 'r1k', 'r2k', 'agg', 'mod', '1.5L', '1L', '50k', '75k', or raw numbers.
     """
     if not mode_arg:
-        return 100000, "Moderate (₹1.0L)"
+        return 1000, "Risk-Normalized (₹1,000 Risk Target - Default)"
 
     m_clean = str(mode_arg).strip().lower().replace("₹", "").replace(",", "")
 
-    # Risk-Normalized Modes (Fixed INR Risk)
-    if m_clean in ("r1k", "risk1k", "1k", "1k_risk"):
-        return 1000, "Risk-Normalized (₹1,000 Risk Target)"
+    # Risk-Normalized Modes (Fixed INR Risk) - Priority Default
+    if m_clean in ("r1k", "risk1k", "1k", "1k_risk", "mod", "default"):
+        return 1000, "Risk-Normalized (₹1,000 Risk Target - Default)"
+    if m_clean in ("r500", "risk500", "500", "500_risk"):
+        return 500, "Risk-Normalized (₹500 Risk Target)"
     if m_clean in ("r2k", "risk2k", "2k", "2k_risk"):
         return 2000, "Risk-Normalized (₹2,000 Risk Target)"
 
@@ -238,7 +241,7 @@ def parse_size_mode(mode_arg):
         val = float(m_clean)
         return int(val), f"Custom (₹{int(val):,})"
     except ValueError:
-        return 100000, "Moderate (₹1.0L - Default)"
+        return 1000, "Risk-Normalized (₹1,000 Risk Target - Default)"
 
 
 def resolve_dhan_security_id(symbol):
@@ -795,22 +798,17 @@ def calculate_order_sizing(quote_data, mode_arg="mod", sl_mode="lod", **kwargs):
         if effective_size < 25000:
             effective_size = 25000
 
-    # P2.1 Defensive Regime Auto-Cap: strictly limit exposure to ₹50k max during defensive/cash breadth regimes
-    is_defensive = str(regime_code).upper() in ("DEFENSIVE", "DEFENSIVE_WATERFALL", "CLIMAX", "WASHOUT", "CHOP") or alloc_pct == 0
-    if is_defensive:
-        if effective_size > 50000:
-            effective_size = 50000
-            mode_label = f"{mode_label} [DEFENSIVE CAP: ₹50k]"
-            cap_msg = f"🛡️ Defensive Regime ({regime_code}): Exposure capped to ₹50,000 max (Capital Preservation)"
-            regime_note = f"{regime_note} | {cap_msg}" if regime_note else cap_msg
+    # P2 Volatility-Adaptive Stop Buffer (3m ATR)
+    sc_data = get_symbol_scanner_data(symbol) or {}
+    atr_val = quote_data.get("atr_3m") or quote_data.get("atr14") or sc_data.get("atr14")
+    if atr_val and float(atr_val) > 0:
+        atr_f = float(atr_val)
+        atr_3m_approx = atr_f / 6.0 if atr_f > (ltp * 0.015) else atr_f
+        adaptive_buf = max(1.0, round(atr_3m_approx * 0.25, 2))
+    else:
+        adaptive_buf = max(1.0, round(day_low * 0.0020, 2))
 
-    quantity = int(effective_size / ltp)
-    if quantity == 0 and effective_size >= ltp:
-        quantity = 1
-
-    actual_exposure = round(quantity * ltp, 2)
-
-    buffer = max(1.0, round(day_low * 0.0005))
+    buffer = max(1.0, round(max(adaptive_buf, day_low * 0.0015)))
     sl_price = round_to_clean_int(day_low - buffer)
 
     if sl_price >= ltp:
@@ -825,17 +823,40 @@ def calculate_order_sizing(quote_data, mode_arg="mod", sl_mode="lod", **kwargs):
         risk_pct = round((risk_per_share / ltp) * 100, 2)
         regime_note += " (SL capped at 2.5% to protect capital)"
 
-    total_risk_inr = round(risk_per_share * quantity, 2)
-
-    # Risk-Normalized Sizing Override (Target Fixed ₹1k/₹2k Risk)
+    # P1 Risk-Normalized Sizing (Default Target: ₹1,000 or ₹2,000 INR Risk)
     m_clean = str(mode_arg).strip().lower()
-    if m_clean in ("r1k", "risk1k", "1k", "1k_risk", "r2k", "risk2k", "2k", "2k_risk"):
-        target_risk_inr = 1000 if m_clean in ("r1k", "risk1k", "1k", "1k_risk") else 2000
+    is_risk_norm = m_clean in ("r500", "risk500", "500", "r1k", "risk1k", "1k", "1k_risk", "r2k", "risk2k", "2k", "2k_risk", "mod", "default", "")
+
+    if is_risk_norm:
+        if m_clean in ("r500", "risk500", "500"):
+            target_risk_inr = 500
+        elif m_clean in ("r2k", "risk2k", "2k", "2k_risk"):
+            target_risk_inr = 2000
+        else:
+            target_risk_inr = 1000  # Default: ₹1,000 Risk Target
+        
         rps = max(1.0, risk_per_share)
         quantity = max(1, int(target_risk_inr // rps))
         actual_exposure = round(quantity * ltp, 2)
         total_risk_inr = round(risk_per_share * quantity, 2)
         mode_label = f"Risk-Normalized (₹{target_risk_inr:,} Risk Target)"
+    else:
+        quantity = int(effective_size / ltp)
+        if quantity == 0 and effective_size >= ltp:
+            quantity = 1
+        actual_exposure = round(quantity * ltp, 2)
+        total_risk_inr = round(risk_per_share * quantity, 2)
+
+    # P2.1 Defensive Regime Auto-Cap: strictly limit exposure to ₹50k max during defensive/cash breadth regimes
+    is_defensive = str(regime_code).upper() in ("DEFENSIVE", "DEFENSIVE_WATERFALL", "CLIMAX", "WASHOUT", "CHOP") or alloc_pct == 0
+    if is_defensive:
+        if actual_exposure > 50000:
+            quantity = max(1, int(50000 // ltp))
+            actual_exposure = round(quantity * ltp, 2)
+            total_risk_inr = round(risk_per_share * quantity, 2)
+            mode_label = f"{mode_label} [DEFENSIVE CAP: ₹50k]"
+            cap_msg = f"🛡️ Defensive Regime ({regime_code}): Exposure capped to ₹50,000 max (Capital Preservation)"
+            regime_note = f"{regime_note} | {cap_msg}" if regime_note else cap_msg
 
     # Dynamic "Risk-Free" Pyramiding Sizing (House Money Equation)
     holding_info = get_active_holding_info(symbol)
@@ -2374,6 +2395,10 @@ def update_tracked_holding_on_fill(symbol, broker, product, quantity, fill_price
             "sl": clean_sl,
             "target": round(tgt_p, 2),
             "entry_date": today_str,
+            "entry_ts": time.time(),
+            "entry_time_ist": get_ist_now().strftime("%Y-%m-%d %H:%M:%S IST"),
+            "highest_ltp": float(f_price),
+            "highest_r": 0.0,
             "notes": f"{b_name} {prod} Position (Live Executed)"
         }
 
@@ -2404,16 +2429,181 @@ def update_tracked_holding_on_exit(symbol, remaining_qty):
             print(f"Notice updating tracked_holdings on exit: {e}")
 
 
+# ---------------------------------------------------------
+# P7: Daily Drawdown Circuit Breaker ("Account Kill Switch")
+# ---------------------------------------------------------
+KILL_SWITCH_FILE = SCRIPT_DIR / "kill_switch.json"
+MAX_DAILY_LOSS_DEFAULT = 4000.0  # ₹4,000 max daily loss limit (~2.5R to 4R)
+
+
+def load_kill_switch_state():
+    """Loads daily kill switch state. Automatically resets for fresh trading day."""
+    today_str = get_ist_now().strftime("%Y-%m-%d")
+    default_state = {
+        "date": today_str,
+        "is_tripped": False,
+        "daily_realized_pnl": 0.0,
+        "max_daily_loss_limit": MAX_DAILY_LOSS_DEFAULT,
+        "tripped_at": None,
+        "reason": None
+    }
+    if KILL_SWITCH_FILE.is_file():
+        try:
+            with open(KILL_SWITCH_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if data.get("date") == today_str:
+                return data
+            # New trading day: save auto-reset state
+            save_kill_switch_state(default_state)
+            return default_state
+        except Exception:
+            pass
+    return default_state
+
+
+def save_kill_switch_state(state):
+    """Persists kill switch state to disk safely."""
+    try:
+        with open(KILL_SWITCH_FILE, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"Error saving kill switch state: {e}")
+        return False
+
+
+def get_daily_realized_pnl():
+    """Calculates cumulative realized P&L from orders_log.json for today."""
+    today_str = get_ist_now().strftime("%Y-%m-%d")
+    log_f = SCRIPT_DIR / "orders_log.json"
+    realized_pnl = 0.0
+    if not log_f.is_file():
+        return 0.0
+    try:
+        with open(log_f, "r", encoding="utf-8") as f:
+            logs = json.load(f)
+        for entry in logs:
+            ts = entry.get("timestamp", "")
+            if ts.startswith(today_str) and entry.get("action") in ("EXIT", "SELL"):
+                pnl_val = float(entry.get("pnl") or entry.get("realized_pnl") or 0.0)
+                realized_pnl += pnl_val
+    except Exception:
+        pass
+    return round(realized_pnl, 2)
+
+
+def check_daily_kill_switch():
+    """
+    Evaluates whether the daily drawdown limit has been breached.
+    Returns (is_tripped: bool, reason: str or None).
+    """
+    state = load_kill_switch_state()
+    if state.get("is_tripped", False):
+        return True, state.get("reason", "Daily Drawdown Kill Switch is ACTIVE")
+
+    realized = get_daily_realized_pnl()
+    state["daily_realized_pnl"] = realized
+    limit = float(state.get("max_daily_loss_limit", MAX_DAILY_LOSS_DEFAULT))
+
+    if realized <= -abs(limit):
+        state["is_tripped"] = True
+        state["tripped_at"] = get_ist_now().strftime("%Y-%m-%d %H:%M:%S IST")
+        state["reason"] = f"Daily Loss Limit Breached: Realized P&L is -₹{abs(realized):,.0f} (Limit: -₹{limit:,.0f})"
+        save_kill_switch_state(state)
+        return True, state["reason"]
+
+    save_kill_switch_state(state)
+    return False, None
+
+
+def reset_daily_kill_switch(manual=True):
+    """Manually resets the kill switch if authorized by user."""
+    state = load_kill_switch_state()
+    state["is_tripped"] = False
+    state["tripped_at"] = None
+    state["reason"] = "Manually reset by user" if manual else None
+    save_kill_switch_state(state)
+    return True, "Kill switch has been reset. Trading enabled."
+
+
+# ---------------------------------------------------------
+# P4: Portfolio Heat Sieve & Exposure Capacity Guard
+# ---------------------------------------------------------
+MAX_PORTFOLIO_VAR_INR = 6000.0  # ₹6,000 max open Value at Risk (~1.2% on ₹5L capital)
+
+
+def check_portfolio_risk_capacity(symbol=None, additional_risk_inr=1000):
+    """
+    Evaluates total open Value-at-Risk and active breakout slots against regime limits.
+    Returns (allowed: bool, details: dict or str).
+    """
+    try:
+        live_pos, _, _ = fetch_all_positions()
+        regime = load_market_regime()
+        regime_code = regime.get("state_code") or regime.get("regime_code", "NORMAL")
+        alloc_pct = regime.get("swing_allocation_pct", 100)
+        is_defensive = str(regime_code).upper() in ("DEFENSIVE", "DEFENSIVE_WATERFALL", "CLIMAX", "WASHOUT", "CHOP") or alloc_pct == 0
+
+        max_slots = 3 if is_defensive else 5
+        active_positions = [p for p in live_pos if int(p.get("qty", 0) or 0) > 0]
+        open_count = len(active_positions)
+
+        # Calculate current total Value at Risk across open holdings
+        logged = get_open_trades_from_logs()
+        total_var = 0.0
+        for p in active_positions:
+            p_sym = p["symbol"].upper()
+            p_entry = float(p.get("avg_price", 0) or 0)
+            p_qty = int(p.get("qty", 0) or 0)
+            meta = logged.get(p_sym, {})
+            p_sl = float(meta.get("stop_loss", 0) or 0)
+            # If SL is at or above entry (+0.15% breakeven), VaR is zero (Risk-Free Runner!)
+            if p_sl > 0 and p_entry > 0 and p_sl < p_entry:
+                total_var += (p_entry - p_sl) * p_qty
+            elif p_sl <= 0 and p_entry > 0:
+                total_var += (p_entry * 0.02) * p_qty  # conservative 2% fallback
+        
+        total_var = round(total_var, 2)
+
+        # Check 1: Slot capacity (Pyramiding existing position does not consume a new slot)
+        sym_clean = (symbol or "").strip().upper()
+        is_existing = any(p["symbol"].upper() == sym_clean for p in active_positions)
+        if not is_existing and open_count >= max_slots:
+            return False, f"Portfolio slots saturated ({open_count}/{max_slots} active positions in {regime_code} regime). Wait for open trades to close or trail."
+
+        # Check 2: Total open Value-at-Risk cap (₹6,000 max)
+        proj_var = total_var + float(additional_risk_inr or 0)
+        if proj_var > MAX_PORTFOLIO_VAR_INR:
+            return False, f"Portfolio Heat Saturated: Total Open VaR is ₹{total_var:,.0f} (+₹{additional_risk_inr:,.0f} would exceed ₹{MAX_PORTFOLIO_VAR_INR:,.0f} max limit). Wait for active trades to reach Breakeven to unlock capacity."
+
+        return True, {
+            "open_count": open_count,
+            "max_slots": max_slots,
+            "total_var": total_var,
+            "proj_var": proj_var,
+            "headroom_var": max(0.0, MAX_PORTFOLIO_VAR_INR - total_var),
+            "is_defensive": is_defensive
+        }
+    except Exception as e:
+        return True, {"note": f"Capacity check bypassed on error: {e}"}
+
+
 def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
     """
     Executes full pipeline across any requested broker:
     Upstox (MTF), Dhan (MTF), or Zerodha (CNC).
     Uses Marketable Limit Order (+0.3% max ceiling) to eliminate slippage on volatile breakouts.
+    Guarded by P7 Kill Switch and P4 Portfolio Heat Sieve.
     """
     symbol = resolve_symbol(symbol)
     target_broker = (broker or get_default_broker()).strip().lower()
     if target_broker not in SUPPORTED_BROKERS:
         target_broker = "upstox"
+
+    # P7: Daily Drawdown Kill Switch Pre-Flight Check
+    is_killed, kill_reason = check_daily_kill_switch()
+    if is_killed:
+        return False, f"🚨 ORDER BLOCKED: {kill_reason}"
 
     quote_data, err = fetch_live_quote(symbol)
     if not quote_data:
@@ -2422,6 +2612,12 @@ def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
     calc = calculate_order_sizing(quote_data, mode_arg=mode_arg, sl_mode=sl_mode)
     if calc["quantity"] <= 0:
         return False, f"Calculated quantity is 0. LTP (₹{calc['ltp']}) exceeds allocated size (₹{calc['target_size']:,})."
+
+    # P4: Portfolio Heat Sieve Pre-Flight Check
+    additional_risk = calc.get("total_risk_inr", 1000)
+    heat_ok, heat_info = check_portfolio_risk_capacity(symbol=symbol, additional_risk_inr=additional_risk)
+    if not heat_ok:
+        return False, f"🛡️ ORDER BLOCKED: {heat_info}"
 
     product_label = "MTF"
     ltp = float(calc.get("ltp", 0) or 0)
@@ -3606,32 +3802,31 @@ def get_daily_emas_and_atr(symbol, token=None):
     return res
 
 
-def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, product="MTF", instrument_key=None, exchange=None, ltp=None):
+def ratchet_broker_stop_loss(broker, symbol, quantity, new_sl_price, entry_price=None, product="MTF", instrument_key=None, exchange=None, ltp=None):
     """
-    Jeff Sun Trailing Automation:
-    Ratchets the Stop-Loss up to Breakeven (+0.15% fee buffer) on the live broker.
-    1. Cancels any existing lower stop-loss order.
-    2. Submits new Stop-Loss limit order at breakeven price.
-    3. Logs update in orders_log.json.
+    P3 Multi-Stage Trailing Stop-Loss Ratchet Engine:
+    Ratchets the Stop-Loss up to new_sl_price on the live broker (Upstox, Dhan, Zerodha).
+    Supports:
+    - Stage 1: -0.5R (Cut risk 50%)
+    - Stage 2: Breakeven (+0.15% fee buffer)
+    - Stage 3: +1.0R (Lock in guaranteed 1R gain)
+    - Stage 4: +2.0R / 10 EMA (Ride the trend)
+    Atomically modifies existing GTT trigger or regular exchange stop-loss order.
     """
     sym = (symbol or "").strip().upper()
     b = (broker or "").strip().lower()
 
-    # Calculate Breakeven SL strictly as a round integer (no decimal part)
-    raw_be = entry_price * 1.0015
-    breakeven_sl = round_to_clean_int(raw_be)
-
+    target_sl = round_to_clean_int(new_sl_price)
     target_exchange = resolve_symbol_exchange(sym, exchange)
 
-    # Pre-Flight Guard: Check Live Quote to ensure LTP > breakeven_sl
-    # (Mandatory Indian exchange rule: Sell Stop-Loss orders require Trigger Price < current LTP)
+    # Pre-Flight Guard: Exchange Rule Trigger Price < LTP for Sell orders
     q, _ = fetch_live_quote(sym)
     current_ltp = float(q.get("ltp", 0) or 0) if q else float(ltp or 0)
-    if current_ltp > 0 and current_ltp <= breakeven_sl:
+    if current_ltp > 0 and current_ltp <= target_sl:
         return False, {
             "status": "failed",
-            "message": f"Cannot ratchet {sym} to Breakeven ₹{breakeven_sl}: Current LTP (₹{current_ltp:,.2f}) is at or below Breakeven. Exchange rules require Trigger Price < LTP for Sell Stop-Loss orders.",
-            "breakeven_sl": breakeven_sl,
+            "message": f"Cannot ratchet {sym} to ₹{target_sl:,.0f}: Current LTP (₹{current_ltp:,.2f}) is at or below target SL. Exchange rules require Trigger Price < LTP for Sell Stop-Loss orders.",
+            "target_sl": target_sl,
             "current_ltp": current_ltp
         }
 
@@ -3645,10 +3840,10 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
         old_oid = existing_sl["order_id"]
         is_gtt = existing_sl.get("is_gtt", False)
         old_trig = float(existing_sl.get("trigger_price") or 0)
-        if old_trig >= breakeven_sl:
+        if old_trig >= target_sl:
             ok = True
             atomic_success = True
-            res = {"status": "success", "mode": "ALREADY_AT_BREAKEVEN", "order_id": old_oid, "sl_price": old_trig}
+            res = {"status": "success", "mode": "ALREADY_AT_OR_ABOVE_TARGET", "order_id": old_oid, "sl_price": old_trig}
         elif is_gtt:
             # Atomically modify existing permanent GTT trigger directly
             gtt_ex = existing_sl.get("exchange") or target_exchange
@@ -3657,7 +3852,7 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
                 broker=b,
                 order_id=old_oid,
                 quantity=quantity,
-                new_sl_price=breakeven_sl,
+                new_sl_price=target_sl,
                 symbol=sym,
                 transaction_type="SELL",
                 exchange=gtt_ex,
@@ -3666,14 +3861,14 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
             if mod_ok:
                 ok = True
                 atomic_success = True
-                res = {"status": "success", "mode": "ATOMIC_GTT_MODIFY", "order_id": old_oid, "sl_price": breakeven_sl}
+                res = {"status": "success", "mode": "ATOMIC_GTT_MODIFY", "order_id": old_oid, "sl_price": target_sl}
         else:
             # Modify regular exchange order
-            mod_ok, mod_res = modify_broker_stop_loss(b, old_oid, quantity, breakeven_sl, transaction_type="SELL")
+            mod_ok, mod_res = modify_broker_stop_loss(b, old_oid, quantity, target_sl, transaction_type="SELL")
             if mod_ok:
                 ok = True
                 atomic_success = True
-                res = {"status": "success", "mode": "ATOMIC_MODIFY", "order_id": old_oid, "sl_price": breakeven_sl}
+                res = {"status": "success", "mode": "ATOMIC_MODIFY", "order_id": old_oid, "sl_price": target_sl}
             else:
                 cancel_broker_order(b, old_oid)
                 time.sleep(0.6)
@@ -3684,7 +3879,7 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
             broker=b,
             symbol=sym,
             quantity=quantity,
-            sl_price=breakeven_sl,
+            sl_price=target_sl,
             instrument_key=instrument_key,
             product=product,
             transaction_type="SELL",
@@ -3696,13 +3891,13 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
                 broker=b,
                 symbol=sym,
                 quantity=quantity,
-                sl_price=breakeven_sl,
+                sl_price=target_sl,
                 instrument_key=instrument_key,
                 product=product,
                 transaction_type="SELL"
             )
         ok = place_ok
-        res = {"status": "success" if place_ok else "failed", "mode": "GTT_PLACE", "order_id": place_res if place_ok else None, "error": place_res if not place_ok else None, "sl_price": breakeven_sl}
+        res = {"status": "success" if place_ok else "failed", "mode": "GTT_PLACE", "order_id": place_res if place_ok else None, "error": place_res if not place_ok else None, "sl_price": target_sl}
 
     # Step 3: Update orders_log.json
     try:
@@ -3713,8 +3908,7 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
             updated = False
             for entry in reversed(logs):
                 if entry.get("symbol", "").upper() == sym:
-                    entry["breakeven_ratcheted"] = True
-                    entry["stop_loss"] = breakeven_sl
+                    entry["stop_loss"] = target_sl
                     entry["ratcheted_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     if ok:
                         oid = res.get("order_id") if isinstance(res, dict) else str(res)
@@ -3737,10 +3931,10 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
                 with open(th_f, "r", encoding="utf-8") as f:
                     th = json.load(f)
                 if sym in th:
-                    th[sym]["sl"] = breakeven_sl
+                    th[sym]["sl"] = target_sl
                     mode_str = "Atomic Modify" if atomic_success else "Fresh SL"
                     oid_str = res.get("order_id", "N/A") if isinstance(res, dict) else str(res)
-                    th[sym]["notes"] = f"{th[sym].get('broker', b.upper())} Holding | Breakeven Trailed ({mode_str} {oid_str})"
+                    th[sym]["notes"] = f"{th[sym].get('broker', b.upper())} Holding | Trailed to ₹{target_sl} ({mode_str} {oid_str})"
                     with open(th_f, "w", encoding="utf-8") as f:
                         json.dump(th, f, indent=2)
         except Exception as e:
@@ -3750,11 +3944,33 @@ def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, produc
         "status": "success" if ok else "failed",
         "symbol": sym,
         "entry_price": entry_price,
-        "breakeven_sl": breakeven_sl,
+        "target_sl": target_sl,
+        "sl_price": target_sl,
+        "breakeven_sl": target_sl,
         "broker": broker,
         "mode": "ATOMIC_MODIFY" if atomic_success else "FRESH_PLACE",
         "details": res
     }
+
+
+def ratchet_stop_loss_to_breakeven(broker, symbol, quantity, entry_price, product="MTF", instrument_key=None, exchange=None, ltp=None):
+    """
+    Ratchets Stop-Loss up to Breakeven (+0.15% fee buffer) on the live broker.
+    Wraps ratchet_broker_stop_loss.
+    """
+    raw_be = entry_price * 1.0015
+    breakeven_sl = round_to_clean_int(raw_be)
+    return ratchet_broker_stop_loss(
+        broker=broker,
+        symbol=symbol,
+        quantity=quantity,
+        new_sl_price=breakeven_sl,
+        entry_price=entry_price,
+        product=product,
+        instrument_key=instrument_key,
+        exchange=exchange,
+        ltp=ltp
+    )
 
 
 def rearm_overnight_stop_losses(notify=True, force=False):
@@ -4100,18 +4316,32 @@ def get_all_open_positions_with_trailing_sl():
                 recommended_sl = round_to_clean_int(initial_sl)
                 action_badge = "🟡 DANGER — NEAR SL"
                 action_text = f"Danger! Price is only {dist_to_sl_pct:.1f}% away from SL ₹{initial_sl:,.0f}"
-            elif r_multiple >= 3.0 or pnl_pct >= 6.0:
-                recommended_sl = round_to_clean_int(entry_p + (risk_per_share * 1.5))
-                action_badge = "⭐ BOOK 50% & TRAIL"
-                action_text = f"Up +{r_multiple:.1f}R! Book 50% partial profit and trail SL to ₹{recommended_sl:,.0f} (+1.5R)"
-            elif r_multiple >= 1.8 or pnl_pct >= 3.0:
-                recommended_sl = round_to_clean_int(entry_p)
-                action_badge = "🟢 TRAIL TO COST"
-                action_text = f"Up +{r_multiple:.1f}R (+{pnl_pct:.1f}%)! Move SL to Breakeven ₹{recommended_sl:,.0f} (Risk-Free!)"
-            elif r_multiple >= 1.0 or pnl_pct >= 1.5:
+            elif r_multiple >= 3.0:
+                # Stage 4: Trail full 100% position along 10 EMA or +2.0R locked profit (NO PARTIAL BOOKING)
+                ema10_val = round_to_clean_int(ema10) if ema10 else 0
+                r2_sl = round_to_clean_int(entry_p + (risk_per_share * 2.0))
+                recommended_sl = max(r2_sl, ema10_val)
+                if recommended_sl >= ltp:
+                    recommended_sl = round_to_clean_int(ltp * 0.985)
+                action_badge = "🚀 RIDE 10 EMA (+2.0R TRAIL)"
+                action_text = f"Surging +{r_multiple:.1f}R! 100% runner riding 10 EMA (Trail SL: ₹{recommended_sl:,.0f}). No profit booked—letting winner run!"
+            elif r_multiple >= 2.0:
+                # Stage 3: Lock +1.0R guaranteed profit
+                recommended_sl = round_to_clean_int(entry_p + (risk_per_share * 1.0))
+                if recommended_sl >= ltp:
+                    recommended_sl = round_to_clean_int(ltp * 0.985)
+                action_badge = "🔒 LOCK +1.0R PROFIT"
+                action_text = f"Up +{r_multiple:.1f}R! Move SL to ₹{recommended_sl:,.0f} (+1.0R locked profit). 100% runner preserved!"
+            elif r_multiple >= 1.5:
+                # Stage 2: Move to Breakeven (+0.15% fee buffer)
+                recommended_sl = round_to_clean_int(entry_p * 1.0015)
+                action_badge = "🟢 RISK-FREE (BREAKEVEN)"
+                action_text = f"Up +{r_multiple:.1f}R! Move SL to Breakeven ₹{recommended_sl:,.0f} (100% Risk-Free!)"
+            elif r_multiple >= 1.0:
+                # Stage 1: Cut risk by 50%
                 recommended_sl = round_to_clean_int(entry_p - (risk_per_share * 0.5))
                 action_badge = "🔵 CUT RISK 50%"
-                action_text = f"Up +{r_multiple:.1f}R. Trail SL up to ₹{recommended_sl:,.0f} to cut max risk by 50%"
+                action_text = f"Up +{r_multiple:.1f}R. Trail SL up to ₹{recommended_sl:,.0f} (-0.5R) to cut initial risk by 50%."
             else:
                 recommended_sl = round_to_clean_int(initial_sl)
                 action_badge = "✅ HOLD — ON TRACK"
