@@ -1,0 +1,101 @@
+{
+  "sessions": [
+    {
+      "date": "2026-11-19",
+      "updated_at": "11:59:59 IST",
+      "regime": "DEFENSIVE",
+      "total_universe": 20,
+      "triggered_count": 14,
+      "qualified_count": 6,
+      "strict_count": 1,
+      "sniper_count": 26,
+      "sniper_triggered": 1,
+      "sniper_win_rate": 100.0,
+      "sniper_avg_r": 0.12,
+      "qual_stats": {
+        "winners": 3,
+        "losers": 3,
+        "runners": 2,
+        "win_rate": 50.0,
+        "total_pnl_inr": 5664,
+        "total_r": 2.3
+      },
+      "strict_stats": {
+        "winners": 1,
+        "losers": 0,
+        "win_rate": 100.0,
+        "total_pnl_inr": 4640,
+        "total_r": 2.0
+      },
+      "trades": [
+        {
+          "symbol": "WESTLIFE",
+          "tier": "💎 STRICT",
+          "outcome": "HIT_TARGET",
+          "r_mult": 2.0,
+          "pnl_inr": 4640,
+          "pnl_pct": 4.6,
+          "mfe_pct": 5.0,
+          "regime": "DEFENSIVE",
+          "is_sniper": false
+        },
+        {
+          "symbol": "UNITDSPR",
+          "tier": "⚡ ORB",
+          "outcome": "OPEN_RUNNER",
+          "r_mult": 0.67,
+          "pnl_inr": 1680,
+          "pnl_pct": 1.7,
+          "mfe_pct": 1.7,
+          "regime": "DEFENSIVE",
+          "is_sniper": false
+        },
+        {
+          "symbol": "MILKYMIST",
+          "tier": "⚡ ORB",
+          "outcome": "OPEN_RUNNER",
+          "r_mult": 0.12,
+          "pnl_inr": 323,
+          "pnl_pct": 0.3,
+          "mfe_pct": 0.6,
+          "regime": "DEFENSIVE",
+          "is_sniper": true
+        },
+        {
+          "symbol": "CEMPRO",
+          "tier": "⚡ ORB",
+          "outcome": "OPEN_RUNNER",
+          "r_mult": -0.04,
+          "pnl_inr": -73,
+          "pnl_pct": -0.1,
+          "mfe_pct": 0.3,
+          "regime": "DEFENSIVE",
+          "is_sniper": false
+        },
+        {
+          "symbol": "SUNTV",
+          "tier": "⚡ ORB",
+          "outcome": "OPEN_RUNNER",
+          "r_mult": -0.17,
+          "pnl_inr": -423,
+          "pnl_pct": -0.4,
+          "mfe_pct": 1.3,
+          "regime": "DEFENSIVE",
+          "is_sniper": false
+        },
+        {
+          "symbol": "ADANIPOWER",
+          "tier": "⚡ ORB",
+          "outcome": "OPEN_RUNNER",
+          "r_mult": -0.25,
+          "pnl_inr": -483,
+          "pnl_pct": -0.5,
+          "mfe_pct": 0.1,
+          "regime": "DEFENSIVE",
+          "is_sniper": false
+        }
+      ]
+    }
+  ],
+  "last_updated": "2026-11-19 12:13:33 IST"
+}
