@@ -1280,6 +1280,7 @@ def handle_help_command():
         "• <code>/heat</code> or <code>/riskcap</code> — Portfolio heat, open VaR & available risk capacity\n"
         "• <code>/exit &lt;SYM&gt; [50%|all]</code> — 1-Tap quick exit/square-off\n"
         "• <code>/journal</code> — Reconcile live broker fills into Journal.xlsx\n"
+        "• <code>/postmortem</code> or <code>/trades</code> — Trade Post-Mortem & Trailing Performance Cockpit\n"
         "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
         "📋 <b>Watchlist & Screening:</b>\n"
         "• <code>/theme</code> or <code>/sectors</code> — Today's sector clusters & institutional group themes\n"
@@ -2009,7 +2010,8 @@ def handle_trailing_command():
             {"text": "🔄 Refresh Trailing SL", "callback_data": "trail_refresh"}
         ],
         [
-            {"text": "📊 Live Positions", "callback_data": "pos_refresh"}
+            {"text": "📊 Live Positions", "callback_data": "pos_refresh"},
+            {"text": "📁 Post-Mortem Stats", "callback_data": "trail_postmortem"}
         ]
     ]
 
@@ -2103,6 +2105,15 @@ def handle_journal_command():
         )
     except Exception as e:
         return f"⚠️ <b>Journal Sync Notice:</b> {e}"
+
+
+def handle_postmortem_command():
+    """Renders the executive trade post-mortem and trailing performance dashboard."""
+    try:
+        from trade_post_mortem import format_post_mortem_telegram_card
+        return format_post_mortem_telegram_card()
+    except Exception as e:
+        return f"⚠️ <b>Post-Mortem Notice:</b> {e}"
 
 
 def handle_preflight_command():
@@ -2449,6 +2460,11 @@ def handle_callback_query(cq):
         text, markup = handle_trailing_command()
         edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
 
+    elif cq_data == "trail_postmortem":
+        answer_callback_query(cq_id, "Loading Trade Post-Mortem & Performance Cockpit...")
+        pm_text = handle_postmortem_command()
+        send_telegram_msg(chat_id, pm_text, thread_id=thread_id)
+
     elif cq_data == "funds_refresh":
         answer_callback_query(cq_id, "Refreshing broker funds & margins...")
         text, markup = handle_funds_command()
@@ -2782,6 +2798,8 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_exit_command(args)
     elif cmd in ("/journal", "/syncjournal", "/sync", "/eod", "/summary", "journal", "sync", "eod", "summary"):
         return handle_journal_command()
+    elif cmd in ("/postmortem", "/trades", "/perf", "/tradehistory", "postmortem", "trades", "perf"):
+        return handle_postmortem_command()
     elif cmd in ("/theme", "/themes", "/sectors", "/sector", "/clusters", "/cluster", "theme", "themes", "sectors", "sector", "clusters"):
         return handle_theme_command()
     elif cmd in ("/preflight", "/audit", "preflight", "audit"):
