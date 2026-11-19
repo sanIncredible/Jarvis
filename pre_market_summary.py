@@ -585,6 +585,166 @@ def fetch_nse_preopen_nifty() -> Optional[Dict[str, Any]]:
         return None
 
 
+PRE_OPEN_GAP_SIEVE_FILE = BASE_DIR / "pre_open_gap_sieve.json"
+
+
+def classify_pre_open_gaps(candidate_symbols: Optional[List[str]] = None) -> Dict[str, Any]:
+    """
+    09:12 AM Sniper Gap & Liquidity Bridge:
+    Inspects indicative pre-open prices & opening auction gaps for top A+ candidates.
+    Classifications:
+      • 🟢 PRIME IGNITION (-0.5% to +1.8%): Tight risk, optimal 3m breakout probability.
+      • 🔴 EXTENDED / CHASED (> +2.8%): High exhaustion gap trap risk. DO NOT BUY 3m ORB!
+      • 🟡 UNDERSHOOT (< -1.5%): Heavy opening gap down. Must reclaim PDH before considering.
+      • ⚪ CONSTRUCTIVE FLAT (+1.8% to +2.8% or -1.5% to -0.5%): Normal coiling opening.
+    """
+    if not candidate_symbols:
+        # 1. Try candidates_merged.json (3-Check Sniper Shortlist)
+        merged_file = BASE_DIR / "candidates_merged.json"
+        if merged_file.is_file():
+            try:
+                with open(merged_file, "r", encoding="utf-8") as f:
+                    m_data = json.load(f)
+                    snipers = m_data.get("sniper_candidates", [])
+                    candidate_symbols = [c["symbol"] for c in snipers if c.get("symbol")]
+            except Exception:
+                pass
+
+        # 2. Fallback to candidates.json
+        if not candidate_symbols:
+            c_file = BASE_DIR / "candidates.json"
+            if c_file.is_file():
+                try:
+                    with open(c_file, "r", encoding="utf-8") as f:
+                        c_data = json.load(f)
+                        candidate_symbols = [c["symbol"] for c in c_data.get("candidates", []) if c.get("symbol")]
+                except Exception:
+                    pass
+
+        # 3. Fallback to watchlist.txt
+        if not candidate_symbols and WATCHLIST_FILE.is_file():
+            try:
+                with open(WATCHLIST_FILE, "r", encoding="utf-8") as f:
+                    candidate_symbols = [line.strip().upper() for line in f if line.strip() and not line.startswith("#")]
+            except Exception:
+                pass
+
+    if not candidate_symbols:
+        return {"status": "no_candidates", "results": []}
+
+    target_syms = list(dict.fromkeys(candidate_symbols))[:15]  # Deduplicate, top 15 max
+    results = []
+
+    # Try bulk Upstox quote if token is active
+    cfg = load_config()
+    upstox_token = cfg.get("upstox", {}).get("access_token", "").strip()
+    quote_map = {}
+    if upstox_token:
+        try:
+            inst_keys = [f"NSE_EQ|{s}" for s in target_syms]
+            url = f"https://api.upstox.com/v2/market-quote/quotes?instrument_key={','.join(inst_keys)}"
+            headers = {"Authorization": f"Bearer {upstox_token}", "Accept": "application/json"}
+            r = requests.get(url, headers=headers, timeout=5)
+            if r.status_code == 200:
+                data = r.json().get("data", {})
+                for k, v in data.items():
+                    s = v.get("symbol") or k.split("|")[-1]
+                    ohlc = v.get("ohlc", {})
+                    ltp = float(v.get("last_price", 0.0) or 0.0)
+                    close = float(ohlc.get("close", 0.0) or ltp)
+                    open_p = float(ohlc.get("open", 0.0) or ltp)
+                    if close > 0:
+                        quote_map[s.upper()] = {
+                            "ltp": ltp,
+                            "prev_close": close,
+                            "open": open_p,
+                            "source": "Upstox Live Quote"
+                        }
+        except Exception:
+            pass
+
+    for sym in target_syms:
+        sym_u = sym.upper()
+        ltp = 0.0
+        prev_close = 0.0
+        src = "None"
+
+        if sym_u in quote_map:
+            ltp = quote_map[sym_u]["ltp"]
+            prev_close = quote_map[sym_u]["prev_close"]
+            src = quote_map[sym_u]["source"]
+        else:
+            # Yahoo Finance Fallback
+            try:
+                url_y = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym_u}.NS?interval=1d&range=2d"
+                req_y = urllib.request.Request(url_y, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req_y, timeout=4) as resp_y:
+                    d_y = json.loads(resp_y.read().decode("utf-8"))
+                    meta = d_y["chart"]["result"][0]["meta"]
+                    ltp = float(meta.get("regularMarketPrice", 0.0) or 0.0)
+                    prev_close = float(meta.get("chartPreviousClose") or meta.get("previousClose") or ltp)
+                    src = "Yahoo Finance"
+            except Exception:
+                pass
+
+        if prev_close > 0 and ltp > 0:
+            gap_pct = round(((ltp - prev_close) / prev_close) * 100.0, 2)
+            if -0.5 <= gap_pct <= 1.8:
+                zone = "IGNITION"
+                badge = "🟢 PRIME IGNITION"
+                tag = "🔥 Prime 3m ORB Setup"
+                action = "Ready for breakout above ORH / PDH"
+            elif gap_pct > 2.8:
+                zone = "EXTENDED"
+                badge = "🔴 EXTENDED / CHASED"
+                tag = "⚠️ Exhaustion Gap Trap"
+                action = "DO NOT BUY 3m Breakout! Wait for 30m base / VWAP test"
+            elif gap_pct < -1.5:
+                zone = "UNDERSHOOT"
+                badge = "🟡 UNDERSHOOT"
+                tag = "🛡️ Opening Under Pressure"
+                action = "Wait for reclaim of Previous Day High (PDH)"
+            else:
+                zone = "CONSTRUCTIVE"
+                badge = "⚪ CONSTRUCTIVE FLAT"
+                tag = "⚖️ Normal Range Opening"
+                action = "Watch opening 3m candle volume confirmation"
+
+            results.append({
+                "symbol": sym_u,
+                "ltp": round(ltp, 2),
+                "prev_close": round(prev_close, 2),
+                "gap_pct": gap_pct,
+                "zone": zone,
+                "badge": badge,
+                "tag": tag,
+                "action": action,
+                "source": src
+            })
+
+    # Sort results: Ignition first, then Constructive, then Undershoot, then Extended
+    zone_order = {"IGNITION": 1, "CONSTRUCTIVE": 2, "UNDERSHOOT": 3, "EXTENDED": 4}
+    results.sort(key=lambda x: (zone_order.get(x["zone"], 5), -x["gap_pct"]))
+
+    out_payload = {
+        "as_of": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
+        "total_scanned": len(results),
+        "ignition_count": sum(1 for r in results if r["zone"] == "IGNITION"),
+        "extended_count": sum(1 for r in results if r["zone"] == "EXTENDED"),
+        "undershoot_count": sum(1 for r in results if r["zone"] == "UNDERSHOOT"),
+        "constructive_count": sum(1 for r in results if r["zone"] == "CONSTRUCTIVE"),
+        "results": results
+    }
+
+    try:
+        with open(PRE_OPEN_GAP_SIEVE_FILE, "w", encoding="utf-8") as f:
+            json.dump(out_payload, f, indent=2)
+    except Exception as ex_w:
+        print(f"Notice writing pre_open_gap_sieve.json: {ex_w}")
+
+    return out_payload
+
+
 def get_watchlist_count() -> int:
     """Returns the number of active symbols in watchlist.txt."""
     if not WATCHLIST_FILE.is_file():
@@ -692,6 +852,29 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
     if preopen_data and preopen_data.get("top_gappers"):
         gap_strs = [f"{g['symbol']} (+{g['pChange']:.1f}%)" for g in preopen_data["top_gappers"]]
         lines.append(f"⚡ <b>09:08 Pre-Open Gappers:</b> {', '.join(gap_strs)}")
+
+    # 09:12 AM Sniper Gap & Liquidity Bridge
+    gap_sieve = classify_pre_open_gaps()
+    if gap_sieve and gap_sieve.get("results"):
+        lines.append("")
+        lines.append("🎯 <b>09:12 AM SNIPER GAP & LIQUIDITY BRIDGE:</b>")
+        ign = [r for r in gap_sieve["results"] if r["zone"] == "IGNITION"]
+        ext = [r for r in gap_sieve["results"] if r["zone"] == "EXTENDED"]
+        und = [r for r in gap_sieve["results"] if r["zone"] == "UNDERSHOOT"]
+        con = [r for r in gap_sieve["results"] if r["zone"] == "CONSTRUCTIVE"]
+
+        if ign:
+            ign_strs = [f"<b>{r['symbol']}</b> ({r['gap_pct']:+.1f}%)" for r in ign[:4]]
+            lines.append(f"• 🟢 <b>Prime Ignition (-0.5% to +1.8%):</b> {', '.join(ign_strs)} — <i>Ready for 3m ORB</i>")
+        if ext:
+            ext_strs = [f"<b>{r['symbol']}</b> ({r['gap_pct']:+.1f}%)" for r in ext[:3]]
+            lines.append(f"• 🔴 <b>Extended / Do Not Chase (>+2.8%):</b> {', '.join(ext_strs)} — <i>Wait for 30m base / VWAP</i>")
+        if und:
+            und_strs = [f"<b>{r['symbol']}</b> ({r['gap_pct']:+.1f}%)" for r in und[:3]]
+            lines.append(f"• 🟡 <b>Undershoot (&lt;-1.5%):</b> {', '.join(und_strs)} — <i>Wait for PDH reclaim</i>")
+        if con and not ign and not ext:
+            con_strs = [f"<b>{r['symbol']}</b> ({r['gap_pct']:+.1f}%)" for r in con[:4]]
+            lines.append(f"• ⚪ <b>Constructive Flat:</b> {', '.join(con_strs)} — <i>Watch volume at open</i>")
 
     vix_item = next((idx for idx in indices_results if idx["name"] == "India VIX"), None)
     if vix_item and vix_item["ltp"] > 0:
@@ -953,6 +1136,19 @@ def send_telegram_alert(msg_html: str, config: Dict[str, Any]) -> Tuple[bool, st
 
 
 def main():
+    if "--pre-open-sieve" in sys.argv or "--gap-sieve" in sys.argv:
+        print("=" * 65)
+        print("🎯 JARVIS 09:12 AM SNIPER GAP & LIQUIDITY SIEVE")
+        print("=" * 65)
+        res = classify_pre_open_gaps()
+        print(f"Scanned: {res.get('total_scanned')} candidates")
+        print(f"Prime Ignition (🟢): {res.get('ignition_count')}")
+        print(f"Extended Trap (🔴): {res.get('extended_count')}")
+        print(f"Undershoot (🟡): {res.get('undershoot_count')}")
+        for r in res.get("results", []):
+            print(f"  • {r['symbol']}: {r['gap_pct']:+.2f}% | {r['badge']} -> {r['action']}")
+        return
+
     force_run = "--force" in sys.argv or "--test" in sys.argv
     now_dt = datetime.now()
     cfg = load_config()
