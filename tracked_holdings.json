@@ -58,35 +58,5 @@
     "target": 301.0,
     "entry_date": "2026-11-16",
     "notes": "Zerodha CNC Holding"
-  },
-  "SAGILITY": {
-    "broker": "UPSTOX",
-    "product": "MTF",
-    "qty": 1001,
-    "entry_price": 45.26,
-    "sl": 44.0,
-    "target": 48.0,
-    "entry_date": "2026-11-18",
-    "notes": "Upstox MTF Holding"
-  },
-  "DRREDDY": {
-    "broker": "UPSTOX",
-    "product": "CNC",
-    "qty": 40,
-    "entry_price": 1387.58,
-    "sl": 1367.0,
-    "target": 1457.0,
-    "entry_date": "2026-11-18",
-    "notes": "Upstox CNC Holding"
-  },
-  "NIFTY-DEC2026-25000-PE": {
-    "broker": "UPSTOX",
-    "product": "CNC",
-    "qty": 65,
-    "entry_price": 283.35,
-    "sl": 279.0,
-    "target": 298.0,
-    "entry_date": "2026-11-18",
-    "notes": "Upstox PE Protective Hedge"
   }
 }
