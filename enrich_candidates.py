@@ -272,6 +272,8 @@ def sync_qm_coils_to_ems(cache: Dict[str, Any]) -> None:
         for c in all_cands:
             sym = c.get("symbol", "")
             bars = cache.get(sym)
+            if c.get("ltp") is None and bars and len(bars) > 0:
+                c["ltp"] = round(float(bars[-1][0]), 2)
             is_qm, details = evaluate_qm_coil(sym, bars)
             c["is_qm_coil"] = is_qm
             c["qm_details"] = details
@@ -283,6 +285,8 @@ def sync_qm_coils_to_ems(cache: Dict[str, Any]) -> None:
             for c in ems_data.get(k, []):
                 sym = c.get("symbol", "")
                 bars = cache.get(sym)
+                if c.get("ltp") is None and bars and len(bars) > 0:
+                    c["ltp"] = round(float(bars[-1][0]), 2)
                 is_qm, details = evaluate_qm_coil(sym, bars)
                 c["is_qm_coil"] = is_qm
                 c["qm_details"] = details
@@ -609,6 +613,10 @@ def merge_candidates() -> Dict[str, Any]:
     for c in merged:
         sym = c.get("symbol", "")
         bars = ohlcv_cache.get(sym)
+        if c.get("ltp") is None and bars and len(bars) > 0:
+            c["ltp"] = round(float(bars[-1][0]), 2)
+            if c.get("curr_close") is None:
+                c["curr_close"] = c["ltp"]
         is_qm, qm_details = evaluate_qm_coil(sym, bars, c.get("ltp"), c.get("vol"))
         c["is_qm_coil"] = is_qm
         c["qm_details"] = qm_details
