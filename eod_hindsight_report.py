@@ -576,6 +576,53 @@ def generate_hindsight_data():
         except Exception:
             pass
 
+    # -------------------------------------------------------------
+    # A+ Sniper & Candidate Universe Alpha Audit:
+    # -------------------------------------------------------------
+    sniper_audit = {
+        "total_snipers": 0,
+        "triggered_count": 0,
+        "winners": 0,
+        "losers": 0,
+        "win_rate": 0.0,
+        "total_r": 0.0,
+        "avg_r": 0.0,
+        "avg_mfe_pct": 0.0,
+        "top_performer": None,
+        "trades": []
+    }
+    candidates_merged_file = BASE_DIR / "candidates_merged.json"
+    if candidates_merged_file.is_file():
+        try:
+            with open(candidates_merged_file, "r", encoding="utf-8") as cmf:
+                c_data = json.load(cmf)
+                candidates = c_data.get("candidates", [])
+                snipers = [c for c in candidates if c.get("is_sniper") or c.get("grade") == "A+"]
+                sniper_audit["total_snipers"] = len(snipers)
+
+                for s_cand in snipers:
+                    c_sym = s_cand.get("symbol", "").upper()
+                    stk_obj = stock_map.get(c_sym)
+                    if stk_obj:
+                        sim = simulate_stock_trade(stk_obj)
+                        if sim:
+                            sniper_audit["triggered_count"] += 1
+                            sniper_audit["trades"].append(sim)
+                            if sim["pnl_inr"] > 0:
+                                sniper_audit["winners"] += 1
+                            elif sim["pnl_inr"] < 0:
+                                sniper_audit["losers"] += 1
+                            sniper_audit["total_r"] += sim["r_mult"]
+
+                if sniper_audit["trades"]:
+                    tr_cnt = len(sniper_audit["trades"])
+                    sniper_audit["win_rate"] = round((sniper_audit["winners"] / tr_cnt) * 100.0, 1)
+                    sniper_audit["avg_r"] = round(sniper_audit["total_r"] / tr_cnt, 2)
+                    sniper_audit["avg_mfe_pct"] = round(sum(t["mfe_pct"] for t in sniper_audit["trades"]) / tr_cnt, 1)
+                    sniper_audit["top_performer"] = max(sniper_audit["trades"], key=lambda x: x["r_mult"])
+        except Exception as e:
+            print(f"Notice: Sniper audit error: {e}")
+
     return {
         "updated_at": raw_data.get("updated_at", datetime.now().strftime("%H:%M:%S IST")),
         "date_str": datetime.now().strftime("%Y-%m-%d"),
@@ -591,7 +638,8 @@ def generate_hindsight_data():
         "qual_stats": qual_stats,
         "filt_stats": filt_stats,
         "strict_stats": strict_stats,
-        "overall_stats": overall_stats
+        "overall_stats": overall_stats,
+        "sniper_audit": sniper_audit
     }
 
 
@@ -681,6 +729,26 @@ def format_hindsight_report(data):
         s_bt_sign = "+" if s_bt["pnl_inr"] >= 0 else ""
         s_bt_r_s = "+" if s_bt["r_mult"] >= 0 else ""
         lines.append(f"• Best Strict Trade: <b>{s_bt['symbol']}</b> (₹{s_bt_sign}{s_bt['pnl_inr']:,} | {s_bt_sign}{s_bt['pnl_pct']:.1f}% | {s_bt_r_s}{s_bt['r_mult']:.1f}R)")
+
+    # Section 0.5: A+ Sniper Hit-Rate & Alpha Audit
+    s_aud = data.get("sniper_audit", {})
+    if s_aud.get("total_snipers", 0) > 0:
+        lines.extend([
+            "",
+            "🎯 <b>A+ SNIPER HIT-RATE & ALPHA AUDIT</b>",
+            f"• Candidates Audited: <b>{s_aud['total_snipers']} A+ Snipers</b>",
+            f"• Triggered Breakouts: <b>{s_aud['triggered_count']}</b> ({round((s_aud['triggered_count'] / max(1, s_aud['total_snipers'])) * 100)}% trigger rate)",
+        ])
+        if s_aud.get("trades"):
+            lines.extend([
+                f"• Sniper Win Rate: <b>{s_aud['win_rate']:.0f}%</b> ({s_aud['winners']}W / {s_aud['losers']}L)",
+                f"• Average Alpha: <b>{s_aud['avg_r']:+.1f}R</b> (Avg MFE: +{s_aud['avg_mfe_pct']}%)",
+            ])
+            top_p = s_aud.get("top_performer")
+            if top_p:
+                lines.append(f"• Top Sniper Alpha: <b>{top_p['symbol']}</b> (+{top_p['r_mult']:.1f}R | MFE +{top_p['mfe_pct']}%)")
+        else:
+            lines.append("• <i>Tracked snipers stayed within opening ranges (0 false-breakout losses).</i>")
 
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
