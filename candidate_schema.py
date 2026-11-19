@@ -72,6 +72,8 @@ class Candidate:
     is_blue_sky: bool = False               # within <=3.5% of 52W High / ATH
     is_coiled: bool = False                 # tight range <= 2.2% or NR4/NR7/Inside Day/VDU
     is_sniper: bool = False                 # satisfies 3-Check Rule (Momentum + Blue Sky + Contraction)
+    is_qm_coil: bool = False                # Kristjan Qullamaggie High-Tight 10/20 EMA Pullback Coil
+    qm_details: Optional[dict] = None       # Detailed metrics (gain_1m, pullback_depth, dist_ema10, rvol, rng)
     grade: str = "B"                        # "A+" for Sniper setups, "A" for Tier 1, "B" for standard
 
     def to_dict(self) -> dict:
