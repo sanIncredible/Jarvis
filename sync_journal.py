@@ -584,6 +584,21 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
             })
             print(f"🎯 CLOSED Position: {sym} | Sold {exit_qty} @ ₹{sell_vwap:,.2f} | Net P&L: ₹{net_pnl:+,.2f} ({pnl_pct:+.1f}%)")
 
+            # Record post-mortem to trade_log.csv & trade_log.json
+            try:
+                from trade_post_mortem import record_trade_post_mortem
+                record_trade_post_mortem(
+                    symbol=sym,
+                    exit_price=sell_vwap,
+                    exit_qty=exit_qty,
+                    exit_reason=None,
+                    broker="DHAN" if "DHAN" in str(ws_tj.cell(row=r_idx, column=4).value or "").upper() else "ZERODHA",
+                    notes=f"EOD Journal Reconciled: Sold {exit_qty} @ ₹{sell_vwap:,.2f}",
+                    dispatch_telegram=False
+                )
+            except Exception as ex_pm:
+                print(f"Notice logging post-mortem in sync_journal: {ex_pm}")
+
             # Clean up any remaining duplicate ghost open entries for this symbol
             if sym in existing_open and existing_open[sym]:
                 for extra_pos in existing_open[sym]:
