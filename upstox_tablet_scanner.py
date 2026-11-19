@@ -956,12 +956,20 @@ def get_instrument_key(symbol):
     return f"NSE_EQ|{sym_u}"
 
 
-def aggregate_1m_to_3m(candles_1m):
-    """Aggregates Upstox 1-minute index candles into 3-minute ORB candles."""
+def aggregate_1m_to_3m(candles_1m, target_date=None):
+    """
+    Aggregates Upstox 1-minute index candles into 3-minute ORB candles.
+    Strictly filters candles for target_date (default: today IST) to prevent
+    residual yesterday candles from contaminating morning 09:15-09:18 Bar 1 anchor calculation.
+    """
+    if target_date is None:
+        target_date = get_ist_now().strftime("%Y-%m-%d")
     buckets = {}
     candles_1m_sorted = sorted(candles_1m, key=lambda c: str(c[0]))
     for c in candles_1m_sorted:
         ts = str(c[0])
+        if target_date and not ts.startswith(target_date):
+            continue
         try:
             dt = datetime.fromisoformat(ts)
             b_min = (dt.minute // 3) * 3
@@ -1050,6 +1058,7 @@ def fetch_upstox_symbol_data(symbol, token, prefetched_quote=None):
     prev_close = None
     day_open = None
     day_low = None
+    day_high = None
     gap_pct = None
     is_gap_up = False
     pdh = None
@@ -1090,6 +1099,7 @@ def fetch_upstox_symbol_data(symbol, token, prefetched_quote=None):
             prev_close = float(ohlc.get("close", 0))
             day_open = float(ohlc.get("open", 0))
             day_low = float(ohlc.get("low", 0))
+            day_high = float(ohlc.get("high", 0))
 
             # Pine Script: isStrongStart(o, l, pc) => o > pc and l >= pc * 0.995
             if day_open > prev_close and day_low >= (prev_close * 0.995):
@@ -1110,6 +1120,8 @@ def fetch_upstox_symbol_data(symbol, token, prefetched_quote=None):
                 lows_3m = [float(c[3]) for c in candles_3m]
                 if (day_low is None or day_low == 0) and lows_3m:
                     day_low = min(lows_3m)
+                if (day_high is None or day_high == 0) and highs_3m:
+                    day_high = max(highs_3m)
 
                 parsed_candles = []
                 for c in candles_3m:
@@ -1302,6 +1314,7 @@ def fetch_upstox_symbol_data(symbol, token, prefetched_quote=None):
         "prev_close": prev_close,
         "day_open": day_open,
         "day_low": day_low,
+        "day_high": day_high if day_high else (max(highs_3m) if highs_3m else ltp),
         "gap_pct": gap_pct,
         "is_gap_up": is_gap_up,
         "pdh": pdh,
@@ -1552,6 +1565,7 @@ def fetch_fallback_data(symbol):
         pass
 
     day_low = min(l_3m) if (parsed_candles and l_3m) else (anchor_low if anchor_low else None)
+    day_high = max(h_3m) if (parsed_candles and h_3m) else (anchor_high if anchor_high else ltp)
 
     if (day_open is None or day_open == 0) and parsed_candles:
         day_open = parsed_candles[0].get("o")
@@ -1565,6 +1579,7 @@ def fetch_fallback_data(symbol):
         "prev_close": prev_close,
         "day_open": day_open,
         "day_low": day_low,
+        "day_high": day_high,
         "gap_pct": gap_pct,
         "is_gap_up": is_gap_up,
         "pdh": pdh,
@@ -3752,6 +3767,11 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                                         if abs(live_p - old_p) >= 0.05:
                                             has_price_move = True
                                         d["ltp"] = live_p
+                                        d["day_high"] = max(float(d.get("day_high") or live_p), live_p)
+                                        if d.get("day_low"):
+                                            d["day_low"] = min(float(d["day_low"]), live_p)
+                                        else:
+                                            d["day_low"] = live_p
                                         # Update 3m candle live tick if available
                                         c_3m = d.get("candles_3m") or d.get("candles") or []
                                         if c_3m:
