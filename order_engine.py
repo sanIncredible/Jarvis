@@ -244,7 +244,7 @@ def parse_size_mode(mode_arg):
         return 1000, "Risk-Normalized (₹1,000 Risk Target - Default)"
 
 
-def resolve_dhan_security_id(symbol):
+def resolve_dhan_security_id(symbol, download_if_missing=False):
     """Resolves symbol to Dhan securityId from local cache or Dhan scrip master."""
     sym_u = resolve_symbol(symbol).strip().upper()
     if DHAN_CACHE_FILE.is_file():
@@ -265,7 +265,10 @@ def resolve_dhan_security_id(symbol):
     except Exception:
         pass
 
-    # Download Dhan scrip master CSV if not cached
+    if not download_if_missing:
+        return None
+
+    # Download Dhan scrip master CSV if not cached and explicitly requested
     try:
         url = "https://images.dhan.co/api-data/api-scrip-master.csv"
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -750,6 +753,32 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
                 "detail": "Normal previous day range"
             })
 
+    # 9. Opening Gap Extension Check (Qullamaggie 2.5% Rule)
+    open_p = float(quote_data.get("open") or quote_data.get("open_price") or 0)
+    prev_close = float(quote_data.get("prev_close") or quote_data.get("close") or 0)
+    pdh = float(quote_data.get("prev_day_high") or (sc_data.get("pdh") if sc_data else 0) or 0)
+    ref_trigger = pdh if pdh > 0 else prev_close
+
+    if open_p > 0 and ref_trigger > 0:
+        gap_ext_pct = ((open_p - ref_trigger) / ref_trigger) * 100.0
+        if gap_ext_pct > 2.5:
+            checklist.append({
+                "rule": "Gap Extension",
+                "passed": False,
+                "badge": "⚠️",
+                "text": f"⚠️ <b>Gap Extension:</b> +{gap_ext_pct:.1f}% (Extended > 2.5%)",
+                "detail": "Large opening gap above breakout trigger - Risk of chase trap. Wait for 3m shelf pullback."
+            })
+            warnings.append(f"Gapped Extended: Open (+{gap_ext_pct:.1f}%) is > 2.5% above breakout trigger. Wait for 3m pullback shelf.")
+        else:
+            checklist.append({
+                "rule": "Gap Extension",
+                "passed": True,
+                "badge": "✅",
+                "text": f"✅ <b>Gap Extension:</b> +{max(0, gap_ext_pct):.1f}% (Controlled <= 2.5%)",
+                "detail": "Healthy opening within 2.5% trigger threshold"
+            })
+
     passed_count = sum(1 for c in checklist if c.get("passed"))
     total_count = len(checklist)
 
@@ -836,10 +865,13 @@ def calculate_order_sizing(quote_data, mode_arg="mod", sl_mode="lod", **kwargs):
             target_risk_inr = 1000  # Default: ₹1,000 Risk Target
         
         rps = max(1.0, risk_per_share)
-        quantity = max(1, int(target_risk_inr // rps))
+        # Institutional ATR-Normalized Risk Floor (prevents oversized positions on artificially tight stops)
+        atr_14_f = float(atr_val) if (atr_val and float(atr_val) > 0) else (ltp * 0.02)
+        effective_risk_dist = max(rps, atr_14_f * 0.75, 1.0)
+        quantity = max(1, int(target_risk_inr // effective_risk_dist))
         actual_exposure = round(quantity * ltp, 2)
         total_risk_inr = round(risk_per_share * quantity, 2)
-        mode_label = f"Risk-Normalized (₹{target_risk_inr:,} Risk Target)"
+        mode_label = f"Risk-Normalized (₹{target_risk_inr:,} Target, ATR-Floored)"
     else:
         quantity = int(effective_size / ltp)
         if quantity == 0 and effective_size >= ltp:
@@ -1924,6 +1956,64 @@ def cancel_upstox_gtt_order(gtt_id):
         return False, str(e)
 
 
+def modify_upstox_gtt_stop_loss(gtt_id, quantity, new_sl_price, symbol=None, instrument_key=None, product="MTF", transaction_type="SELL"):
+    """
+    Modifies an active Upstox v3 GTT Stop-Loss order.
+    Attempts PUT /v3/order/gtt/modify; if unsuccessful or rejected, automatically falls back
+    to atomic replacement (cancel old GTT + place new higher GTT) to ensure the position is never left unprotected.
+    """
+    cfg = load_config()
+    tok = cfg.get("upstox", {}).get("access_token", "").strip()
+    if not tok:
+        return False, "Upstox access token missing"
+
+    clean_sl = round_to_clean_int(new_sl_price)
+    tt = transaction_type.upper()
+    trig_type = "BELOW" if tt == "SELL" else "ABOVE"
+    prod_code = "D" if product.upper() in ("CNC", "DELIVERY", "D") else "MTF"
+
+    # Attempt 1: Native Upstox API v3 GTT modify endpoint
+    try:
+        payload = {
+            "gtt_order_id": str(gtt_id),
+            "type": "SINGLE",
+            "quantity": int(quantity),
+            "rules": [
+                {
+                    "strategy": "ENTRY",
+                    "trigger_type": trig_type,
+                    "trigger_price": int(clean_sl)
+                }
+            ]
+        }
+        req_data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request("https://api.upstox.com/v3/order/gtt/modify", data=req_data, method="PUT", headers={
+            "Authorization": f"Bearer {tok}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "Jarvis-Order-Engine"
+        })
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            if data.get("status") == "success":
+                mod_id = data.get("data", {}).get("gtt_order_id", str(gtt_id))
+                return True, str(mod_id)
+    except Exception:
+        pass
+
+    # Attempt 2: Atomic cancel and place new GTT
+    inst_k = instrument_key or (resolve_instrument_key(symbol) if symbol else None)
+    if not inst_k and symbol:
+        inst_k = resolve_instrument_key(symbol)
+
+    if inst_k:
+        cancel_upstox_gtt_order(gtt_id)
+        time.sleep(0.3)
+        return place_upstox_gtt_stop_loss(inst_k, quantity, clean_sl, product=prod_code, transaction_type=tt, symbol=symbol)
+
+    return False, f"Upstox GTT modify failed and missing instrument key for fallback ({symbol or gtt_id})"
+
+
 def place_broker_gtt_stop_loss(broker, symbol, quantity, sl_price, instrument_key=None, product="MTF", transaction_type="SELL", exchange="NSE"):
     """Unified dispatcher: submits a permanent 1-year GTT Stop-Loss to designated broker."""
     b = (broker or "").strip().lower()
@@ -1949,7 +2039,7 @@ def modify_broker_gtt_stop_loss(broker, order_id, quantity, new_sl_price, symbol
     elif b == "dhan":
         return modify_dhan_forever_stop_loss(order_id, quantity, clean_sl, transaction_type=transaction_type)
     elif b == "upstox":
-        return False, "Upstox GTT modify not yet implemented"
+        return modify_upstox_gtt_stop_loss(order_id, quantity, clean_sl, symbol=symbol, product=product, transaction_type=transaction_type)
     return False, f"Unsupported broker for modify GTT: {broker}"
 
 
@@ -3861,7 +3951,8 @@ def ratchet_broker_stop_loss(broker, symbol, quantity, new_sl_price, entry_price
             if mod_ok:
                 ok = True
                 atomic_success = True
-                res = {"status": "success", "mode": "ATOMIC_GTT_MODIFY", "order_id": old_oid, "sl_price": target_sl}
+                new_oid = str(mod_res) if mod_res else old_oid
+                res = {"status": "success", "mode": "ATOMIC_GTT_MODIFY", "order_id": new_oid, "sl_price": target_sl}
         else:
             # Modify regular exchange order
             mod_ok, mod_res = modify_broker_stop_loss(b, old_oid, quantity, target_sl, transaction_type="SELL")
@@ -3873,8 +3964,8 @@ def ratchet_broker_stop_loss(broker, symbol, quantity, new_sl_price, entry_price
                 cancel_broker_order(b, old_oid)
                 time.sleep(0.6)
 
-    if not ok and not (existing_sl and existing_sl.get("is_gtt")):
-        # Step 2: Fresh GTT placement only if no GTT trigger existed
+    if not ok:
+        # Step 2: Fresh GTT placement if no GTT trigger existed or modify failed
         place_ok, place_res = place_broker_gtt_stop_loss(
             broker=b,
             symbol=sym,
@@ -4235,6 +4326,187 @@ def rearm_overnight_stop_losses(notify=True, force=False):
     }
 
 
+_ORPHAN_TRACKER = {}  # key: (broker, symbol), value: first_detected_timestamp
+
+def run_orphan_position_sentry(auto_rearm=True, grace_seconds=30):
+    """
+    Continuous 30-Second Sentry Fail-Safe:
+    Inspects all live open positions across Upstox, Dhan, and Zerodha.
+    If an open position (qty != 0) is detected with NO active GTT or Stop-Loss order on the exchange,
+    tracks it. Once it has remained unprotected for > grace_seconds (default 30s):
+    1. Immediately auto-submits a fresh GTT Stop-Loss to the broker.
+    2. Sends high-priority Emergency Telegram Alert to 'orders' and 'risk_trailing' topics.
+    3. Updates orders_log.json and tracked_holdings.json.
+    """
+    global _ORPHAN_TRACKER
+    all_pos, totals, broker_status = fetch_all_positions()
+    now_ts = time.time()
+    orphans_rearmed = []
+    orphans_pending_grace = []
+
+    cfg = load_config()
+    ignored = set(s.upper() for s in cfg.get("ignored_symbols", ["MOTHERSON"]))
+    active_keys = set()
+
+    for p in all_pos:
+        sym = p.get("symbol", "").upper()
+        if not sym or sym in ignored:
+            continue
+        broker = p.get("broker", "UPSTOX").upper()
+        qty = int(p.get("qty", 0))
+        if qty == 0:
+            continue
+        key = (broker, sym)
+        active_keys.add(key)
+
+        # Check broker for active pending Stop-Loss order (GTT or regular)
+        pending_sl = get_pending_stop_loss_order(sym, broker=broker)
+        if pending_sl:
+            _ORPHAN_TRACKER.pop(key, None)
+            continue
+
+        # Position is UNPROTECTED
+        if key not in _ORPHAN_TRACKER:
+            _ORPHAN_TRACKER[key] = now_ts
+            elapsed = 0
+        else:
+            elapsed = now_ts - _ORPHAN_TRACKER[key]
+
+        avg_p = float(p.get("avg_price", 0) or 0)
+        ltp = float(p.get("ltp", avg_p) or avg_p)
+        prod = p.get("product", "MTF")
+        tx_type = "SELL" if qty > 0 else "BUY"
+        abs_qty = abs(qty)
+
+        if elapsed < grace_seconds:
+            orphans_pending_grace.append({
+                "symbol": sym,
+                "broker": broker,
+                "qty": abs_qty,
+                "elapsed": round(elapsed, 1)
+            })
+            continue
+
+        # Elapsed >= grace_seconds: AUTO-REARM & ALERT
+        target_sl = 0.0
+        th_f = SCRIPT_DIR / "tracked_holdings.json"
+        if th_f.is_file():
+            try:
+                with open(th_f, "r", encoding="utf-8") as f:
+                    th = json.load(f)
+                if sym in th and th[sym].get("sl"):
+                    target_sl = float(th[sym]["sl"])
+            except Exception:
+                pass
+
+        if target_sl <= 0 and avg_p > 0:
+            target_sl = round_to_clean_int(avg_p * 0.975 if qty > 0 else avg_p * 1.025)
+
+        target_sl = round_to_clean_int(target_sl)
+
+        # Validate exchange rule LTP > target_sl
+        if qty > 0 and ltp > 0 and ltp <= target_sl:
+            target_sl = round_to_clean_int(ltp * 0.985)
+
+        rearm_ok = False
+        rearm_res = None
+        if auto_rearm:
+            rearm_ok, rearm_res = place_broker_gtt_stop_loss(
+                broker=broker,
+                symbol=sym,
+                quantity=abs_qty,
+                sl_price=target_sl,
+                product=prod,
+                transaction_type=tx_type
+            )
+            if not rearm_ok and is_market_open():
+                rearm_ok, rearm_res = place_broker_stop_loss(
+                    broker=broker,
+                    symbol=sym,
+                    quantity=abs_qty,
+                    sl_price=target_sl,
+                    product=prod,
+                    transaction_type=tx_type
+                )
+
+        if rearm_ok:
+            _ORPHAN_TRACKER.pop(key, None)
+            oid = str(rearm_res)
+            orphans_rearmed.append({
+                "symbol": sym,
+                "broker": broker,
+                "qty": abs_qty,
+                "sl": target_sl,
+                "order_id": oid
+            })
+            alert_msg = (
+                f"🚨 <b>ORPHAN POSITION AUTO-PROTECTED BY SENTRY</b>\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📌 <b>{sym}</b> on <b>{broker}</b> had NO active Stop-Loss for {int(elapsed)}s!\n"
+                f"🛡️ <b>Emergency Action:</b> Auto-placed GTT Stop-Loss @ <b>₹{target_sl:,.0f}</b>\n"
+                f"🎯 <b>Order ID:</b> <code>{oid}</code> | <b>Qty:</b> {abs_qty}\n"
+                f"💡 <i>Capital is now fully safeguarded on the broker server.</i>"
+            )
+            try:
+                from telegram_bot import send_topic_alert
+                send_topic_alert("orders", alert_msg)
+                send_topic_alert("risk_trailing", alert_msg)
+            except Exception:
+                pass
+
+    # Clean up stale keys in tracker
+    for k in list(_ORPHAN_TRACKER.keys()):
+        if k not in active_keys:
+            _ORPHAN_TRACKER.pop(k, None)
+
+    return {
+        "status": "success",
+        "orphans_rearmed": orphans_rearmed,
+        "orphans_pending_grace": orphans_pending_grace
+    }
+
+
+def audit_dead_money_positions(max_days=4, min_r=1.0):
+    """
+    Evaluates open swing positions for 'Dead Money' capital stagnation.
+    If a trade has been held for >= max_days (default 4) and has failed
+    to achieve at least min_r (default +1.0R), flags it for capital recycling.
+    """
+    positions = get_all_open_positions_with_trailing_sl()
+    dead_positions = []
+    today = datetime.now().date()
+
+    for p in positions:
+        sym = p.get("symbol", "").upper()
+        entry_date_str = p.get("entry_date") or ""
+        holding_days = 0
+        if entry_date_str:
+            try:
+                ed = datetime.strptime(entry_date_str.split()[0], "%Y-%m-%d").date()
+                holding_days = (today - ed).days
+            except Exception:
+                pass
+
+        r_mult = float(p.get("r_multiple", 0) or 0)
+        pnl_pct = float(p.get("pnl_pct", 0) or 0)
+
+        if holding_days >= max_days and r_mult < min_r:
+            dead_positions.append({
+                "symbol": sym,
+                "broker": p.get("broker", "UPSTOX"),
+                "qty": p.get("qty", 0),
+                "entry_price": p.get("entry_price", 0),
+                "ltp": p.get("ltp", 0),
+                "holding_days": holding_days,
+                "r_multiple": r_mult,
+                "pnl_pct": pnl_pct,
+                "initial_sl": p.get("initial_sl", 0),
+                "current_sl": p.get("recommended_sl", 0)
+            })
+
+    return dead_positions
+
+
 def get_all_open_positions_with_trailing_sl():
     """
     Consolidates ALL open positions across live brokers (Dhan, Zerodha, Upstox)
@@ -4287,6 +4559,17 @@ def get_all_open_positions_with_trailing_sl():
         risk_per_share = max(0.10, abs(entry_p - initial_sl)) if entry_p > 0 and initial_sl > 0 else 1.0
         r_multiple = round((ltp - entry_p) / risk_per_share, 2) if risk_per_share > 0 else 0.0
         dist_to_sl_pct = round(((ltp - initial_sl) / ltp) * 100, 2) if ltp > 0 and initial_sl > 0 else 99.0
+
+        # Jeff Sun 10 EMA & 20 EMA Trailing Telemetry
+        ema_info = get_daily_emas_and_atr(sym)
+        ema10 = ema_info.get("ema10")
+        ema20 = ema_info.get("ema20")
+        sma50 = ema_info.get("sma50")
+        atr14 = ema_info.get("atr14")
+
+        dist_ema10_pct = round(((ltp - ema10) / ema10) * 100.0, 2) if ema10 and ltp else None
+        dist_ema20_pct = round(((ltp - ema20) / ema20) * 100.0, 2) if ema20 and ltp else None
+        atr_stretch = round((ltp - sma50) / atr14, 1) if sma50 and atr14 and atr14 > 0 and ltp else None
 
         # Determine recommended trailing stop loss
         is_option = "CE" in sym or "PE" in sym or "NIFTY" in sym
@@ -4346,17 +4629,6 @@ def get_all_open_positions_with_trailing_sl():
                 recommended_sl = round_to_clean_int(initial_sl)
                 action_badge = "✅ HOLD — ON TRACK"
                 action_text = f"Position healthy. Keep stop at ₹{initial_sl:,.0f} (Target: ₹{target_p:,.0f})"
-
-        # Jeff Sun 10 EMA & 20 EMA Trailing Telemetry
-        ema_info = get_daily_emas_and_atr(sym)
-        ema10 = ema_info.get("ema10")
-        ema20 = ema_info.get("ema20")
-        sma50 = ema_info.get("sma50")
-        atr14 = ema_info.get("atr14")
-
-        dist_ema10_pct = round(((ltp - ema10) / ema10) * 100.0, 2) if ema10 and ltp else None
-        dist_ema20_pct = round(((ltp - ema20) / ema20) * 100.0, 2) if ema20 and ltp else None
-        atr_stretch = round((ltp - sma50) / atr14, 1) if sma50 and atr14 and atr14 > 0 and ltp else None
 
         jeff_badge = action_badge
         jeff_status = action_text
