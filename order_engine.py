@@ -849,9 +849,9 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
             })
 
     # 9. Opening Gap Extension Check (Qullamaggie 2.5% Rule)
-    open_p = float(quote_data.get("open") or quote_data.get("open_price") or 0)
-    prev_close = float(quote_data.get("prev_close") or quote_data.get("close") or 0)
-    pdh = float(quote_data.get("prev_day_high") or (sc_data.get("pdh") if sc_data else 0) or 0)
+    open_p = float((quote_data or {}).get("open") or (quote_data or {}).get("open_price") or 0)
+    prev_close = float((quote_data or {}).get("prev_close") or (quote_data or {}).get("close") or 0)
+    pdh = float((quote_data or {}).get("prev_day_high") or (sc_data.get("pdh") if sc_data else 0) or 0)
     ref_trigger = pdh if pdh > 0 else prev_close
 
     if open_p > 0 and ref_trigger > 0:
@@ -875,7 +875,7 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
             })
 
     # 10. Candle Range Quality / Upper Wick Trap Check
-    day_high_val = float(quote_data.get("day_high") or (calc_data or {}).get("day_high", 0) or 0)
+    day_high_val = float((quote_data or {}).get("day_high") or (calc_data or {}).get("day_high", 0) or 0)
     day_low_val = float(day_low or 0)
     if day_high_val > day_low_val and ltp > 0:
         total_candle_range = day_high_val - day_low_val
@@ -944,6 +944,8 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
         "warnings": warnings,
         "passed_count": passed_count,
         "total_count": total_count,
+        "passed_rules": passed_count,
+        "total_rules": total_count,
         "is_all_passed": len(warnings) == 0,
         "scanner_signal": sc_data.get("signal") if sc_data else None
     }
