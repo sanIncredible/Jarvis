@@ -1282,6 +1282,7 @@ def handle_help_command():
         "• <code>/journal</code> — Reconcile live broker fills into Journal.xlsx\n"
         "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
         "📋 <b>Watchlist & Screening:</b>\n"
+        "• <code>/theme</code> or <code>/sectors</code> — Today's sector clusters & institutional group themes\n"
         "• <code>/candidates</code> or <code>/screen</code> — Scan Nifty 500 swing setups (saves to candidates.txt)\n"
         "• <code>/qm</code> or <code>/coils</code> — 🌀 Kristjan Qullamaggie High Tight Flags & 10/20 EMA Pullback Coils\n"
         "• <code>/momo90</code> or <code>/broadmomo</code> — Breadth Ledger 90D/30% Candidates (1-tap add)\n"
@@ -2032,6 +2033,56 @@ def handle_trailing_command():
     return message_text, reply_markup
 
 
+def handle_theme_command():
+    """Displays today's active sector breakout map and institutional clusters."""
+    try:
+        from upstox_tablet_scanner import get_all_theme_breakouts
+        themes = get_all_theme_breakouts()
+    except Exception:
+        themes = {}
+
+    now_str = get_ist_now().strftime("%d %b %H:%M IST")
+
+    lines = [
+        "🏢 <b>JARVIS SECTOR BREADTH & THEME CLUSTERS</b>",
+        f"🕒 <i>{now_str}</i>",
+        "━━━━━━━━━━━━━━━━━━━━━━"
+    ]
+
+    if not themes:
+        try:
+            with open("data.json", "r", encoding="utf-8") as df:
+                d = json.load(df)
+            themes = d.get("active_themes", {})
+        except Exception:
+            themes = {}
+
+    if not themes:
+        lines.append("💤 <b>No Theme Breakouts Active Today Yet</b>")
+        lines.append("<i>Sector clusters are mapped continuously in real-time as 3m ORB triggers fire.</i>\n")
+        lines.append("💡 <i>Themes with ≥3 simultaneous breakouts have >75% multi-day follow-through.</i>")
+    else:
+        sorted_themes = sorted(themes.items(), key=lambda x: len(x[1]), reverse=True)
+        for theme_name, stock_list in sorted_themes:
+            cnt = len(stock_list)
+            from order_engine import resolve_sector_theme
+            sample_sym = stock_list[0].get("symbol", "")
+            icon = resolve_sector_theme(sample_sym).get("icon", "🏢")
+
+            badge = "🔥 <b>INSTITUTIONAL CLUSTER</b>" if cnt >= 3 else ("⚡ <b>DUAL RUNNER</b>" if cnt == 2 else "⚪ <b>SINGLE RUNNER</b>")
+            lines.append(f"{icon} <b>{theme_name} ({cnt} Breakouts)</b> • {badge}")
+            sym_strs = []
+            for s in stock_list:
+                sym_strs.append(f"<code>{s['symbol']}</code> (₹{float(s['ltp']):,.1f})")
+            lines.append(f"  └ " + ", ".join(sym_strs))
+            lines.append("")
+
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append("💡 <b>Trading Edge:</b> <i>Focus capital on themes with 3+ breakouts—they have institutional sponsorship!</i>")
+
+    return "\n".join(lines)
+
+
 def handle_journal_command():
     """
     Triggers manual sync of broker executions and live positions into Journal.xlsx,
@@ -2731,6 +2782,8 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_exit_command(args)
     elif cmd in ("/journal", "/syncjournal", "/sync", "/eod", "/summary", "journal", "sync", "eod", "summary"):
         return handle_journal_command()
+    elif cmd in ("/theme", "/themes", "/sectors", "/sector", "/clusters", "/cluster", "theme", "themes", "sectors", "sector", "clusters"):
+        return handle_theme_command()
     elif cmd in ("/preflight", "/audit", "preflight", "audit"):
         return handle_preflight_command()
     elif cmd in ("/hindsight", "/sim", "/simulation", "hindsight", "sim", "/hindsght", "hindsght", "/hindsite", "hindsite", "/strict", "strict"):
