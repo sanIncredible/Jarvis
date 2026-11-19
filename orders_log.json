@@ -192,7 +192,7 @@
     "status": "REARMED",
     "notes": "Overnight Auto-Rearm (Default 2.5% SL)",
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-19 11:46:32"
+    "ratcheted_at": "2026-11-19 11:52:30"
   },
   {
     "timestamp": "2026-11-08 23:51:10 IST",
@@ -276,7 +276,7 @@
     "status": "PLACED",
     "notes": "Zerodha CNC Swing Holding",
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-19 11:45:23",
+    "ratcheted_at": "2026-11-19 11:52:55",
     "sl_order_id": "343476050",
     "sl_status": "PENDING"
   },
@@ -312,7 +312,7 @@
     "status": "PLACED",
     "notes": "Zerodha CNC Swing Holding",
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-19 11:45:26",
+    "ratcheted_at": "2026-11-19 11:52:57",
     "sl_order_id": "342986108",
     "sl_status": "PENDING"
   },
