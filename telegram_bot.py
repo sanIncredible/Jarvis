@@ -1193,6 +1193,8 @@ def handle_help_command():
         "• <code>/funds</code> or <code>/margin</code> — Live multi-broker available cash & MTF margin\n"
         "• <code>/trail</code> or <code>/sl</code> — Trailing SL & Risk Breakeven recommendations\n"
         "• <code>/gtt</code> or <code>/rearm</code> — Permanent 1-Year GTT Stop-Loss audit & protection\n"
+        "• <code>/killswitch</code> — Daily drawdown circuit breaker status & reset\n"
+        "• <code>/heat</code> or <code>/riskcap</code> — Portfolio heat, open VaR & available risk capacity\n"
         "• <code>/exit &lt;SYM&gt; [50%|all]</code> — 1-Tap quick exit/square-off\n"
         "• <code>/journal</code> — Reconcile live broker fills into Journal.xlsx\n"
         "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
@@ -1313,6 +1315,19 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
     if not quote_data:
         return f"❌ <b>Quote Failed for {symbol}:</b>\n{err}", None
 
+    # P7 Daily Drawdown Kill Switch Pre-Flight Guard
+    from order_engine import check_daily_kill_switch, check_portfolio_risk_capacity
+    is_killed, kill_reason = check_daily_kill_switch()
+    if is_killed:
+        return (
+            f"🚨 <b>TRADING LOCKED BY KILL SWITCH</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"⚠️ <b>Reason:</b> {kill_reason}\n\n"
+            "<i>All new BUY executions are locked for the day to preserve capital.\n"
+            "Existing runners and stop-loss trailing remain active.</i>",
+            None
+        )
+
     calc = calculate_order_sizing(quote_data, mode_arg=mode, sl_mode=sl_mode)
     if calc["quantity"] <= 0:
         return (
@@ -1321,6 +1336,12 @@ def build_buy_preview(symbol, mode, sl_mode, broker):
             f"Cannot buy even 1 share with {calc['mode_label']} mode.",
             None
         )
+
+    # P4 Portfolio Heat Sieve Guard
+    heat_ok, heat_info = check_portfolio_risk_capacity(symbol=symbol, additional_risk_inr=calc.get("total_risk_inr", 1000))
+    heat_warning = ""
+    if not heat_ok:
+        heat_warning = f"\n⚠️ <b>PORTFOLIO HEAT CEILING:</b>\n<i>{heat_info}</i>\n"
 
     b_label = "Upstox MTF" if broker == "upstox" else ("DhanHQ MTF" if broker == "dhan" else "Zerodha CNC (Delivery)")
     regime_warning = f"\n{calc['regime_note']}" if calc.get("regime_note") else ""
@@ -2651,6 +2672,44 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
             f"<b>Topic Mappings:</b>\n{topic_lines}\n\n"
             "<i>Commands & alerts automatically route to their dedicated topic threads!</i>"
         )
+    elif cmd in ("/killswitch", "/circuit", "/breaker", "killswitch"):
+        from order_engine import load_kill_switch_state, reset_daily_kill_switch, get_daily_realized_pnl
+        if "reset" in args.lower():
+            ok, msg = reset_daily_kill_switch(manual=True)
+            return f"🛡️ <b>KILL SWITCH OVERRIDE:</b>\n{msg}"
+        st = load_kill_switch_state()
+        pnl = get_daily_realized_pnl()
+        limit = float(st.get("max_daily_loss_limit", 4000.0))
+        status_badge = "🚨 <b>TRIPPED (TRADING LOCKED)</b>" if st.get("is_tripped") else "🟢 <b>NORMAL (ACTIVE)</b>"
+        return (
+            "🛡️ <b>DAILY DRAWDOWN KILL SWITCH STATUS</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"• <b>Status:</b> {status_badge}\n"
+            f"• <b>Realized P&L Today:</b> ₹{pnl:+,.2f}\n"
+            f"• <b>Max Daily Loss Limit:</b> -₹{limit:,.0f}\n"
+            f"• <b>Session Date:</b> {st.get('date')}\n"
+            f"• <b>Tripped At:</b> {st.get('tripped_at') or 'N/A'}\n"
+            f"• <b>Reason:</b> {st.get('reason') or 'No drawdown breach'}\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "💡 <i>To manually reset and resume trading:</i> <code>/killswitch reset</code>"
+        )
+    elif cmd in ("/heat", "/riskcapacity", "/riskcap", "/capacity", "heat"):
+        from order_engine import check_portfolio_risk_capacity
+        ok, data = check_portfolio_risk_capacity()
+        if isinstance(data, dict):
+            status_badge = "🟢 <b>WITHIN LIMITS</b>" if ok else "⚠️ <b>CAPACITY SATURATED</b>"
+            return (
+                "🛡️ <b>PORTFOLIO HEAT & RISK CAPACITY</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"• <b>Status:</b> {status_badge}\n"
+                f"• <b>Active Positions:</b> {data.get('open_count')}/{data.get('max_slots')} slots\n"
+                f"• <b>Open Value-at-Risk (VaR):</b> ₹{data.get('total_var', 0):,.0f} / ₹6,000 max\n"
+                f"• <b>Remaining Risk Capacity:</b> ₹{data.get('headroom_var', 0):,.0f}\n"
+                f"• <b>Regime Mode:</b> {'DEFENSIVE (3 slots)' if data.get('is_defensive') else 'NORMAL (5 slots)'}\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 <i>Trades that ratchet to Breakeven (+0.15%) carry ₹0 VaR and free capacity automatically!</i>"
+            )
+        return f"Portfolio Capacity: {data}"
     elif cmd == "/settopic":
         if not args or len(args.split()) < 2:
             return "<b>Usage:</b> <code>/settopic &lt;topic_name&gt; &lt;thread_id&gt;</code>\n<i>e.g. /settopic orb_signals 8</i>"
@@ -2778,6 +2837,7 @@ def run_telegram_bot_loop(stop_event=None):
 # ---------------------------------------------------------
 _sent_trailing_alerts = {}
 _preflight_sent_dates = set()  # (symbol, alert_type) -> timestamp
+_rearm_sent_dates = set()      # date_str -> timestamp
 
 
 def run_trailing_surveillance_worker():
@@ -2851,51 +2911,94 @@ def run_trailing_surveillance_worker():
                                 send_topic_alert("risk_trailing", alert_msg, reply_markup={"inline_keyboard": kb})
                                 _sent_trailing_alerts[alert_key] = now_ts
 
-                        # 2. Super Winner (+3R or +6% gain) -> Book 50% AND ensure Breakeven Ratchet is applied
-                        elif (r_mult >= 3.0 or pnl_pct >= 6.0) and r_mult > 0:
-                            # Autonomous check: ensure SL is at least at Breakeven
-                            raw_be = entry_p * 1.0015
-                            from order_engine import round_to_clean_int
-                            breakeven_sl = round_to_clean_int(raw_be)
-                            if sl < breakeven_sl and entry_p > 0 and sl > 0:
-                                ratchet_key = (sym, "AUTO_BREAKEVEN")
+                        # 2. Stage 4: Super Runner (+3.0R gain) -> Auto-Trail to +2.0R / 10 EMA (NO PARTIAL BOOKING)
+                        elif r_mult >= 3.0 and entry_p > 0:
+                            from order_engine import round_to_clean_int, ratchet_broker_stop_loss
+                            ema10_val = round_to_clean_int(p.get("ema10") or 0)
+                            rps_val = max(0.1, abs(entry_p - sl)) if sl > 0 else (entry_p * 0.02)
+                            r2_sl = round_to_clean_int(entry_p + (rps_val * 2.0))
+                            target_trail_sl = max(r2_sl, ema10_val)
+                            if target_trail_sl >= ltp:
+                                target_trail_sl = round_to_clean_int(ltp * 0.985)
+
+                            if sl < target_trail_sl and target_trail_sl > 0:
+                                ratchet_key = (sym, "AUTO_TRAIL_3R")
                                 if now_ts - _sent_trailing_alerts.get(ratchet_key, 0) > 1800:
                                     _sent_trailing_alerts[ratchet_key] = now_ts
-                                    from order_engine import ratchet_stop_loss_to_breakeven
-                                    ratchet_stop_loss_to_breakeven(
+                                    ratchet_broker_stop_loss(
                                         broker=broker,
                                         symbol=sym,
                                         quantity=qty,
+                                        new_sl_price=target_trail_sl,
                                         entry_price=entry_p,
                                         product=prod,
                                         exchange=p.get("exchange", "NSE"),
-                                        ltp=p.get("ltp")
+                                        ltp=ltp
                                     )
 
-                            alert_key = (sym, "BOOK_3R")
+                            alert_key = (sym, "RUNNER_3R")
                             last_sent = _sent_trailing_alerts.get(alert_key, 0)
-                            if now_ts - last_sent > 3600:  # 1 hour cooldown
-                                half_qty = max(1, qty // 2)
+                            if now_ts - last_sent > 3600:
                                 alert_msg = (
-                                    f"⭐ <b>SUPER WINNER: {sym} SURGES +{r_mult:.1f}R!</b>\n"
+                                    f"🚀 <b>SUPER RUNNER: {sym} SURGES +{r_mult:.1f}R!</b>\n"
                                     "━━━━━━━━━━━━━━━━━━━━━━\n"
-                                    f"📌 <b>Symbol:</b> {sym} ({broker} • {prod})\n"
+                                    f"📌 <b>Symbol:</b> {sym} ({broker} • {prod} • {qty} shs)\n"
                                     f"📈 <b>LTP:</b> ₹{ltp:,.2f} (Entry: ₹{entry_p:,.2f})\n"
                                     f"🚀 <b>Gain:</b> <b>+{pnl_pct:.1f}%</b> (+{r_mult:.1f}R)\n"
                                     f"💰 <b>Unrealized P&L:</b> ₹{pnl:+,.2f}\n"
-                                    f"🎯 <b>Guidance:</b> Book 50% profit now to lock in gains, trail rest to ₹{rec_sl:,.0f}!\n"
+                                    f"🔒 <b>Broker Stop Trailed:</b> ₹{sl:,.0f} ➔ <b>₹{target_trail_sl:,.0f}</b>\n"
                                     "━━━━━━━━━━━━━━━━━━━━━━\n"
-                                    "💡 <i>Tap below to execute partial exit immediately:</i>"
+                                    "🎉 <b>100% Position Trailing Along 10 EMA!</b>\n"
+                                    "• Zero partial profit booked—letting compound runner ride!\n"
+                                    f"• <b>Trailing Guide:</b> Riding 10 EMA. Hold runner until daily close under 10 EMA."
                                 )
                                 kb = [
-                                    [{"text": f"🟡 Book 50% ({half_qty} shs)", "callback_data": f"ex_x:{b_code}:{sym}:half"}],
-                                    [{"text": "🎯 Trailing Cockpit", "callback_data": "trail_refresh"}, {"text": f"🔴 Exit 100%", "callback_data": f"ex_p:{b_code}:{sym}"}]
+                                    [{"text": "🎯 Trailing Cockpit", "callback_data": "trail_refresh"}, {"text": f"🔴 Exit Full Position", "callback_data": f"ex_p:{b_code}:{sym}"}]
                                 ]
                                 send_topic_alert("risk_trailing", alert_msg, reply_markup={"inline_keyboard": kb})
                                 _sent_trailing_alerts[alert_key] = now_ts
 
-                        # 3. JEFF SUN AUTOMATED BREAKEVEN RATCHET (+1.5R or +2.5% Gain)
-                        elif (r_mult >= 1.5 or pnl_pct >= 2.5) and r_mult > 0 and entry_p > 0:
+                        # 3. Stage 3: Milestone (+2.0R gain) -> Lock +1.0R Guaranteed Profit (NO PARTIAL BOOKING)
+                        elif r_mult >= 2.0 and entry_p > 0:
+                            from order_engine import round_to_clean_int, ratchet_broker_stop_loss
+                            rps_val = max(0.1, abs(entry_p - sl)) if sl > 0 else (entry_p * 0.02)
+                            target_lock_sl = round_to_clean_int(entry_p + (rps_val * 1.0))
+                            if target_lock_sl >= ltp:
+                                target_lock_sl = round_to_clean_int(ltp * 0.985)
+
+                            if sl < target_lock_sl and target_lock_sl > 0:
+                                ratchet_key = (sym, "AUTO_TRAIL_2R")
+                                if now_ts - _sent_trailing_alerts.get(ratchet_key, 0) > 1800:
+                                    _sent_trailing_alerts[ratchet_key] = now_ts
+                                    r_ok, r_res = ratchet_broker_stop_loss(
+                                        broker=broker,
+                                        symbol=sym,
+                                        quantity=qty,
+                                        new_sl_price=target_lock_sl,
+                                        entry_price=entry_p,
+                                        product=prod,
+                                        exchange=p.get("exchange", "NSE"),
+                                        ltp=ltp
+                                    )
+                                    if r_ok:
+                                        alert_msg = (
+                                            f"🔒 <b>AUTO-TRAIL: {sym} LOCKED AT +1.0R PROFIT!</b>\n"
+                                            "━━━━━━━━━━━━━━━━━━━━━━\n"
+                                            f"🚀 <b>Milestone:</b> <b>+{r_mult:.1f}R (+{pnl_pct:.1f}%)</b>\n"
+                                            f"📌 <b>Symbol:</b> {sym} ({broker} • {prod} • {qty} shs)\n"
+                                            f"📈 <b>LTP:</b> ₹{ltp:,.2f} (Entry: ₹{entry_p:,.2f})\n"
+                                            f"🔒 <b>Broker Stop Ratcheted:</b> ₹{sl:,.0f} ➔ <b>₹{target_lock_sl:,.0f} (+1.0R)</b>\n"
+                                            "━━━━━━━━━━━━━━━━━━━━━━\n"
+                                            "💰 <b>Guaranteed Profit: Minimum +1.0R locked on exchange!</b>\n"
+                                            "• 100% full position preserved. Next milestone: +3.0R."
+                                        )
+                                        kb = [
+                                            [{"text": "🎯 Trailing Cockpit", "callback_data": "trail_refresh"}, {"text": f"🔴 Exit {sym}", "callback_data": f"ex_p:{b_code}:{sym}"}]
+                                        ]
+                                        send_topic_alert("risk_trailing", alert_msg, reply_markup={"inline_keyboard": kb})
+
+                        # 4. Stage 2: Breakeven Ratchet (+1.5R Gain)
+                        elif r_mult >= 1.5 and entry_p > 0:
                             ratchet_key = (sym, "AUTO_BREAKEVEN")
                             last_sent = _sent_trailing_alerts.get(ratchet_key, 0)
                             if (now_ts - last_sent > 1800) and sl > 0:
@@ -2903,7 +3006,6 @@ def run_trailing_surveillance_worker():
                                 raw_be = entry_p * 1.0015
                                 breakeven_sl = round_to_clean_int(raw_be)
                                 if sl < breakeven_sl:
-                                    # Set cooldown immediately so we NEVER hammer broker in a loop on failure!
                                     _sent_trailing_alerts[ratchet_key] = now_ts
                                     r_ok, r_res = ratchet_stop_loss_to_breakeven(
                                         broker=broker,
@@ -2930,20 +3032,76 @@ def run_trailing_surveillance_worker():
                                             f"• <b>Trailing Guide:</b> Riding the <b>10 EMA</b> (₹{ema10_val}). Hold until daily close &lt; 10 EMA."
                                         )
                                         kb = [
-                                            [{"text": f"🟡 Book 50% ({max(1, qty//2)} shs)", "callback_data": f"ex_x:{b_code}:{sym}:half"}],
                                             [{"text": "🎯 Trailing Cockpit", "callback_data": "trail_refresh"}, {"text": f"🔴 Exit {sym}", "callback_data": f"ex_p:{b_code}:{sym}"}]
                                         ]
                                         send_topic_alert("risk_trailing", alert_msg, reply_markup={"inline_keyboard": kb})
-                                    else:
-                                        err_details = r_res.get("details") or r_res.get("message") or "Broker SL rejection"
-                                        send_topic_alert(
-                                            "risk_trailing",
-                                            f"⚠️ <b>AUTO-TRAIL NOTICE: {sym} Breakeven Ratchet Failed</b>\n"
-                                            f"• <b>Symbol:</b> {sym} ({broker} • {prod})\n"
-                                            f"• <b>Target SL:</b> ₹{breakeven_sl:,.0f}\n"
-                                            f"• <b>Broker Feedback:</b> <code>{err_details}</code>\n"
-                                            "<i>Cooldown active (30 mins). Will not retry immediately to prevent repeated broker orders.</i>"
-                                        )
+
+                        # 5. P5 Momentum Time Stop: 60-Minute Stalled Breakout Check
+                        th_file_p = SCRIPT_DIR / "tracked_holdings.json"
+                        if th_file_p.is_file():
+                            try:
+                                with open(th_file_p, "r", encoding="utf-8") as f:
+                                    th_data_p = json.load(f)
+                                th_meta = th_data_p.get(sym, {})
+                                entry_ts = th_meta.get("entry_ts")
+                                if entry_ts:
+                                    elapsed_mins = (now_ts - float(entry_ts)) / 60.0
+                                    if elapsed_mins >= 60.0 and r_mult < 0.5 and ltp < entry_p:
+                                        stall_key = (sym, "STALL_60M")
+                                        if now_ts - _sent_trailing_alerts.get(stall_key, 0) > 3600:
+                                            _sent_trailing_alerts[stall_key] = now_ts
+                                            stall_msg = (
+                                                f"⏳ <b>STALLED BREAKOUT: {sym} ({broker} • {prod})</b>\n"
+                                                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                                                f"⏱️ <b>Time in Trade:</b> {elapsed_mins:.0f} minutes\n"
+                                                f"📉 <b>Performance:</b> {r_mult:+.1f}R ({pnl_pct:+.1f}%) | <b>LTP:</b> ₹{ltp:,.2f} vs <b>Entry:</b> ₹{entry_p:,.2f}\n"
+                                                "⚠️ <i>Price has failed to expand past +0.5R and is trading below entry price with declining momentum.</i>\n"
+                                                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                                                "💡 <b>Recommendation:</b> Exit at cost / micro-loss now to recycle capital and free portfolio heat!"
+                                            )
+                                            kb = [
+                                                [{"text": f"🟡 Exit {sym} at Cost", "callback_data": f"ex_p:{b_code}:{sym}"}],
+                                                [{"text": "🎯 Trailing Cockpit", "callback_data": "trail_refresh"}]
+                                            ]
+                                            send_topic_alert("risk_trailing", stall_msg, reply_markup={"inline_keyboard": kb})
+                            except Exception:
+                                pass
+        except Exception:
+            pass
+
+        # P6: Autonomous 09:10 AM Pre-Open Stop-Loss Rearm Verification
+        try:
+            now_dt = get_ist_now()
+            today_str = now_dt.strftime("%Y-%m-%d")
+            time_hm = now_dt.strftime("%H:%M")
+            if time_hm == "09:10" and today_str not in _rearm_sent_dates:
+                _rearm_sent_dates.add(today_str)
+                from order_engine import rearm_overnight_stop_losses
+                rearm_overnight_stop_losses(notify=True, force=True)
+        except Exception:
+            pass
+
+        # P7: Real-Time Daily Drawdown Kill Switch Surveillance
+        try:
+            from order_engine import check_daily_kill_switch
+            is_killed, kill_reason = check_daily_kill_switch()
+            if is_killed:
+                now_dt = get_ist_now()
+                today_str = now_dt.strftime("%Y-%m-%d")
+                kill_key = ("SYSTEM", "KILL_SWITCH_TRIPPED", today_str)
+                if kill_key not in _sent_trailing_alerts:
+                    _sent_trailing_alerts[kill_key] = time.time()
+                    kill_alert = (
+                        "🚨🚨 <b>EMERGENCY KILL SWITCH TRIPPED</b> 🚨🚨\n"
+                        "━━━━━━━━━━━━━━━━━━━━━━\n"
+                        f"⚠️ <b>Reason:</b> {kill_reason}\n"
+                        "🔒 <b>Protection Mode:</b> All new BUY order executions are LOCKED for today.\n"
+                        "🛡️ <i>Existing runner trailing and stop-loss surveillance remain active.</i>\n"
+                        "━━━━━━━━━━━━━━━━━━━━━━\n"
+                        "<i>Preserve your capital and reset for tomorrow's session. Use /killswitch for status.</i>"
+                    )
+                    send_topic_alert("orders", kill_alert)
+                    send_topic_alert("risk_trailing", kill_alert)
         except Exception:
             pass
 
