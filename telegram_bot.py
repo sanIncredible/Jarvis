@@ -1272,6 +1272,7 @@ def handle_help_command():
         "• <code>/positions</code> or <code>/pos</code> — Live open positions & real-time P&L\n"
         "• <code>/funds</code> or <code>/margin</code> — Live multi-broker available cash & MTF margin\n"
         "• <code>/trail</code> or <code>/sl</code> — Trailing SL & Risk Breakeven recommendations\n"
+        "• <code>/trailsync</code> — Auto-ratchet and modify all broker GTT stops to match latest trailing levels\n"
         "• <code>/gtt</code> or <code>/rearm</code> — Permanent 1-Year GTT Stop-Loss audit & protection\n"
         "• <code>/sentry</code> — Multi-broker orphan position 30s sentry audit & fail-safe\n"
         "• <code>/deadmoney</code> or <code>/recycle</code> — Audit stagnated trades (held ≥4 days, <1R) for capital recycling\n"
@@ -2003,7 +2004,10 @@ def handle_trailing_command():
 
     kb_rows = [
         [
-            {"text": "🔄 Refresh Trailing SL", "callback_data": "trail_refresh"},
+            {"text": "🛡️ Sync All Broker GTTs", "callback_data": "sync_trailing_gtt"},
+            {"text": "🔄 Refresh Trailing SL", "callback_data": "trail_refresh"}
+        ],
+        [
             {"text": "📊 Live Positions", "callback_data": "pos_refresh"}
         ]
     ]
@@ -2385,6 +2389,15 @@ def handle_callback_query(cq):
         text, markup = handle_trailing_command()
         edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
 
+    elif cq_data == "sync_trailing_gtt":
+        answer_callback_query(cq_id, "Synchronizing all broker GTT trailing stops...")
+        from order_engine import rearm_overnight_stop_losses
+        res = rearm_overnight_stop_losses(notify=False, force=True)
+        report_text = res.get("report_text", "GTT synchronization completed.")
+        send_telegram_msg(chat_id, report_text, thread_id=thread_id)
+        text, markup = handle_trailing_command()
+        edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
+
     elif cq_data == "funds_refresh":
         answer_callback_query(cq_id, "Refreshing broker funds & margins...")
         text, markup = handle_funds_command()
@@ -2703,9 +2716,9 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_positions_command()
     elif cmd in ("/trail", "/trailing", "/sl", "/trails", "trail", "trailing"):
         return handle_trailing_command()
-    elif cmd in ("/gtt", "/forever", "/rearm", "/armsl", "gtt", "forever", "rearm", "armsl"):
+    elif cmd in ("/gtt", "/forever", "/rearm", "/armsl", "/trailsync", "/synctrail", "gtt", "forever", "rearm", "armsl", "trailsync", "synctrail"):
         from order_engine import rearm_overnight_stop_losses
-        force_mode = "force" in args.lower()
+        force_mode = "force" in args.lower() or cmd in ("/trailsync", "/synctrail", "trailsync", "synctrail")
         res = rearm_overnight_stop_losses(notify=False, force=force_mode)
         return res.get("report_text")
     elif cmd in ("/sentry", "/orphan", "/guard", "sentry", "orphan"):
