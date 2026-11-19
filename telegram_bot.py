@@ -432,6 +432,11 @@ def trigger_immediate_rescan():
     try:
         # Guarantee GitHub has latest watchlist first so scanner pull never reverts it
         push_watchlist_to_github()
+        try:
+            from upstox_tablet_scanner import hot_resubscribe_websocket
+            hot_resubscribe_websocket()
+        except Exception:
+            pass
         from upstox_tablet_scanner import scan_watchlist, export_static_html
         results = scan_watchlist()
         now_str = get_ist_now().strftime("%H:%M:%S IST")
@@ -621,6 +626,11 @@ def handle_add_command(args_text):
     # Write updated list
     write_watchlist_symbols(current_syms)
     try:
+        from upstox_tablet_scanner import hot_resubscribe_websocket
+        hot_resubscribe_websocket()
+    except Exception:
+        pass
+    try:
         from watchlist_hygiene import sync_watchlist_meta
         sync_watchlist_meta(current_syms)
     except Exception:
@@ -677,6 +687,11 @@ def handle_remove_command(args_text):
         return f"⚠️ Symbol(s) not found in watchlist: <b>{', '.join(not_found)}</b>"
 
     write_watchlist_symbols(current_syms)
+    try:
+        from upstox_tablet_scanner import hot_resubscribe_websocket
+        hot_resubscribe_websocket()
+    except Exception:
+        pass
     try:
         from watchlist_hygiene import sync_watchlist_meta
         sync_watchlist_meta(current_syms)
@@ -1191,6 +1206,7 @@ def handle_help_command():
         "• <code>/sniper</code> or <code>/aplus</code> — 🎯 A+ Grade Sniper Setups (The 3-Check Rule: Momentum + Blue Sky + Contraction)\n"
         "• <code>/exited</code> or <code>/reentry</code> — Audit past exited stocks for candidate re-entry\n"
         "• <code>/hindsight</code> or <code>/sim</code> — EOD Multi-Trade Simulation & Strict Audit\n"
+        "• <code>/expectancy</code> or <code>/alpha</code> — Cumulative 30-Day Strategy Expectancy & Edge Ledger\n"
         "• <code>/add &lt;SYMBOL...&gt;</code> — Add stock(s) to scanner watchlist\n"
         "• <code>/remove &lt;SYMBOL...&gt;</code> — Remove stock(s) from watchlist\n"
         "• <code>/watchlist</code> — Show full active watchlist & TV links\n"
@@ -1954,6 +1970,23 @@ def handle_hindsight_command():
         return f"⚠️ <b>Hindsight Report Notice:</b> {e}"
 
 
+def handle_expectancy_command(args=""):
+    """
+    Handles /expectancy or /alpha command:
+    Computes rolling 30-day strategy expectancy, realized R-multiples, and setup tier statistical edge.
+    """
+    try:
+        from eod_hindsight_report import compute_rolling_expectancy, format_rolling_expectancy_card
+        days = 30
+        if args and args.strip().isdigit():
+            days = max(1, min(90, int(args.strip())))
+        exp = compute_rolling_expectancy(days=days)
+        card = format_rolling_expectancy_card(exp, days=days)
+        return card
+    except Exception as e:
+        return f"⚠️ <b>Expectancy Ledger Notice:</b> {e}"
+
+
 def handle_buy_command(args, from_chat_id):
     """
     Handles /buy or /mtf command across Upstox, Dhan, or Zerodha.
@@ -2562,6 +2595,8 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_preflight_command()
     elif cmd in ("/hindsight", "/sim", "/simulation", "hindsight", "sim", "/hindsght", "hindsght", "/hindsite", "hindsite", "/strict", "strict"):
         return handle_hindsight_command()
+    elif cmd in ("/expectancy", "/alpha", "/edge", "/ledger", "expectancy", "alpha", "edge", "ledger"):
+        return handle_expectancy_command(args)
     elif cmd in ("/login", "/auth", "login", "auth"):
         return handle_login_command()
     elif cmd in ("/token", "/tokens", "/status", "/check", "token", "tokens", "status"):
