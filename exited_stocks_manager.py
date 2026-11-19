@@ -85,24 +85,15 @@ def get_active_open_symbols():
         except Exception:
             pass
 
-    # 2. From config_credentials.json tracked_swing_holdings
-    if CONFIG_FILE.is_file():
-        try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                cfg = json.load(f)
-                for s in cfg.get("tracked_swing_holdings", []):
-                    if s:
-                        open_syms.add(str(s).strip().upper())
-        except Exception:
-            pass
-
-    # 3. From tracked_holdings.json
+    # 2. From tracked_holdings.json (authoritative active swing holding ledger)
     if HOLDINGS_FILE.is_file():
         try:
             with open(HOLDINGS_FILE, "r", encoding="utf-8") as f:
                 th = json.load(f)
                 for s, meta in th.items():
-                    if isinstance(meta, dict) and meta.get("status") == "OPEN":
+                    if isinstance(meta, dict) and meta.get("status") != "CLOSED" and float(meta.get("qty", 1) or 0) > 0:
+                        open_syms.add(str(s).strip().upper())
+                    elif isinstance(meta, (str, list)):
                         open_syms.add(str(s).strip().upper())
         except Exception:
             pass
