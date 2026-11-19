@@ -192,7 +192,7 @@
     "status": "REARMED",
     "notes": "Overnight Auto-Rearm (Default 2.5% SL)",
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-18 09:15:49"
+    "ratcheted_at": "2026-11-19 09:16:19"
   },
   {
     "timestamp": "2026-11-08 23:51:10 IST",
@@ -276,7 +276,7 @@
     "status": "PLACED",
     "notes": "Zerodha CNC Swing Holding",
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-18 09:15:51",
+    "ratcheted_at": "2026-11-19 09:16:21",
     "sl_order_id": "343476050",
     "sl_status": "PENDING"
   },
@@ -312,7 +312,7 @@
     "status": "PLACED",
     "notes": "Zerodha CNC Swing Holding",
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-18 09:15:53",
+    "ratcheted_at": "2026-11-19 09:16:24",
     "sl_order_id": "342986108",
     "sl_status": "PENDING"
   },
@@ -343,8 +343,8 @@
     "ltp": 692.7,
     "exposure": 84929.08,
     "stop_loss": 685.7,
-    "status": "PLACED",
-    "notes": "Zerodha CNC Swing Holding"
+    "status": "EXITED",
+    "notes": "Auto-reconciled: position closed on ZERODHA broker"
   },
   {
     "timestamp": "2026-11-14 09:15:00 IST",
@@ -358,8 +358,8 @@
     "ltp": 283.72,
     "exposure": 141722.88,
     "stop_loss": 272.0,
-    "status": "PLACED",
-    "notes": "Zerodha CNC Swing Holding"
+    "status": "EXITED",
+    "notes": "Auto-reconciled: position closed on ZERODHA broker"
   },
   {
     "timestamp": "2026-11-17 09:15:00 IST",
@@ -373,8 +373,8 @@
     "ltp": 803.95,
     "exposure": 121793.58,
     "stop_loss": 786.42,
-    "status": "PLACED",
-    "notes": "Dhan MTF Swing Holding"
+    "status": "EXITED",
+    "notes": "Auto-reconciled: position closed on DHAN broker"
   },
   {
     "timestamp": "2026-11-17 15:10:13 IST",
@@ -478,5 +478,28 @@
     "sl_status": "PENDING",
     "status": "REARMED",
     "notes": "Overnight Auto-Rearm (Tracked Holdings)"
+  },
+  {
+    "timestamp": "2026-11-19 09:36:27 IST",
+    "symbol": "WESTLIFE",
+    "broker": "DHAN",
+    "product": "MTF",
+    "action": "BUY",
+    "order_type": "LIMIT",
+    "limit_price": 695,
+    "quantity": 72,
+    "ltp": 692.6,
+    "exposure": 49867.2,
+    "stop_loss": 694,
+    "sl_order_id": "32132611191818",
+    "sl_status": "PENDING",
+    "risk_pct": 2.83,
+    "total_risk_inr": 1411.2,
+    "mode": "Conservative (\u20b950K)",
+    "status": "PLACED",
+    "order_id": "321261119202903 (TRANSIT)",
+    "error": null,
+    "breakeven_ratcheted": true,
+    "ratcheted_at": "2026-11-19 10:26:47"
   }
 ]
