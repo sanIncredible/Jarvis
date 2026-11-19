@@ -746,7 +746,7 @@ def format_hindsight_report(data):
             ])
             top_p = s_aud.get("top_performer")
             if top_p:
-                lines.append(f"• Top Sniper Alpha: <b>{top_p['symbol']}</b> (+{top_p['r_mult']:.1f}R | MFE +{top_p['mfe_pct']}%)")
+                lines.append(f"• Top Sniper Alpha: <b>{top_p['symbol']}</b> ({top_p['r_mult']:+.1f}R | MFE +{top_p['mfe_pct']}%)")
         else:
             lines.append("• <i>Tracked snipers stayed within opening ranges (0 false-breakout losses).</i>")
 
