@@ -24,6 +24,7 @@ import sys
 import csv
 import json
 import time
+import tempfile
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -50,6 +51,25 @@ TRADE_LOG_JSON = SCRIPT_DIR / "trade_log.json"
 SERVER_IP = "80.225.210.222"
 
 IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def atomic_write_json(file_path, data):
+    """Atomically writes JSON to disk using a temporary file to prevent corruption."""
+    try:
+        p = Path(file_path)
+        dir_name = p.parent
+        with tempfile.NamedTemporaryFile("w", dir=dir_name, delete=False, encoding="utf-8") as tf:
+            json.dump(data, tf, indent=2, ensure_ascii=False)
+            temp_name = tf.name
+        os.replace(temp_name, str(p))
+        return True
+    except Exception as ex:
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            return True
+        except Exception:
+            return False
 
 
 def round_to_clean_int(price):
@@ -849,7 +869,7 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
             })
 
     # 9. Opening Gap Extension Check (Qullamaggie 2.5% Rule)
-    open_p = float((quote_data or {}).get("open") or (quote_data or {}).get("open_price") or 0)
+    open_p = float((quote_data or {}).get("open") or (quote_data or {}).get("day_open") or (quote_data or {}).get("open_price") or 0)
     prev_close = float((quote_data or {}).get("prev_close") or (quote_data or {}).get("close") or 0)
     pdh = float((quote_data or {}).get("prev_day_high") or (sc_data.get("pdh") if sc_data else 0) or 0)
     ref_trigger = pdh if pdh > 0 else prev_close
@@ -2652,8 +2672,7 @@ def update_tracked_holding_on_fill(symbol, broker, product, quantity, fill_price
         }
 
     try:
-        with open(th_file, "w", encoding="utf-8") as f:
-            json.dump(th_data, f, indent=2)
+        atomic_write_json(th_file, th_data)
     except Exception as e:
         print(f"Error persisting tracked_holdings.json on fill: {e}")
 
@@ -2688,8 +2707,7 @@ def update_tracked_holding_on_exit(symbol, remaining_qty, exit_price=None, exit_
                 else:
                     th_data[sym_u]["qty"] = int(remaining_qty)
                     th_data[sym_u]["notes"] = str(th_data[sym_u].get("notes", "")) + f" | Partial Exit ({remaining_qty} shs remaining)"
-                with open(th_file, "w", encoding="utf-8") as f:
-                    json.dump(th_data, f, indent=2)
+                atomic_write_json(th_file, th_data)
         except Exception as e:
             print(f"Notice updating tracked_holdings on exit: {e}")
 
@@ -2980,8 +2998,8 @@ def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
 
     product_label = "MTF"
     ltp = float(calc.get("ltp", 0) or 0)
-    # Marketable Limit Order (+0.3% slippage protection ceiling): clean integer price without fractional decimals
-    marketable_limit = round_to_clean_int(ltp * 1.003) if ltp > 0 else 0
+    # Marketable Limit Order (+0.3% slippage protection ceiling with min ₹1 buffer): clean integer price without fractional decimals
+    marketable_limit = max(round_to_clean_int(ltp) + 1, round_to_clean_int(ltp * 1.003)) if ltp > 0 else 0
     order_type = "LIMIT" if marketable_limit > 0 else "MARKET"
     order_price = int(marketable_limit) if marketable_limit > 0 else 0
 
@@ -3945,8 +3963,7 @@ def reconcile_and_prune_exited_holdings(live_pos, broker_status):
                         modified = True
                         print(f"🧹 Auto-pruned exited holding {sym} ({b}) from tracked_holdings.json")
             if modified:
-                with open(th_file, "w", encoding="utf-8") as f:
-                    json.dump(th_data, f, indent=2)
+                atomic_write_json(th_file, th_data)
         except Exception as e:
             print(f"Notice pruning tracked_holdings: {e}")
 
@@ -4330,8 +4347,7 @@ def ratchet_broker_stop_loss(broker, symbol, quantity, new_sl_price, entry_price
                     mode_str = "Atomic Modify" if atomic_success else "Fresh SL"
                     oid_str = res.get("order_id", "N/A") if isinstance(res, dict) else str(res)
                     th[sym]["notes"] = f"{th[sym].get('broker', b.upper())} Holding | Trailed to ₹{target_sl} ({mode_str} {oid_str})"
-                    with open(th_f, "w", encoding="utf-8") as f:
-                        json.dump(th, f, indent=2)
+                    atomic_write_json(th_f, th)
         except Exception as e:
             print(f"Notice updating tracked_holdings: {e}")
 
@@ -4523,8 +4539,7 @@ def rearm_overnight_stop_losses(notify=True, force=False):
                             th_data[sym] = {"broker": broker}
                         th_data[sym]["sl"] = target_sl
                         th_data[sym]["notes"] = f"{broker} Holding | Trailed GTT Stop (SL: ₹{target_sl:,.0f})"
-                        with open(th_f, "w", encoding="utf-8") as f:
-                            json.dump(th_data, f, indent=2)
+                        atomic_write_json(th_f, th_data)
                     except Exception:
                         pass
                     continue
@@ -4620,8 +4635,7 @@ def rearm_overnight_stop_losses(notify=True, force=False):
                     th_data[sym] = {"broker": broker}
                 th_data[sym]["sl"] = target_sl
                 th_data[sym]["notes"] = f"{broker} Holding | Rearmed Overnight SL (Order {new_oid})"
-                with open(th_f, "w", encoding="utf-8") as f:
-                    json.dump(th_data, f, indent=2)
+                atomic_write_json(th_f, th_data)
             except Exception as e:
                 print(f"Notice updating tracked_holdings on rearm: {e}")
         else:
