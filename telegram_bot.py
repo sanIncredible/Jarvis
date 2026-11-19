@@ -1282,6 +1282,10 @@ def handle_help_command():
         "• <code>/journal</code> — Reconcile live broker fills into Journal.xlsx\n"
         "• <code>/postmortem</code> or <code>/trades</code> — Trade Post-Mortem & Trailing Performance Cockpit\n"
         "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
+        "🤖 <b>Phase 1 Autonomous Engine:</b>\n"
+        "• <code>/phase1</code> or <code>/shadow</code> — Autonomous Paper Execution status & metrics\n"
+        "• <code>/shadowreport</code> — Force generate Phase 1 EOD report (Topic 11)\n"
+        "• <code>/shadowtrades</code> — List all active open & recent closed shadow trades\n\n"
         "📋 <b>Watchlist & Screening:</b>\n"
         "• <code>/theme</code> or <code>/sectors</code> — Today's sector clusters & institutional group themes\n"
         "• <code>/candidates</code> or <code>/screen</code> — Scan Nifty 500 swing setups (saves to candidates.txt)\n"
@@ -2891,6 +2895,33 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
                 "💡 <i>Trailing strictly follows 10/20 EMA & Structural Strategy (Full breathing room).</i>"
             )
         return f"Portfolio Capacity: {data}"
+    elif cmd in ("/phase1", "/shadow", "phase1", "shadow"):
+        from shadow_execution_engine import format_shadow_status_card
+        return format_shadow_status_card()
+    elif cmd in ("/shadowreport", "/phase1report", "shadowreport"):
+        from shadow_execution_engine import generate_and_send_phase1_eod_report
+        return generate_and_send_phase1_eod_report(notify=False)
+    elif cmd in ("/shadowtrades", "/shadowlog", "shadowtrades"):
+        from shadow_execution_engine import load_shadow_portfolio, load_shadow_trade_log
+        p = load_shadow_portfolio()
+        l = load_shadow_trade_log()
+        lines = ["🤖 <b>PHASE 1 SHADOW TRADES LEDGER</b>", "━━━━━━━━━━━━━━━━━━━━━━"]
+        lines.append(f"<b>Active Open Positions ({len(p)}):</b>")
+        if not p:
+            lines.append("<i>No open swing positions.</i>")
+        else:
+            for s, pos in p.items():
+                lines.append(f"• <b>{s}</b>: Entry ₹{pos['entry_price']:,} | SL ₹{pos['current_sl']:,} | Qty {pos['quantity']} | 1R=₹{pos['fixed_risk_inr']:,} | Day {pos.get('holding_days', 1)}")
+        lines.append("\n<b>Recent Closed Exits:</b>")
+        if not l:
+            lines.append("<i>No closed trades yet in 30-day window.</i>")
+        else:
+            for ex in l[-5:]:
+                r_val = ex.get('realized_r', 0)
+                r_s = f"+{r_val:.2f}R" if r_val >= 0 else f"{r_val:.2f}R"
+                lines.append(f"• <b>{ex['symbol']}</b>: {r_s} (₹{ex.get('realized_pnl_inr', 0):+,}) | {ex.get('exit_reason')}")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━")
+        return "\n".join(lines)
     elif cmd == "/settopic":
         if not args or len(args.split()) < 2:
             return "<b>Usage:</b> <code>/settopic &lt;topic_name&gt; &lt;thread_id&gt;</code>\n<i>e.g. /settopic orb_signals 8</i>"
