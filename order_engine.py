@@ -2832,20 +2832,14 @@ def check_portfolio_risk_capacity(symbol=None, additional_risk_inr=1000):
             except Exception:
                 pass
 
-        derisked_positions = []
-        active_risk_positions = []
         total_var = 0.0
-
         for p in active_positions:
             p_sym = p["symbol"].upper()
             p_qty = int(p.get("qty", 0) or 0)
             meta = logged.get(p_sym, {})
             th_meta = th_data.get(p_sym, {})
 
-            # Priority entry price: tracked_holdings > logged > live avg_price
             p_entry = float(th_meta.get("entry_price") or meta.get("entry_price") or p.get("avg_price", 0) or 0)
-
-            # Effective SL: best of logged SL, tracked_holdings sl, and recommended_sl
             sl_candidates = [
                 float(meta.get("stop_loss", 0) or 0),
                 float(th_meta.get("sl", 0) or 0),
@@ -2853,23 +2847,12 @@ def check_portfolio_risk_capacity(symbol=None, additional_risk_inr=1000):
             ]
             p_sl = max(sl_candidates) if sl_candidates else 0.0
 
-            # If SL is at or above entry (-0.2% slippage buffer), it is a Free-Roll runner!
-            is_derisked = False
-            if p_entry > 0 and p_sl >= (p_entry * 0.998):
-                is_derisked = True
-
-            if is_derisked:
-                derisked_positions.append(p_sym)
-            else:
-                active_risk_positions.append(p_sym)
-                if p_sl > 0 and p_entry > p_sl:
-                    total_var += (p_entry - p_sl) * p_qty
-                elif p_entry > 0:
-                    total_var += (p_entry * 0.02) * p_qty  # 2% fallback
+            if p_sl > 0 and p_entry > p_sl:
+                total_var += (p_entry - p_sl) * p_qty
+            elif p_entry > 0 and p_sl <= 0:
+                total_var += (p_entry * 0.02) * p_qty  # 2% fallback
 
         total_var = round(total_var, 2)
-        active_risk_count = len(active_risk_positions)
-        derisked_count = len(derisked_positions)
 
         # Determine SA market regime
         regime = load_market_regime()
@@ -2886,7 +2869,7 @@ def check_portfolio_risk_capacity(symbol=None, additional_risk_inr=1000):
         elif "WASHOUT" in regime_code or "CLIMAX" in regime_code:
             default_sa_slots = 1
 
-        max_risk_slots = int(sa_limits.get(regime_code, default_sa_slots))
+        max_slots = int(sa_limits.get(regime_code, default_sa_slots))
 
         # Check daily entries today
         today_str = datetime.now().strftime("%Y-%m-%d")
@@ -2923,9 +2906,9 @@ def check_portfolio_risk_capacity(symbol=None, additional_risk_inr=1000):
         if not is_existing and total_open_count >= max_total_slots:
             blocked_reason = f"Portfolio total capacity saturated ({total_open_count}/{max_total_slots} open positions across brokers). Exit an open position before adding new exposure."
         
-        # Check 2: SA Regime Active Risk Capacity (Slots Under Fire)
-        elif not is_existing and active_risk_count >= max_risk_slots:
-            blocked_reason = f"SA Regime Risk Capacity Saturated: {active_risk_count}/{max_risk_slots} active risk positions under fire in {regime_code} regime ({derisked_count} de-risked runners held). Wait for open positions to trail to Breakeven or exit to unlock risk slots."
+        # Check 2: SA Regime Active Capacity (Expansion: 5, Chop: 3, Washout: 1)
+        elif not is_existing and total_open_count >= max_slots:
+            blocked_reason = f"SA Regime Capacity Saturated: {total_open_count}/{max_slots} active positions in {regime_code} regime. Preserving capital against regime headwinds."
 
         # Check 3: Daily Entry Throttle (Pacing Guard against morning cluster risk)
         elif not is_existing and max_daily_entries == 0:
@@ -2935,7 +2918,7 @@ def check_portfolio_risk_capacity(symbol=None, additional_risk_inr=1000):
 
         # Check 4: Total Open Value-at-Risk (VaR) Cap
         elif proj_var > max_var:
-            blocked_reason = f"Portfolio Heat Saturated: Total Open VaR is ₹{total_var:,.0f} (+₹{additional_risk_inr:,.0f} would exceed ₹{max_var:,.0f} max limit). Wait for active trades to reach Breakeven to unlock capacity."
+            blocked_reason = f"Portfolio Heat Saturated: Total Open VaR is ₹{total_var:,.0f} (+₹{additional_risk_inr:,.0f} would exceed ₹{max_var:,.0f} max limit)."
 
         # If evaluating for an actual order execution (symbol is provided), block with error message
         if symbol is not None and blocked_reason:
@@ -2945,13 +2928,8 @@ def check_portfolio_risk_capacity(symbol=None, additional_risk_inr=1000):
             "allowed": (blocked_reason is None),
             "blocked_reason": blocked_reason,
             "open_count": total_open_count,
-            "max_slots": max_total_slots,
+            "max_slots": max_slots,
             "max_total_slots": max_total_slots,
-            "active_risk_count": active_risk_count,
-            "max_risk_slots": max_risk_slots,
-            "derisked_count": derisked_count,
-            "derisked_positions": derisked_positions,
-            "active_risk_positions": active_risk_positions,
             "entries_today_count": entries_today_count,
             "max_daily_entries": max_daily_entries,
             "total_var": total_var,
