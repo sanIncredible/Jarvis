@@ -590,6 +590,10 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                 f"• Action : Ready for ignition breakout above ₹{s_lvl:,.2f}\n"
             )
             coil_kb.append([
+                {"text": f"📊 View {s_sym} Chart", "url": f"https://sanincredible.github.io/Jarvis/?symbol={s_sym}"},
+                {"text": f"📈 TV App", "url": f"https://in.tradingview.com/chart/?symbol=NSE:{s_sym}"}
+            ])
+            coil_kb.append([
                 {"text": f"🎯 Buy {s_sym} (1k Risk)", "callback_data": f"buy_risk:{s_sym}:1k"},
                 {"text": f"🎯 Buy {s_sym} (2k Risk)", "callback_data": f"buy_risk:{s_sym}:2k"}
             ])
@@ -786,6 +790,10 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
         for b in new_breakouts[:3]:
             sym = b["sym"]
             is_pyr = b.get("is_pyramid")
+            kb_buttons.append([
+                {"text": f"📊 View {sym} Chart", "url": f"https://sanincredible.github.io/Jarvis/?symbol={sym}"},
+                {"text": f"📈 TV App", "url": f"https://in.tradingview.com/chart/?symbol=NSE:{sym}"}
+            ])
             if is_pyr:
                 kb_buttons.append([
                     {"text": f"🔺 Pyramid {sym} (Risk-Free)", "callback_data": f"buy_prep:{sym}:rf:lod:default"},
