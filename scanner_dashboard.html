@@ -1424,6 +1424,9 @@
     </div>
   </div>
 
+  <!-- Auto-Focus Alert Inspection Banner -->
+  <div id="focus-banner" style="display:none; margin-bottom:12px; border-radius:10px; padding:10px 16px; border:1px solid #0284c7; background:linear-gradient(90deg, rgba(2,132,199,0.18), rgba(37,99,235,0.12)); align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; box-shadow:0 4px 18px rgba(0,0,0,0.5);"></div>
+
   <!-- Live Market Data Table -->
   <div class="table-box">
     <table>
@@ -3362,6 +3365,7 @@
     document.getElementById('cnt-bear').innerText = bearCount;
 
     renderFilteredTable();
+    checkUrlAutoFocus();
 
     // If modal is active for a stock, refresh its chart live
     if (activeSym && popup.style.display === 'flex') {
@@ -3403,7 +3407,77 @@
     }
   }
 
+
+  let hasAutoFocused = false;
+
+  function showFocusModeBanner(sym) {
+    let banner = document.getElementById('focus-banner');
+    if (!banner) return;
+    const stk = (RAW_STOCKS || []).find(s => s.symbol.toUpperCase() === sym.toUpperCase());
+    const ltpStr = (stk && stk.ltp) ? `₹${Number(stk.ltp).toFixed(2)}` : '';
+    const sigStr = (stk && stk.signal) ? ` • ${stk.signal}` : '';
+    banner.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:18px;">🎯</span>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-weight:800; font-size:13px; color:#38bdf8; letter-spacing:0.3px;">AUTO-FOCUSED ON ${sym}</span>
+              <span style="background:rgba(56,189,248,0.18); color:#38bdf8; border:1px solid #0284c7; font-size:10px; font-weight:800; padding:1px 6px; border-radius:4px;">ALERT INSPECTION</span>
+            </div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+              ${ltpStr}${sigStr}
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button onclick="showChartPopup(null, '${sym}', true)" class="btn-action" style="font-size:11px; padding:5px 12px; background:#0284c7; color:#fff; border:1px solid #38bdf8; border-radius:6px; font-weight:700; cursor:pointer;" title="Reopen chart modal">📈 View Chart</button>
+          <a href="https://in.tradingview.com/chart/?symbol=NSE:${sym}" target="_blank" class="btn-action" style="font-size:11px; padding:5px 12px; background:#1e293b; color:#38bdf8; border:1px solid #334155; border-radius:6px; font-weight:700; text-decoration:none; cursor:pointer;" title="Open in TradingView App">🚀 TV App ↗</a>
+          <button onclick="clearFocusMode()" class="btn-action" style="font-size:11px; padding:5px 12px; background:#334155; color:#cbd5e1; border:1px solid #475569; border-radius:6px; font-weight:700; cursor:pointer;" title="Reset filter and view all watchlist stocks">✕ Show Full Watchlist</button>
+        </div>
+      </div>
+    `;
+    banner.style.display = 'flex';
+  }
+
+  function clearFocusMode() {
+    const banner = document.getElementById('focus-banner');
+    if (banner) banner.style.display = 'none';
+    if (searchInput) searchInput.value = '';
+    renderFilteredTable();
+    hideChartPopup();
+    if (window.history && window.history.replaceState) {
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  }
+
+  function checkUrlAutoFocus() {
+    if (hasAutoFocused) return;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetSym = (urlParams.get('symbol') || urlParams.get('focus') || '').trim().toUpperCase();
+      if (!targetSym) return;
+
+      if (RAW_STOCKS && RAW_STOCKS.length) {
+        const match = RAW_STOCKS.find(s => s.symbol.toUpperCase() === targetSym);
+        if (match) {
+          hasAutoFocused = true;
+          if (searchInput) {
+            searchInput.value = match.symbol;
+            renderFilteredTable();
+          }
+          showChartPopup(null, match.symbol, true);
+          showFocusModeBanner(match.symbol);
+        }
+      }
+    } catch (e) {
+      console.warn('URL auto-focus notice:', e);
+    }
+  }
+
   function renderFilteredTable() {
+
     const q = (searchInput.value || '').trim().toUpperCase();
 
     let filtered = RAW_STOCKS.filter(stk => {
@@ -4279,13 +4353,17 @@
       popup.style.top = '10px';
       if (chartBackdrop) chartBackdrop.style.display = 'block';
     } else {
-      let x = (e && e.clientX) ? e.clientX : (window.innerWidth / 2 - popupWidth / 2);
-      let y = (e && e.clientY) ? e.clientY : (window.innerHeight / 2 - popupHeight / 2);
+      let left, top;
+      if (!e || forceTap) {
+        left = Math.max(10, Math.floor((window.innerWidth - popupWidth) / 2));
+        top = Math.max(10, Math.floor((window.innerHeight - popupHeight) / 2));
+      } else {
+        let x = e.clientX;
+        let y = e.clientY;
+        left = x + 20;
+        top = y - 40;
 
-      let left = x + 20;
-      let top = y - 40;
-
-      // Smart anti-collision: Ensure popup never spawns directly under or engulfs the cursor
+        // Smart anti-collision: Ensure popup never spawns directly under or engulfs the cursor
       if (left + popupWidth > window.innerWidth - 15) {
         if (x - popupWidth - 20 >= 15) {
           left = x - popupWidth - 20;
