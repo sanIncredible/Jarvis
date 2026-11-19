@@ -3203,7 +3203,10 @@ def export_static_html(results, now_str, port, force_cloud_push=False):
                                 "trigger_badges": c.get("trigger_badges", []),
                                 "triggers_count": c.get("triggers_count", 1),
                                 "dist_52w_pct": c.get("dist_52w_pct"),
-                                "rs_rating": c.get("rs_rating", 0)
+                                "rs_rating": c.get("rs_rating", 0),
+                                "is_qm_coil": c.get("is_qm_coil", False),
+                                "qm_details": c.get("qm_details"),
+                                "coil_tag": c.get("coil_tag")
                             })
                     if ems_payload:
                         break
@@ -3235,6 +3238,8 @@ def export_static_html(results, now_str, port, force_cloud_push=False):
                                 "flags": c.get("flags", []),
                                 "is_sniper": c.get("is_sniper", False),
                                 "is_blue_sky": c.get("is_blue_sky", False),
+                                "is_qm_coil": c.get("is_qm_coil", False),
+                                "qm_details": c.get("qm_details"),
                                 "grade": c.get("grade", "B"),
                                 "daily_range_pct": c.get("daily_range_pct")
                             })
@@ -3255,6 +3260,7 @@ def export_static_html(results, now_str, port, force_cloud_push=False):
             "ems_candidates": ems_payload,
             "merged_candidates": merged_payload,
             "sniper_candidates": [c for c in merged_payload if c.get("is_sniper")],
+            "qm_candidates": [c for c in merged_payload if c.get("is_qm_coil")],
             "stocks": stocks_payload
         }
 
