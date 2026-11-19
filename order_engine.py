@@ -1803,7 +1803,7 @@ def cancel_dhan_forever_order(order_id):
         return False, str(e)
 
 
-def place_upstox_gtt_stop_loss(instrument_key, quantity, sl_price, product="MTF", transaction_type="SELL"):
+def place_upstox_gtt_stop_loss(instrument_key, quantity, sl_price, product="MTF", transaction_type="SELL", symbol=None):
     """Submits a permanent 1-year GTT Stop-Loss directly to Upstox API v3."""
     cfg = load_config()
     tok = cfg.get("upstox", {}).get("access_token", "").strip()
@@ -1814,6 +1814,15 @@ def place_upstox_gtt_stop_loss(instrument_key, quantity, sl_price, product="MTF"
     tt = transaction_type.upper()
     trig_type = "BELOW" if tt == "SELL" else "ABOVE"
     prod_code = "D" if product.upper() in ("CNC", "DELIVERY", "D") else "MTF"
+
+    # Guard: prevent duplicate GTT triggers for the same scrip on Upstox
+    if symbol:
+        existing_gtt = get_pending_gtt_order(symbol, broker="upstox")
+        if existing_gtt and existing_gtt.get("order_id"):
+            old_trig = float(existing_gtt.get("trigger_price") or 0)
+            if tt == "SELL" and old_trig >= trigger_p:
+                return True, f"Active Upstox GTT {existing_gtt['order_id']} already protects {symbol} at ₹{old_trig:,.0f} (duplicate prevented)"
+            cancel_upstox_gtt_order(existing_gtt["order_id"])
 
     payload = {
         "type": "SINGLE",
@@ -1882,7 +1891,7 @@ def place_broker_gtt_stop_loss(broker, symbol, quantity, sl_price, instrument_ke
         inst_k = instrument_key or resolve_instrument_key(symbol)
         if not inst_k:
             return False, f"Could not resolve instrument key for {symbol}"
-        return place_upstox_gtt_stop_loss(inst_k, quantity, clean_sl, product=product, transaction_type=transaction_type)
+        return place_upstox_gtt_stop_loss(inst_k, quantity, clean_sl, product=product, transaction_type=transaction_type, symbol=symbol)
     return False, f"Unsupported broker for GTT: {broker}"
 
 
@@ -2350,18 +2359,6 @@ def update_tracked_holding_on_fill(symbol, broker, product, quantity, fill_price
     except Exception as e:
         print(f"Error persisting tracked_holdings.json on fill: {e}")
 
-    # Ensure symbol is tracked in config_credentials.json tracked_swing_holdings
-    try:
-        cfg = load_config()
-        t_holdings = cfg.get("tracked_swing_holdings", [])
-        if sym_u not in [s.upper() for s in t_holdings]:
-            t_holdings.append(sym_u)
-            cfg["tracked_swing_holdings"] = t_holdings
-            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                json.dump(cfg, f, indent=2)
-    except Exception as e:
-        print(f"Notice updating config tracked_swing_holdings on fill: {e}")
-
 
 def update_tracked_holding_on_exit(symbol, remaining_qty):
     """Updates or prunes symbol from tracked_holdings.json upon partial or full exit."""
@@ -2536,7 +2533,14 @@ def fetch_all_positions():
         broker_status: dict indicating which brokers were queried successfully
     """
     cfg = load_config()
-    tracked_holdings = set(s.upper() for s in cfg.get("tracked_swing_holdings", []))
+    tracked_holdings = set()
+    th_f = SCRIPT_DIR / "tracked_holdings.json"
+    if th_f.is_file():
+        try:
+            with open(th_f, "r", encoding="utf-8") as f:
+                tracked_holdings = set(s.upper() for s in json.load(f).keys())
+        except Exception:
+            pass
     ignored_symbols = set(s.upper() for s in cfg.get("ignored_symbols", ["MOTHERSON"]))
     
     # Auto-expand swing tracking symbols to include logged trades and active journal open trades
@@ -3364,29 +3368,6 @@ def reconcile_and_prune_exited_holdings(live_pos, broker_status):
                     json.dump(orders, f, indent=2)
         except Exception as e:
             print(f"Notice pruning orders_log: {e}")
-
-    # 3. Prune config_credentials.json tracked_swing_holdings
-    try:
-        cfg = load_config()
-        curr_tracked = cfg.get("tracked_swing_holdings", [])
-        new_tracked = []
-        for s in curr_tracked:
-            s_u = s.upper()
-            is_alive = False
-            for b, syms in live_symbols_by_broker.items():
-                if s_u in syms:
-                    is_alive = True
-                    break
-            if is_alive or not any(broker_status.get(k, "").startswith("OK") for k in ("dhan", "zerodha", "upstox")):
-                new_tracked.append(s)
-            else:
-                print(f"🧹 Removed {s_u} from config tracked_swing_holdings (exited)")
-        if len(new_tracked) != len(curr_tracked):
-            cfg["tracked_swing_holdings"] = new_tracked
-            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                json.dump(cfg, f, indent=2)
-    except Exception as e:
-        print(f"Notice updating config tracked_swing_holdings: {e}")
 
 # Trailing Stop-Loss & Risk Breakeven Recommendation Engine
 # ---------------------------------------------------------
