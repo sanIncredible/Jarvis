@@ -3326,6 +3326,21 @@ def export_static_html(results, now_str, port, force_cloud_push=False):
                 except Exception:
                     pass
 
+        # Ingest candidates_exited.json if available
+        exited_payload = []
+        exited_standby_payload = []
+        for ef in ["candidates_exited.json", os.path.join(script_dir, "candidates_exited.json")]:
+            if os.path.isfile(ef):
+                try:
+                    with open(ef, "r", encoding="utf-8") as f_ex:
+                        ex_data = json.load(f_ex)
+                        exited_payload = ex_data.get("qualified", [])
+                        exited_standby_payload = ex_data.get("standby", [])
+                    if exited_payload or exited_standby_payload:
+                        break
+                except Exception:
+                    pass
+
         payload = {
             "updated_at": now_str,
             "updated_ts": int(time.time()),
@@ -3339,6 +3354,8 @@ def export_static_html(results, now_str, port, force_cloud_push=False):
             "merged_candidates": merged_payload,
             "sniper_candidates": [c for c in merged_payload if c.get("is_sniper")],
             "qm_candidates": [c for c in merged_payload if c.get("is_qm_coil")],
+            "exited_candidates": exited_payload,
+            "exited_standby": exited_standby_payload,
             "active_themes": get_all_theme_breakouts(),
             "stocks": stocks_payload
         }
