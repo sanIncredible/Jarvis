@@ -192,7 +192,7 @@
     "status": "REARMED",
     "notes": "Overnight Auto-Rearm (Default 2.5% SL)",
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-19 11:52:30"
+    "ratcheted_at": "2026-11-19 12:01:17"
   },
   {
     "timestamp": "2026-11-08 23:51:10 IST",
@@ -276,7 +276,7 @@
     "status": "PLACED",
     "notes": "Zerodha CNC Swing Holding",
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-19 11:52:55",
+    "ratcheted_at": "2026-11-19 12:01:20",
     "sl_order_id": "343476050",
     "sl_status": "PENDING"
   },
@@ -312,7 +312,7 @@
     "status": "PLACED",
     "notes": "Zerodha CNC Swing Holding",
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-19 11:52:57",
+    "ratcheted_at": "2026-11-19 12:01:22",
     "sl_order_id": "342986108",
     "sl_status": "PENDING"
   },
@@ -496,11 +496,12 @@
     "risk_pct": 2.83,
     "total_risk_inr": 1411.2,
     "mode": "Conservative (\u20b950K)",
-    "status": "PLACED",
+    "status": "EXITED",
     "order_id": "321261119202903 (TRANSIT)",
     "error": null,
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-19 10:26:47"
+    "ratcheted_at": "2026-11-19 10:26:47",
+    "notes": "Auto-reconciled: position closed on DHAN broker"
   },
   {
     "timestamp": "2026-11-19 11:42:51 IST",
