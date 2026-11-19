@@ -420,6 +420,7 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                 pass
 
     new_breakouts = []
+    new_coils = []
     for row in results:
         score, d, m = row
         sym = d.get("symbol")
@@ -475,6 +476,43 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
             alert_type = "ORB_HIGH"
             trigger_label = "ORB High Break"
 
+        # 5. Pre-Breakout Coiling Setup (Coiling within 0.05% to 0.60% below ORB High or PDH)
+        elif not alert_type and ltp and (orb_h or pdh) and orb_status != "H":
+            is_coiling = False
+            coil_anchor = ""
+            coil_level = 0.0
+            dist_pct = 0.0
+
+            if orb_h and float(ltp) < float(orb_h):
+                d_pct = ((float(orb_h) - float(ltp)) / float(orb_h)) * 100.0
+                if 0.05 <= d_pct <= 0.60:
+                    is_coiling = True
+                    coil_anchor = "ORB High"
+                    coil_level = float(orb_h)
+                    dist_pct = d_pct
+            elif pdh and float(ltp) < float(pdh):
+                d_pct = ((float(pdh) - float(ltp)) / float(pdh)) * 100.0
+                if 0.05 <= d_pct <= 0.60:
+                    is_coiling = True
+                    coil_anchor = "PDH"
+                    coil_level = float(pdh)
+                    dist_pct = d_pct
+
+            if is_coiling:
+                coil_key = (sym, "PRE_BREAKOUT_COIL", today)
+                if coil_key not in sent_alerts:
+                    sent_alerts.add(coil_key)
+                    new_coils.append({
+                        "sym": sym,
+                        "ltp": float(ltp),
+                        "anchor": coil_anchor,
+                        "level": coil_level,
+                        "dist_pct": round(dist_pct, 2),
+                        "is_inside_day": bool(d.get("is_inside_day")),
+                        "is_narrow": bool(d.get("is_narrow_prev_day")),
+                        "day_low": float(d.get("day_low") or m.get("day_low") or (float(ltp) * 0.985))
+                    })
+
         if alert_type and trigger_label:
             alert_key = (sym, alert_type, today)
             if alert_key not in sent_alerts:
@@ -520,6 +558,38 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                     "is_gap_up": is_gap_up,
                     "gap_pct": gap_pct
                 })
+
+    # Dispatch Pre-Breakout Coil Alerts if any
+    if new_coils:
+        coil_lines = [
+            f"⚡ <b>JARVIS PRE-BREAKOUT COIL ALERT — {t_clean}</b>",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "<i>Setups coiling within 0.6% of breakout anchor on narrow compression:</i>\n"
+        ]
+        coil_kb = []
+        for c in new_coils[:3]:
+            s_sym = c["sym"]
+            s_ltp = c["ltp"]
+            s_anc = c["anchor"]
+            s_lvl = c["level"]
+            s_dist = c["dist_pct"]
+            tv_link = f"https://in.tradingview.com/chart/?symbol=NSE:{s_sym}"
+
+            comp_tag = "Narrow Inside Day" if c.get("is_inside_day") else ("NR Coiling" if c.get("is_narrow") else "Tight Range")
+            coil_lines.append(
+                f"🎯 <a href='{tv_link}'><b>{s_sym}</b></a> (₹{s_ltp:,.2f})\n"
+                f"• Proximity : 🟡 Coiling {s_dist:.2f}% below {s_anc} (₹{s_lvl:,.2f})\n"
+                f"• Structure : 🧱 {comp_tag}\n"
+                f"• Action : Ready for ignition breakout above ₹{s_lvl:,.2f}\n"
+            )
+            coil_kb.append([
+                {"text": f"🎯 Buy {s_sym} (1k Risk)", "callback_data": f"buy_risk:{s_sym}:1k"},
+                {"text": f"🎯 Buy {s_sym} (2k Risk)", "callback_data": f"buy_risk:{s_sym}:2k"}
+            ])
+        coil_lines.append("━━━━━━━━━━━━━━━━━━━━━━")
+        coil_lines.append("📊 <a href='https://sanincredible.github.io/Jarvis/'>Open Live Dashboard</a>")
+        coil_markup = {"inline_keyboard": coil_kb} if coil_kb else None
+        send_telegram_alert_async("\n".join(coil_lines), reply_markup=coil_markup)
 
     if not new_breakouts:
         return
@@ -720,6 +790,10 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                     {"text": f"🛡️ Scalp {sym} (25k)", "callback_data": f"buy_prep:{sym}:25k:regime:default"}
                 ])
             else:
+                kb_buttons.append([
+                    {"text": f"🎯 Buy {sym} (1k Risk)", "callback_data": f"buy_risk:{sym}:1k"},
+                    {"text": f"🎯 Buy {sym} (2k Risk)", "callback_data": f"buy_risk:{sym}:2k"}
+                ])
                 kb_buttons.append([
                     {"text": f"🛒 Buy {sym} (1.0L)", "callback_data": f"buy_prep:{sym}:mod:lod:default"},
                     {"text": f"🛒 Buy {sym} (50k)", "callback_data": f"buy_prep:{sym}:50k:lod:default"}
@@ -2835,28 +2909,38 @@ def purge_jsdelivr_cache():
         pass
 
 
-def trigger_git_push_async():
-    """Spawns a background thread to commit and push data.json via GitHub API or Git CLI."""
+_last_git_push_ts = [0.0]
+_git_push_lock = threading.Lock()
+
+
+def trigger_git_push_async(force=False):
+    """Spawns a background thread to commit and push data.json via GitHub API or Git CLI (throttled to max 1 per 18s unless force=True)."""
     gh_cfg = load_github_config()
     should_push = (gh_cfg and gh_cfg.get("auto_push")) or os.environ.get("AUTO_GIT_PUSH", "0") == "1" or os.path.isdir(".git")
     if not should_push:
         return
 
-    def _worker():
-        # 1. Try direct GitHub REST API sync (Zero git client required on tablet!)
-        if gh_cfg and gh_cfg.get("token"):
-            if os.path.isfile("index.html"):
-                sync_file_to_github_api(gh_cfg, "index.html", "Init static dashboard shell index.html")
-            now_t = get_ist_now().strftime("%H:%M:%S IST")
-            pushed_api = sync_file_to_github_api(gh_cfg, "data.json", f"sync data.json {now_t}")
-            if pushed_api:
-                purge_jsdelivr_cache()
-                return
+    now_ts = time.time()
+    if not force and (now_ts - _last_git_push_ts[0]) < 18.0:
+        return
 
-        # 2. Fallback to CLI git if installed
+    def _worker():
+        if not _git_push_lock.acquire(blocking=False):
+            return
         try:
+            _last_git_push_ts[0] = time.time()
+            # 1. Try direct GitHub REST API sync (Zero git client required on tablet!)
+            if gh_cfg and gh_cfg.get("token"):
+                if os.path.isfile("index.html"):
+                    sync_file_to_github_api(gh_cfg, "index.html", "Init static dashboard shell index.html")
+                now_t = get_ist_now().strftime("%H:%M:%S IST")
+                pushed_api = sync_file_to_github_api(gh_cfg, "data.json", f"sync data.json {now_t}")
+                if pushed_api:
+                    purge_jsdelivr_cache()
+                    return
+
+            # 2. Fallback to CLI git if installed
             if os.path.isdir(".git"):
-                # If remote is not configured with token, embed token if available
                 if gh_cfg and gh_cfg.get("token"):
                     tok = gh_cfg["token"].strip()
                     owner = gh_cfg.get("username", "sanIncredible").strip()
@@ -2866,12 +2950,14 @@ def trigger_git_push_async():
                 purge_jsdelivr_cache()
         except Exception:
             pass
+        finally:
+            _git_push_lock.release()
 
     t = threading.Thread(target=_worker, daemon=True)
     t.start()
 
 
-def export_static_html(results, now_str, port):
+def export_static_html(results, now_str, port, force_cloud_push=False):
     """
     1. Generates compact data.json (~40KB) for low-latency git push & laptop infosec compliance.
     2. Saves standalone scanner_dashboard.html for offline local viewing on tablet.
@@ -3147,8 +3233,8 @@ def export_static_html(results, now_str, port):
                 with open(dest_html, "w", encoding="utf-8") as f:
                     f.write(html_content)
 
-        # 4. Trigger async git push
-        trigger_git_push_async()
+        # 4. Trigger async git push (throttled to 18s unless forced)
+        trigger_git_push_async(force=force_cloud_push)
     except Exception:
         pass
 
@@ -3336,10 +3422,11 @@ def run_upstox_scanner(once=False, auto_open_web=False):
             current_market_event = evt
             next_refresh_timestamp = time.time() + wait
 
-            # Sleep until target event with 20s fast-polling during prime ORB breakout window (09:18 - 10:15 AM)
+            # Dynamic window: strictly Mon-Fri 09:15:00 to 10:15:00 IST -> near-realtime 3s fast pulses
+            # After 10:15:00 IST -> 3-minute candle close polling
             tok = load_upstox_token()
-            is_prime_window = (now.weekday() < 5 and ((now.hour == 9 and now.minute >= 18) or (now.hour == 10 and now.minute <= 15)))
-            poll_step = 20.0 if is_prime_window else 60.0
+            is_prime_window = (now.weekday() < 5 and ((now.hour == 9 and now.minute >= 15) or (now.hour == 10 and now.minute < 15)))
+            poll_step = 3.0 if is_prime_window else 60.0
 
             while wait > 0 and not stop_scanner_event.is_set():
                 sleep_sec = min(poll_step, max(1.0, wait))
@@ -3347,22 +3434,30 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                 check_and_run_auto_gtt_rearm()
                 wait = (target - get_ist_now()).total_seconds()
 
-                # Fast quote pulse during prime window: check for instant breakouts without waiting 3 minutes
-                if wait > 8.0 and is_prime_window and tok:
+                # Near-realtime quote pulse during 09:15 - 10:15 AM: check for instant breakouts, coils, and live chart update
+                if is_prime_window and tok and wait > 1.5:
                     try:
                         fast_quotes = fetch_upstox_bulk_quotes(get_active_watchlist(), tok)
                         if fast_quotes and latest_results:
                             updated_res = []
-                            triggered_new = False
+                            has_price_move = False
                             for score, d, m in latest_results:
                                 sym = d["symbol"]
                                 q = fast_quotes.get(sym.upper())
                                 if q:
-                                    live_p = float(q.get("last_price", d["ltp"]))
+                                    live_p = float(q.get("last_price") or d.get("ltp") or 0.0)
+                                    old_p = float(d.get("ltp") or live_p)
+                                    if abs(live_p - old_p) >= 0.05:
+                                        has_price_move = True
                                     d["ltp"] = live_p
-                                    # Detect new breach of ORB High or PDH
-                                    if (d.get("orb_high") and live_p > d["orb_high"]) or (d.get("pdh") and live_p > d["pdh"]):
-                                        triggered_new = True
+                                    # Update 3m candle live tick if available
+                                    c_3m = d.get("candles_3m") or d.get("candles") or []
+                                    if c_3m:
+                                        last_c = c_3m[-1]
+                                        if isinstance(last_c, dict):
+                                            last_c["c"] = live_p
+                                            last_c["h"] = max(last_c.get("h", live_p), live_p)
+                                            last_c["l"] = min(last_c.get("l", live_p), live_p)
                                     new_m = compute_metrics(d)
                                     new_score = compute_strength_score(d, new_m)
                                     new_m["strength_score"] = new_score
@@ -3370,7 +3465,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                                 else:
                                     updated_res.append((score, d, m))
 
-                            if triggered_new:
+                            if updated_res and has_price_move:
                                 updated_res.sort(key=lambda x: x[0], reverse=True)
                                 cur_t = get_ist_now().strftime('%H:%M:%S IST')
                                 evaluate_and_dispatch_alerts(updated_res, cur_t)
