@@ -537,7 +537,7 @@ def scan_nifty500_candidates(
         flag_str = f" | {' '.join(c.get('flags', []))}" if c.get('flags') else ""
         lines.append(
             f"{c['symbol']}  # ₹{c['ltp']:,.2f} | [{c['tier']}] {c['coil_tag']}{flag_str} | 20D Dist: {c['dist_pivot_20d_pct']:+.2f}% ({c['dist_pivot_atr']}x ATR) | "
-            f"PDH Dist: {c['dist_pdh_pct']:+.2f}% | 5D/3D VCP: {c['vcp_ratio_5d']}x/{c.get('vcp_ratio_3d', 'N/A')}x ATR | Range: {c['daily_range_pct']:.2f}% | {c['vol_tag']} | {c.get('sector_tag', c.get('industry', 'Equity'))} | Move: {c['change_pct']:+.1f}% | ₹{c['turnover_cr']:,.1f} Cr"
+            f"PDH Dist: {c['dist_pdh_pct']:+.2f}% | 5D/3D VCP: {c['vcp_ratio_5d']}x/{c.get('vcp_ratio_3d', 'N/A')}x ATR | Range: {c['daily_range_pct']:.2f}% | {c['vol_tag']} | {c.get('sector_tag', c.get('industry', 'Equity'))} | Move: {c['change_pct']:+.1f}% | ₹{c.get('turnover_cr', 0.0) or 0.0:,.1f} Cr"
         )
 
     with open(CANDIDATES_FILE, "w", encoding="utf-8") as f:
@@ -714,7 +714,21 @@ def send_morning_candidate_card():
         print("Candidates cache missing or empty. Running fresh scan...")
         res = scan_nifty500_candidates(top_n=15)
 
-    text, reply_markup = format_candidates_telegram_card(res, max_display=10, is_morning=True)
+    # Prefer Unified A+ Sniper Card if candidates_merged.json exists
+    text, reply_markup = None, None
+    merged_file = BASE_DIR / "candidates_merged.json"
+    if merged_file.is_file():
+        try:
+            from enrich_candidates import format_sniper_telegram_card
+            with open(merged_file, "r", encoding="utf-8") as f:
+                m_data = json.load(f)
+            if m_data.get("sniper_candidates"):
+                text, reply_markup = format_sniper_telegram_card(m_data, max_display=8)
+        except Exception as ex:
+            print(f"Notice: Sniper card fallback to standard: {ex}")
+
+    if not text:
+        text, reply_markup = format_candidates_telegram_card(res, max_display=10, is_morning=True)
 
     tg_group_id = cfg.get("telegram", {}).get("group_id")
     topics = cfg.get("telegram", {}).get("topics", {})
