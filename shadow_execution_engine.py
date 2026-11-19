@@ -3,18 +3,27 @@ Jarvis Phase 1: Autonomous Shadow Execution Engine
 ===================================================
 Autonomous Paper Trading Engine for Positional / Swing Breakout Setups.
 
-Key Specifications:
-1. Entry Window: Strictly 09:30:00 to 10:15:00 IST (Filters morning chop; prime momentum zone).
+Key Specifications & Edge-Case Protections:
+1. Entry Window: Strictly 09:30:00 to 10:15:00 IST (Mon-Fri).
 2. Sizing Model: Strictly R-Multiples ($1R = ₹1,000 fixed risk per trade).
 3. Strategy Sieve: 11-Point Technical Checklist + Situational Awareness (SA) Regime.
 4. Uncapped Capacity: Captures all qualified setups to record true statistical edge over 30 days.
-5. Multi-Day Swing Trailing Engine:
+5. Edge-Case Guards:
+   - Same-Day Re-Entry Trap: Blocks re-entering a symbol that already traded/exited today.
+   - Stop-Loss Sanitization: Guards against LOD >= FillPrice and division-by-zero.
+   - Penny Stock Collar: Enforces minimum price threshold (LTP >= ₹20).
+   - Realistic Overnight Gap-Down Slippage: If market opens below SL on Day 2+, exits at Day Open.
+   - Session-Based Holding Days: Counts business/trading days (excluding weekends/holidays).
+   - Live EMA Resolution: Resolves 10 EMA & 20 EMA from data.json cache / daily bars.
+   - Thread-Safe Atomic Writes: Protects JSON ledgers from process interruption or race conditions.
+   - Day 30 Milestone Banner: Flags mature benchmark completion on Day 30.
+6. Multi-Day Swing Trailing Engine:
    - Day 1: Structural LOD Stop (Full breathing room, zero premature choking).
    - Day 1 Close: Day-1 Spurt Shield (+4.5% on heavy volume -> trailed to breakeven).
    - Day 2+: 10 EMA / 20 EMA Trailing Stop along swing structure.
    - Extensions: Parabolic 5 EMA exit & 30% profit target cap.
-6. Automated EOD Report: Dispatches daily at 15:35 IST directly to Telegram Topic 11 ('reports').
-7. Isolated Storage: shadow_portfolio.json, shadow_trade_log.json, shadow_history_eod.json.
+7. Automated EOD Report: Dispatches daily at 15:35 IST directly to Telegram Topic 11 ('reports').
+8. Isolated Storage: shadow_portfolio.json, shadow_trade_log.json, shadow_history_eod.json.
 """
 
 import os
@@ -22,6 +31,8 @@ import sys
 import json
 import time
 import math
+import tempfile
+import threading
 from datetime import datetime, time as dtime, timezone, timedelta
 from pathlib import Path
 
@@ -45,6 +56,7 @@ START_DATE_STR = "2026-11-20"
 EVALUATION_HORIZON_DAYS = 30
 
 IST = timezone(timedelta(hours=5, minutes=30))
+SHADOW_LOCK = threading.RLock()
 
 
 def get_ist_now():
@@ -62,6 +74,38 @@ def round_to_clean_int(val):
         return 0
 
 
+def count_trading_days(date_start, date_end):
+    """Counts actual trading days (Monday to Friday) between two dates inclusive."""
+    if date_start > date_end:
+        return 1
+    cur = date_start
+    days = 0
+    while cur <= date_end:
+        if cur.weekday() < 5:  # Mon=0, Fri=4
+            days += 1
+        cur += timedelta(days=1)
+    return max(1, days)
+
+
+def atomic_write_json(file_path: Path, data):
+    """Atomically writes JSON to disk using a temporary file to prevent corruption."""
+    try:
+        dir_name = file_path.parent
+        with tempfile.NamedTemporaryFile("w", dir=dir_name, delete=False, encoding="utf-8") as tf:
+            json.dump(data, tf, indent=2, ensure_ascii=False)
+            temp_name = tf.name
+        os.replace(temp_name, str(file_path))
+        return True
+    except Exception as ex:
+        print(f"Error atomic writing {file_path.name}: {ex}")
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            return True
+        except Exception:
+            return False
+
+
 def load_config():
     if CONFIG_FILE.is_file():
         try:
@@ -73,47 +117,55 @@ def load_config():
 
 
 def load_shadow_portfolio():
-    """Loads active open swing shadow positions."""
-    if SHADOW_PORTFOLIO_FILE.is_file():
-        try:
-            with open(SHADOW_PORTFOLIO_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {}
+    """Loads active open swing shadow positions (thread-safe)."""
+    with SHADOW_LOCK:
+        if SHADOW_PORTFOLIO_FILE.is_file():
+            try:
+                with open(SHADOW_PORTFOLIO_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        return {}
 
 
 def save_shadow_portfolio(data):
-    """Persists active open swing shadow positions."""
-    try:
-        with open(SHADOW_PORTFOLIO_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        return True
-    except Exception as e:
-        print(f"Error saving shadow portfolio: {e}")
-        return False
+    """Persists active open swing shadow positions (thread-safe & atomic)."""
+    with SHADOW_LOCK:
+        return atomic_write_json(SHADOW_PORTFOLIO_FILE, data)
 
 
 def load_shadow_trade_log():
-    """Loads closed trade log."""
-    if SHADOW_LOG_FILE.is_file():
-        try:
-            with open(SHADOW_LOG_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return []
+    """Loads closed trade log (thread-safe)."""
+    with SHADOW_LOCK:
+        if SHADOW_LOG_FILE.is_file():
+            try:
+                with open(SHADOW_LOG_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        return []
 
 
 def save_shadow_trade_log(data):
-    """Persists closed trade log."""
+    """Persists closed trade log (thread-safe & atomic)."""
+    with SHADOW_LOCK:
+        return atomic_write_json(SHADOW_LOG_FILE, data)
+
+
+def get_cached_symbol_metrics(symbol):
+    """Retrieves cached EMA10, EMA20, and daily metrics from data.json."""
+    if not DATA_FILE.is_file():
+        return {}
     try:
-        with open(SHADOW_LOG_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        return True
-    except Exception as e:
-        print(f"Error saving shadow trade log: {e}")
-        return False
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            d = json.load(f)
+        sym_u = symbol.strip().upper()
+        for s in d.get("stocks", []):
+            if str(s.get("symbol", "")).upper() == sym_u:
+                return s
+    except Exception:
+        pass
+    return {}
 
 
 def send_phase1_telegram_alert(message_html, topic_name="reports"):
@@ -163,7 +215,7 @@ def is_entry_window_active(dt=None):
     if dt is None:
         dt = get_ist_now()
 
-    # Mon=0, Sun=6
+    # Mon=0, Fri=4, Sat=5, Sun=6
     if dt.weekday() >= 5:
         return False
 
@@ -177,6 +229,13 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     """
     Evaluates candidate breakout against strategy checklist and logs paper fill if qualified.
     Runs strictly during 09:30 - 10:15 AM IST.
+    Guards against:
+    - Outside prime window
+    - Already open positions
+    - Same-day re-entry whipsaw traps
+    - Bad stop loss data (LOD >= fill price)
+    - Division-by-zero
+    - Micro-penny stocks (< ₹20)
     """
     sym = (symbol or "").strip().upper()
     if not sym:
@@ -196,9 +255,20 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     if sym in portfolio:
         return False, f"{sym} already held in active shadow portfolio"
 
+    # Edge Case Guard 1: Same-Day Re-Entry Trap
+    today_str = now.strftime("%Y-%m-%d")
+    trade_log = load_shadow_trade_log()
+    already_traded_today = any(t.get("symbol") == sym and t.get("entry_date") == today_str for t in trade_log)
+    if already_traded_today:
+        return False, f"{sym} already entered/exited today (Whipsaw protection: 1 trade per symbol per session)"
+
     ltp = float(trigger_price or quote_data.get("ltp") or 0.0)
     if ltp <= 0:
         return False, "Invalid LTP"
+
+    # Edge Case Guard 2: Penny Stock Collar
+    if ltp < 20.0:
+        return False, f"Penny stock filter: {sym} LTP ₹{ltp:.2f} < ₹20 threshold"
 
     # Realistic Marketable Fill (+0.15% slippage collar)
     fill_price = round_to_clean_int(ltp * 1.0015)
@@ -208,14 +278,18 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     buffer = max(1.0, round(dl * 0.002, 2))
     initial_sl = round_to_clean_int(dl - buffer)
 
-    # Risk distance per share
-    risk_per_share = max(1, fill_price - initial_sl)
+    # Edge Case Guard 3: Stop-Loss Sanitization (Ensure SL is strictly below fill price)
+    if initial_sl >= fill_price:
+        initial_sl = round_to_clean_int(fill_price * 0.975)  # 2.5% structural default
+
+    # Risk distance per share (ensures min 1.0 to prevent division by zero)
+    risk_per_share = max(1.0, float(fill_price - initial_sl))
     risk_pct = round((risk_per_share / fill_price) * 100.0, 2)
 
     # Safety Cap: If LOD stop is wider than 3.5%, cap structural SL at 2.5% to protect R-sizing
     if risk_pct > 3.5:
         initial_sl = round_to_clean_int(fill_price * 0.975)
-        risk_per_share = max(1, fill_price - initial_sl)
+        risk_per_share = max(1.0, float(fill_price - initial_sl))
         risk_pct = round((risk_per_share / fill_price) * 100.0, 2)
 
     # Standardized 1.0R = ₹1,000 Position Sizing
@@ -224,7 +298,6 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     capital_invested = round_to_clean_int(qty * fill_price)
 
     # Check 11-point strategy checklist if order_engine available
-    checklist_passed = True
     ck_note = "Qualified Playbook Setup"
     try:
         from order_engine import evaluate_strategy_checklist
@@ -243,12 +316,12 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         "initial_sl": initial_sl,
         "current_sl": initial_sl,
         "target_price": target_price,
-        "risk_per_share": risk_per_share,
+        "risk_per_share": round(risk_per_share, 2),
         "risk_pct": risk_pct,
         "quantity": qty,
         "fixed_risk_inr": round_to_clean_int(qty * risk_per_share),
         "capital_invested": capital_invested,
-        "entry_date": now.strftime("%Y-%m-%d"),
+        "entry_date": today_str,
         "entry_time": now.strftime("%H:%M:%S"),
         "highest_ltp": fill_price,
         "highest_r": 0.0,
@@ -290,6 +363,7 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
     - Day-1 Spurt Shield: +4.5% gain on volume -> trailed to breakeven.
     - Day 2+: Trailed along 10 EMA / 20 EMA.
     - Extensions: Parabolic 5 EMA exit & 30% profit cap.
+    - Realistic Overnight Gap-Down Slippage: If market opens below SL on Day 2+, exits at Day Open.
     - Simulated stop-loss / target breach detection.
     """
     portfolio = load_shadow_portfolio()
@@ -318,6 +392,7 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
     for sym, pos in list(portfolio.items()):
         q = quotes_dict.get(sym, {})
         ltp = float(q.get("ltp") or 0.0)
+        day_open = float(q.get("day_open") or 0.0)
         day_high = float(q.get("day_high") or ltp)
         day_low = float(q.get("day_low") or ltp)
 
@@ -327,15 +402,15 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         entry_p = pos["entry_price"]
         current_sl = pos["current_sl"]
         target_p = pos["target_price"]
-        risk_per_share = pos["risk_per_share"]
+        risk_per_share = max(1.0, float(pos.get("risk_per_share") or 1.0))
         qty = pos["quantity"]
         entry_date = pos.get("entry_date", today_str)
 
-        # Calculate holding days
+        # Edge Case Guard 4: Trading Days (Excluding Weekends)
         try:
             d_entry = datetime.strptime(entry_date, "%Y-%m-%d").date()
             d_curr = now.date()
-            holding_days = max(1, (d_curr - d_entry).days + 1)
+            holding_days = count_trading_days(d_entry, d_curr)
         except Exception:
             holding_days = pos.get("holding_days", 1)
         pos["holding_days"] = holding_days
@@ -357,6 +432,17 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         ema20 = float(q.get("ema20") or 0.0)
         ema5 = float(q.get("ema5") or 0.0)
 
+        # Edge Case Guard 5: Resolve EMAs from data.json cache if quote lacks them
+        if ema10 <= 0 or ema20 <= 0:
+            c_meta = get_cached_symbol_metrics(sym)
+            if c_meta:
+                if ema10 <= 0:
+                    ema10 = float(c_meta.get("ema10") or 0.0)
+                if ema20 <= 0:
+                    ema20 = float(c_meta.get("ema20") or 0.0)
+                if ema5 <= 0:
+                    ema5 = float(c_meta.get("ema5") or 0.0)
+
         # Trailing Rule Hierarchy:
         # 1. 🛡️ 30% PROFIT CAP
         if peak_gain_pct >= 28.0 or highest_r >= 8.0:
@@ -365,7 +451,7 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 new_sl = rec_sl
                 new_rule = "🛡️ 30% PROFIT CAP (Lock +25% Gains)"
 
-        # 2. ⚡ PARABOLIC 5 EMA
+        # 2. ⚡ PARABOLIC 5 EMA (Locks aggressive gains on vertical runs)
         elif highest_r >= 4.0 and ema5 > 0:
             rec_sl = round_to_clean_int(ema5 * 0.995)
             if rec_sl > new_sl:
@@ -379,9 +465,9 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 new_sl = rec_sl
                 new_rule = "🚀 DAY-1 SPURT SHIELD (+4.5% Surge -> Breakeven)"
 
-        # 4. 🟢 10 EMA TRAIL (Day 2+ trending position)
+        # 4. 🟢 10 EMA TRAIL (Day 2+ trending position with full breathing room)
         elif holding_days >= 2 and highest_r >= 1.5 and ema10 > 0:
-            rec_sl = round_to_clean_int(ema10 * 0.992)  # Full breathing buffer
+            rec_sl = round_to_clean_int(ema10 * 0.992)
             if rec_sl > new_sl:
                 new_sl = rec_sl
                 new_rule = "🟢 10 EMA SWING TRAIL"
@@ -406,8 +492,11 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         # Breach 1: Stop-Loss Breach (Intraday Low breached trailed stop)
         if day_low <= pos["current_sl"]:
             exit_triggered = True
-            # Simulated realistic marketable fill
-            exit_price = round_to_clean_int(min(pos["current_sl"], ltp * 0.9985))
+            # Edge Case Guard 6: Realistic Overnight Gap-Down Slippage
+            if day_open > 0 and day_open < pos["current_sl"]:
+                exit_price = round_to_clean_int(min(day_open, ltp, pos["current_sl"]) * 0.9985)
+            else:
+                exit_price = round_to_clean_int(min(pos["current_sl"], ltp * 0.9985))
             exit_reason = pos["last_trail_rule"]
 
         # Breach 2: Target Reached (Intraday High touched 2.0R target)
@@ -443,7 +532,7 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
             trade_log.append(log_entry)
             exited_symbols.append(sym)
 
-            # Dispatch Exit Telegram Card
+            # Dispatch Exit Telegram Card to Topic 11 ('reports')
             pnl_s = f"+₹{realized_pnl:,}" if realized_pnl >= 0 else f"-₹{abs(realized_pnl):,}"
             r_s = f"+{realized_r:.2f}R" if realized_r >= 0 else f"{realized_r:.2f}R"
             badge = "🟢 PROFIT EXIT" if realized_r >= 0 else "🛑 STOP-LOSS EXIT"
@@ -455,7 +544,7 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 f"• <b>Entry:</b> ₹{entry_p:,} ➔ <b>Exit:</b> ₹{exit_price:,}\n"
                 f"• <b>Realized Result:</b> <b>{r_s} ({pnl_s})</b>\n"
                 f"• <b>Peak R Achieved:</b> +{highest_r:.2f}R <i>(Give-back: -{giveback_r:.2f}R)</i>\n"
-                f"• <b>Holding Duration:</b> {holding_days} days\n"
+                f"• <b>Holding Duration:</b> {holding_days} trading days\n"
                 f"• <b>Exit Reason:</b> {exit_reason}\n"
                 f"• <b>SA Regime:</b> {pos.get('sa_regime')}\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -562,6 +651,7 @@ def get_shadow_analytics():
 def generate_and_send_phase1_eod_report(notify=True):
     """
     Compiles and dispatches the daily Phase 1 EOD Report strictly at 15:35 IST to Topic 11 ('reports').
+    Features Day 30 Maturity Banner when 30 days are reached.
     """
     now = get_ist_now()
     today_str = now.strftime("%Y-%m-%d")
@@ -570,11 +660,11 @@ def generate_and_send_phase1_eod_report(notify=True):
     trade_log = load_shadow_trade_log()
     analytics = get_shadow_analytics()
 
-    # Calculate current day in 30-day evaluation
+    # Calculate current business/trading day in 30-day evaluation
     try:
         d_start = datetime.strptime(START_DATE_STR, "%Y-%m-%d").date()
         d_curr = now.date()
-        day_num = max(1, (d_curr - d_start).days + 1)
+        day_num = count_trading_days(d_start, d_curr)
     except Exception:
         day_num = 1
 
@@ -631,7 +721,12 @@ def generate_and_send_phase1_eod_report(notify=True):
     today_closed_r = round(today_closed_r, 2)
 
     # Build EOD HTML Card
-    lines = [
+    lines = []
+    if day_num >= EVALUATION_HORIZON_DAYS:
+        lines.append("🏆 <b>[30-DAY AUTONOMOUS PILOT MATURE — READY FOR PHASE 2 REVIEW]</b>")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+    lines.extend([
         "🤖 <b>PHASE 1 AUTONOMOUS SHADOW ENGINE — EOD REPORT</b>",
         f"📅 <b>Day {day_num} of {EVALUATION_HORIZON_DAYS}</b> | Session: {now.strftime('%d-%b-%Y')} (15:35 IST)",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
@@ -639,7 +734,7 @@ def generate_and_send_phase1_eod_report(notify=True):
         f"• <b>Open Swing Holdings:</b> {len(portfolio)} positions",
         f"• <b>Unrealized P&L:</b> {'+' if unrealized_r >= 0 else ''}{unrealized_r:.2f}R (₹{unrealized_pnl:+,})",
         f"• <b>Today's Closed P&L:</b> {'+' if today_closed_r >= 0 else ''}{today_closed_r:.2f}R",
-    ]
+    ])
 
     if open_lines:
         lines.append("\n💼 <b>OPEN RUNNERS BREAKDOWN:</b>")
@@ -697,11 +792,7 @@ def generate_and_send_phase1_eod_report(notify=True):
     # Replace today if already present
     history = [h for h in history if h.get("date") != today_str]
     history.append(snapshot)
-    try:
-        with open(SHADOW_EOD_FILE, "w", encoding="utf-8") as f:
-            json.dump(history, f, indent=2)
-    except Exception:
-        pass
+    atomic_write_json(SHADOW_EOD_FILE, history)
 
     return report_html
 
@@ -712,15 +803,23 @@ def format_shadow_status_card():
     portfolio = load_shadow_portfolio()
     analytics = get_shadow_analytics()
 
+    try:
+        d_start = datetime.strptime(START_DATE_STR, "%Y-%m-%d").date()
+        d_curr = now.date()
+        day_num = count_trading_days(d_start, d_curr)
+    except Exception:
+        day_num = 1
+
     lines = [
         "🤖 <b>PHASE 1 AUTONOMOUS SHADOW ENGINE STATUS</b>",
+        f"📅 <b>Day {day_num} of {EVALUATION_HORIZON_DAYS}</b> | 30-Day Evaluation Active",
         "━━━━━━━━━━━━━━━━━━━━━━",
         f"• <b>Active Swing Positions:</b> {len(portfolio)} open",
         f"• <b>Entry Window:</b> 09:30–10:15 AM IST ({'🟢 OPEN' if is_entry_window_active(now) else '🔒 CLOSED'})",
         f"• <b>Sizing Model:</b> Standardized Fixed Risk ($1R = ₹1,000)",
         f"• <b>Capacity Mode:</b> UNCAPPED (Capturing every valid setup)",
         f"• <b>Total Closed Trades:</b> {analytics['total_trades']} completed",
-        f"• <b>Win Rate:</b> {analytics['win_rate_pct']}%",
+        f"• <b>Win Rate:</b> {analytics['win_rate_pct']}% ({analytics['win_count']}W / {analytics['loss_count']}L)",
         f"• <b>Net Realized P&L:</b> <b>{'+' if analytics['net_r'] >= 0 else ''}{analytics['net_r']:.2f}R (₹{analytics['net_pnl_inr']:+,})</b>",
         f"• <b>Profit Factor:</b> {analytics['profit_factor']}",
         f"• <b>Expectancy:</b> {'+' if analytics['expectancy_r'] >= 0 else ''}{analytics['expectancy_r']:.2f}R / trade",
@@ -732,7 +831,7 @@ def format_shadow_status_card():
 
 
 if __name__ == "__main__":
-    print(f"=== Jarvis Phase 1 Shadow Engine ===")
+    print(f"=== Jarvis Phase 1 Shadow Engine (Audited & Hardened) ===")
     print(f"Current IST: {get_ist_now().strftime('%Y-%m-%d %H:%M:%S IST')}")
     print(f"Entry Window Active (09:30-10:15 AM): {is_entry_window_active()}")
     card = format_shadow_status_card()
