@@ -3465,6 +3465,30 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                 except Exception as e:
                     print(f"Notice: Automated 15:20 GTT rearm exception: {e}")
 
+    _last_orphan_sentry_time = [0.0]
+
+    def check_and_run_orphan_sentry(curr_now=None):
+        """
+        Continuous Multi-Broker Orphan Position Sentry:
+        Runs every 30 seconds during market hours (09:15-15:30 IST) across Upstox, Dhan, and Zerodha.
+        Auto-places GTT Stop-Loss if any open position has been unhedged for >30 seconds.
+        """
+        now_ts = time.time()
+        if now_ts - _last_orphan_sentry_time[0] < 30.0:
+            return
+        _last_orphan_sentry_time[0] = now_ts
+        if curr_now is None:
+            curr_now = get_ist_now()
+
+        if curr_now.weekday() < 5:
+            market_mins = curr_now.hour * 60 + curr_now.minute
+            if 555 <= market_mins <= 930:  # 09:15 to 15:30 IST
+                try:
+                    from order_engine import run_orphan_position_sentry
+                    run_orphan_position_sentry(auto_rearm=True, grace_seconds=30)
+                except Exception:
+                    pass
+
     def periodic_scanner():
         global latest_results, last_scan_time, next_refresh_timestamp, current_market_event, ACTIVE_WS_FEED
         last_wl_mtime = 0.0
@@ -3479,6 +3503,8 @@ def run_upstox_scanner(once=False, auto_open_web=False):
         try:
             while not stop_scanner_event.is_set():
                 now = get_ist_now()
+                check_and_run_orphan_sentry(now)
+                check_and_run_auto_gtt_rearm(now)
                 evt, target, wait = get_next_market_event(now)
                 current_market_event = evt
                 next_refresh_timestamp = time.time() + wait
