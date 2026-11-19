@@ -1613,10 +1613,12 @@
           Official Nifty IPO Index Constituents screened for Stage 1/2 IPO Bases, NR Contractions (NR7 / NR4 / Inside Day / Tight Range) &amp; ATH Doorsteps &bull; Zero Overhead Supply
         </div>
       </div>
-      <div style="display:flex; gap:8px; font-size:11px; font-weight:700;">
-        <span style="color:#10b981; background:rgba(16,185,129,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.4);">🎯 NR7 Squeeze</span>
-        <span style="color:#38bdf8; background:rgba(56,189,248,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(56,189,248,0.4);">⚡ NR4 Coil</span>
-        <span style="color:#c084fc; background:rgba(192,132,252,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(192,132,252,0.4);">📦 Inside Day</span>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button id="btn-ipo-all" class="pill-btn active" onclick="setIpoFilter('all')" style="font-size:11px; padding:3px 10px; cursor:pointer; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#fff; font-weight:700;">All (<span id="cnt-ipo-all">0</span>)</button>
+        <button id="btn-ipo-bluesky" class="pill-btn" onclick="setIpoFilter('bluesky')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#fbbf24; border:1px solid rgba(251,191,36,0.5); background:rgba(251,191,36,0.12); border-radius:4px; font-weight:800; opacity:0.6;">👑 Blue Sky (<span id="cnt-ipo-bluesky">0</span>)</button>
+        <button id="btn-ipo-nr" class="pill-btn" onclick="setIpoFilter('nr')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#10b981; border:1px solid rgba(16,185,129,0.5); background:rgba(16,185,129,0.14); border-radius:4px; font-weight:800; opacity:0.6;">🔒 NR7/Inside (<span id="cnt-ipo-nr">0</span>)</button>
+        <button id="btn-ipo-vdu" class="pill-btn" onclick="setIpoFilter('vdu')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#38bdf8; border:1px solid rgba(56,189,248,0.5); background:rgba(56,189,248,0.14); border-radius:4px; font-weight:800; opacity:0.6;">💧 VDU Dry (<span id="cnt-ipo-vdu">0</span>)</button>
+        <button id="btn-ipo-liq" class="pill-btn" onclick="setIpoFilter('liq')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#a78bfa; border:1px solid rgba(167,139,250,0.5); background:rgba(167,139,250,0.14); border-radius:4px; font-weight:800; opacity:0.6;">🏛️ Inst. Liq (<span id="cnt-ipo-liq">0</span>)</button>
       </div>
     </div>
 
@@ -2123,18 +2125,63 @@
     }
   }
 
+  let IPO_FILTER_MODE = 'all';
+
+  function setIpoFilter(mode) {
+    IPO_FILTER_MODE = mode;
+    const bAll = document.getElementById('btn-ipo-all');
+    const bBlue = document.getElementById('btn-ipo-bluesky');
+    const bNr = document.getElementById('btn-ipo-nr');
+    const bVdu = document.getElementById('btn-ipo-vdu');
+    const bLiq = document.getElementById('btn-ipo-liq');
+    if (bAll) bAll.style.opacity = (mode === 'all') ? '1' : '0.6';
+    if (bBlue) bBlue.style.opacity = (mode === 'bluesky') ? '1' : '0.6';
+    if (bNr) bNr.style.opacity = (mode === 'nr') ? '1' : '0.6';
+    if (bVdu) bVdu.style.opacity = (mode === 'vdu') ? '1' : '0.6';
+    if (bLiq) bLiq.style.opacity = (mode === 'liq') ? '1' : '0.6';
+    renderIpoView();
+  }
+
   function renderIpoView() {
     if (!RAW_IPO.length) {
       fetchIpoFallback();
       return;
     }
-    const t1 = RAW_IPO.filter(c => c.tier_order === 1 || (c.tier || '').toUpperCase().includes('TIER 1') || c.tier === 'TIER_1_DOORSTEP');
-    const t2 = RAW_IPO.filter(c => c.tier_order === 2 || (c.tier || '').toUpperCase().includes('TIER 2') || c.tier === 'TIER_2_LAUNCHPAD');
-    const t3 = RAW_IPO.filter(c => c.tier_order === 3 || (c.tier || '').toUpperCase().includes('TIER 3') || c.tier === 'TIER_3_BASE');
 
-    const totalIPO = t1.length + t2.length + t3.length;
+    const cntAll = RAW_IPO.length;
+    const cntBlueSky = RAW_IPO.filter(c => (c.dist_ath_pct !== null && c.dist_ath_pct !== undefined && c.dist_ath_pct <= 3.5)).length;
+    const cntNr = RAW_IPO.filter(c => c.is_nr7 || c.is_inside || c.is_nr4).length;
+    const cntVdu = RAW_IPO.filter(c => c.is_vdu || (c.rvol && c.rvol <= 0.60)).length;
+    const cntLiq = RAW_IPO.filter(c => (c.turnover_cr || 0) >= 50).length;
+
+    const elAll = document.getElementById('cnt-ipo-all');
+    const elBlue = document.getElementById('cnt-ipo-bluesky');
+    const elNr = document.getElementById('cnt-ipo-nr');
+    const elVdu = document.getElementById('cnt-ipo-vdu');
+    const elLiq = document.getElementById('cnt-ipo-liq');
+    if (elAll) elAll.innerText = cntAll;
+    if (elBlue) elBlue.innerText = cntBlueSky;
+    if (elNr) elNr.innerText = cntNr;
+    if (elVdu) elVdu.innerText = cntVdu;
+    if (elLiq) elLiq.innerText = cntLiq;
+
+    let filtered = RAW_IPO;
+    if (IPO_FILTER_MODE === 'bluesky') {
+      filtered = RAW_IPO.filter(c => (c.dist_ath_pct !== null && c.dist_ath_pct !== undefined && c.dist_ath_pct <= 3.5));
+    } else if (IPO_FILTER_MODE === 'nr') {
+      filtered = RAW_IPO.filter(c => c.is_nr7 || c.is_inside || c.is_nr4);
+    } else if (IPO_FILTER_MODE === 'vdu') {
+      filtered = RAW_IPO.filter(c => c.is_vdu || (c.rvol && c.rvol <= 0.60));
+    } else if (IPO_FILTER_MODE === 'liq') {
+      filtered = RAW_IPO.filter(c => (c.turnover_cr || 0) >= 50);
+    }
+
+    const t1 = filtered.filter(c => c.tier_order === 1 || (c.tier || '').toUpperCase().includes('TIER 1') || c.tier === 'TIER_1_DOORSTEP');
+    const t2 = filtered.filter(c => c.tier_order === 2 || (c.tier || '').toUpperCase().includes('TIER 2') || c.tier === 'TIER_2_LAUNCHPAD');
+    const t3 = filtered.filter(c => c.tier_order === 3 || (c.tier || '').toUpperCase().includes('TIER 3') || c.tier === 'TIER_3_BASE');
+
     const badge = document.getElementById('tab-badge-ipo');
-    if (badge) badge.innerText = totalIPO;
+    if (badge) badge.innerText = cntAll;
 
     let r = 1;
     renderIpoTierGrid('ipo-grid-tier1', t1, r); r += t1.length;
@@ -2153,7 +2200,7 @@
     const container = document.getElementById(containerId);
     if (!container) return;
     if (!list || !list.length) {
-      container.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:10px;">No setups in this tier.</div>';
+      container.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:10px;">No setups match current filter in this tier.</div>';
       return;
     }
     let html = '';
@@ -2176,6 +2223,9 @@
       if (c.is_inside) {
         badgesHtml += '<span style="font-size:10px; font-weight:800; color:#c084fc; background:rgba(192,132,252,0.18); border:1px solid rgba(192,132,252,0.4); padding:1px 5px; border-radius:4px;">📦 Inside</span>';
       }
+      if (c.is_vdu) {
+        badgesHtml += '<span style="font-size:10px; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); padding:1px 5px; border-radius:4px;">💧 VDU</span>';
+      }
       if (c.daily_range_pct) {
         badgesHtml += `<span style="font-size:10px; color:#fde047; background:rgba(234,179,8,0.15); padding:1px 5px; border-radius:4px;">${c.daily_range_pct.toFixed(1)}% rng</span>`;
       }
@@ -2183,6 +2233,7 @@
       const ltpStr = c.ltp ? `₹${c.ltp}` : '';
       const chgStr = c.change_pct !== undefined && c.change_pct !== null ? `${c.change_pct >= 0 ? '+' : ''}${c.change_pct.toFixed(1)}%` : '';
       const chgColor = (c.change_pct || 0) >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+      const toStr = (c.turnover_cr && c.turnover_cr >= 10) ? `₹${Math.round(c.turnover_cr)}Cr` : '';
 
       html += `
         <a href="${tvUrl}" target="_blank" class="cand-link-btn" title="Open ${sym} chart on TradingView" style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px; gap:8px;">
@@ -2198,6 +2249,7 @@
               <span style="color:#fbbf24; font-weight:700;">${distStr}</span>
               <span>•</span>
               <span style="max-width:140px; overflow:hidden; text-overflow:ellipsis;">${c.industry || 'IPO'}</span>
+              ${toStr ? `<span>•</span><span style="color:#a78bfa; font-weight:700;">${toStr}</span>` : ''}
               <span>•</span>
               <span style="color:#94a3b8; overflow:hidden; text-overflow:ellipsis; max-width:160px;">${c.name || sym}</span>
             </div>
