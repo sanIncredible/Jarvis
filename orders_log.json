@@ -104,7 +104,7 @@
     "quantity": 101,
     "ltp": 1002.76,
     "exposure": 101278.76,
-    "stop_loss": 1004.25,
+    "stop_loss": 1102,
     "sl_order_id": "22132611042738",
     "sl_status": "PENDING",
     "risk_pct": 0.0,
@@ -114,7 +114,7 @@
     "order_id": null,
     "error": null,
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-05 10:55:23"
+    "ratcheted_at": "2026-11-19 18:27:33"
   },
   {
     "timestamp": "2026-11-05 09:28:07 IST",
@@ -192,7 +192,7 @@
     "status": "REARMED",
     "notes": "Overnight Auto-Rearm (Default 2.5% SL)",
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-19 12:16:58"
+    "ratcheted_at": "2026-11-19 12:34:33"
   },
   {
     "timestamp": "2026-11-08 23:51:10 IST",
@@ -276,7 +276,7 @@
     "status": "PLACED",
     "notes": "Zerodha CNC Swing Holding",
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-19 12:17:00",
+    "ratcheted_at": "2026-11-19 12:34:35",
     "sl_order_id": "343476050",
     "sl_status": "PENDING"
   },
@@ -308,11 +308,11 @@
     "price": 1792.95,
     "ltp": 2128.7,
     "exposure": 91440.45,
-    "stop_loss": 1796,
+    "stop_loss": 2070,
     "status": "PLACED",
     "notes": "Zerodha CNC Swing Holding",
     "breakeven_ratcheted": true,
-    "ratcheted_at": "2026-11-19 12:17:03",
+    "ratcheted_at": "2026-11-19 16:02:25",
     "sl_order_id": "342986108",
     "sl_status": "PENDING"
   },
@@ -327,9 +327,12 @@
     "price": 817.0,
     "ltp": 827.15,
     "exposure": 41667.0,
-    "stop_loss": 804.75,
+    "stop_loss": 805,
     "status": "PLACED",
-    "notes": "Zerodha CNC Swing Holding"
+    "notes": "Zerodha CNC Swing Holding",
+    "ratcheted_at": "2026-11-19 16:02:17",
+    "sl_order_id": "344750298",
+    "sl_status": "PENDING"
   },
   {
     "timestamp": "2026-11-12 09:15:00 IST",
@@ -523,5 +526,49 @@
     "status": "FAILED",
     "order_id": null,
     "error": "Could not map securityId for MILKYMIST in Dhan instrument master"
+  },
+  {
+    "timestamp": "2026-11-19 13:46:45 IST",
+    "symbol": "WESTLIFE",
+    "broker": "DHAN",
+    "product": "MTF",
+    "action": "BUY",
+    "order_type": "LIMIT",
+    "limit_price": 694,
+    "quantity": 52,
+    "ltp": 692.2,
+    "exposure": 35994.4,
+    "stop_loss": 673,
+    "sl_order_id": "23126111948303",
+    "sl_status": "PLACED",
+    "risk_pct": 2.77,
+    "total_risk_inr": 998.4,
+    "mode": "Risk-Normalized (\u20b91,000 Risk Target)",
+    "status": "EXITED",
+    "order_id": "23126111948203 (TRANSIT)",
+    "error": null,
+    "notes": "Auto-reconciled: position closed on DHAN broker"
+  },
+  {
+    "timestamp": "2026-11-19 13:47:06 IST",
+    "symbol": "WESTLIFE",
+    "broker": "DHAN",
+    "product": "MTF",
+    "action": "BUY",
+    "order_type": "LIMIT",
+    "limit_price": 694,
+    "quantity": 51,
+    "ltp": 692.35,
+    "exposure": 35309.85,
+    "stop_loss": 673,
+    "sl_order_id": "23126111948403",
+    "sl_status": "PLACED",
+    "risk_pct": 2.79,
+    "total_risk_inr": 986.85,
+    "mode": "Risk-Normalized (\u20b91,000 Risk Target)",
+    "status": "EXITED",
+    "order_id": "321261119491103 (TRANSIT)",
+    "error": null,
+    "notes": "Auto-reconciled: position closed on DHAN broker"
   }
 ]
