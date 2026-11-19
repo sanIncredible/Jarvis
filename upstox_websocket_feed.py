@@ -245,15 +245,18 @@ class UpstoxWebSocketFeed:
         if not added and not removed:
             return
 
+        remove_keys = [self.symbol_to_key[s] for s in removed if s in self.symbol_to_key]
         self.symbols = clean
         self._build_key_mappings()
 
+        with self.lock:
+            for s in removed:
+                self.latest_quotes.pop(s, None)
+
         if self.streamer and self.is_connected:
             try:
-                if removed:
-                    remove_keys = [self.symbol_to_key[s] for s in removed if s in self.symbol_to_key]
-                    if remove_keys:
-                        self.streamer.unsubscribe(remove_keys)
+                if remove_keys:
+                    self.streamer.unsubscribe(remove_keys)
                 if added:
                     add_keys = [self.symbol_to_key[s] for s in added if s in self.symbol_to_key]
                     if add_keys:
