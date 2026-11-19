@@ -2878,18 +2878,17 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
             reg_code = data.get("regime_code", "NORMAL")
             max_var_disp = data.get("max_var", 10000.0)
             return (
-                "🛡️ <b>PORTFOLIO HEAT & SA RISK SIEVE</b>\n"
+                "🛡️ <b>PORTFOLIO HEAT & SA RISK CAPACITY</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"• <b>Status:</b> {status_badge}\n"
-                f"• <b>Total Holdings:</b> {data.get('open_count')}/{data.get('max_total_slots', 10)} slots\n"
-                f"• <b>Active Risk Under Fire:</b> {data.get('active_risk_count', 0)}/{data.get('max_risk_slots', 5)} ({reg_code} Limit)\n"
-                f"• <b>De-risked Runners:</b> {data.get('derisked_count', 0)} (Free-Roll / Cost Trailed)\n"
+                f"• <b>Active Positions:</b> {data.get('open_count')}/{data.get('max_slots', 5)} ({reg_code} Limit)\n"
+                f"• <b>Total Portfolio Ceiling:</b> {data.get('max_total_slots', 10)} slots max\n"
                 f"• <b>New Entries Today:</b> {data.get('entries_today_count', 0)}/{data.get('max_daily_entries', 2)} max/day\n"
                 f"• <b>Open Value-at-Risk (VaR):</b> ₹{data.get('total_var', 0):,.0f} / ₹{max_var_disp:,.0f} max\n"
                 f"• <b>Remaining Risk Headroom:</b> ₹{data.get('headroom_var', 0):,.0f}\n"
                 f"• <b>SA Market Regime:</b> {reg_code}\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 <i>Trades trailed to Breakeven (+0.15%) carry ₹0 VaR and unlock active risk capacity!</i>"
+                "💡 <i>Trailing strictly follows 10/20 EMA & Structural Strategy (Full breathing room).</i>"
             )
         return f"Portfolio Capacity: {data}"
     elif cmd == "/settopic":
