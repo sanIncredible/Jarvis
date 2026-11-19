@@ -760,13 +760,21 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
     }
 
 
-def calculate_order_sizing(quote_data, mode_arg="mod", sl_mode="lod"):
+def calculate_order_sizing(quote_data, mode_arg="mod", sl_mode="lod", **kwargs):
     """
     Calculates quantity, stop loss, exposure, risk parameters, and strategy checklist.
+    Supports either quote dictionary or string symbol, with flexible size_mode/mode_arg keywords.
     """
-    symbol = quote_data["symbol"]
-    ltp = quote_data["ltp"]
-    day_low = quote_data["day_low"]
+    if "size_mode" in kwargs and (mode_arg == "mod" or not mode_arg):
+        mode_arg = kwargs["size_mode"]
+    if isinstance(quote_data, str):
+        sym_s = quote_data.strip().upper()
+        q, _ = fetch_live_quote(sym_s)
+        quote_data = q if q else {"symbol": sym_s, "ltp": 100.0, "day_low": 98.0}
+
+    symbol = quote_data.get("symbol", "")
+    ltp = float(quote_data.get("ltp") or 0.0)
+    day_low = float(quote_data.get("day_low") or (ltp * 0.985 if ltp > 0 else 0.0))
 
     base_size, mode_label = parse_size_mode(mode_arg)
     regime = load_market_regime()
@@ -867,7 +875,7 @@ def calculate_order_sizing(quote_data, mode_arg="mod", sl_mode="lod"):
 
     return {
         "symbol": symbol,
-        "instrument_key": quote_data["instrument_key"],
+        "instrument_key": quote_data.get("instrument_key", ""),
         "ltp": ltp,
         "quantity": quantity,
         "mode_label": mode_label,
