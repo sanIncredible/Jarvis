@@ -405,9 +405,31 @@ def send_telegram_alert_async(message, parse_mode="HTML", reply_markup=None, top
     threading.Thread(target=_worker, daemon=True).start()
 
 
+# ---------------------------------------------------------
+# Intraday Sector & Theme Cluster Surveillance
+# ---------------------------------------------------------
+_DAILY_THEME_BREAKOUTS = {}  # key: theme_name, value: list of {symbol, ltp, trigger, time}
+_LAST_THEME_DATE = [None]
+
+def get_theme_breakout_count(theme_name):
+    """Returns number of stocks in this theme that have broken out today."""
+    global _DAILY_THEME_BREAKOUTS
+    return len(_DAILY_THEME_BREAKOUTS.get(theme_name, []))
+
+def get_all_theme_breakouts():
+    """Returns the dictionary of all today's theme breakouts."""
+    global _DAILY_THEME_BREAKOUTS
+    return dict(_DAILY_THEME_BREAKOUTS)
+
+
 def evaluate_and_dispatch_alerts(results, current_time_str):
     """Evaluates scan results and dispatches rich Action Card Telegram alerts for newly triggered stocks."""
+    global _DAILY_THEME_BREAKOUTS, _LAST_THEME_DATE
     today = get_ist_now().strftime("%Y-%m-%d")
+    if _LAST_THEME_DATE[0] != today:
+        _LAST_THEME_DATE[0] = today
+        _DAILY_THEME_BREAKOUTS = {}
+
     t_clean = current_time_str.replace(" IST", "")
     if len(t_clean.split(":")) >= 2:
         t_clean = ":".join(t_clean.split(":")[:2]) + " IST"
@@ -565,6 +587,24 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                 is_pyramid = holding_info is not None
 
                 day_high_raw = float(d.get("day_high") or d.get("high") or ltp)
+
+                # Sector Theme Resolution & Cluster Tracking
+                from order_engine import resolve_sector_theme
+                t_info = resolve_sector_theme(sym, industry=d.get("industry"), quote_data=d)
+                theme_name = t_info.get("theme", "General Equities")
+                theme_icon = t_info.get("icon", "🏢")
+
+                if theme_name not in _DAILY_THEME_BREAKOUTS:
+                    _DAILY_THEME_BREAKOUTS[theme_name] = []
+                if not any(x.get("symbol") == sym for x in _DAILY_THEME_BREAKOUTS[theme_name]):
+                    _DAILY_THEME_BREAKOUTS[theme_name].append({
+                        "symbol": sym,
+                        "ltp": float(ltp),
+                        "trigger": trigger_label,
+                        "time": t_clean
+                    })
+                theme_count = len(_DAILY_THEME_BREAKOUTS[theme_name])
+
                 new_breakouts.append({
                     "sym": sym,
                     "ltp": float(ltp),
@@ -581,7 +621,10 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                     "lod_dist": lod_dist,
                     "stretch_pct": stretch_pct,
                     "is_gap_up": is_gap_up,
-                    "gap_pct": gap_pct
+                    "gap_pct": gap_pct,
+                    "theme": theme_name,
+                    "theme_icon": theme_icon,
+                    "theme_count": theme_count
                 })
 
     # Dispatch Pre-Breakout Coil Alerts if any
@@ -686,6 +729,18 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
             "━━━━━━━━━━━━━━━━━━━━━━"
         ]
 
+    # Check for active Theme Clusters (>= 3 breakouts in same sector)
+    cluster_themes = set()
+    for b in new_breakouts:
+        if b.get("theme_count", 0) >= 3 and b.get("theme") and b.get("theme") != "General Equities":
+            cluster_themes.add((b["theme"], b.get("theme_icon", "🏢"), b["theme_count"]))
+    
+    if cluster_themes:
+        for ct_name, ct_icon, ct_count in sorted(cluster_themes):
+            lines.append(f"🔥 <b>THEME CLUSTER: {ct_icon} {ct_name} ({ct_count}+ Breakouts)</b>")
+            lines.append("<i>⚡ Institutional group sponsorship active! (>75% follow-through)</i>")
+            lines.append("━━━━━━━━━━━━━━━━━━━━━━")
+
     for i, b in enumerate(new_breakouts):
         if i > 0:
             lines.append("")  # Blank separation between stock cards
@@ -766,6 +821,18 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
             struct_parts.append(f"⚡ {b['trigger']}")
 
         lines.append("├ " + " • ".join(struct_parts))
+
+        # Sector Theme & Institutional Cluster Pill
+        b_theme = b.get("theme")
+        b_icon = b.get("theme_icon", "🏢")
+        b_tcnt = b.get("theme_count", 1)
+        if b_theme and b_theme != "General Equities":
+            if b_tcnt >= 3:
+                lines.append(f"├ {b_icon} <b>Theme:</b> {b_theme} • 🔥 <b>Cluster #{b_tcnt} (Sponsor)</b>")
+            elif b_tcnt == 2:
+                lines.append(f"├ {b_icon} <b>Theme:</b> {b_theme} • ⚡ <b>Dual Run #{b_tcnt}</b>")
+            else:
+                lines.append(f"├ {b_icon} <b>Theme:</b> {b_theme}")
 
         # Upper Wick Quality Check
         day_h_val = b.get("day_high")
@@ -3272,6 +3339,7 @@ def export_static_html(results, now_str, port, force_cloud_push=False):
             "merged_candidates": merged_payload,
             "sniper_candidates": [c for c in merged_payload if c.get("is_sniper")],
             "qm_candidates": [c for c in merged_payload if c.get("is_qm_coil")],
+            "active_themes": get_all_theme_breakouts(),
             "stocks": stocks_payload
         }
 
