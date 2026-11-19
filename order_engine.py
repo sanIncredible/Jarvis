@@ -3014,14 +3014,15 @@ def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
 
     now_ist = get_ist_now().strftime("%Y-%m-%d %H:%M:%S IST")
 
-    # Hard Broker Stop-Loss Placement
+    # Hard Broker Stop-Loss Placement (Permanent Cloud GTT with Day Order Fallback)
     sl_placed = False
     sl_order_id = None
     sl_error = None
     if success and calc.get("stop_loss") and float(calc["stop_loss"]) > 0:
         cfg = load_config()
         if cfg.get("auto_place_broker_sl", True):
-            sl_ok, sl_res = place_broker_stop_loss(
+            # 1. Primary: Submit 1-Year Permanent Cloud GTT directly to broker orderbook
+            sl_ok, sl_res = place_broker_gtt_stop_loss(
                 broker=target_broker,
                 symbol=symbol,
                 quantity=calc["quantity"],
@@ -3029,11 +3030,24 @@ def execute_broker_order(symbol, mode_arg="mod", sl_mode="lod", broker=None):
                 instrument_key=calc.get("instrument_key"),
                 product=product_label.split()[0]
             )
-            sl_placed = sl_ok
             if sl_ok:
+                sl_placed = True
                 sl_order_id = sl_res
             else:
-                sl_error = sl_res
+                # 2. Fallback: Submit regular day Stop-Loss order if GTT rejected
+                sl_day_ok, sl_day_res = place_broker_stop_loss(
+                    broker=target_broker,
+                    symbol=symbol,
+                    quantity=calc["quantity"],
+                    sl_price=calc["stop_loss"],
+                    instrument_key=calc.get("instrument_key"),
+                    product=product_label.split()[0]
+                )
+                sl_placed = sl_day_ok
+                if sl_day_ok:
+                    sl_order_id = sl_day_res
+                else:
+                    sl_error = f"GTT: {sl_res} | DaySL: {sl_day_res}"
 
     calc["sl_placed"] = sl_placed
     calc["sl_order_id"] = sl_order_id
