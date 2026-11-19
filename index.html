@@ -2534,31 +2534,7 @@
   let activeFilter = 'all';
   let sortField = 'strength_score';
   let sortAsc = false;
-  let userOverrodePoll = false;
-
-  function getDynamicPollInterval() {
-    if (userOverrodePoll) return pollIntervalSec;
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const ist = new Date(utc + (5.5 * 3600000));
-    const day = ist.getDay();
-    const hr = ist.getHours();
-    const min = ist.getMinutes();
-
-    // Monday to Friday: 09:15 to 10:15 IST -> 3 seconds near-realtime
-    if (day >= 1 && day <= 5) {
-      if ((hr === 9 && min >= 15) || (hr === 10 && min < 15)) {
-        return 3;
-      }
-      // After 10:15 to 15:30 IST -> 180 seconds (3 minutes)
-      if ((hr === 10 && min >= 15) || (hr > 10 && hr < 15) || (hr === 15 && min <= 30)) {
-        return 180;
-      }
-    }
-    return 30; // Off-hours default
-  }
-
-  let pollIntervalSec = getDynamicPollInterval();
+  let pollIntervalSec = 30;
   let countdown = pollIntervalSec;
   let timerHandle = null;
   let popupTimer = null;
@@ -2809,7 +2785,6 @@
   }
 
   function setPollInterval(sec) {
-    userOverrodePoll = true;
     pollIntervalSec = sec;
     countdown = sec;
     document.querySelectorAll('.pill-btn').forEach(btn => {
@@ -2825,9 +2800,7 @@
   function updateTimerText() {
     const m = Math.floor(countdown / 60);
     const s = countdown % 60;
-    const timeStr = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
-    const badge = (pollIntervalSec <= 5) ? ' ⚡ 3s' : (pollIntervalSec === 180 ? ' ⏱ 3m' : '');
-    timerDisplay.innerText = timeStr + badge;
+    timerDisplay.innerText = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
   }
 
   function startCountdown() {
@@ -2835,7 +2808,6 @@
     timerHandle = setInterval(() => {
       countdown--;
       if (countdown <= 0) {
-        pollIntervalSec = getDynamicPollInterval();
         countdown = pollIntervalSec;
         fetchData(false);
       }
