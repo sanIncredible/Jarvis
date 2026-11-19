@@ -620,6 +620,11 @@ def handle_add_command(args_text):
 
     # Write updated list
     write_watchlist_symbols(current_syms)
+    try:
+        from watchlist_hygiene import sync_watchlist_meta
+        sync_watchlist_meta(current_syms)
+    except Exception:
+        pass
 
     # Push watchlist to GitHub synchronously FIRST to guarantee persistence
     push_watchlist_to_github()
@@ -672,6 +677,11 @@ def handle_remove_command(args_text):
         return f"⚠️ Symbol(s) not found in watchlist: <b>{', '.join(not_found)}</b>"
 
     write_watchlist_symbols(current_syms)
+    try:
+        from watchlist_hygiene import sync_watchlist_meta
+        sync_watchlist_meta(current_syms)
+    except Exception:
+        pass
     push_watchlist_to_github()
     threading.Thread(target=trigger_immediate_rescan, daemon=True).start()
 
@@ -703,8 +713,18 @@ def handle_watchlist_command():
         }
         return empty_text, empty_markup
 
+    hygiene_str = ""
+    try:
+        from watchlist_hygiene import load_watchlist_meta
+        meta = load_watchlist_meta()
+        stale_cnt = sum(1 for s in syms if meta.get(s, {}).get("days_active", 0) >= 3)
+        act_cnt = len(syms) - stale_cnt
+        hygiene_str = f"\n📊 🟢 {act_cnt} Active | ⚠️ {stale_cnt} Stale (≥3d)"
+    except Exception:
+        pass
+
     lines = [
-        f"📋 <b>ACTIVE 3M ORB WATCHLIST ({len(syms)} Stocks)</b>",
+        f"📋 <b>ACTIVE 3M ORB WATCHLIST ({len(syms)} Stocks)</b>{hygiene_str}",
         "━━━━━━━━━━━━━━━━━━━━━━"
     ]
     for idx, s in enumerate(syms, 1):
@@ -727,7 +747,10 @@ def handle_watchlist_command():
         kb_rows.append(btn_row)
 
     kb_rows.append([
-        {"text": "🔄 Refresh Watchlist", "callback_data": "wl_show"},
+        {"text": "🧹 Hygiene & Prune", "callback_data": "wl_hygiene_show"},
+        {"text": "🔄 Refresh Watchlist", "callback_data": "wl_show"}
+    ])
+    kb_rows.append([
         {"text": "🎯 Scan Candidates", "callback_data": "cand_refresh"}
     ])
 
@@ -1142,6 +1165,8 @@ def handle_help_command():
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         "🛒 <b>MTF Broker Orders:</b>\n"
         "• <code>/buy &lt;SYM&gt; [mode] [sl]</code> — Place MTF Order with LoD SL\n"
+        "  - <code>/buy RELIANCE 1k</code> — ₹1,000 Fixed Risk (Normalized Sizing)\n"
+        "  - <code>/buy RELIANCE 2k</code> — ₹2,000 Fixed Risk (Normalized Sizing)\n"
         "  - <code>/buy RELIANCE agg</code> — ₹1.5L Aggressive Size\n"
         "  - <code>/buy RELIANCE mod</code> — ₹1.0L Moderate Size (Default)\n"
         "  - <code>/buy RELIANCE 50k</code> — ₹50K Conservative / 50% Risk\n"
@@ -1168,7 +1193,8 @@ def handle_help_command():
         "• <code>/hindsight</code> or <code>/sim</code> — EOD Multi-Trade Simulation & Strict Audit\n"
         "• <code>/add &lt;SYMBOL...&gt;</code> — Add stock(s) to scanner watchlist\n"
         "• <code>/remove &lt;SYMBOL...&gt;</code> — Remove stock(s) from watchlist\n"
-        "• <code>/watchlist</code> — Show full active watchlist & TV links\n\n"
+        "• <code>/watchlist</code> — Show full active watchlist & TV links\n"
+        "• <code>/hygiene</code> or <code>/prune</code> — Audit watchlist age & 1-tap prune stale setups\n\n"
         "🎟️ <b>Token Management:</b>\n"
         "• <code>/token</code> — Check live health of all broker tokens\n"
         "• <code>/upstox &lt;TOKEN&gt;</code> — Update Upstox token & test feed\n"
@@ -1939,6 +1965,8 @@ def handle_buy_command(args, from_chat_id):
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "<b>Usage:</b> <code>/buy &lt;SYMBOL&gt; [mode] [sl] [broker] [confirm]</code>\n\n"
             "<b>Sizing Modes:</b>\n"
+            "• <code>1k</code> / <code>r1k</code>   — Risk-Normalized (🎯 Exact ₹1,000 risk)\n"
+            "• <code>2k</code> / <code>r2k</code>   — Risk-Normalized (🎯 Exact ₹2,000 risk)\n"
             "• <code>agg</code> / <code>1.5L</code> — Aggressive (₹1,50,000 exposure)\n"
             "• <code>mod</code> / <code>1L</code>   — Moderate (₹1,00,000 exposure - Default)\n"
             "• <code>50k</code> / <code>low</code>  — Conservative / 50% Risk (₹50,000 exposure)\n"
@@ -2309,11 +2337,48 @@ def handle_callback_query(cq):
         else:
             curr_syms = [s for s in curr_syms if s != sym]
             write_watchlist_symbols(curr_syms)
+            try:
+                from watchlist_hygiene import sync_watchlist_meta
+                sync_watchlist_meta(curr_syms)
+            except Exception:
+                pass
             push_watchlist_to_github()
             answer_callback_query(cq_id, f"🗑️ Removed {sym} from Watchlist!")
             threading.Thread(target=trigger_immediate_rescan, daemon=True).start()
             text, markup = handle_watchlist_command()
             edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
+
+    elif cq_data in ("wl_hygiene_show", "wl_hygiene_refresh"):
+        answer_callback_query(cq_id, "Auditing watchlist hygiene...")
+        from watchlist_hygiene import audit_watchlist_hygiene, format_hygiene_telegram_card
+        aud = audit_watchlist_hygiene()
+        text, markup = format_hygiene_telegram_card(aud)
+        edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
+
+    elif cq_data == "wl_prune_stale":
+        answer_callback_query(cq_id, "Pruning stale & invalidated symbols...")
+        from watchlist_hygiene import prune_watchlist, audit_watchlist_hygiene, format_hygiene_telegram_card
+        pruned, rem = prune_watchlist()
+        pruned_txt = ", ".join(pruned[:4]) if pruned else "None"
+        answer_callback_query(cq_id, f"🧹 Pruned {len(pruned)} symbols! ({pruned_txt})", show_alert=True)
+        threading.Thread(target=trigger_immediate_rescan, daemon=True).start()
+        aud = audit_watchlist_hygiene()
+        text, markup = format_hygiene_telegram_card(aud)
+        edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
+
+    elif cq_data.startswith("buy_risk:"):
+        parts = cq_data.split(":")
+        sym = parts[1].upper()
+        r_mode = parts[2].lower() if len(parts) > 2 else "1k"
+        answer_callback_query(cq_id, f"Calculating {r_mode.upper()} risk order for {sym}...")
+        from order_engine import get_default_broker
+        broker = get_default_broker()
+        preview = build_buy_preview(sym, r_mode, "lod", broker)
+        if isinstance(preview, tuple):
+            text, markup = preview
+            send_telegram_msg(chat_id, text, reply_markup=markup, thread_id=thread_id)
+        else:
+            send_telegram_msg(chat_id, preview, thread_id=thread_id)
 
     elif cq_data.startswith("trail_be:"):
         parts = cq_data.split(":")
@@ -2458,6 +2523,10 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_remove_command(args)
     elif cmd in ("/watchlist", "/list", "/stocks", "/wl", "/telegram", "watchlist", "list", "stocks", "wl", "telegram"):
         return handle_watchlist_command()
+    elif cmd in ("/hygiene", "/prune", "/stale", "hygiene", "prune", "stale"):
+        from watchlist_hygiene import audit_watchlist_hygiene, format_hygiene_telegram_card
+        aud = audit_watchlist_hygiene()
+        return format_hygiene_telegram_card(aud)
     elif cmd in ("/candidates", "/cand", "/screen", "/screener", "/eodscan", "/briefing", "candidates", "cand", "screen", "briefing"):
         return handle_candidates_command()
     elif cmd in ("/momo90", "/momo", "/broadmomo", "momo90", "momo", "broadmomo"):
