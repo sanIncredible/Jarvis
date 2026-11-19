@@ -1680,11 +1680,9 @@
           Sourced from Manas Arora Breadth Ledger &bull; 1W &ge; 20% &bull; 1M &ge; 25% &bull; 1Q &ge; 35% &bull; 6M &ge; 50% &bull; Multi-Timeframe Momentum Leaders
         </div>
       </div>
-      <div style="display:flex; gap:8px; font-size:11px; font-weight:700;">
-        <span style="color:#f59e0b; background:rgba(245,158,11,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(245,158,11,0.4);">🔥 1W +20%</span>
-        <span style="color:#38bdf8; background:rgba(56,189,248,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(56,189,248,0.4);">🚀 1M +25%</span>
-        <span style="color:#a855f7; background:rgba(168,85,247,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(168,85,247,0.4);">🎯 1Q +35%</span>
-        <span style="color:#10b981; background:rgba(16,185,129,0.18); padding:3px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.4);">💎 6M +50%</span>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button id="btn-ems-all" class="pill-btn active" onclick="setEmsFilter('all')" style="font-size:11px; padding:3px 10px; cursor:pointer; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#fff; font-weight:700;">All EMS (<span id="cnt-ems-all">0</span>)</button>
+        <button id="btn-ems-qm" class="pill-btn" onclick="setEmsFilter('qm')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#38bdf8; border:1px solid rgba(56,189,248,0.5); background:rgba(56,189,248,0.14); border-radius:4px; font-weight:800; opacity:0.6;">🌀 QM Coils (<span id="cnt-ems-qm">0</span>)</button>
       </div>
     </div>
 
@@ -1747,6 +1745,7 @@
       <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <button id="btn-mrg-all" class="pill-btn active" onclick="setMergedFilter('all')" style="font-size:11px; padding:3px 10px; cursor:pointer; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#fff; font-weight:700;">All (<span id="cnt-mrg-all">0</span>)</button>
         <button id="btn-mrg-sniper" class="pill-btn" onclick="setMergedFilter('sniper')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#ef4444; border:1px solid rgba(239,68,68,0.5); background:rgba(239,68,68,0.12); border-radius:4px; font-weight:800;">🎯 A+ Sniper (<span id="cnt-mrg-sniper">0</span>)</button>
+        <button id="btn-mrg-qm" class="pill-btn" onclick="setMergedFilter('qm')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#38bdf8; border:1px solid rgba(56,189,248,0.5); background:rgba(56,189,248,0.14); border-radius:4px; font-weight:800; opacity:0.6;">🌀 QM Coils (<span id="cnt-mrg-qm">0</span>)</button>
         <button id="btn-mrg-bluesky" class="pill-btn" onclick="setMergedFilter('bluesky')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#fbbf24; border:1px solid rgba(251,191,36,0.5); background:rgba(251,191,36,0.12); border-radius:4px; font-weight:700;">👑 Blue Sky (<span id="cnt-mrg-bluesky">0</span>)</button>
       </div>
     </div>
@@ -2244,14 +2243,35 @@
     }
   }
 
+  let EMS_FILTER_MODE = 'all';
+
+  function setEmsFilter(mode) {
+    EMS_FILTER_MODE = mode;
+    const bAll = document.getElementById('btn-ems-all');
+    const bQm = document.getElementById('btn-ems-qm');
+    if (bAll) bAll.style.opacity = (mode === 'all') ? '1' : '0.6';
+    if (bQm) bQm.style.opacity = (mode === 'qm') ? '1' : '0.6';
+    renderEmsView();
+  }
+
   function renderEmsView() {
     if (!RAW_EMS.length) {
       fetchEmsFallback();
       return;
     }
-    const t1 = RAW_EMS.filter(c => c.tier_order === 1 || (c.tier || '').toUpperCase().includes('TIER 1') || c.tier === 'TIER_1_MULTI');
-    const t2 = RAW_EMS.filter(c => c.tier_order === 2 || (c.tier || '').toUpperCase().includes('TIER 2') || c.tier === 'TIER_2_SHORT');
-    const t3 = RAW_EMS.filter(c => c.tier_order === 3 || (c.tier || '').toUpperCase().includes('TIER 3') || c.tier === 'TIER_3_STRUCT');
+
+    const cntAll = RAW_EMS.length;
+    const cntQm = RAW_EMS.filter(c => c.is_qm_coil).length;
+    const elAll = document.getElementById('cnt-ems-all');
+    const elQm = document.getElementById('cnt-ems-qm');
+    if (elAll) elAll.innerText = cntAll;
+    if (elQm) elQm.innerText = cntQm;
+
+    const baseList = (EMS_FILTER_MODE === 'qm') ? RAW_EMS.filter(c => c.is_qm_coil) : RAW_EMS;
+
+    const t1 = baseList.filter(c => c.tier_order === 1 || (c.tier || '').toUpperCase().includes('TIER 1') || c.tier === 'TIER_1_MULTI');
+    const t2 = baseList.filter(c => c.tier_order === 2 || (c.tier || '').toUpperCase().includes('TIER 2') || c.tier === 'TIER_2_SHORT');
+    const t3 = baseList.filter(c => c.tier_order === 3 || (c.tier || '').toUpperCase().includes('TIER 3') || c.tier === 'TIER_3_STRUCT');
 
     const totalEMS = t1.length + t2.length + t3.length;
     const badge = document.getElementById('tab-badge-ems');
@@ -2289,6 +2309,10 @@
         : 'Near High';
 
       let badgesHtml = '';
+      if (c.is_qm_coil) {
+        const pb = (c.qm_details && c.qm_details.pullback_depth_pct !== undefined) ? c.qm_details.pullback_depth_pct : (c.pullback_depth_pct || 0);
+        badgesHtml += `<span style="font-size:10px; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); padding:1px 5px; border-radius:4px;" title="Qullamaggie 10/20 EMA Pullback Coil (-${pb}% Retrace)">🌀 QM -${pb}%</span>`;
+      }
       if (c.rs_rating) {
         badgesHtml += `<span style="font-size:10px; font-weight:800; color:#34d399; background:rgba(52,211,153,0.18); border:1px solid rgba(52,211,153,0.4); padding:1px 5px; border-radius:4px;">RS:${c.rs_rating}</span>`;
       }
@@ -2361,9 +2385,11 @@
     MERGED_FILTER_MODE = mode;
     const bAll = document.getElementById('btn-mrg-all');
     const bSniper = document.getElementById('btn-mrg-sniper');
+    const bQm = document.getElementById('btn-mrg-qm');
     const bBlue = document.getElementById('btn-mrg-bluesky');
     if (bAll) bAll.style.opacity = (mode === 'all') ? '1' : '0.6';
     if (bSniper) bSniper.style.opacity = (mode === 'sniper') ? '1' : '0.6';
+    if (bQm) bQm.style.opacity = (mode === 'qm') ? '1' : '0.6';
     if (bBlue) bBlue.style.opacity = (mode === 'bluesky') ? '1' : '0.6';
     renderMergedView();
   }
@@ -2376,17 +2402,22 @@
 
     const cntAll = RAW_MERGED.length;
     const cntSniper = RAW_MERGED.filter(c => c.is_sniper || c.grade === 'A+').length;
+    const cntQm = RAW_MERGED.filter(c => c.is_qm_coil).length;
     const cntBlue = RAW_MERGED.filter(c => c.is_blue_sky).length;
     const elAll = document.getElementById('cnt-mrg-all');
     const elSniper = document.getElementById('cnt-mrg-sniper');
+    const elQm = document.getElementById('cnt-mrg-qm');
     const elBlue = document.getElementById('cnt-mrg-bluesky');
     if (elAll) elAll.innerText = cntAll;
     if (elSniper) elSniper.innerText = cntSniper;
+    if (elQm) elQm.innerText = cntQm;
     if (elBlue) elBlue.innerText = cntBlue;
 
     let filtered = RAW_MERGED;
     if (MERGED_FILTER_MODE === 'sniper') {
       filtered = RAW_MERGED.filter(c => c.is_sniper || c.grade === 'A+');
+    } else if (MERGED_FILTER_MODE === 'qm') {
+      filtered = RAW_MERGED.filter(c => c.is_qm_coil);
     } else if (MERGED_FILTER_MODE === 'bluesky') {
       filtered = RAW_MERGED.filter(c => c.is_blue_sky);
     }
@@ -2448,6 +2479,12 @@
         bonusBadge = `<span style="font-size:10px; font-weight:800; color:#fbbf24; background:rgba(251,191,36,0.2); border:1px solid rgba(251,191,36,0.5); padding:1px 5px; border-radius:4px;">⚡+${Math.round(c.cross_list_bonus)}</span>`;
       }
 
+      let qmBadge = '';
+      if (c.is_qm_coil) {
+        const pb = (c.qm_details && c.qm_details.pullback_depth_pct !== undefined) ? c.qm_details.pullback_depth_pct : (c.pullback_depth_pct || 0);
+        qmBadge = `<span style="font-size:10px; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); padding:1px 5px; border-radius:4px;" title="Qullamaggie 10/20 EMA Pullback Coil (-${pb}% Retrace)">🌀 QM -${pb}%</span>`;
+      }
+
       let sniperBadge = '';
       if (c.is_sniper || c.grade === 'A+') {
         sniperBadge = `<span style="font-size:10px; font-weight:800; color:#fff; background:#ef4444; border:1px solid #f87171; padding:1px 6px; border-radius:4px; box-shadow:0 0 6px rgba(239,68,68,0.5);">🎯 A+ SNIPER</span>`;
@@ -2464,6 +2501,7 @@
               <span class="cand-rank">#${rank}</span>
               <span class="cand-sym" style="font-size:13px; font-weight:800;">🏆 ${displaySym}</span>
               ${sniperBadge}
+              ${qmBadge}
               ${sourceBadges}
               ${bonusBadge}
             </div>
