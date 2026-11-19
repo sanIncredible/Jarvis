@@ -484,6 +484,99 @@ def get_active_holding_info(symbol):
     return None
 
 
+# ---------------------------------------------------------
+# Sector & Industry Theme Clustering Engine
+# ---------------------------------------------------------
+SECTOR_THEME_RULES = [
+    ('Pharma & Healthcare', '💊', ['pharma', 'health', 'medic', 'biotech', 'hospital', 'drug', 'diagnost', 'vijaya', 'fdc', 'cohance', 'hcare']),
+    ('Banking & Financials', '🏦', ['bank', 'financ', 'nbfc', 'brok', 'invest', 'insur', 'amc', 'wealth', 'fin', 'sgfin']),
+    ('Auto & Ancillaries', '🚗', ['auto', 'motor', 'tyre', 'wheel', 'ancilar', 'vehicle', 'ev ']),
+    ('Electronics & EMS', '🔌', ['ems', 'electronic', 'semiconduct', 'pcb', 'cyientdlm', 'centum']),
+    ('Defence & Aerospace', '🛡️', ['defen', 'aerospace', 'ship build', 'missile', 'naval', 'rostech', 'unimech', 'marine']),
+    ('Capital Goods & Industrial', '⚙️', ['capital goods', 'industrial', 'power equip', 'machin', 'electr', 'engineer']),
+    ('IT & Software', '💻', ['software', 'information tech', 'it enabled', 'tech', 'data', 'cloud', 'digital', 'saas']),
+    ('Metals & Mining', '⛏️', ['metal', 'mining', 'steel', 'iron', 'alumin', 'zinc', 'copper']),
+    ('Realty & Infra', '🏗️', ['realty', 'real estate', 'construct', 'infra', 'cement', 'pipe', 'housing']),
+    ('FMCG & Consumption', '🛒', ['fmcg', 'consumer', 'food', 'beverag', 'jewel', 'retail', 'hotel', 'dairy', 'sugar', 'restaur', 'brew', 'distill', 'personal care', 'westlife', 'cupid', 'e- commerce', 'timex']),
+    ('Chemicals & Fertilisers', '🧪', ['chemic', 'fertili', 'agric', 'pest']),
+    ('Energy & Power', '⚡', ['power', 'oil', 'gas', 'energy', 'solar', 'renew', 'refin']),
+    ('Textiles & Apparel', '🧵', ['textil', 'apparel', 'garment', 'fashion', 'cotton', 'yarn', 'fabric']),
+    ('Logistics & Shipping', '🚢', ['logistic', 'freight', 'transport', 'shipping', 'port', 'courier', 'shadowfax']),
+    ('Media & Telecom', '📡', ['media', 'telecom', 'entertain', 'broadcasting', 'publish', 'network', 'cable']),
+    ('Services & Commercial', '💼', ['services', 'commercial', 'staffing', 'quess', 'innovision', 'urbanco', 'enginersin'])
+]
+
+_SECTOR_LOOKUP_CACHE = {}
+
+def resolve_sector_theme(symbol, industry=None, quote_data=None):
+    """
+    Resolves symbol to institutional Sector/Theme and emoji icon.
+    Checks memory cache, candidate files, Nifty 500 constituents, and keyword rules.
+    """
+    sym = (symbol or "").strip().upper()
+    if not sym:
+        return {"theme": "General Equities", "icon": "🏢"}
+    if sym in _SECTOR_LOOKUP_CACHE and not industry:
+        return _SECTOR_LOOKUP_CACHE[sym]
+
+    ind_str = str(industry or "").strip().lower()
+    tag_str = ""
+    name_str = ""
+
+    # Check quote_data or candidate lists if industry not passed
+    if not ind_str:
+        q = quote_data or {}
+        ind_str = str(q.get("industry") or "").strip().lower()
+        tag_str = str(q.get("sector_tag") or "").strip().lower()
+        name_str = str(q.get("name") or "").strip().lower()
+
+    if not ind_str:
+        for fpath in [SCRIPT_DIR / "candidates_merged.json", SCRIPT_DIR / "data.json"]:
+            if fpath.is_file():
+                try:
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        cd = json.load(f)
+                    c_list = cd.get("candidates", []) or cd.get("merged_candidates", [])
+                    for item in c_list:
+                        if item.get("symbol", "").upper() == sym:
+                            ind_str = str(item.get("industry") or "").strip().lower()
+                            tag_str = str(item.get("sector_tag") or "").strip().lower()
+                            name_str = str(item.get("name") or "").strip().lower()
+                            break
+                except Exception:
+                    pass
+            if ind_str:
+                break
+
+    if not ind_str:
+        n500_f = SCRIPT_DIR / "nifty500_constituents.json"
+        if n500_f.is_file():
+            try:
+                with open(n500_f, "r", encoding="utf-8") as f:
+                    n500 = json.load(f)
+                for item in n500:
+                    if item.get("symbol", "").upper() == sym:
+                        ind_str = str(item.get("industry") or "").strip().lower()
+                        name_str = str(item.get("name") or "").strip().lower()
+                        break
+            except Exception:
+                pass
+
+    combined = f"{sym.lower()} {ind_str} {tag_str} {name_str}"
+    resolved_theme = "General Equities"
+    resolved_icon = "🏢"
+
+    for theme, icon, kw_list in SECTOR_THEME_RULES:
+        if any(kw in combined for kw in kw_list):
+            resolved_theme = theme
+            resolved_icon = icon
+            break
+
+    res = {"theme": resolved_theme, "icon": resolved_icon}
+    _SECTOR_LOOKUP_CACHE[sym] = res
+    return res
+
+
 def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
     """
     Evaluates 8 core strategy rules:
@@ -803,6 +896,43 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
                 "text": f"✅ <b>Candle Quality:</b> Solid Close (Upper Wick: {upper_wick_pct:.0f}%)",
                 "detail": "Price trading near the top of its range (controlled upper shadow <= 40%)"
             })
+
+    # 11. Sector Theme Sponsorship / Group Momentum Check
+    theme_info = resolve_sector_theme(symbol, quote_data=quote_data)
+    theme_name = theme_info.get("theme", "General Equities")
+    theme_icon = theme_info.get("icon", "🏢")
+
+    theme_cnt = 1
+    try:
+        from upstox_tablet_scanner import get_theme_breakout_count
+        theme_cnt = get_theme_breakout_count(theme_name)
+    except Exception:
+        theme_cnt = 1
+
+    if theme_cnt >= 3:
+        checklist.append({
+            "rule": "Sector Theme",
+            "passed": True,
+            "badge": "🔥",
+            "text": f"🔥 <b>Sector Theme:</b> {theme_icon} {theme_name} ({theme_cnt}+ Active Breakouts - SPONSORED)",
+            "detail": f"High institutional group sponsorship ({theme_cnt} stocks breaking out in sync)"
+        })
+    elif theme_cnt >= 2:
+        checklist.append({
+            "rule": "Sector Theme",
+            "passed": True,
+            "badge": "⚡",
+            "text": f"⚡ <b>Sector Theme:</b> {theme_icon} {theme_name} ({theme_cnt} Dual Breakouts)",
+            "detail": f"Emerging sector momentum ({theme_cnt} stocks moving together)"
+        })
+    else:
+        checklist.append({
+            "rule": "Sector Theme",
+            "passed": True,
+            "badge": theme_icon,
+            "text": f"{theme_icon} <b>Sector Theme:</b> {theme_name} (Single Runner)",
+            "detail": f"Individual stock momentum in {theme_name}"
+        })
 
     passed_count = sum(1 for c in checklist if c.get("passed"))
     total_count = len(checklist)
