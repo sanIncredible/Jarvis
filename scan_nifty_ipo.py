@@ -258,6 +258,8 @@ def analyze_ipo_setup(stock: Dict[str, str]) -> Optional[Dict[str, Any]]:
     else:
         return None
 
+    to_cr = round((curr_vol * curr_close) / 10000000.0, 2) if curr_close > 0 else 0.0
+
     return {
         "symbol": sym,
         "name": stock.get("name", sym),
@@ -265,6 +267,11 @@ def analyze_ipo_setup(stock: Dict[str, str]) -> Optional[Dict[str, Any]]:
         "series": stock.get("series", "EQ"),
         "isin": stock.get("isin", ""),
         "ltp": round(curr_close, 2),
+        "vol": curr_vol,
+        "turnover_cr": to_cr,
+        "day_high": round(curr["high"], 2),
+        "day_low": round(curr["low"], 2),
+        "prev_close": round(prev["close"], 2),
         "change_pct": change_pct,
         "daily_range_pct": range_pct,
         "dist_52w_pct": dist_ath_pct,
