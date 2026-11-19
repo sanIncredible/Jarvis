@@ -620,11 +620,26 @@ def format_candidates_telegram_card(res, max_display=10, is_morning=False):
             pdh_status = "Cleared!" if c["dist_pdh_pct"] < 0 else f"{c['dist_pdh_pct']:+.2f}%"
             badge_str = f" • {' '.join(c.get('flags', []))}" if c.get('flags') else ""
             vcp_str = f"{c['vcp_ratio_5d']}x (5D) / {c.get('vcp_ratio_3d', 'N/A')}x (3D)"
+            
+            # Risk Sizing
+            ltp_c = float(c.get("ltp") or 0.0)
+            day_l = float(c.get("day_low") or 0.0)
+            sizing_line = ""
+            if ltp_c > 0:
+                clean_l = int(round(ltp_c))
+                sl_e = int(round(day_l)) if (day_l > 0 and day_l < ltp_c and (ltp_c - day_l)/ltp_c <= 0.04) else int(round(ltp_c * 0.985))
+                if sl_e >= clean_l: sl_e = max(1, clean_l - 1)
+                r_sh = max(1, clean_l - sl_e)
+                q1 = max(1, int(1000 // r_sh))
+                q2 = max(1, int(2000 // r_sh))
+                sizing_line = f"\n   • 🎯 <b>Sizing:</b> 1k Risk = <b>{q1} shs</b> | 2k Risk = <b>{q2} shs</b> [SL: ₹{sl_e:,}]"
+
             lines.append(
                 f"<b>{i}.</b> {c['coil_tag'][:2]} {tv_link} (₹{c['ltp']:,.2f}){badge_str}\n"
                 f"   • Sits: <b>{c['dist_pivot_20d_pct']:+.2f}%</b> from 20D High | PDH: <b>{pdh_status}</b>\n"
                 f"   • VCP: <b>{vcp_str} ATR</b> | {c['vol_tag']}\n"
                 f"   • Move: <b>{c['change_pct']:+.1f}%</b> (₹{c['turnover_cr']:,.1f} Cr) | Sector: <b>{c.get('sector_tag', c.get('industry', 'Equity'))}</b>"
+                f"{sizing_line}"
             )
         lines.append("")
 
