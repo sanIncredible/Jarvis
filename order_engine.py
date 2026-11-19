@@ -206,6 +206,12 @@ def parse_size_mode(mode_arg):
 
     m_clean = str(mode_arg).strip().lower().replace("₹", "").replace(",", "")
 
+    # Risk-Normalized Modes (Fixed INR Risk)
+    if m_clean in ("r1k", "risk1k", "1k", "1k_risk"):
+        return 1000, "Risk-Normalized (₹1,000 Risk Target)"
+    if m_clean in ("r2k", "risk2k", "2k", "2k_risk"):
+        return 2000, "Risk-Normalized (₹2,000 Risk Target)"
+
     if m_clean in MODE_SIZES:
         amt = MODE_SIZES[m_clean]
         if amt >= 150000:
@@ -812,6 +818,16 @@ def calculate_order_sizing(quote_data, mode_arg="mod", sl_mode="lod"):
         regime_note += " (SL capped at 2.5% to protect capital)"
 
     total_risk_inr = round(risk_per_share * quantity, 2)
+
+    # Risk-Normalized Sizing Override (Target Fixed ₹1k/₹2k Risk)
+    m_clean = str(mode_arg).strip().lower()
+    if m_clean in ("r1k", "risk1k", "1k", "1k_risk", "r2k", "risk2k", "2k", "2k_risk"):
+        target_risk_inr = 1000 if m_clean in ("r1k", "risk1k", "1k", "1k_risk") else 2000
+        rps = max(1.0, risk_per_share)
+        quantity = max(1, int(target_risk_inr // rps))
+        actual_exposure = round(quantity * ltp, 2)
+        total_risk_inr = round(risk_per_share * quantity, 2)
+        mode_label = f"Risk-Normalized (₹{target_risk_inr:,} Risk Target)"
 
     # Dynamic "Risk-Free" Pyramiding Sizing (House Money Equation)
     holding_info = get_active_holding_info(symbol)
