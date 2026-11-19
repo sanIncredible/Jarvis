@@ -92,54 +92,57 @@ def create_backup() -> Optional[Path]:
 # 1. BROKER FETCHERS: DHAN & ZERODHA KITE (API + CSV FALLBACK)
 # =============================================================================
 
-def fetch_dhan_executions(config: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], str]:
+def fetch_dhan_executions(config: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], str, bool]:
     """
     Fetches today's completed trades and pending orders from DhanHQ API.
     Falls back to dhan_trades*.csv or orderbook*.csv if token is expired or unavailable.
-    Returns: (trades_list, orders_list, source_description)
+    Returns: (trades_list, orders_list, source_description, is_success)
     """
     d_cfg = config.get("dhan", {})
     client_id = d_cfg.get("client_id", "").strip()
     access_token = d_cfg.get("access_token", "").strip()
+    enabled = d_cfg.get("enabled", True)
+
+    if not enabled or not (client_id and access_token):
+        return [], [], "Dhan Not Configured", True
 
     # 1. Try Live DhanHQ API
-    if client_id and access_token and d_cfg.get("enabled", True):
-        headers = {
-            "access-token": access_token,
-            "client-id": client_id,
-            "Content-Type": "application/json"
-        }
-        try:
-            r_trades = requests.get("https://api.dhan.co/v2/trades", headers=headers, timeout=8)
-            if r_trades.status_code == 200:
-                raw_trades = r_trades.json() if isinstance(r_trades.json(), list) else r_trades.json().get("data", [])
-                
-                # Fetch orders for pending SL detection
-                r_orders = requests.get("https://api.dhan.co/v2/orders", headers=headers, timeout=8)
-                raw_orders = r_orders.json() if r_orders.status_code == 200 and isinstance(r_orders.json(), list) else []
+    headers = {
+        "access-token": access_token,
+        "client-id": client_id,
+        "Content-Type": "application/json"
+    }
+    try:
+        r_trades = requests.get("https://api.dhan.co/v2/trades", headers=headers, timeout=8)
+        if r_trades.status_code == 200:
+            raw_trades = r_trades.json() if isinstance(r_trades.json(), list) else r_trades.json().get("data", [])
+            
+            # Fetch orders for pending SL detection
+            r_orders = requests.get("https://api.dhan.co/v2/orders", headers=headers, timeout=8)
+            raw_orders = r_orders.json() if r_orders.status_code == 200 and isinstance(r_orders.json(), list) else []
 
-                norm_trades = []
-                for t in raw_trades:
-                    sym = (t.get("tradingSymbol") or t.get("customSymbol") or "").strip().upper()
-                    norm_trades.append({
-                        "broker": "Dhan",
-                        "symbol": sym,
-                        "side": (t.get("transactionType") or "").strip().upper(),
-                        "qty": float(t.get("tradedQuantity", 0) or t.get("quantity", 0)),
-                        "price": float(t.get("tradedPrice", 0) or t.get("price", 0)),
-                        "time": str(t.get("exchangeTime") or t.get("createTime") or datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-                        "order_id": str(t.get("orderId", "")),
-                        "product": str(t.get("productType", "CNC")).upper()
-                    })
+            norm_trades = []
+            for t in raw_trades:
+                sym = (t.get("tradingSymbol") or t.get("customSymbol") or "").strip().upper()
+                norm_trades.append({
+                    "broker": "Dhan",
+                    "symbol": sym,
+                    "side": (t.get("transactionType") or "").strip().upper(),
+                    "qty": float(t.get("tradedQuantity", 0) or t.get("quantity", 0)),
+                    "price": float(t.get("tradedPrice", 0) or t.get("price", 0)),
+                    "time": str(t.get("exchangeTime") or t.get("createTime") or datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+                    "order_id": str(t.get("orderId", "")),
+                    "product": str(t.get("productType", "CNC")).upper()
+                })
 
-                print(f"✅ DhanHQ API: Successfully fetched {len(norm_trades)} executed trades.")
-                return norm_trades, raw_orders, "DhanHQ Live API"
-            elif r_trades.status_code == 401:
-                print("ℹ️ Dhan token is expired (30-day validity). Checking for CSV fallback...")
-            else:
-                print(f"⚠️ Dhan API response: HTTP {r_trades.status_code}")
-        except Exception as e:
-            print(f"⚠️ Dhan API error: {e}")
+            print(f"✅ DhanHQ API: Successfully fetched {len(norm_trades)} executed trades.")
+            return norm_trades, raw_orders, "DhanHQ Live API", True
+        elif r_trades.status_code in (401, 403):
+            print(f"ℹ️ Dhan token is expired or unauthorized (HTTP {r_trades.status_code}). Checking for CSV fallback...")
+        else:
+            print(f"⚠️ Dhan API response: HTTP {r_trades.status_code}")
+    except Exception as e:
+        print(f"⚠️ Dhan API error: {e}")
 
     # 2. Check for Drop-in CSV files
     csv_patterns = ["*dhan*trades*.csv", "*trades*dhan*.csv", "*dhan*order*.csv", "Dhan_TradeBook*.csv"]
@@ -148,9 +151,9 @@ def fetch_dhan_executions(config: Dict[str, Any]) -> Tuple[List[Dict[str, Any]],
         if matches:
             target_csv = matches[0]
             print(f"📂 Found Dhan tradebook CSV: {target_csv.name}")
-            return parse_dhan_csv(target_csv), [], f"Dhan CSV ({target_csv.name})"
+            return parse_dhan_csv(target_csv), [], f"Dhan CSV ({target_csv.name})", True
 
-    return [], [], "None"
+    return [], [], "None (API Uncontactable & No CSV)", False
 
 
 def parse_dhan_csv(csv_path: Path) -> List[Dict[str, Any]]:
@@ -193,53 +196,56 @@ def parse_dhan_csv(csv_path: Path) -> List[Dict[str, Any]]:
     return trades
 
 
-def fetch_zerodha_executions(config: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], str]:
+def fetch_zerodha_executions(config: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], str, bool]:
     """
     Fetches today's completed trades and pending orders from Zerodha Kite Connect API.
     Falls back to kite_trades*.csv or tradebook*.csv if token is expired or unavailable.
-    Returns: (trades_list, orders_list, source_description)
+    Returns: (trades_list, orders_list, source_description, is_success)
     """
     z_cfg = config.get("zerodha", {})
     api_key = z_cfg.get("api_key", "").strip()
     access_token = z_cfg.get("access_token", "").strip()
+    enabled = z_cfg.get("enabled", True)
+
+    if not enabled or not (api_key and access_token):
+        return [], [], "Zerodha Not Configured", True
 
     # 1. Try Live Kite Connect API
-    if api_key and access_token and z_cfg.get("enabled", True):
-        headers = {
-            "X-Kite-Version": "3",
-            "Authorization": f"token {api_key}:{access_token}"
-        }
-        try:
-            r_trades = requests.get("https://api.kite.trade/trades", headers=headers, timeout=8)
-            if r_trades.status_code == 200:
-                raw_trades = r_trades.json().get("data", [])
-                
-                # Fetch orders for pending SL detection
-                r_orders = requests.get("https://api.kite.trade/orders", headers=headers, timeout=8)
-                raw_orders = r_orders.json().get("data", []) if r_orders.status_code == 200 else []
+    headers = {
+        "X-Kite-Version": "3",
+        "Authorization": f"token {api_key}:{access_token}"
+    }
+    try:
+        r_trades = requests.get("https://api.kite.trade/trades", headers=headers, timeout=8)
+        if r_trades.status_code == 200:
+            raw_trades = r_trades.json().get("data", [])
+            
+            # Fetch orders for pending SL detection
+            r_orders = requests.get("https://api.kite.trade/orders", headers=headers, timeout=8)
+            raw_orders = r_orders.json().get("data", []) if r_orders.status_code == 200 else []
 
-                norm_trades = []
-                for t in raw_trades:
-                    sym = (t.get("tradingsymbol") or "").strip().upper()
-                    norm_trades.append({
-                        "broker": "Zerodha",
-                        "symbol": sym,
-                        "side": (t.get("transaction_type") or "").strip().upper(),
-                        "qty": float(t.get("quantity", 0)),
-                        "price": float(t.get("average_price", 0) or t.get("price", 0)),
-                        "time": str(t.get("fill_timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-                        "order_id": str(t.get("order_id", "")),
-                        "product": str(t.get("product", "CNC")).upper()
-                    })
+            norm_trades = []
+            for t in raw_trades:
+                sym = (t.get("tradingsymbol") or "").strip().upper()
+                norm_trades.append({
+                    "broker": "Zerodha",
+                    "symbol": sym,
+                    "side": (t.get("transaction_type") or "").strip().upper(),
+                    "qty": float(t.get("quantity", 0)),
+                    "price": float(t.get("average_price", 0) or t.get("price", 0)),
+                    "time": str(t.get("fill_timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+                    "order_id": str(t.get("order_id", "")),
+                    "product": str(t.get("product", "CNC")).upper()
+                })
 
-                print(f"✅ Zerodha Kite API: Successfully fetched {len(norm_trades)} executed trades.")
-                return norm_trades, raw_orders, "Zerodha Kite Live API"
-            elif r_trades.status_code == 403:
-                print("ℹ️ Zerodha token is expired (daily 6:00 AM expiry). Checking for CSV fallback...")
-            else:
-                print(f"⚠️ Zerodha API response: HTTP {r_trades.status_code}")
-        except Exception as e:
-            print(f"⚠️ Zerodha API error: {e}")
+            print(f"✅ Zerodha Kite API: Successfully fetched {len(norm_trades)} executed trades.")
+            return norm_trades, raw_orders, "Zerodha Kite Live API", True
+        elif r_trades.status_code in (401, 403):
+            print(f"ℹ️ Zerodha token is expired or unauthorized (daily 6:00 AM expiry, HTTP {r_trades.status_code}). Checking for CSV fallback...")
+        else:
+            print(f"⚠️ Zerodha API response: HTTP {r_trades.status_code}")
+    except Exception as e:
+        print(f"⚠️ Zerodha API error: {e}")
 
     # 2. Check for Drop-in CSV files
     csv_patterns = ["*kite*trades*.csv", "*trades*kite*.csv", "*tradebook*.csv", "trades.csv"]
@@ -248,9 +254,9 @@ def fetch_zerodha_executions(config: Dict[str, Any]) -> Tuple[List[Dict[str, Any
         if matches:
             target_csv = matches[0]
             print(f"📂 Found Zerodha tradebook CSV: {target_csv.name}")
-            return parse_zerodha_csv(target_csv), [], f"Zerodha CSV ({target_csv.name})"
+            return parse_zerodha_csv(target_csv), [], f"Zerodha CSV ({target_csv.name})", True
 
-    return [], [], "None"
+    return [], [], "None (API Uncontactable & No CSV)", False
 
 
 def parse_zerodha_csv(csv_path: Path) -> List[Dict[str, Any]]:
@@ -712,9 +718,21 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
             p_sym = str(p.get("symbol", "")).strip().upper()
             if not p_sym or p_sym in ignored_symbols:
                 continue
+
+            # FAIL-SAFE GUARD 1: If position was carried forward from Journal due to token error, do NOT auto-journal!
+            if p.get("source") and "JOURNAL" in str(p.get("source")).upper():
+                continue
+
+            broker = str(p.get("broker", "UNKNOWN")).strip().lower()
+            b_stat_val = broker_status.get(broker, "") if broker_status else ""
+
+            # FAIL-SAFE GUARD 2: Broker API must be verified healthy (starts with 'OK') to auto-journal
+            if not b_stat_val.startswith("OK"):
+                print(f"⚠️ Skipping auto-journaling {p_sym} from {broker.upper()} - broker API not verified OK ({b_stat_val})")
+                continue
+
             net_qty = float(p.get("qty", 0) or 0)
             buy_avg = float(p.get("avg_price", 0) or 0)
-            broker = str(p.get("broker", "UNKNOWN")).upper()
             prod = str(p.get("product", "MTF")).upper()
 
             if net_qty > 0 and buy_avg > 0 and p_sym:
@@ -750,7 +768,7 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
                     ws_tj.cell(row=next_row, column=8, value=net_qty)
                     ws_tj.cell(row=next_row, column=11, value="OPEN 🟢")
                     ws_tj.cell(row=next_row, column=12, value=buy_avg)
-                    ws_tj.cell(row=next_row, column=22, value=f"Live sync from {broker} ({prod})")
+                    ws_tj.cell(row=next_row, column=22, value=f"Live sync from {broker.upper()} ({prod})")
 
                     risk_rs = round(abs(buy_avg - initial_sl) * net_qty, 2)
                     ws_tj.cell(row=next_row, column=16, value=risk_rs)
@@ -771,22 +789,45 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
                         "sl": initial_sl,
                         "risk_rs": risk_rs
                     })
-                    print(f"📥 AUTO-JOURNALED Live Position: {p_sym} | {net_qty} shs @ ₹{buy_avg:,.2f} on {broker} ({prod})")
+                    print(f"📥 AUTO-JOURNALED Live Position: {p_sym} | {net_qty} shs @ ₹{buy_avg:,.2f} on {broker.upper()} ({prod})")
 
-        # Auto-register all currently live open positions into tracked_swing_holdings in config
+        # Maintain authoritative tracked_holdings.json
         try:
-            cfg_curr = load_config()
-            curr_tracked = set(s.upper() for s in cfg_curr.get("tracked_swing_holdings", []))
-            for lp in live_positions:
-                s_u = str(lp.get("symbol", "")).strip().upper()
-                if s_u and s_u not in ignored_symbols:
-                    curr_tracked.add(s_u)
-            cfg_curr["tracked_swing_holdings"] = sorted(list(curr_tracked))
-            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                json.dump(cfg_curr, f, indent=2)
-            print(f"✅ Reconciled tracked_swing_holdings in config: {cfg_curr['tracked_swing_holdings']}")
-        except Exception as ex_t:
-            print(f"Notice auto-registering tracked_swing_holdings: {ex_t}")
+            th_file = BASE_DIR / "tracked_holdings.json"
+            th_data = {}
+            if th_file.is_file():
+                with open(th_file, "r", encoding="utf-8") as f:
+                    th_data = json.load(f)
+
+            # 1. Prune closed positions
+            for c in closed_today:
+                c_sym = c["symbol"].upper()
+                if c_sym in th_data:
+                    del th_data[c_sym]
+                    print(f"🧹 Removed closed position {c_sym} from tracked_holdings.json")
+
+            # 2. Add or update newly opened positions
+            for o in opened_today:
+                o_sym = o["symbol"].upper()
+                if o_sym not in th_data:
+                    b_name = fills_by_sym.get(o_sym, {}).get("broker", "DHAN")
+                    th_data[o_sym] = {
+                        "broker": b_name.upper(),
+                        "product": "CNC",
+                        "qty": int(o["qty"]),
+                        "entry_price": o["entry_p"],
+                        "sl": o["sl"],
+                        "target": round(o["entry_p"] * 1.05, 2),
+                        "entry_date": today_dt.strftime("%Y-%m-%d"),
+                        "notes": f"Logged from EOD Journal sync ({b_name.upper()})"
+                    }
+                    print(f"📥 Added new position {o_sym} to tracked_holdings.json")
+
+            with open(th_file, "w", encoding="utf-8") as f:
+                json.dump(th_data, f, indent=2)
+            print(f"✅ Authoritative tracked_holdings.json synced ({len(th_data)} active positions).")
+        except Exception as ex_th:
+            print(f"Notice reconciling tracked_holdings.json: {ex_th}")
 
     # =========================================================================
     # REFRESH OPEN POSITIONS & LIVE LTP
@@ -838,7 +879,7 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
                             sym_broker = b
                             break
 
-                is_tracked_swing = (sym_str in tracked_swing_holdings)
+                is_tracked_swing = (sym_str in tracked_meta)
                 broker_ok = bool(sym_broker and "OK" in broker_status.get(sym_broker, ""))
                 
                 if sym_broker and not broker_ok:
@@ -1069,6 +1110,38 @@ def reconcile_journal(fills_by_sym: Dict[str, Dict[str, Any]], all_orders: List[
 # 5. TELEGRAM EOD REPORT CARD DISPATCH
 # =============================================================================
 
+def send_telegram_alert(message: str, config: Dict[str, Any], topic: str = "reports"):
+    """Dispatches operational and fail-safe alerts directly to Telegram topic."""
+    tg_cfg = config.get("telegram", {})
+    if not tg_cfg.get("enabled", True):
+        return
+
+    bot_token = tg_cfg.get("bot_token", "").strip()
+    chat_id = tg_cfg.get("chat_id", "").strip()
+    if not bot_token or not chat_id:
+        return
+
+    group_id = tg_cfg.get("group_id", "").strip()
+    topics = tg_cfg.get("topics", {})
+    thread_id = topics.get(topic) if group_id else None
+    target_chat = group_id if (group_id and thread_id) else chat_id
+
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {
+        "chat_id": target_chat,
+        "text": message,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True
+    }
+    if thread_id:
+        payload["message_thread_id"] = int(thread_id)
+
+    try:
+        requests.post(url, json=payload, timeout=6)
+    except Exception as e:
+        print(f"⚠️ Telegram alert dispatch error: {e}")
+
+
 def send_telegram_eod_card(summary: Dict[str, Any], config: Dict[str, Any]):
     """Sends rich EOD Summary Report to Telegram chat."""
     tg_cfg = config.get("telegram", {})
@@ -1208,13 +1281,13 @@ def run_eod_sync():
 
     # 2. Fetch Dhan trades & orders
     print("\n[1/3] Checking DhanHQ Broker Fills...")
-    dhan_trades, dhan_orders, dhan_src = fetch_dhan_executions(config)
-    print(f"      Source: {dhan_src} ({len(dhan_trades)} trades)")
+    dhan_trades, dhan_orders, dhan_src, dhan_ok = fetch_dhan_executions(config)
+    print(f"      Source: {dhan_src} ({len(dhan_trades)} trades, OK: {dhan_ok})")
 
     # 3. Fetch Zerodha Kite trades & orders
     print("\n[2/3] Checking Zerodha Kite Broker Fills...")
-    kite_trades, kite_orders, kite_src = fetch_zerodha_executions(config)
-    print(f"      Source: {kite_src} ({len(kite_trades)} trades)")
+    kite_trades, kite_orders, kite_src, kite_ok = fetch_zerodha_executions(config)
+    print(f"      Source: {kite_src} ({len(kite_trades)} trades, OK: {kite_ok})")
 
     all_fills = dhan_trades + kite_trades
     all_orders = dhan_orders + kite_orders
@@ -1227,6 +1300,7 @@ def run_eod_sync():
 
     # 3.5 Fetch live multi-broker open positions
     print("\n[3/4] Querying Live Broker Open Positions (Dhan + Zerodha + Upstox)...")
+    b_stat = {}
     try:
         from order_engine import fetch_all_positions
         live_pos, _, b_stat = fetch_all_positions()
@@ -1236,6 +1310,25 @@ def run_eod_sync():
     except Exception as e:
         print(f"      ⚠️ Notice querying live positions: {e}")
         live_pos = []
+
+    # Fail-safe overrides if execution fetchers detected token failure
+    if not dhan_ok and config.get("dhan", {}).get("enabled", True):
+        b_stat["dhan"] = "Error (Dhan Token Expired / Uncontactable)"
+        send_telegram_alert(
+            "⚠️ <b>Broker API uncontactable</b> - Journal reconciliation paused for <b>Dhan</b> to prevent ghost entries.\nPlease refresh Dhan token or drop tradebook CSV.",
+            config,
+            topic="reports"
+        )
+        print("📢 Dispatched Dhan API pause alert to Telegram #reports.")
+
+    if not kite_ok and config.get("zerodha", {}).get("enabled", True):
+        b_stat["zerodha"] = "Error (Zerodha Kite Token Expired / Uncontactable)"
+        send_telegram_alert(
+            "⚠️ <b>Broker API uncontactable</b> - Journal reconciliation paused for <b>Zerodha</b> to prevent ghost entries.\nPlease refresh Kite token or drop tradebook CSV.",
+            config,
+            topic="reports"
+        )
+        print("📢 Dispatched Zerodha API pause alert to Telegram #reports.")
 
     # 4. Aggregate & Reconcile
     print(f"\n[4/4] Reconciling fills and live positions with Journal.xlsx...")
