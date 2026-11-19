@@ -926,7 +926,7 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                     quote_data={**b, "ltp": ltp_b, "day_low": dl_b},
                     trigger_price=ltp_b,
                     day_low=dl_b,
-                    regime_code="DEFENSIVE" if is_defensive else "EXPANSION",
+                    regime_code=scode if ('scode' in locals() and scode) else ("DEFENSIVE" if is_defensive else "EXPANSION"),
                     trigger_name=trig_b
                 )
         except Exception as shadow_err:
@@ -1828,37 +1828,87 @@ def compute_strength_score(d, m):
 
 
 def get_active_watchlist():
-    """Loads active watchlist dynamically from watchlist.txt, config_credentials.json, or default WATCHLIST."""
+    """
+    Loads active watchlist dynamically combining:
+    1. watchlist.txt (user's personal core watchlist)
+    2. Active open holdings from tracked_holdings.json & shadow_portfolio.json (ensuring held runners are always monitored)
+    3. Top 50 A+ Snipers & QM Coils from candidates_merged.json (auto-ingesting curated setups for 100% breakout capture)
+    Returns unified, deduplicated symbol list (typically 60-80 stocks, well within Upstox batch limit).
+    """
     script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
-    candidates = ["watchlist.txt", os.path.join(script_dir, "watchlist.txt")]
-    for w_path in candidates:
+    IGNORED_TOKENS = {"NSE", "BSE", "NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "MIDCPNIFTY", "CNX500"}
+    syms = []
+
+    # 1. Base watchlist.txt
+    for w_path in ["watchlist.txt", os.path.join(script_dir, "watchlist.txt")]:
         if os.path.isfile(w_path):
             try:
                 with open(w_path, "r", encoding="utf-8", errors="replace") as f:
-                    content = f.read().replace("\r\n", "\n").replace("\r", "\n")
-                    lines = [l.strip().upper().replace(",", " ") for l in content.split("\n") if l.strip() and not l.startswith("#")]
-                    IGNORED_TOKENS = {"NSE", "BSE", "NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "MIDCPNIFTY", "CNX500"}
-                    syms = []
-                    for line in lines:
-                        for s in line.split():
-                            canonical = SYMBOL_ALIASES.get(s, s)
-                            if canonical in IGNORED_TOKENS:
-                                continue
+                    c_text = f.read().replace("\r\n", "\n").replace("\r", "\n")
+                lines = [l.strip().upper().replace(",", " ") for l in c_text.split("\n") if l.strip() and not l.startswith("#")]
+                for line in lines:
+                    for s in line.split():
+                        canonical = SYMBOL_ALIASES.get(s, s)
+                        if canonical not in IGNORED_TOKENS:
                             syms.append(canonical)
-                    if syms:
-                        return list(dict.fromkeys(syms))
+                break
             except Exception:
                 pass
+
+    # 2. Live & Shadow Open Holdings (ensures trailing surveillance always streams held runners)
+    for th_f in ["tracked_holdings.json", os.path.join(script_dir, "tracked_holdings.json")]:
+        if os.path.isfile(th_f):
+            try:
+                with open(th_f, "r", encoding="utf-8") as f:
+                    th_d = json.load(f)
+                for s in th_d.keys():
+                    can = SYMBOL_ALIASES.get(s.strip().upper(), s.strip().upper())
+                    if can not in IGNORED_TOKENS:
+                        syms.append(can)
+                break
+            except Exception:
+                pass
+
+    for sp_f in ["shadow_portfolio.json", os.path.join(script_dir, "shadow_portfolio.json")]:
+        if os.path.isfile(sp_f):
+            try:
+                with open(sp_f, "r", encoding="utf-8") as f:
+                    sp_d = json.load(f)
+                for s in sp_d.keys():
+                    can = SYMBOL_ALIASES.get(s.strip().upper(), s.strip().upper())
+                    if can not in IGNORED_TOKENS:
+                        syms.append(can)
+                break
+            except Exception:
+                pass
+
+    # 3. Top A+ Snipers & QM Coils from candidates_merged.json (auto-ingests up to 50 top setups)
+    for cm_f in ["candidates_merged.json", os.path.join(script_dir, "candidates_merged.json")]:
+        if os.path.isfile(cm_f):
+            try:
+                with open(cm_f, "r", encoding="utf-8") as f:
+                    cm_d = json.load(f)
+                cands = cm_d.get("candidates", [])
+                for c in cands[:50]:
+                    csym = c.get("symbol", "").strip().upper()
+                    can = SYMBOL_ALIASES.get(csym, csym)
+                    if can and can not in IGNORED_TOKENS:
+                        syms.append(can)
+                break
+            except Exception:
+                pass
+
+    if syms:
+        return list(dict.fromkeys(syms))
 
     for cfg_f in [CONFIG_FILE, "credentials.json", os.path.join(script_dir, "config_credentials.json")]:
         if os.path.isfile(cfg_f):
             try:
                 with open(cfg_f, "r", encoding="utf-8") as f:
                     cfg = json.load(f)
-                    syms = cfg.get("watchlist")
-                    if syms and isinstance(syms, list):
-                        IGNORED_TOKENS = {"NSE", "BSE", "NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "MIDCPNIFTY", "CNX500"}
-                        return [SYMBOL_ALIASES.get(s.strip().upper(), s.strip().upper()) for s in syms if s.strip() and SYMBOL_ALIASES.get(s.strip().upper(), s.strip().upper()) not in IGNORED_TOKENS]
+                s_list = cfg.get("watchlist")
+                if s_list and isinstance(s_list, list):
+                    return [SYMBOL_ALIASES.get(s.strip().upper(), s.strip().upper()) for s in s_list if s.strip() and SYMBOL_ALIASES.get(s.strip().upper(), s.strip().upper()) not in IGNORED_TOKENS]
             except Exception:
                 pass
 
