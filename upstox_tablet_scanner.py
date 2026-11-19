@@ -21,6 +21,7 @@ import http.server
 import socketserver
 import urllib.request
 import urllib.parse
+import tempfile
 from datetime import datetime, timedelta, timezone
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -452,6 +453,7 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
 
     new_breakouts = []
     new_coils = []
+    active_breakout_setups = []
     for row in results:
         score, d, m = row
         sym = d.get("symbol")
@@ -545,6 +547,7 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                     })
 
         if alert_type and trigger_label:
+            active_breakout_setups.append((sym, d, m, trigger_label))
             alert_key = (sym, alert_type, today)
             if alert_key not in sent_alerts:
                 sent_alerts.add(alert_key)
@@ -663,12 +666,10 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
         coil_markup = {"inline_keyboard": coil_kb} if coil_kb else None
         send_telegram_alert_async("\n".join(coil_lines), reply_markup=coil_markup)
 
-    if not new_breakouts:
-        return
-
     # Check regime state to protect against discipline leak / FOMO in RED markets
     is_defensive = False
     regime_label = ""
+    scode = "EXPANSION"
     for r_f in [
         "positional_market_regime.json",
         "market_regime.json",
@@ -687,6 +688,32 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                 break
             except Exception:
                 pass
+
+    # Phase 1 Autonomous Shadow Execution Engine Trigger Hook (09:30 - 10:15 AM)
+    # Evaluates all active qualifying breakout setups decoupled from Telegram alert deduplication!
+    now_ist = get_ist_now()
+    is_prime_shadow_window = (now_ist.weekday() < 5 and ((now_ist.hour == 9 and now_ist.minute >= 30) or (now_ist.hour == 10 and now_ist.minute <= 15)))
+    if is_prime_shadow_window and active_breakout_setups:
+        try:
+            from shadow_execution_engine import evaluate_and_record_shadow_entry
+            for s_sym, s_d, s_m, s_trig in active_breakout_setups:
+                s_ltp = float(s_d.get("ltp") or 0.0)
+                s_dl = float(s_m.get("day_low") or s_d.get("day_low") or (s_ltp * 0.985 if s_ltp > 0 else 0.0))
+                # Pass comprehensive quote data including day_open, prev_close, pdh, pdl, atr14, rvol
+                full_quote_data = {**s_d, **s_m, "ltp": s_ltp, "day_low": s_dl}
+                evaluate_and_record_shadow_entry(
+                    symbol=s_sym,
+                    quote_data=full_quote_data,
+                    trigger_price=s_ltp,
+                    day_low=s_dl,
+                    regime_code=scode if scode else ("DEFENSIVE" if is_defensive else "EXPANSION"),
+                    trigger_name=s_trig or "ORB Breakout"
+                )
+        except Exception as shadow_err:
+            print(f"Notice on Phase 1 shadow entry: {shadow_err}")
+
+    if not new_breakouts:
+        return
 
     # Upgrade 5: Event-Driven Real-Time Watchlist Breadth Circuit Breaker
     adv_cnt = 0
@@ -912,26 +939,6 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
     full_msg = "\n".join(lines)
     send_telegram_alert_async(full_msg, reply_markup=reply_markup)
 
-    # Phase 1 Autonomous Shadow Execution Engine Trigger Hook (09:30 - 10:15 AM)
-    if new_breakouts:
-        try:
-            from shadow_execution_engine import evaluate_and_record_shadow_entry
-            for b in new_breakouts:
-                sym_b = b.get("sym")
-                ltp_b = b.get("ltp")
-                dl_b = b.get("day_low")
-                trig_b = b.get("trigger", "ORB Breakout")
-                evaluate_and_record_shadow_entry(
-                    symbol=sym_b,
-                    quote_data={**b, "ltp": ltp_b, "day_low": dl_b},
-                    trigger_price=ltp_b,
-                    day_low=dl_b,
-                    regime_code=scode if ('scode' in locals() and scode) else ("DEFENSIVE" if is_defensive else "EXPANSION"),
-                    trigger_name=trig_b
-                )
-        except Exception as shadow_err:
-            print(f"Notice on Phase 1 shadow entry: {shadow_err}")
-
 
 def get_instrument_key(symbol):
     """Resolves instrument key for Upstox API queries (stocks & indices)."""
@@ -952,7 +959,8 @@ def get_instrument_key(symbol):
 def aggregate_1m_to_3m(candles_1m):
     """Aggregates Upstox 1-minute index candles into 3-minute ORB candles."""
     buckets = {}
-    for c in candles_1m:
+    candles_1m_sorted = sorted(candles_1m, key=lambda c: str(c[0]))
+    for c in candles_1m_sorted:
         ts = str(c[0])
         try:
             dt = datetime.fromisoformat(ts)
@@ -3380,10 +3388,22 @@ def export_static_html(results, now_str, port, force_cloud_push=False):
             "stocks": stocks_payload
         }
 
-        # 1. Write compact data.json in current directory
+        # 1. Write compact data.json atomically to prevent race condition JSONDecodeError
         json_content = json.dumps(payload, separators=(',', ':'))
-        with open("data.json", "w", encoding="utf-8") as f:
-            f.write(json_content)
+        script_dir_p = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
+        for df_path in [os.path.join(script_dir_p, "data.json"), "data.json"]:
+            try:
+                d_dir = os.path.dirname(os.path.abspath(df_path))
+                with tempfile.NamedTemporaryFile("w", dir=d_dir, delete=False, encoding="utf-8") as tf:
+                    tf.write(json_content)
+                    temp_f = tf.name
+                os.replace(temp_f, df_path)
+            except Exception:
+                try:
+                    with open(df_path, "w", encoding="utf-8") as f:
+                        f.write(json_content)
+                except Exception:
+                    pass
 
         # 2. Write standalone HTML dashboard for offline local viewing
         html_content = generate_html_dashboard(results, now_str, port)
@@ -3454,6 +3474,7 @@ def get_next_market_event(now):
     t_914 = now.replace(hour=9, minute=14, second=0, microsecond=0)
     t_915 = now.replace(hour=9, minute=15, second=0, microsecond=0)
     t_1530 = now.replace(hour=15, minute=30, second=0, microsecond=0)
+    t_1535 = now.replace(hour=15, minute=35, second=5, microsecond=0)
 
     if now < t_914:
         return 'WARMUP_914', t_914, max(1.0, (t_914 - now).total_seconds())
@@ -3469,6 +3490,8 @@ def get_next_market_event(now):
             target_dt = t_1530.replace(second=10)
             wait_secs = max(1.0, (target_dt - now).total_seconds())
         return 'CANDLE_CLOSE_3M', target_dt, wait_secs
+    elif now < t_1535:
+        return 'PHASE1_EOD_1535', t_1535, max(1.0, (t_1535 - now).total_seconds())
     else:
         nxt_914 = get_next_trading_day_914(now)
         return 'EOD_SLEEP', nxt_914, max(1.0, (nxt_914 - now).total_seconds())
@@ -3492,6 +3515,8 @@ def live_terminal_timer():
                         prompt_txt = f"\r\033[K[⚡ 09:14 Warmup Done | Market Open in {m:02d}:{s:02d}] 👉 Enter # (1-16): "
                     elif current_market_event == 'CANDLE_CLOSE_3M':
                         prompt_txt = f"\r\033[K[⏱ 3m Candle Closes in {m:02d}:{s:02d}] 👉 Enter # (1-16) or 'w': "
+                    elif current_market_event == 'PHASE1_EOD_1535':
+                        prompt_txt = f"\r\033[K[🏁 Market Closed | 15:35 Phase 1 EOD Report in {m:02d}:{s:02d}] 👉 Enter # (1-16): "
                     else:
                         prompt_txt = f"\r\033[K[🏁 Market Closed | Next Session in {h:02d}h {m:02d}m] 👉 Enter # (1-16) or 'r': "
 
@@ -3679,8 +3704,16 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                 while wait > 0 and not stop_scanner_event.is_set():
                     sleep_sec = min(poll_step, max(1.0, wait))
                     time.sleep(sleep_sec)
-                    check_and_run_auto_gtt_rearm()
-                    wait = (target - get_ist_now()).total_seconds()
+                    cur_loop_now = get_ist_now()
+                    check_and_run_orphan_sentry(cur_loop_now)
+                    check_and_run_auto_gtt_rearm(cur_loop_now)
+                    check_and_run_phase1_eod_report(cur_loop_now)
+                    try:
+                        from shadow_execution_engine import update_shadow_trailing_and_exits
+                        update_shadow_trailing_and_exits()
+                    except Exception:
+                        pass
+                    wait = (target - cur_loop_now).total_seconds()
 
                     # Instant hot-resubscribe if watchlist.txt was modified externally
                     try:
