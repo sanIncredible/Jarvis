@@ -38,6 +38,7 @@ HOLDINGS_FILE = BASE_DIR / "tracked_holdings.json"
 EXITED_STOCKS_FILE = BASE_DIR / "exited_stocks.json"
 CANDIDATES_JSON = BASE_DIR / "candidates.json"
 CANDIDATES_TXT = BASE_DIR / "candidates.txt"
+CANDIDATES_EXITED_JSON = BASE_DIR / "candidates_exited.json"
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -264,7 +265,9 @@ def evaluate_single_stock_eod(sym, meta=None):
                     "symbol": sym,
                     "qualified": False,
                     "reason": f"Below 20/50 EMA (LTP ₹{ltp:,.1f} | 20 EMA ₹{ema20:,.1f} | 50 EMA ₹{ema50:,.1f})",
-                    "ltp": ltp
+                    "ltp": ltp,
+                    "last_exit_date": meta.get("last_exit_date", "Unknown") if meta else "Unknown",
+                    "last_exit_price": meta.get("last_exit_price") if meta else None
                 }
 
             # 2. ATR 14
@@ -321,7 +324,9 @@ def evaluate_single_stock_eod(sym, meta=None):
                     "symbol": sym,
                     "qualified": False,
                     "reason": f"Uptrend intact but not coiling near pivot (20D Dist: {dist_20d_pct:.1f}%, 5D VCP: {vcp_5d:.2f}x ATR)",
-                    "ltp": ltp
+                    "ltp": ltp,
+                    "last_exit_date": meta.get("last_exit_date", "Unknown") if meta else "Unknown",
+                    "last_exit_price": meta.get("last_exit_price") if meta else None
                 }
 
             # RVOL
@@ -395,7 +400,13 @@ def evaluate_single_stock_eod(sym, meta=None):
             }
 
     except Exception as e:
-        return {"symbol": sym, "qualified": False, "reason": f"Feed error: {e}"}
+        return {
+            "symbol": sym,
+            "qualified": False,
+            "reason": f"Feed error: {e}",
+            "last_exit_date": meta.get("last_exit_date", "Unknown") if meta else "Unknown",
+            "last_exit_price": meta.get("last_exit_price") if meta else None
+        }
 
 
 def analyze_exited_stocks_eod():
@@ -434,7 +445,7 @@ def analyze_exited_stocks_eod():
     # Sort qualified by score descending
     qualified.sort(key=lambda x: x.get("score", 0.0), reverse=True)
 
-    return {
+    out_payload = {
         "status": "success",
         "total_exited": len(symbols),
         "qualified_count": len(qualified),
@@ -443,6 +454,14 @@ def analyze_exited_stocks_eod():
         "standby": standby,
         "updated_at": get_ist_now().strftime("%Y-%m-%d %H:%M:%S IST")
     }
+
+    try:
+        with open(CANDIDATES_EXITED_JSON, "w", encoding="utf-8") as f:
+            json.dump(out_payload, f, indent=2)
+    except Exception as ex_w:
+        print(f"Notice saving candidates_exited.json: {ex_w}")
+
+    return out_payload
 
 
 def promote_exited_to_candidates(qualified_exited):
