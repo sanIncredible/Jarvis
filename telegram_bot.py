@@ -1005,6 +1005,65 @@ def handle_qm_command(args=""):
         return f"⚠️ <b>Qullamaggie Coils Error:</b> {e}", None
 
 
+def handle_sentry_command():
+    """Manual trigger of Orphan Position Sentry across Upstox, Dhan, and Zerodha."""
+    try:
+        from order_engine import run_orphan_position_sentry
+        res = run_orphan_position_sentry(auto_rearm=True, grace_seconds=0)
+        rearmed = res.get("orphans_rearmed", [])
+        pending = res.get("orphans_pending_grace", [])
+
+        lines = [
+            "🛡️ <b>ORPHAN POSITION SENTRY AUDIT</b>",
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        ]
+        if rearmed:
+            lines.append(f"🚨 <b>Auto-Protected ({len(rearmed)}):</b>")
+            for r in rearmed:
+                lines.append(f"• <b>{r['symbol']}</b> ({r['broker']}): GTT Stop-Loss placed @ ₹{r['sl']:,.0f} (ID: <code>{r['order_id']}</code>)")
+            lines.append("")
+        if pending:
+            lines.append(f"⏳ <b>Under Grace Period ({len(pending)}):</b>")
+            for p in pending:
+                lines.append(f"• <b>{p['symbol']}</b> ({p['broker']}): {p['elapsed']}s elapsed")
+            lines.append("")
+        if not rearmed and not pending:
+            lines.append("✅ <b>All Open Positions are 100% Protected!</b>")
+            lines.append("No orphan or unhedged trades detected across Upstox, Dhan, or Zerodha.")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"⚠️ <b>Sentry Audit Error:</b> {e}"
+
+
+def handle_dead_money_command():
+    """Evaluates open positions for dead money capital stagnation (held >= 4 days, < 1.0R)."""
+    try:
+        from order_engine import audit_dead_money_positions
+        dead = audit_dead_money_positions(max_days=4, min_r=1.0)
+        lines = [
+            "⏳ <b>DEAD MONEY CAPITAL RECYCLING RADAR</b>",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "<i>Rule: Held ≥ 4 trading days with < +1.0R expansion. Capital is better deployed into active A+ Snipers / QM Coils.</i>",
+            ""
+        ]
+        if not dead:
+            lines.append("🎉 <b>Zero Dead Money!</b>")
+            lines.append("All open holdings are either fresh entries (<4 days) or expanding profitably (≥ 1.0R).")
+            return "\n".join(lines)
+
+        lines.append(f"⚠️ <b>Stagnated Holdings Detected ({len(dead)}):</b>\n")
+        for d in dead:
+            lines.append(f"• <b>{d['symbol']}</b> ({d['broker']}) — <b>{d['holding_days']} Days Held</b>")
+            lines.append(f"  Bought: ₹{d['entry_price']:,.2f} | LTP: ₹{d['ltp']:,.2f} ({d['pnl_pct']:+.1f}%)")
+            lines.append(f"  Expansion: <b>{d['r_multiple']:+.2f}R</b> (Sub-threshold)")
+            lines.append(f"  Current SL: ₹{d['current_sl']:,.0f}")
+            lines.append(f"  👉 <i>Exit command: <code>/exit {d['symbol']}</code></i>\n")
+
+        return "\n".join(lines)
+    except Exception as e:
+        return f"⚠️ <b>Dead Money Audit Error:</b> {e}"
+
+
 def handle_token_status_command():
     """Handles /token, /tokens, or /status"""
     cfg = load_config()
@@ -1214,6 +1273,8 @@ def handle_help_command():
         "• <code>/funds</code> or <code>/margin</code> — Live multi-broker available cash & MTF margin\n"
         "• <code>/trail</code> or <code>/sl</code> — Trailing SL & Risk Breakeven recommendations\n"
         "• <code>/gtt</code> or <code>/rearm</code> — Permanent 1-Year GTT Stop-Loss audit & protection\n"
+        "• <code>/sentry</code> — Multi-broker orphan position 30s sentry audit & fail-safe\n"
+        "• <code>/deadmoney</code> or <code>/recycle</code> — Audit stagnated trades (held ≥4 days, <1R) for capital recycling\n"
         "• <code>/killswitch</code> — Daily drawdown circuit breaker status & reset\n"
         "• <code>/heat</code> or <code>/riskcap</code> — Portfolio heat, open VaR & available risk capacity\n"
         "• <code>/exit &lt;SYM&gt; [50%|all]</code> — 1-Tap quick exit/square-off\n"
@@ -1221,6 +1282,7 @@ def handle_help_command():
         "• <code>/broker</code> — View/switch default broker (Upstox/Dhan/Zerodha)\n\n"
         "📋 <b>Watchlist & Screening:</b>\n"
         "• <code>/candidates</code> or <code>/screen</code> — Scan Nifty 500 swing setups (saves to candidates.txt)\n"
+        "• <code>/qm</code> or <code>/coils</code> — 🌀 Kristjan Qullamaggie High Tight Flags & 10/20 EMA Pullback Coils\n"
         "• <code>/momo90</code> or <code>/broadmomo</code> — Breadth Ledger 90D/30% Candidates (1-tap add)\n"
         "• <code>/nr</code> or <code>/momo_nr</code> — Narrow Range (NR4/NR7/Inside Day) Coils (Sniper List)\n"
         "• <code>/ipo</code> or <code>/niftyipo</code> — Official Nifty IPO Index High-Tight &amp; NR Contractions\n"
@@ -2646,6 +2708,10 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         force_mode = "force" in args.lower()
         res = rearm_overnight_stop_losses(notify=False, force=force_mode)
         return res.get("report_text")
+    elif cmd in ("/sentry", "/orphan", "/guard", "sentry", "orphan"):
+        return handle_sentry_command()
+    elif cmd in ("/deadmoney", "/recycle", "/stagnant", "deadmoney", "recycle"):
+        return handle_dead_money_command()
     elif cmd in ("/funds", "/fund", "/margin", "/margins", "/cash", "/bal", "/balance", "funds", "fund", "margin", "cash"):
         return handle_funds_command()
     elif cmd in ("/exit", "/close", "/squareoff", "exit", "close"):
