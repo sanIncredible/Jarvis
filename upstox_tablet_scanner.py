@@ -923,7 +923,7 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                 trig_b = b.get("trigger", "ORB Breakout")
                 evaluate_and_record_shadow_entry(
                     symbol=sym_b,
-                    quote_data={"ltp": ltp_b, "day_low": dl_b},
+                    quote_data={**b, "ltp": ltp_b, "day_low": dl_b},
                     trigger_price=ltp_b,
                     day_low=dl_b,
                     regime_code="DEFENSIVE" if is_defensive else "EXPANSION",
@@ -3614,7 +3614,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
         """
         if curr_now is None:
             curr_now = get_ist_now()
-        if curr_now.weekday() < 5 and curr_now.hour == 15 and 35 <= curr_now.minute <= 45:
+        if curr_now.weekday() < 5 and ((curr_now.hour == 15 and curr_now.minute >= 35) or curr_now.hour >= 16):
             today_str = curr_now.strftime('%Y-%m-%d')
             if _last_phase1_eod_date[0] != today_str:
                 _last_phase1_eod_date[0] = today_str
