@@ -341,7 +341,7 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     ck_note = "Qualified Playbook Setup"
     try:
         from order_engine import evaluate_strategy_checklist
-        ck = evaluate_strategy_checklist(sym, quote_data=quote_data, calc_data={"ltp": fill_price, "day_low": initial_sl, "risk_pct": risk_pct})
+        ck = evaluate_strategy_checklist(sym, quote_data=quote_data, calc_data={"ltp": fill_price, "day_low": initial_sl, "day_high": float((quote_data or {}).get("day_high") or fill_price), "risk_pct": risk_pct})
         score = ck.get("passed_count") or ck.get("passed_rules") or 0
         total = ck.get("total_count") or ck.get("total_rules") or 11
         warnings = ck.get("warnings", [])
