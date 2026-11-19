@@ -984,6 +984,27 @@ def handle_sniper_command(args=""):
         return f"⚠️ <b>A+ Sniper Sieve Error:</b> {e}", None
 
 
+def handle_qm_command(args=""):
+    """
+    Handles /qm, /coils, /qullamaggie, /htf:
+    Displays Kristjan Qullamaggie High Tight Flag & 10/20 EMA Pullback Coils:
+    - 1M Gain >= 25-30%
+    - Pullback depth <= 20%
+    - 10/20 EMA support shelf
+    - VDU volume dry up
+    - Daily range / inside day / NR7 contraction
+    """
+    try:
+        from enrich_candidates import merge_candidates, format_qm_telegram_card, write_json, write_txt
+        payload = merge_candidates()
+        write_json(payload)
+        write_txt(payload)
+        text, markup = format_qm_telegram_card(payload)
+        return text, markup
+    except Exception as e:
+        return f"⚠️ <b>Qullamaggie Coils Error:</b> {e}", None
+
+
 def handle_token_status_command():
     """Handles /token, /tokens, or /status"""
     cfg = load_config()
@@ -2307,7 +2328,7 @@ def handle_callback_query(cq):
         text, markup = handle_funds_command()
         edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
 
-    elif cq_data == "cand_add_top5":
+    elif cq_data in ("cand_add_top5", "cand_add_top5_qm"):
         cand_merged_file = SCRIPT_DIR / "candidates_merged.json"
         cand_file = SCRIPT_DIR / "candidates.json"
         top5_syms = []
@@ -2315,11 +2336,15 @@ def handle_callback_query(cq):
             try:
                 with open(cand_merged_file, "r", encoding="utf-8") as f:
                     cmdata = json.load(f)
-                    snipers = cmdata.get("sniper_candidates", [])
-                    if snipers:
-                        top5_syms = [c["symbol"] for c in snipers[:5]]
+                    if cq_data == "cand_add_top5_qm":
+                        qm_c = cmdata.get("qm_candidates", [])
+                        top5_syms = [c["symbol"] for c in qm_c[:5]]
                     else:
-                        top5_syms = [c["symbol"] for c in cmdata.get("candidates", [])[:5]]
+                        snipers = cmdata.get("sniper_candidates", [])
+                        if snipers:
+                            top5_syms = [c["symbol"] for c in snipers[:5]]
+                        else:
+                            top5_syms = [c["symbol"] for c in cmdata.get("candidates", [])[:5]]
             except Exception:
                 pass
 
@@ -2608,6 +2633,8 @@ def dispatch_command(msg_text, from_chat_id, user_id=None, thread_id=None):
         return handle_merged_command(args)
     elif cmd in ("/sniper", "/aplus", "/a+", "sniper", "aplus", "a+"):
         return handle_sniper_command(args)
+    elif cmd in ("/qm", "/coils", "/qullamaggie", "/htf", "qm", "coils", "qullamaggie", "htf"):
+        return handle_qm_command(args)
     elif cmd in ("/exited", "/reentry", "/exholdings", "exited", "reentry"):
         return handle_exited_command()
     elif cmd in ("/positions", "/pos", "/portfolio", "/pnl", "/holdings", "positions", "pos", "pnl"):
