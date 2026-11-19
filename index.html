@@ -1304,6 +1304,10 @@
       <span class="tab-icon">🚀</span> <span id="txt-tab-ipo">Nifty IPO (NR)</span> 
       <span id="tab-badge-ipo" class="tab-badge">0</span>
     </button>
+    <button id="tab-btn-exited" class="main-tab-btn" onclick="switchMainView('exited')" title="View Past Exited Stocks Re-Entry & Coil Candidates">
+      <span class="tab-icon">🔄</span> <span id="txt-tab-exited">Ex-Holding Re-Entry</span> 
+      <span id="tab-badge-exited" class="tab-badge">0</span>
+    </button>
   </div>
 
   <!-- VIEW 1: 3m ORB Live Scanner View -->
@@ -1787,6 +1791,87 @@
 
   </div> <!-- /#view-merged -->
 
+  <!-- VIEW 7: Past Exited Stocks Re-Entry & Candidate Radar -->
+  <div id="view-exited" style="display:none;" class="cand-view-container">
+
+    <div style="background:rgba(56, 189, 248, 0.08); border:1px solid rgba(56, 189, 248, 0.35); border-radius:10px; padding:12px 18px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <div style="font-size:14px; font-weight:800; color:#38bdf8; display:flex; align-items:center; gap:8px;">
+          <span>🔄 PAST EXITED STOCKS RE-ENTRY &amp; CANDIDATE RADAR</span>
+        </div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+          Systematic tracking of past swing holdings resetting bases &amp; coiling for secondary breakout re-entries &bull; Filtered for Stage 2 Uptrends, VCP, and Pivot Doorsteps
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button id="btn-exit-all" class="pill-btn active" onclick="setExitedFilter('all')" style="font-size:11px; padding:3px 10px; cursor:pointer; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#fff; font-weight:700;">All (<span id="cnt-exit-all">0</span>)</button>
+        <button id="btn-exit-qual" class="pill-btn" onclick="setExitedFilter('qual')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#10b981; border:1px solid rgba(16,185,129,0.5); background:rgba(16,185,129,0.14); border-radius:4px; font-weight:800; opacity:0.6;">💎 Coiled (<span id="cnt-exit-qual">0</span>)</button>
+        <button id="btn-exit-t1" class="pill-btn" onclick="setExitedFilter('t1')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#ef4444; border:1px solid rgba(239,68,68,0.5); background:rgba(239,68,68,0.12); border-radius:4px; font-weight:800; opacity:0.6;">🔥 Tier 1 Doorsteps (<span id="cnt-exit-t1">0</span>)</button>
+        <button id="btn-exit-t2" class="pill-btn" onclick="setExitedFilter('t2')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#fbbf24; border:1px solid rgba(251,191,36,0.5); background:rgba(251,191,36,0.12); border-radius:4px; font-weight:800; opacity:0.6;">🚀 Tier 2 Launchpad (<span id="cnt-exit-t2">0</span>)</button>
+        <button id="btn-exit-t3" class="pill-btn" onclick="setExitedFilter('t3')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#38bdf8; border:1px solid rgba(56,189,248,0.5); background:rgba(56,189,248,0.14); border-radius:4px; font-weight:800; opacity:0.6;">🛡️ Tier 3 EMA Shelf (<span id="cnt-exit-t3">0</span>)</button>
+        <button id="btn-exit-inside" class="pill-btn" onclick="setExitedFilter('inside')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#c084fc; border:1px solid rgba(192,132,252,0.5); background:rgba(192,132,252,0.14); border-radius:4px; font-weight:800; opacity:0.6;">📦 Inside Day (<span id="cnt-exit-inside">0</span>)</button>
+        <button id="btn-exit-standby" class="pill-btn" onclick="setExitedFilter('standby')" style="font-size:11px; padding:3px 10px; cursor:pointer; color:#94a3b8; border:1px solid rgba(148,163,184,0.4); background:rgba(148,163,184,0.14); border-radius:4px; font-weight:700; opacity:0.6;">⏳ Standby (<span id="cnt-exit-standby">0</span>)</button>
+      </div>
+    </div>
+
+    <!-- TIER 1: PIVOT DOORSTEPS -->
+    <div id="sec-exit-t1" class="tier-card tier-1a-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1a-title">🔥 <span>TIER 1: PIVOT DOORSTEPS (≤2.5% from 20D Pivot High)</span></span>
+          <span id="exit-cnt-tier1" class="tier-badge-pill tier-1a-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle">Immediate breakout ignition points sitting right below 20D/52W highs with tight VCP volatility contraction</div>
+      </div>
+      <div id="exit-grid-tier1" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 2: BASE LAUNCHPADS -->
+    <div id="sec-exit-t2" class="tier-card tier-1b-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-1b-title">🚀 <span>TIER 2: BASE LAUNCHPADS (2.2% to 5.0% from 20D High)</span></span>
+          <span id="exit-cnt-tier2" class="tier-badge-pill tier-1b-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle">Tight short-term consolidations coiling near previous day highs within active bases</div>
+      </div>
+      <div id="exit-grid-tier2" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TIER 3: EMA PULLBACK SHELVES -->
+    <div id="sec-exit-t3" class="tier-card tier-3-border">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title tier-3-title">🛡️ <span>TIER 3: EMA PULLBACK SHELVES (Coiling off 10/20 EMA Support)</span></span>
+          <span id="exit-cnt-tier3" class="tier-badge-pill tier-3-pill">-- Setups</span>
+        </div>
+        <div class="tier-subtitle">Support shelf pullbacks resting quietly on rising 10 EMA or 20 EMA with volume dry-up</div>
+      </div>
+      <div id="exit-grid-tier3" class="cand-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- STANDBY EX-HOLDINGS -->
+    <div id="sec-exit-standby" class="tier-card" style="border:1px solid rgba(148,163,184,0.3); background:rgba(30,41,59,0.35);">
+      <div class="tier-header">
+        <div class="tier-title-group">
+          <span class="tier-title" style="color:#94a3b8;">⏳ <span>STANDBY EX-HOLDINGS (Still Resetting Bases / Below 20 EMA)</span></span>
+          <span id="exit-cnt-standby" class="tier-badge-pill" style="background:rgba(148,163,184,0.18); color:#94a3b8; border:1px solid rgba(148,163,184,0.4);">-- Setups</span>
+        </div>
+        <div class="tier-subtitle">Past swing positions being monitored as they consolidate or reset before qualifying for re-entry</div>
+      </div>
+      <div id="exit-grid-standby" class="cand-grid" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+  </div> <!-- /#view-exited -->
+
 
   <div id="page-footer" class="footer">
     Cluster Telemetry &amp; Node Observer Daemon • Distributed Ingress Telemetry Pipeline • High-Throughput Stream • Press [?] for Diagnostics
@@ -1885,6 +1970,9 @@
   let RAW_IPO = [];
   let RAW_EMS = [];
   let RAW_MERGED = [];
+  let RAW_EXITED = [];
+  let RAW_EXITED_STANDBY = [];
+  let EXITED_FILTER_MODE = 'all';
 
   function switchMainView(viewName) {
     if (viewName === 'ems') {
@@ -1902,6 +1990,10 @@
       setMergedFilter('momo');
       return;
     }
+    if (viewName === 'reentry' || viewName === 'ex' || viewName === 'exited_stocks') {
+      switchMainView('exited');
+      return;
+    }
     currentMainView = viewName;
     const btnOrb = document.getElementById('tab-btn-orb');
     const btnCand = document.getElementById('tab-btn-cand');
@@ -1909,12 +2001,14 @@
     const btnIpo = document.getElementById('tab-btn-ipo');
     const btnEms = document.getElementById('tab-btn-ems');
     const btnMerged = document.getElementById('tab-btn-merged');
+    const btnExited = document.getElementById('tab-btn-exited');
     const viewOrb = document.getElementById('view-orb');
     const viewCand = document.getElementById('view-candidates');
     const viewMomo = document.getElementById('view-momo');
     const viewIpo = document.getElementById('view-ipo');
     const viewEms = document.getElementById('view-ems');
     const viewMerged = document.getElementById('view-merged');
+    const viewExited = document.getElementById('view-exited');
 
     if (btnOrb) btnOrb.classList.toggle('active', viewName === 'orb');
     if (btnCand) btnCand.classList.toggle('active', viewName === 'candidates');
@@ -1922,6 +2016,7 @@
     if (btnIpo) btnIpo.classList.toggle('active', viewName === 'ipo');
     if (btnEms) btnEms.classList.toggle('active', viewName === 'ems');
     if (btnMerged) btnMerged.classList.toggle('active', viewName === 'merged');
+    if (btnExited) btnExited.classList.toggle('active', viewName === 'exited');
 
     if (viewOrb) viewOrb.style.display = (viewName === 'orb') ? 'block' : 'none';
     if (viewCand) viewCand.style.display = (viewName === 'candidates') ? 'flex' : 'none';
@@ -1929,6 +2024,7 @@
     if (viewIpo) viewIpo.style.display = (viewName === 'ipo') ? 'flex' : 'none';
     if (viewEms) viewEms.style.display = (viewName === 'ems') ? 'flex' : 'none';
     if (viewMerged) viewMerged.style.display = (viewName === 'merged') ? 'flex' : 'none';
+    if (viewExited) viewExited.style.display = (viewName === 'exited') ? 'flex' : 'none';
 
     if (viewName === 'candidates') {
       renderCandidatesView();
@@ -1940,6 +2036,8 @@
       renderEmsView();
     } else if (viewName === 'merged') {
       renderMergedView();
+    } else if (viewName === 'exited') {
+      renderExitedView();
     }
   }
 
@@ -2647,6 +2745,237 @@
     }
   }
 
+  async function fetchExitedFallback() {
+    const endpoints = [
+      'candidates_exited.json',
+      'https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/candidates_exited.json',
+      'https://raw.githubusercontent.com/sanIncredible/Jarvis/main/candidates_exited.json'
+    ];
+    for (const url of endpoints) {
+      try {
+        const res = await fetchWithTimeout(url, { cache: 'no-store' }, 3000);
+        if (!res.ok) continue;
+        const d = await res.json();
+        if (d && (d.qualified || d.standby)) {
+          RAW_EXITED = d.qualified || [];
+          RAW_EXITED_STANDBY = d.standby || [];
+          renderExitedView();
+          break;
+        }
+      } catch (e) {
+        // continue
+      }
+    }
+  }
+
+  function setExitedFilter(mode) {
+    EXITED_FILTER_MODE = mode;
+    const buttons = ['all', 'qual', 't1', 't2', 't3', 'inside', 'standby'];
+    buttons.forEach(b => {
+      const el = document.getElementById(`btn-exit-${b}`);
+      if (el) {
+        el.classList.toggle('active', b === mode);
+        el.style.opacity = (b === mode) ? '1' : '0.6';
+      }
+    });
+    renderExitedView();
+  }
+
+  function renderExitedView() {
+    if (!RAW_EXITED.length && !RAW_EXITED_STANDBY.length) {
+      fetchExitedFallback();
+      return;
+    }
+
+    const cntAll = RAW_EXITED.length + RAW_EXITED_STANDBY.length;
+    const cntQual = RAW_EXITED.length;
+    const cntT1 = RAW_EXITED.filter(c => (c.tier || '').toUpperCase().includes('TIER 1')).length;
+    const cntT2 = RAW_EXITED.filter(c => (c.tier || '').toUpperCase().includes('TIER 2')).length;
+    const cntT3 = RAW_EXITED.filter(c => (c.tier || '').toUpperCase().includes('TIER 3')).length;
+    const cntInside = RAW_EXITED.filter(c => c.is_inside_day).length;
+    const cntStandby = RAW_EXITED_STANDBY.length;
+
+    const elAll = document.getElementById('cnt-exit-all');
+    const elQual = document.getElementById('cnt-exit-qual');
+    const elT1 = document.getElementById('cnt-exit-t1');
+    const elT2 = document.getElementById('cnt-exit-t2');
+    const elT3 = document.getElementById('cnt-exit-t3');
+    const elInside = document.getElementById('cnt-exit-inside');
+    const elStandby = document.getElementById('cnt-exit-standby');
+
+    if (elAll) elAll.innerText = cntAll;
+    if (elQual) elQual.innerText = cntQual;
+    if (elT1) elT1.innerText = cntT1;
+    if (elT2) elT2.innerText = cntT2;
+    if (elT3) elT3.innerText = cntT3;
+    if (elInside) elInside.innerText = cntInside;
+    if (elStandby) elStandby.innerText = cntStandby;
+
+    const tabBadge = document.getElementById('tab-badge-exited');
+    if (tabBadge) tabBadge.innerText = cntQual;
+
+    let qualList = RAW_EXITED;
+    let showStandby = (EXITED_FILTER_MODE === 'all' || EXITED_FILTER_MODE === 'standby');
+
+    if (EXITED_FILTER_MODE === 'standby') {
+      qualList = [];
+    } else if (EXITED_FILTER_MODE === 't1') {
+      qualList = RAW_EXITED.filter(c => (c.tier || '').toUpperCase().includes('TIER 1'));
+      showStandby = false;
+    } else if (EXITED_FILTER_MODE === 't2') {
+      qualList = RAW_EXITED.filter(c => (c.tier || '').toUpperCase().includes('TIER 2'));
+      showStandby = false;
+    } else if (EXITED_FILTER_MODE === 't3') {
+      qualList = RAW_EXITED.filter(c => (c.tier || '').toUpperCase().includes('TIER 3'));
+      showStandby = false;
+    } else if (EXITED_FILTER_MODE === 'inside') {
+      qualList = RAW_EXITED.filter(c => c.is_inside_day);
+      showStandby = false;
+    } else if (EXITED_FILTER_MODE === 'qual') {
+      showStandby = false;
+    }
+
+    const t1 = qualList.filter(c => (c.tier || '').toUpperCase().includes('TIER 1'));
+    const t2 = qualList.filter(c => (c.tier || '').toUpperCase().includes('TIER 2'));
+    const t3 = qualList.filter(c => (c.tier || '').toUpperCase().includes('TIER 3'));
+
+    const secT1 = document.getElementById('sec-exit-t1');
+    const secT2 = document.getElementById('sec-exit-t2');
+    const secT3 = document.getElementById('sec-exit-t3');
+    const secStandby = document.getElementById('sec-exit-standby');
+
+    if (secT1) secT1.style.display = (t1.length || EXITED_FILTER_MODE === 't1') ? 'block' : 'none';
+    if (secT2) secT2.style.display = (t2.length || EXITED_FILTER_MODE === 't2') ? 'block' : 'none';
+    if (secT3) secT3.style.display = (t3.length || EXITED_FILTER_MODE === 't3') ? 'block' : 'none';
+    if (secStandby) secStandby.style.display = showStandby ? 'block' : 'none';
+
+    let r = 1;
+    renderExitedTierGrid('exit-grid-tier1', t1, r); r += t1.length;
+    renderExitedTierGrid('exit-grid-tier2', t2, r); r += t2.length;
+    renderExitedTierGrid('exit-grid-tier3', t3, r);
+
+    const c1 = document.getElementById('exit-cnt-tier1');
+    if (c1) c1.innerText = `${t1.length} Setups`;
+    const c2 = document.getElementById('exit-cnt-tier2');
+    if (c2) c2.innerText = `${t2.length} Setups`;
+    const c3 = document.getElementById('exit-cnt-tier3');
+    if (c3) c3.innerText = `${t3.length} Setups`;
+
+    const standbyContainer = document.getElementById('exit-grid-standby');
+    const cStandby = document.getElementById('exit-cnt-standby');
+    if (cStandby) cStandby.innerText = `${RAW_EXITED_STANDBY.length} Setups`;
+    if (standbyContainer && showStandby) {
+      if (!RAW_EXITED_STANDBY.length) {
+        standbyContainer.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:10px;">No stocks standing by.</div>';
+      } else {
+        standbyContainer.innerHTML = RAW_EXITED_STANDBY.map(s => renderExitedStandbyCard(s)).join('');
+      }
+    }
+  }
+
+  function renderExitedTierGrid(containerId, list, startRank) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!list || !list.length) {
+      container.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:10px;">No setups in this tier.</div>';
+      return;
+    }
+    container.innerHTML = list.map((c, idx) => renderExitedCard(c, startRank + idx)).join('');
+  }
+
+  function renderExitedCard(c, rank) {
+    const sym = c.symbol;
+    const tvUrl = `https://in.tradingview.com/chart/?symbol=NSE:${sym}`;
+    const displaySym = isStealthMode ? formatNodeName(sym) : sym;
+    const tier = c.tier || 'TIER 1';
+    const scoreVal = c.score || 0;
+    const ltpStr = c.ltp ? `₹${Number(c.ltp).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '';
+    const chgPct = c.change_pct !== undefined ? `${c.change_pct >= 0 ? '+' : ''}${c.change_pct.toFixed(1)}%` : '';
+    const chgColor = (c.change_pct >= 0) ? '#10b981' : '#ef4444';
+    
+    const distPivot = (c.dist_pivot_20d_pct !== undefined && c.dist_pivot_20d_pct !== null) ? `${c.dist_pivot_20d_pct.toFixed(1)}% 20D` : '';
+    const distPdh = (c.dist_pdh_pct !== undefined && c.dist_pdh_pct !== null) ? `${c.dist_pdh_pct.toFixed(1)}% PDH` : '';
+    const vcpVal = c.vcp_ratio_5d ? `${c.vcp_ratio_5d.toFixed(2)}x ATR` : (c.vcp_ratio_3d ? `${c.vcp_ratio_3d.toFixed(2)}x ATR` : '');
+
+    let badgeHtml = '';
+    (c.flags || ['🔄 Ex-Holding']).forEach(f => {
+      let fColor = '#38bdf8';
+      let fBg = 'rgba(56,189,248,0.16)';
+      let fBorder = 'rgba(56,189,248,0.4)';
+      if (f.includes('Strict')) {
+        fColor = '#10b981'; fBg = 'rgba(16,185,129,0.16)'; fBorder = 'rgba(16,185,129,0.4)';
+      } else if (f.includes('Inside')) {
+        fColor = '#c084fc'; fBg = 'rgba(192,132,252,0.16)'; fBorder = 'rgba(192,132,252,0.4)';
+      } else if (f.includes('VDU')) {
+        fColor = '#34d399'; fBg = 'rgba(52,211,153,0.16)'; fBorder = 'rgba(52,211,153,0.4)';
+      }
+      badgeHtml += `<span style="font-size:10px; font-weight:800; color:${fColor}; background:${fBg}; border:1px solid ${fBorder}; padding:1px 5px; border-radius:4px;">${f}</span>`;
+    });
+
+    let exitInfo = '';
+    if (c.last_exit_date && c.last_exit_date !== 'Unknown') {
+      const exitPriceStr = c.last_exit_price ? ` @ ₹${Number(c.last_exit_price).toLocaleString('en-IN')}` : '';
+      exitInfo = `<span style="color:#94a3b8; font-size:10px;">Exited: ${c.last_exit_date}${exitPriceStr}</span>`;
+    }
+
+    return `
+      <a href="${tvUrl}" target="_blank" class="cand-link-btn" title="Open ${sym} chart on TradingView" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; gap:8px;">
+        <div style="display:flex; flex-direction:column; gap:4px; min-width:0;">
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <span class="cand-rank">#${rank}</span>
+            <span class="cand-sym" style="font-size:13px; font-weight:800;">🔄 ${displaySym}</span>
+            <span style="font-size:10px; font-weight:800; color:#fbbf24; background:rgba(251,191,36,0.15); border:1px solid rgba(251,191,36,0.4); padding:1px 5px; border-radius:4px;">${tier}</span>
+            ${badgeHtml}
+          </div>
+          <div style="font-size:10px; color:var(--text-muted); display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <span style="color:#fff; font-weight:700;">${ltpStr}</span>
+            <span style="color:${chgColor}; font-weight:700;">${chgPct}</span>
+            <span>•</span>
+            <span style="color:#fbbf24; font-weight:700;">${distPivot}</span>
+            <span>•</span>
+            <span style="color:#38bdf8;">${distPdh}</span>
+            <span>•</span>
+            <span style="color:#a78bfa;">5D VCP: ${vcpVal}</span>
+            ${exitInfo ? `<span>•</span> ${exitInfo}` : ''}
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0;">
+          <span class="cand-tv-icon" style="font-size:12px;">↗</span>
+          <span style="font-size:10px; color:#10b981; font-weight:800;">${scoreVal.toFixed(0)} pts</span>
+        </div>
+      </a>
+    `;
+  }
+
+  function renderExitedStandbyCard(c) {
+    const sym = c.symbol;
+    const tvUrl = `https://in.tradingview.com/chart/?symbol=NSE:${sym}`;
+    const displaySym = isStealthMode ? formatNodeName(sym) : sym;
+    const ltpStr = c.ltp ? `₹${Number(c.ltp).toLocaleString('en-IN', {minimumFractionDigits: 1, maximumFractionDigits: 1})}` : '';
+    const reasonStr = c.reason || 'Consolidating / Base reset in progress';
+    const exitDateStr = c.last_exit_date && c.last_exit_date !== 'Unknown' ? c.last_exit_date : '';
+    const exitPriceStr = c.last_exit_price ? ` @ ₹${Number(c.last_exit_price).toLocaleString('en-IN')}` : '';
+
+    return `
+      <a href="${tvUrl}" target="_blank" class="cand-link-btn" title="Open ${sym} chart on TradingView" style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px; gap:8px; opacity:0.85; border-color:rgba(148,163,184,0.25);">
+        <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <span class="cand-sym" style="font-size:13px; font-weight:700; color:#cbd5e1;">⏳ ${displaySym}</span>
+            <span style="font-size:10px; color:#94a3b8; background:rgba(148,163,184,0.15); border:1px solid rgba(148,163,184,0.3); padding:1px 5px; border-radius:4px;">STANDBY</span>
+            <span style="font-size:11px; font-weight:700; color:#fff;">${ltpStr}</span>
+          </div>
+          <div style="font-size:10px; color:#94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            <i>${reasonStr}</i>
+          </div>
+          ${exitDateStr ? `<div style="font-size:9px; color:#64748b;">Exited: ${exitDateStr}${exitPriceStr}</div>` : ''}
+        </div>
+        <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+          <span class="cand-tv-icon" style="font-size:12px; color:#64748b;">↗</span>
+        </div>
+      </a>
+    `;
+  }
+
   let RAW_STOCKS = [];
   let CHARTS_DATA = {};
   let activeSym = '';
@@ -3278,6 +3607,14 @@
       renderMergedView();
     } else if (!RAW_MERGED.length) {
       fetchMergedFallback();
+    }
+
+    if (data.exited_candidates && Array.isArray(data.exited_candidates) && data.exited_candidates.length) {
+      RAW_EXITED = data.exited_candidates;
+      RAW_EXITED_STANDBY = data.exited_standby || [];
+      renderExitedView();
+    } else if (!RAW_EXITED.length) {
+      fetchExitedFallback();
     }
     const tabBadgeOrb = document.getElementById('tab-badge-orb');
     if (tabBadgeOrb && data.stocks) tabBadgeOrb.innerText = data.stocks.length;
