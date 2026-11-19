@@ -887,7 +887,7 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
 
 
 def send_telegram_alert(msg_html: str, config: Dict[str, Any]) -> Tuple[bool, str]:
-    """Dispatches the pre-market summary to Telegram chat."""
+    """Dispatches the pre-market summary to Telegram chat, safely chunking if > 4000 chars."""
     tg_cfg = config.get("telegram", {})
     if not tg_cfg.get("enabled", True):
         return False, "Telegram disabled in config"
@@ -903,24 +903,53 @@ def send_telegram_alert(msg_html: str, config: Dict[str, Any]) -> Tuple[bool, st
         return False, "Bot token or chat ID missing in config"
 
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {
-        "chat_id": target_chat,
-        "text": msg_html,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": True
-    }
-    if thread_id:
-        payload["message_thread_id"] = int(thread_id)
-    try:
-        data_bytes = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(url, data=data_bytes, headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            res_data = json.loads(resp.read().decode("utf-8"))
-            if res_data.get("ok"):
-                return True, "Delivered"
-            return False, str(res_data)
-    except Exception as e:
-        return False, str(e)
+
+    # Telegram hard limit: 4096 chars. Chunk safely if needed.
+    chunks = []
+    if len(msg_html) <= 4000:
+        chunks = [msg_html]
+    else:
+        parts = msg_html.split("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        cur = ""
+        for p in parts:
+            cand = (cur + "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" + p) if cur else p
+            if len(cand) > 3800:
+                if cur:
+                    chunks.append(cur.strip())
+                cur = p
+            else:
+                cur = cand
+        if cur:
+            chunks.append(cur.strip())
+
+    all_ok = True
+    last_err = ""
+    for c in chunks:
+        if not c.strip():
+            continue
+        payload = {
+            "chat_id": target_chat,
+            "text": c,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True
+        }
+        if thread_id:
+            payload["message_thread_id"] = int(thread_id)
+        try:
+            data_bytes = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(url, data=data_bytes, headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                res_data = json.loads(resp.read().decode("utf-8"))
+                if not res_data.get("ok"):
+                    all_ok = False
+                    last_err = str(res_data)
+        except Exception as e:
+            all_ok = False
+            last_err = str(e)
+
+    if all_ok:
+        return True, "Delivered"
+    return False, last_err
 
 
 def main():
