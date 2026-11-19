@@ -1,0 +1,175 @@
+{
+  "as_of": "2026-11-19 10:59:25 IST",
+  "total_scanned": 15,
+  "ignition_count": 8,
+  "extended_count": 1,
+  "undershoot_count": 3,
+  "constructive_count": 3,
+  "results": [
+    {
+      "symbol": "LENSKART",
+      "ltp": 743.0,
+      "prev_close": 732.1,
+      "gap_pct": 1.49,
+      "zone": "IGNITION",
+      "badge": "\ud83d\udfe2 PRIME IGNITION",
+      "tag": "\ud83d\udd25 Prime 3m ORB Setup",
+      "action": "Ready for breakout above ORH / PDH",
+      "source": "Yahoo Finance"
+    },
+    {
+      "symbol": "MEESHO",
+      "ltp": 257.16,
+      "prev_close": 253.55,
+      "gap_pct": 1.42,
+      "zone": "IGNITION",
+      "badge": "\ud83d\udfe2 PRIME IGNITION",
+      "tag": "\ud83d\udd25 Prime 3m ORB Setup",
+      "action": "Ready for breakout above ORH / PDH",
+      "source": "Yahoo Finance"
+    },
+    {
+      "symbol": "RKFORGE",
+      "ltp": 764.1,
+      "prev_close": 758.65,
+      "gap_pct": 0.72,
+      "zone": "IGNITION",
+      "badge": "\ud83d\udfe2 PRIME IGNITION",
+      "tag": "\ud83d\udd25 Prime 3m ORB Setup",
+      "action": "Ready for breakout above ORH / PDH",
+      "source": "Yahoo Finance"
+    },
+    {
+      "symbol": "GLAND",
+      "ltp": 3249.4,
+      "prev_close": 3230.5,
+      "gap_pct": 0.59,
+      "zone": "IGNITION",
+      "badge": "\ud83d\udfe2 PRIME IGNITION",
+      "tag": "\ud83d\udd25 Prime 3m ORB Setup",
+      "action": "Ready for breakout above ORH / PDH",
+      "source": "Yahoo Finance"
+    },
+    {
+      "symbol": "GCSL",
+      "ltp": 839.2,
+      "prev_close": 838.75,
+      "gap_pct": 0.05,
+      "zone": "IGNITION",
+      "badge": "\ud83d\udfe2 PRIME IGNITION",
+      "tag": "\ud83d\udd25 Prime 3m ORB Setup",
+      "action": "Ready for breakout above ORH / PDH",
+      "source": "Yahoo Finance"
+    },
+    {
+      "symbol": "TFCILTD",
+      "ltp": 169.71,
+      "prev_close": 169.69,
+      "gap_pct": 0.01,
+      "zone": "IGNITION",
+      "badge": "\ud83d\udfe2 PRIME IGNITION",
+      "tag": "\ud83d\udd25 Prime 3m ORB Setup",
+      "action": "Ready for breakout above ORH / PDH",
+      "source": "Yahoo Finance"
+    },
+    {
+      "symbol": "THELEELA",
+      "ltp": 689.1,
+      "prev_close": 689.35,
+      "gap_pct": -0.04,
+      "zone": "IGNITION",
+      "badge": "\ud83d\udfe2 PRIME IGNITION",
+      "tag": "\ud83d\udd25 Prime 3m ORB Setup",
+      "action": "Ready for breakout above ORH / PDH",
+      "source": "Yahoo Finance"
+    },
+    {
+      "symbol": "SHREEJISPG",
+      "ltp": 900.7,
+      "prev_close": 901.05,
+      "gap_pct": -0.04,
+      "zone": "IGNITION",
+      "badge": "\ud83d\udfe2 PRIME IGNITION",
+      "tag": "\ud83d\udd25 Prime 3m ORB Setup",
+      "action": "Ready for breakout above ORH / PDH",
+      "source": "Yahoo Finance"
+    },
+    {
+      "symbol": "STEAMHOUSE",
+      "ltp": 158.92,
+      "prev_close": 155.38,
+      "gap_pct": 2.28,
+      "zone": "CONSTRUCTIVE",
+      "badge": "\u26aa CONSTRUCTIVE FLAT",
+      "tag": "\u2696\ufe0f Normal Range Opening",
+      "action": "Watch opening 3m candle volume confirmation",
+      "source": "Yahoo Finance"
+    },
+    {
+      "symbol": "DIVISLAB",
+      "ltp": 10990.5,
+      "prev_close": 11049.0,
+      "gap_pct": -0.53,
+      "zone": "CONSTRUCTIVE",
+      "badge": "\u26aa CONSTRUCTIVE FLAT",
+      "tag": "\u2696\ufe0f Normal Range Opening",
+      "action": "Watch opening 3m candle volume confirmation",
+      "source": "Yahoo Finance"
+    },
+    {
+      "symbol": "SYMBIOTEC",
+      "ltp": 1600.0,
+      "prev_close": 1621.3,
+      "gap_pct": -1.31,
+      "zone": "CONSTRUCTIVE",
+      "badge": "\u26aa CONSTRUCTIVE FLAT",
+      "tag": "\u2696\ufe0f Normal Range Opening",
+      "action": "Watch opening 3m candle volume confirmation",
+      "source": "Yahoo Finance"
+    },
+    {
+      "symbol": "TIMEX",
+      "ltp": 728.65,
+      "prev_close": 740.55,
+      "gap_pct": -1.61,
+      "zone": "UNDERSHOOT",
+      "badge": "\ud83d\udfe1 UNDERSHOOT",
+      "tag": "\ud83d\udee1\ufe0f Opening Under Pressure",
+      "action": "Wait for reclaim of Previous Day High (PDH)",
+      "source": "Yahoo Finance"
+    },
+    {
+      "symbol": "KARURVYSYA",
+      "ltp": 380.4,
+      "prev_close": 387.0,
+      "gap_pct": -1.71,
+      "zone": "UNDERSHOOT",
+      "badge": "\ud83d\udfe1 UNDERSHOOT",
+      "tag": "\ud83d\udee1\ufe0f Opening Under Pressure",
+      "action": "Wait for reclaim of Previous Day High (PDH)",
+      "source": "Yahoo Finance"
+    },
+    {
+      "symbol": "PAYTM",
+      "ltp": 1720.0,
+      "prev_close": 1890.0,
+      "gap_pct": -8.99,
+      "zone": "UNDERSHOOT",
+      "badge": "\ud83d\udfe1 UNDERSHOOT",
+      "tag": "\ud83d\udee1\ufe0f Opening Under Pressure",
+      "action": "Wait for reclaim of Previous Day High (PDH)",
+      "source": "Yahoo Finance"
+    },
+    {
+      "symbol": "SHADOWFAX",
+      "ltp": 308.55,
+      "prev_close": 298.65,
+      "gap_pct": 3.31,
+      "zone": "EXTENDED",
+      "badge": "\ud83d\udd34 EXTENDED / CHASED",
+      "tag": "\u26a0\ufe0f Exhaustion Gap Trap",
+      "action": "DO NOT BUY 3m Breakout! Wait for 30m base / VWAP test",
+      "source": "Yahoo Finance"
+    }
+  ]
+}
