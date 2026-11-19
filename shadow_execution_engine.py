@@ -58,6 +58,25 @@ EVALUATION_HORIZON_DAYS = 30
 IST = timezone(timedelta(hours=5, minutes=30))
 SHADOW_LOCK = threading.RLock()
 
+SYMBOL_ALIASES = {
+    "M&M": "M_M",
+    "M_M": "M_M",
+    "BAJAJ-AUTO": "BAJAJ_AUTO",
+    "BAJAJ_AUTO": "BAJAJ_AUTO",
+    "L&TFH": "L_TFH",
+    "L_TFH": "L_TFH",
+    "M&MFIN": "M_MFIN",
+    "M_MFIN": "M_MFIN"
+}
+
+
+def resolve_symbol(symbol):
+    """Normalizes symbol aliases cleanly for uniform dictionary and file lookups."""
+    if not symbol:
+        return ""
+    s = str(symbol).strip().upper()
+    return SYMBOL_ALIASES.get(s, s)
+
 
 def get_ist_now():
     """Returns current datetime in Indian Standard Time (UTC+5:30)."""
@@ -260,7 +279,7 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     - Division-by-zero
     - Micro-penny stocks (< ₹20)
     """
-    sym = (symbol or "").strip().upper()
+    sym = resolve_symbol(symbol).strip().upper()
     if not sym:
         return False, "Invalid symbol"
 
@@ -278,10 +297,10 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     if sym in portfolio:
         return False, f"{sym} already held in active shadow portfolio"
 
-    # Edge Case Guard 1: Same-Day Re-Entry Trap
+    # Edge Case Guard 1: Same-Day Re-Entry Trap (Check both entry_date and exit_date)
     today_str = now.strftime("%Y-%m-%d")
     trade_log = load_shadow_trade_log()
-    already_traded_today = any(t.get("symbol") == sym and t.get("entry_date") == today_str for t in trade_log)
+    already_traded_today = any(t.get("symbol") == sym and (t.get("entry_date") == today_str or t.get("exit_date") == today_str) for t in trade_log)
     if already_traded_today:
         return False, f"{sym} already entered/exited today (Whipsaw protection: 1 trade per symbol per session)"
 
@@ -451,7 +470,12 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         pos["holding_days"] = holding_days
 
         # Update peak LTP and peak R
-        highest_ltp = max(pos.get("highest_ltp", entry_p), day_high, ltp)
+        # Day 1: Track peak observed POST-ENTRY (ignore pre-entry 09:15-09:30 morning spikes)
+        # Day 2+: Today's entire trading session is post-entry, so session day_high is valid
+        if holding_days == 1:
+            highest_ltp = max(pos.get("highest_ltp", entry_p), ltp)
+        else:
+            highest_ltp = max(pos.get("highest_ltp", entry_p), day_high, ltp)
         highest_r = round(max(0.0, highest_ltp - entry_p) / risk_per_share, 2)
         pos["highest_ltp"] = highest_ltp
         pos["highest_r"] = highest_r
@@ -467,7 +491,20 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         ema20 = float(q.get("ema20") or 0.0)
         ema5 = float(q.get("ema5") or 0.0)
 
-        # Edge Case Guard 5: Resolve EMAs from data.json cache if quote lacks them
+        # Edge Case Guard 5: Resolve true Daily EMAs (10 EMA, 20 EMA, 5 EMA) via order_engine for swing runners
+        if ema10 <= 0 or ema20 <= 0 or ema5 <= 0:
+            try:
+                from order_engine import get_daily_emas_and_atr
+                d_emas = get_daily_emas_and_atr(sym)
+                if ema10 <= 0 and d_emas.get("ema10"):
+                    ema10 = float(d_emas["ema10"])
+                if ema20 <= 0 and d_emas.get("ema20"):
+                    ema20 = float(d_emas["ema20"])
+                if ema5 <= 0 and d_emas.get("ema5"):
+                    ema5 = float(d_emas["ema5"])
+            except Exception:
+                pass
+
         if ema10 <= 0 or ema20 <= 0:
             c_meta = get_cached_symbol_metrics(sym)
             if c_meta:
@@ -545,10 +582,11 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         # Structural Exit: Low breached the current trailed stop-loss
         is_sl_breached = False
         if holding_days == 1:
-            # On Day 1: If stop was ratcheted above morning low (e.g. Day-1 Spurt Shield to BE),
+            # On Day 1: If stop was ratcheted above initial LOD stop (e.g. Day-1 Spurt Shield to BE),
             # exit only if current live LTP hits or drops below the stop.
-            # Otherwise (initial LOD stop below morning low), exit if day_low breached initial stop.
-            if pos["current_sl"] >= day_low:
+            # Otherwise (initial LOD stop strictly below morning low), any session day_low breach is a valid structural stop hit!
+            is_trailed = (pos["current_sl"] > pos["initial_sl"])
+            if is_trailed:
                 is_sl_breached = (ltp <= pos["current_sl"])
             else:
                 is_sl_breached = (day_low <= pos["current_sl"])
