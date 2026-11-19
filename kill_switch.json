@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-19",
+  "is_tripped": false,
+  "daily_realized_pnl": 0.0,
+  "max_daily_loss_limit": 4000.0,
+  "tripped_at": null,
+  "reason": null
+}
