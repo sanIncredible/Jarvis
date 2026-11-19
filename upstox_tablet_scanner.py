@@ -44,6 +44,8 @@ except Exception:
     UpstoxWebSocketFeed = None
     UPSTOX_WS_AVAILABLE = False
 
+ACTIVE_WS_FEED = [None]
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
 CONFIG_FILE = os.path.join(SCRIPT_DIR, "config_credentials.json")
 REFRESH_SECONDS = 180  # 3 minutes
@@ -1751,6 +1753,20 @@ def get_active_watchlist():
     return WATCHLIST
 
 
+def hot_resubscribe_websocket():
+    """Instantly hot-subscribes active Upstox WebSocket feed to updated watchlist symbols."""
+    try:
+        feed = ACTIVE_WS_FEED[0]
+        if feed and getattr(feed, "is_running", False):
+            wl = get_active_watchlist()
+            feed.update_symbols(wl)
+            print(f"⚡ [WebSocket] Hot-resubscribe executed immediately for {len(wl)} instruments.")
+            return True
+    except Exception as e:
+        print(f"⚠️ [WebSocket] Hot-resubscribe error: {e}")
+    return False
+
+
 def scan_watchlist():
     """Scans all symbols in watchlist and returns results sorted by strength descending."""
     try:
@@ -3430,8 +3446,16 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                     print(f"Notice: Automated 15:20 GTT rearm exception: {e}")
 
     def periodic_scanner():
-        global latest_results, last_scan_time, next_refresh_timestamp, current_market_event
-        active_ws_feed = [None]
+        global latest_results, last_scan_time, next_refresh_timestamp, current_market_event, ACTIVE_WS_FEED
+        last_wl_mtime = 0.0
+        script_dir_local = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
+        wl_path = os.path.join(script_dir_local, "watchlist.txt") if os.path.isfile(os.path.join(script_dir_local, "watchlist.txt")) else "watchlist.txt"
+        if os.path.isfile(wl_path):
+            try:
+                last_wl_mtime = os.path.getmtime(wl_path)
+            except Exception:
+                pass
+
         try:
             while not stop_scanner_event.is_set():
                 now = get_ist_now()
@@ -3447,22 +3471,22 @@ def run_upstox_scanner(once=False, auto_open_web=False):
 
                 # Manage WebSocket feed lifecycle for 09:15 - 10:15 AM prime window
                 if is_prime_window and tok and UPSTOX_WS_AVAILABLE:
-                    if active_ws_feed[0] is None or not active_ws_feed[0].is_running:
+                    if ACTIVE_WS_FEED[0] is None or not ACTIVE_WS_FEED[0].is_running:
                         try:
                             print("⚡ [WebSocket] Launching Upstox V3 streaming market feed for prime window (09:15-10:15 IST)...")
-                            active_ws_feed[0] = UpstoxWebSocketFeed(get_active_watchlist())
-                            active_ws_feed[0].start()
+                            ACTIVE_WS_FEED[0] = UpstoxWebSocketFeed(get_active_watchlist())
+                            ACTIVE_WS_FEED[0].start()
                         except Exception as ws_err:
                             print(f"⚠️ [WebSocket] Streamer startup notice: {ws_err}")
-                            active_ws_feed[0] = None
+                            ACTIVE_WS_FEED[0] = None
                 elif not is_prime_window:
-                    if active_ws_feed[0] is not None and active_ws_feed[0].is_running:
+                    if ACTIVE_WS_FEED[0] is not None and ACTIVE_WS_FEED[0].is_running:
                         print("🔒 [WebSocket] 10:15 AM Prime window ended: stopping WebSocket streamer.")
                         try:
-                            active_ws_feed[0].stop()
+                            ACTIVE_WS_FEED[0].stop()
                         except Exception:
                             pass
-                        active_ws_feed[0] = None
+                        ACTIVE_WS_FEED[0] = None
 
                 while wait > 0 and not stop_scanner_event.is_set():
                     sleep_sec = min(poll_step, max(1.0, wait))
@@ -3470,13 +3494,26 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                     check_and_run_auto_gtt_rearm()
                     wait = (target - get_ist_now()).total_seconds()
 
+                    # Instant hot-resubscribe if watchlist.txt was modified externally
+                    try:
+                        if os.path.isfile(wl_path):
+                            cur_wl_mtime = os.path.getmtime(wl_path)
+                            if last_wl_mtime and cur_wl_mtime != last_wl_mtime:
+                                last_wl_mtime = cur_wl_mtime
+                                print("⚡ [Watchlist] External update detected in watchlist.txt -> hot-resubscribing WebSocket...")
+                                hot_resubscribe_websocket()
+                            elif not last_wl_mtime:
+                                last_wl_mtime = cur_wl_mtime
+                    except Exception:
+                        pass
+
                     # Near-realtime quote pulse during 09:15 - 10:15 AM: check for instant breakouts, coils, and live chart update
                     if is_prime_window and wait > 1.0:
                         try:
                             fast_quotes = {}
                             # Tier 1: Check in-memory decoded protobuf ticks from WebSocket (sub-millisecond)
-                            if active_ws_feed[0] and active_ws_feed[0].is_healthy():
-                                fast_quotes = active_ws_feed[0].get_all_latest_quotes()
+                            if ACTIVE_WS_FEED[0] and ACTIVE_WS_FEED[0].is_healthy():
+                                fast_quotes = ACTIVE_WS_FEED[0].get_all_latest_quotes()
 
                             # Tier 2: Resilient Fallback - if WS reconnecting/token refresh, fetch 3s bulk REST batch
                             if not fast_quotes and tok:
@@ -3530,9 +3567,9 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                 check_and_run_auto_gtt_rearm()
 
                 # Sync any newly added watchlist stocks to active WebSocket streamer
-                if active_ws_feed[0] and active_ws_feed[0].is_running:
+                if ACTIVE_WS_FEED[0] and ACTIVE_WS_FEED[0].is_running:
                     try:
-                        active_ws_feed[0].update_symbols(get_active_watchlist())
+                        ACTIVE_WS_FEED[0].update_symbols(get_active_watchlist())
                     except Exception:
                         pass
 
@@ -3552,12 +3589,12 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                 clear_screen()
                 print_terminal_view(new_res, cur_time, active_web_port, next_str)
         finally:
-            if active_ws_feed[0] is not None and active_ws_feed[0].is_running:
+            if ACTIVE_WS_FEED[0] is not None and ACTIVE_WS_FEED[0].is_running:
                 try:
-                    active_ws_feed[0].stop()
+                    ACTIVE_WS_FEED[0].stop()
                 except Exception:
                     pass
-                active_ws_feed[0] = None
+                ACTIVE_WS_FEED[0] = None
 
     scanner_thread = threading.Thread(target=periodic_scanner, daemon=True)
     scanner_thread.start()
