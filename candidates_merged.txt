@@ -1,4 +1,4 @@
-# JARVIS UNIFIED CANDIDATE CONFLUENCE & A+ SNIPER BRIEFING — 2026-11-19 12:32:31 IST
+# JARVIS UNIFIED CANDIDATE CONFLUENCE & A+ SNIPER BRIEFING — 2026-11-19 14:24:03 IST
 # Market Regime: 🛑 DEFENSIVE / SELLING CASCADE ACTIVE (Swing Alloc: 0%)
 # Total Unique: 177 | 🎯 A+ Snipers: 5 | 👑 Blue Sky: 33 | 🔗 Multi-Source: 45
 # 3-Check Rule: [1] Momentum Velocity + [2] Blue Sky/Doorstep (≤3.5% 52W) + [3] Volatility Contraction (≤2.2% rng / NR)
@@ -15,16 +15,47 @@
 5    KDDL             135.0     A+ ems,nr90                +2.0%    3.03% Jewellery                 
 
 ==========================================================================================
+🌀 KRISTJAN QULLAMAGGIE 10/20 EMA HIGH-TIGHT COILS (35 Setups)
+==========================================================================================
+#    SYMBOL           1M GAIN   PULLBACK   10EMA DIST    RVOL    RANGE INDUSTRY                
+──── ────────────── ───────── ────────── ──────────── ─────── ──────── ────────────────────────
+1    IGIL              +44.6%      -7.2%        +2.2%   0.07x    2.14% Financial Services-Specialty
+2    CLEANMAX          +31.7%      -8.6%        -0.4%   0.08x    1.25% Power                   
+3    MONEYVIEW         +38.7%     -19.6%        +0.4%   0.16x    2.03% Financial Services      
+4    SAILIFE           +43.7%     -13.1%        +1.1%   0.16x    2.36% Pharmaceuticals         
+5    INNOVISION        +57.7%     -10.4%        -1.8%   0.07x    1.16% Services                
+6    PRASOLCHEM        +25.6%     -11.4%        -1.4%   0.17x    2.93% Chemicals               
+7    THELEELA          +25.8%      -8.5%        +2.3%   0.31x    1.62% Hotels                  
+8    SONACOMS          +26.1%      -5.6%        +0.1%   0.27x    1.96% Auto Ancilaries         
+9    LAURUSLABS        +28.7%     -12.0%        -1.2%   0.51x    2.42% Medical-Diversified     
+10   RATNAVEER         +26.7%      -8.6%        +0.8%   0.45x    2.04% Iron & Steel            
+11   MBAPL             +34.4%      -8.6%        +0.4%   0.28x    2.04% Agro chemicals          
+12   KOPRAN            +32.7%     -12.8%        +0.8%   0.19x    3.12% Medical-Diversified     
+13   ROSSTECH          +25.4%     -14.3%        +2.5%   0.22x    2.64% Aerospace & Defense     
+14   UNIMECH           +38.9%     -12.6%        -0.3%   0.41x    3.79% Aerospace & Defense     
+15   LUMAXTECH         +45.8%     -13.1%        +2.1%   0.26x    3.23% Auto Ancilaries         
+16   KSHINTL           +29.1%     -11.6%        +1.8%   0.23x    3.78% Capital Goods           
+17   KALYANKJIL        +48.7%     -18.4%        +1.1%   0.82x    3.20% Jewellery               
+18   ROLEXRINGS        +49.2%      -9.8%        -1.0%   0.33x    3.00% Industrial Products & Manufacturing
+19   TIMEX             +32.2%      -8.9%        +0.7%   0.23x    2.69% Diversified Retail      
+20   ENGINERSIN        +36.7%      -9.8%        +1.2%   0.18x    2.43% Diversified Commercial Services
+21   ENTERO            +49.1%      -9.7%        +1.6%   0.18x    2.72% Pharmaceuticals         
+22   PPLPHARMA         +37.2%      -7.3%        -0.0%   0.10x    2.35% Medical-Diversified     
+23   ORIENTHOT         +29.5%      -6.4%        +2.1%   0.42x    2.48% Hotels                  
+24   SRIT              +46.3%     -13.7%        +3.0%   0.80x    4.81% Information Technology  
+25   ACUTAAS           +33.9%      -8.4%        +1.5%   0.22x    2.00% Chemicals Specialty     
+
+==========================================================================================
 🏆 ALL RANKED CANDIDATES (TOP 40)
 ==========================================================================================
 #    SYMBOL           SCORE  GRADE SOURCES              52W DIST  BONUS INDUSTRY                  
 ──── ────────────── ─────── ────── ────────────────── ────────── ────── ──────────────────────────
 1    DIVISLAB         178.3      A ems,eod,nr90            +5.7%    +20 Healthcare                
-2    KARURVYSYA       166.9     A+ eod,nr90                +1.1%    +10 Financial Services        
-3    KOTAKBANK        165.0     A+ ems,nr90                +0.5%    +10 Private Banks             
-4    GLAND            163.6      A ems,eod                 -5.8%    +10 Healthcare                
-5    RKFORGE          160.2      A ems,eod,nr90            +2.7%    +20 Iron & Steel              
-6    IGIL             160.0      A ems,nr90                +0.7%    +10 Financial Services-Specialty
+2    IGIL             172.0      A ems,nr90                +0.7%    +10 Financial Services-Specialty
+3    KARURVYSYA       166.9     A+ eod,nr90                +1.1%    +10 Financial Services        
+4    KOTAKBANK        165.0     A+ ems,nr90                +0.5%    +10 Private Banks             
+5    GLAND            163.6      A ems,eod                 -5.8%    +10 Healthcare                
+6    RKFORGE          160.2      A ems,eod,nr90            +2.7%    +20 Iron & Steel              
 7    DRREDDY          159.4      A eod                         -        Healthcare                
 8    ANANDRATHI       156.7      A eod                         -        Financial Services        
 9    GCSL             155.0     A+ ems,nr90                +1.3%    +10 Investment Banking & Broking
@@ -48,14 +79,14 @@
 27   ITCHOTELS        127.0      B eod                         -        Consumer Services         
 28   STEAMHOUSE       125.0      A ems,ipo                 +1.4%    +10 Chemicals                 
 29   TECHM            124.5      B eod                         -        Information Technology    
-30   WESTLIFE         121.5      B eod                         -                                  
-31   ANGELONE         121.3      B eod                         -        Financial Services        
-32   FILATEX          120.0      A ems,nr90                +9.4%    +10 Textiles                  
-33   FEDERALBNK       119.7      B eod                         -        Financial Services        
-34   VIJAYA           119.0      B eod                         -                                  
-35   FDC              118.3      B eod                         -                                  
-36   LEMONTREE        117.8      B eod                         -        Consumer Services         
-37   COFORGE          115.0      B ems,nr90                +4.1%    +10 Software Services         
-38   NEPHROPLUS       115.0      B ipo                    +17.3%        Healthcare                
-39   COHANCE          110.4      B eod                         -                                  
-40   63MOONS          110.0      A ems,nr90                +2.3%    +10 Financial Services-Specialty
+30   CLEANMAX         122.0      B ipo                    +14.5%        Power                     
+31   WESTLIFE         121.5      B eod                         -                                  
+32   ANGELONE         121.3      B eod                         -        Financial Services        
+33   FILATEX          120.0      A ems,nr90                +9.4%    +10 Textiles                  
+34   FEDERALBNK       119.7      B eod                         -        Financial Services        
+35   VIJAYA           119.0      B eod                         -                                  
+36   FDC              118.3      B eod                         -                                  
+37   LEMONTREE        117.8      B eod                         -        Consumer Services         
+38   MONEYVIEW        117.0      B ipo                    +13.7%        Financial Services        
+39   COFORGE          115.0      B ems,nr90                +4.1%    +10 Software Services         
+40   NEPHROPLUS       115.0      B ipo                    +17.3%        Healthcare                
