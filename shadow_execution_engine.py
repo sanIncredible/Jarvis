@@ -171,6 +171,7 @@ def get_cached_symbol_metrics(symbol):
 def send_phase1_telegram_alert(message_html, topic_name="reports"):
     """
     Dispatches Telegram message directly to Topic 11 ('reports') or designated topic.
+    Includes message length safety (< 3900 chars) and plain text fallback on entity parse errors.
     """
     try:
         cfg = load_config()
@@ -185,11 +186,16 @@ def send_phase1_telegram_alert(message_html, topic_name="reports"):
         topics = tg.get("topics", {})
         thread_id = topics.get(topic_name, 11)  # Default Topic 11 'reports'
 
+        # Safeguard against 4096 character limit
+        text_to_send = message_html
+        if len(text_to_send) > 3900:
+            text_to_send = text_to_send[:3900] + "\n\n<i>... [Report truncated to fit Telegram limit]</i>"
+
         import urllib.request
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         payload = {
             "chat_id": chat_id,
-            "text": message_html,
+            "text": text_to_send,
             "parse_mode": "HTML",
             "disable_web_page_preview": True
         }
@@ -202,8 +208,25 @@ def send_phase1_telegram_alert(message_html, topic_name="reports"):
             data=data_bytes,
             headers={"Content-Type": "application/json", "User-Agent": "Jarvis-ShadowEngine"}
         )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return resp.status in (200, 201), "OK"
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return resp.status in (200, 201), "OK"
+        except Exception as parse_err:
+            # Fallback: Retry with plain text without HTML parse_mode in case of malformed entity
+            if "400" in str(parse_err):
+                import re
+                clean_text = re.sub(r"<[^>]+>", "", text_to_send)
+                payload["text"] = clean_text
+                payload.pop("parse_mode", None)
+                data_bytes = json.dumps(payload).encode("utf-8")
+                req = urllib.request.Request(
+                    url,
+                    data=data_bytes,
+                    headers={"Content-Type": "application/json", "User-Agent": "Jarvis-ShadowEngine"}
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    return resp.status in (200, 201), "OK (Plaintext Fallback)"
+            raise parse_err
     except Exception as ex:
         return False, str(ex)
 
@@ -278,19 +301,17 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     buffer = max(1.0, round(dl * 0.002, 2))
     initial_sl = round_to_clean_int(dl - buffer)
 
-    # Edge Case Guard 3: Stop-Loss Sanitization (Ensure SL is strictly below fill price)
+    # Edge Case Guard 3: Stop-Loss Sanitization (Ensure SL is strictly at least ₹1 below fill price)
     if initial_sl >= fill_price:
-        initial_sl = round_to_clean_int(fill_price * 0.975)  # 2.5% structural default
+        initial_sl = fill_price - 1
 
     # Risk distance per share (ensures min 1.0 to prevent division by zero)
     risk_per_share = max(1.0, float(fill_price - initial_sl))
     risk_pct = round((risk_per_share / fill_price) * 100.0, 2)
 
-    # Safety Cap: If LOD stop is wider than 3.5%, cap structural SL at 2.5% to protect R-sizing
-    if risk_pct > 3.5:
-        initial_sl = round_to_clean_int(fill_price * 0.975)
-        risk_per_share = max(1.0, float(fill_price - initial_sl))
-        risk_pct = round((risk_per_share / fill_price) * 100.0, 2)
+    # Edge Case Guard 4: Excessive Stop Distance Rejection (Checklist Rule 6: <= 4.0% Limit)
+    if risk_pct > 4.0:
+        return False, f"Wide Stop-Loss: Distance to Day Low is {risk_pct:.1f}% (> 4.0% limit). Capital preserved against excessive tail risk."
 
     # Standardized 1.0R = ₹1,000 Position Sizing
     qty = max(1, int(round(FIXED_RISK_PER_TRADE_INR / risk_per_share)))
@@ -304,8 +325,22 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         ck = evaluate_strategy_checklist(sym, quote_data=quote_data, calc_data={"ltp": fill_price, "day_low": initial_sl, "risk_pct": risk_pct})
         score = ck.get("passed_count") or ck.get("passed_rules") or 0
         total = ck.get("total_count") or ck.get("total_rules") or 11
+        warnings = ck.get("warnings", [])
+
+        # Check for fatal trade-killing red flags:
+        fatal_flags = []
+        for w in warnings:
+            w_u = str(w).upper()
+            if "OVEREXTENDED" in w_u or "10 EMA" in w_u:
+                fatal_flags.append("Overextended 10 EMA (>1.5%)")
+            elif "UPPER WICK" in w_u:
+                fatal_flags.append("Upper Wick Rejection (>40%)")
+
+        if fatal_flags:
+            return False, f"Checklist filter: {', '.join(fatal_flags)}"
+
         ck_note = f"Checklist {score}/{total} Passed"
-        if score < 7:
+        if score < 5 or (total > 0 and (score / total) < 0.5):
             return False, f"Checklist score insufficient ({score}/{total})"
     except Exception:
         pass
@@ -508,10 +543,23 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         exit_reason = ""
 
         # Structural Exit: Low breached the current trailed stop-loss
-        if day_low <= pos["current_sl"]:
+        is_sl_breached = False
+        if holding_days == 1:
+            # On Day 1: If stop was ratcheted above morning low (e.g. Day-1 Spurt Shield to BE),
+            # exit only if current live LTP hits or drops below the stop.
+            # Otherwise (initial LOD stop below morning low), exit if day_low breached initial stop.
+            if pos["current_sl"] >= day_low:
+                is_sl_breached = (ltp <= pos["current_sl"])
+            else:
+                is_sl_breached = (day_low <= pos["current_sl"])
+        else:
+            # Day 2+: Today's entire session is post-entry, so any day_low breach is a valid structural stop hit
+            is_sl_breached = (day_low <= pos["current_sl"])
+
+        if is_sl_breached:
             exit_triggered = True
             # Edge Case Guard 6: Realistic Overnight Gap-Down Slippage
-            if day_open > 0 and day_open < pos["current_sl"]:
+            if holding_days >= 2 and day_open > 0 and day_open < pos["current_sl"]:
                 exit_price = round_to_clean_int(min(day_open, ltp, pos["current_sl"]) * 0.9985)
             else:
                 exit_price = round_to_clean_int(min(pos["current_sl"], ltp * 0.9985))
