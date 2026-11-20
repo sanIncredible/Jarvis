@@ -1022,11 +1022,23 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
 
     stretch_passed = bool(stretch_pct is None or stretch_pct <= 3.0)
 
+    # Stop Distance Collar: Must be <= 4.0% (to prevent wide tail risk) AND >= 0.5x ATR14 (to prevent noise-tight fragility)
+    risk_dist = float(ltp - day_low) if (ltp and day_low) else 0.0
+    atr_val = quote_data.get("atr14") or quote_data.get("atr_3m") or (sc_data.get("atr14") if sc_data else 0)
+    atr_f = float(atr_val) if (atr_val and float(atr_val) > 0) else (ltp * 0.02 if ltp else 1.0)
+    is_noise_tight = bool(atr_f > 0 and risk_dist > 0 and risk_dist < 0.5 * atr_f)
+    stop_passed = bool((risk_pct is None or risk_pct <= 4.0) and not is_noise_tight)
+    stop_reason = f"{risk_pct:.1f}%" if risk_pct is not None else "N/A"
+    if is_noise_tight:
+        stop_reason = f"{risk_pct:.1f}% (<0.5 ATR Noise-Tight)"
+    elif risk_pct is not None and risk_pct > 4.0:
+        stop_reason = f"{risk_pct:.1f}% (>4.0% Wide Tail)"
+
     hard_gates = [
         {"name": "Regime Permission", "passed": not is_defensive, "reason": state_code},
         {"name": "ORB Breakout", "passed": orb_passed, "reason": orb_status or "Near High"},
         {"name": "Volume Participation (>=1.0x TOD)", "passed": (rvol_val is None or rvol_val >= 1.0), "reason": f"RVOL {rvol_val:.2f}x" if rvol_val is not None else "N/A"},
-        {"name": "Stop Distance (<=4.0%)", "passed": (risk_pct is None or risk_pct <= 4.0), "reason": f"{risk_pct:.1f}%" if risk_pct is not None else "N/A"},
+        {"name": "Stop Distance Collar (0.5x ATR to 4.0%)", "passed": stop_passed, "reason": stop_reason},
         {"name": "10 EMA Stretch (<=3.0%)", "passed": stretch_passed, "reason": f"{stretch_pct:.1f}%" if stretch_pct is not None else "N/A"},
         {"name": "Gap Extension (<=2.5%)", "passed": (gap_ext_pct is None or gap_ext_pct <= 2.5), "reason": f"{gap_ext_pct:.1f}%" if gap_ext_pct is not None else "N/A"},
         {"name": "Upper Wick Rejection (<=40%)", "passed": (upper_wick_pct is None or upper_wick_pct <= 40.0), "reason": f"{upper_wick_pct:.0f}%" if upper_wick_pct is not None else "N/A"}
@@ -1098,7 +1110,7 @@ def calculate_order_sizing(quote_data, mode_arg="mod", sl_mode="lod", **kwargs):
     effective_size = base_size
     regime_note = ""
 
-    if sl_mode.lower() in ("regime", "reg"):
+    if str(sl_mode or "").lower() in ("regime", "reg"):
         cfg = load_config()
         multipliers = cfg.get("risk_parameters", {}).get("swing", {}).get("regime_multipliers", {})
         mult = multipliers.get(regime_code, 1.0)
