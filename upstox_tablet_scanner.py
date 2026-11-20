@@ -164,6 +164,29 @@ def resolve_isin_dynamic(symbol):
     except Exception:
         return None
 
+
+def calculate_tod_volume_fraction(session_mins: float) -> float:
+    """
+    Continuous piecewise linear cumulative volume function F(m) for NSE trading day (09:15 to 15:30 IST, m in [0, 375]).
+    Anchors:
+      m = 0   (09:15 AM): F(0)   = 0.00  (Start of session, zero cumulative volume)
+      m = 15  (09:30 AM): F(15)  = 0.10  (10.0% volume after opening 15-min discovery)
+      m = 60  (10:15 AM): F(60)  = 0.25  (25.0% volume after 1st hour breakout prime window)
+      m = 285 (14:00 PM): F(285) = 0.65  (65.0% volume through mid-day lull)
+      m = 375 (15:30 PM): F(375) = 1.00  (100.0% volume at market close)
+    Strictly continuous at all knot points with a safe floor of 0.01 (1%).
+    """
+    m = max(0.0, min(375.0, float(session_mins)))
+    if m <= 15.0:
+        pct = 0.00 + (m / 15.0) * 0.10
+    elif m <= 60.0:
+        pct = 0.10 + ((m - 15.0) / 45.0) * 0.15
+    elif m <= 285.0:
+        pct = 0.25 + ((m - 60.0) / 225.0) * 0.40
+    else:
+        pct = 0.65 + ((m - 285.0) / 90.0) * 0.35
+    return max(0.01, round(pct, 4))
+
 # ANSI Colors matching Pine Script Palette
 GREEN = "\033[92m"        # Lime / Green (#0b8043)
 RED = "\033[91m"          # Red (#cc2222)
@@ -1280,17 +1303,10 @@ def fetch_upstox_symbol_data(symbol, token, prefetched_quote=None):
                     avg_v = sum(vols[1:21]) / 20.0
                     if avg_v > 0:
                         raw_rvol = vols[0] / avg_v
-                        # Time-of-day expected volume fraction (NSE 09:15 - 15:30 U-shaped curve)
+                        # Continuous Time-of-Day expected volume fraction F(m) starting at 0.0 at 09:15 AM
                         now_dt = get_ist_now()
                         session_mins = max(1, min(375, (now_dt.hour * 60 + now_dt.minute) - (9 * 60 + 15)))
-                        if session_mins <= 15:       # 09:15 - 09:30 (Opening surge zone)
-                            expected_pct = 0.05 + (session_mins / 15.0) * 0.08  # ~5% to 13%
-                        elif session_mins <= 60:     # 09:30 - 10:15 (Prime breakout zone)
-                            expected_pct = 0.13 + ((session_mins - 15) / 45.0) * 0.17 # ~13% to 30%
-                        elif session_mins <= 285:    # 10:15 - 14:00 (Mid-day session)
-                            expected_pct = 0.30 + ((session_mins - 60) / 225.0) * 0.35 # ~30% to 65%
-                        else:                        # 14:00 - 15:30 (Closing momentum)
-                            expected_pct = 0.65 + ((session_mins - 285) / 90.0) * 0.35 # ~65% to 100%
+                        expected_pct = calculate_tod_volume_fraction(session_mins)
                         expected_vol = avg_v * expected_pct
                         rvol_tod = round(vols[0] / expected_vol, 2) if expected_vol > 0 else raw_rvol
                         # Time-of-day normalized relative volume
@@ -1486,14 +1502,7 @@ def fetch_fallback_data(symbol):
                     raw_rvol = vols[-1] / avg_vol
                     now_dt = get_ist_now()
                     session_mins = max(1, min(375, (now_dt.hour * 60 + now_dt.minute) - (9 * 60 + 15)))
-                    if session_mins <= 15:
-                        expected_pct = 0.05 + (session_mins / 15.0) * 0.08
-                    elif session_mins <= 60:
-                        expected_pct = 0.13 + ((session_mins - 15) / 45.0) * 0.17
-                    elif session_mins <= 285:
-                        expected_pct = 0.30 + ((session_mins - 60) / 225.0) * 0.35
-                    else:
-                        expected_pct = 0.65 + ((session_mins - 285) / 90.0) * 0.35
+                    expected_pct = calculate_tod_volume_fraction(session_mins)
                     expected_vol = avg_vol * expected_pct
                     rvol_tod = round(vols[-1] / expected_vol, 2) if expected_vol > 0 else raw_rvol
                     rvol = round(rvol_tod, 2)
