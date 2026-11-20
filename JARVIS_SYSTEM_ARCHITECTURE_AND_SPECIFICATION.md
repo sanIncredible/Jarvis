@@ -3,7 +3,7 @@
 **Classification:** Complete System Engineering Blueprint  
 **System Target:** Fully Autonomous 3M ORB Scanner, Positional Swing Engine, Multi-Broker Hub & Cloud Infrastructure  
 **Author:** Jarvis Engineering Team & DeepMind Antigravity  
-**Reconstruction Feasibility:** 100% (Complete Module-by-Module Technical Specification)
+**Reconstruction Feasibility:** Deterministic System Engineering Blueprint (Complete Module-by-Module Technical Specification)
 
 ---
 
@@ -303,10 +303,12 @@ Evaluated by `evaluate_strategy_checklist(symbol, quote_data, calc_data)`:
 
 #### A. Hard Gates (Strictly 7 Non-Negotiable Prerequisite Gates — Must ALL Pass)
 A failure in ANY single hard gate triggers an immediate, fatal rejection of the trade setup:
-1. **Regime Permission:** Market state is NOT `DEFENSIVE`, `DEFENSIVE_WATERFALL`, `CLIMAX`, `WASHOUT`, or `alloc_pct == 0`.
+1. **Regime Permission:** Market state is NOT `DEFENSIVE`, `WASHOUT`, or `alloc_pct == 0` (EXPANSION, NORMAL, and NEUTRAL permitted).
 2. **ORB Breakout Confirmation:** Price is actively breaking out (`orb_status in ("H", "L➔H")` or `LTP > ORB High`).
 3. **Volume Participation (Time-of-Day Hurdle):** Volume meets the expected session pace for the elapsed time (`RVOL_TOD >= 1.0x`).
-4. **Stop Distance Collar:** Distance to structural Day Low is within risk limits (`risk_pct <= 4.0%`).
+4. **Stop Distance Collar (0.5x ATR to 4.0%):** Distance to Day Low stop is within valid structural boundaries:
+   $$\text{Stop Distance} \le 4.0\% \quad \text{AND} \quad \text{Stop Distance} \ge 0.5 \times \text{ATR}_{14}$$
+   *(Prevents wide tail risk while fatally rejecting artificially tight, sub-noise stops that result in immediate noise shakeouts).*
 5. **10 EMA Stretch Collar:** Micro-timeframe 3m 10 EMA stretch is controlled (`stretch_pct <= 3.0%`; prevents chasing local blow-off tops).
 6. **Opening Gap Extension:** Opening gap is not extended beyond the breakout trigger (`gap_ext_pct <= 2.5%`).
 7. **Candle Range Quality:** Rejection upper wick does not dominate the session range (`upper_wick_pct <= 40.0%`).
@@ -418,32 +420,36 @@ $$\text{New Stop Loss} = \max\left(\text{Current SL}, \, \text{Candidate}_1, \, 
 
 > **Mathematical Guarantee:** Because `best_sl, best_rule = max(candidates)`, a higher-level state cannot loosen established lower-level floors, and Level 6 (10 EMA) and Level 7 (20 EMA) compete fairly with the tighter structural stop winning.
 
-### 8.4 Realistic Exit Fill Model & Post-Entry Bar Lows
-To prevent optimistic paper trading survival bias:
-1. **Day-1 Execution (Post-Entry Intra-Day Lows):**
-   - The engine isolates all 3-minute candles starting at the entry candle bucket:
-     $$\text{Entry Bucket} = \lfloor \text{Minute} / 3 \rfloor \times 3$$
-     $$\text{Post-Entry Low} = \min\left(\{ \text{Low}_i \mid \text{Bucket}_i \ge \text{Entry Bucket} \}\right)$$
-   - Stop breach occurs if $\text{Post-Entry Low} \le \text{Current SL}$ or $\text{LTP} \le \text{Current SL}$.
-   - Safely includes the entry candle itself (safe because initial stop sits strictly below the pre-breakout day low), catching post-breakout intraday wicks that a real resting stop order would fill.
-   - **Simulated Fill:** $\text{Exit Price} = \text{round\_to\_tick}(\text{Current SL} \times 0.9985, \, 0.05, \, \text{"down"})$ (0.15% realistic slippage on resting stop limit fill).
-2. **Day 2+ Execution & Mid-Session Ratchet Rogue Wick Guard:**
-   - **Mid-Session Ratchet Guard:** If a stop is raised higher *today* mid-session (e.g., to +2.0R at 11:30 AM), inspecting full session `day_low` would falsely exit the trade if an earlier 09:20 AM morning dip dropped below the new stop. The engine tracks `sl_last_ratchet_date` and `sl_last_ratchet_time`. If the stop was ratcheted *today* mid-session, the engine only evaluates candles timestamped $\ge \text{last\_ratchet\_bucket}$, ensuring only true price action *following* the ratchet can trigger an exit. If stop was set prior to today, session `day_low` is checked.
-   - **Overnight Gap-Down Auction Fills:** If a stock gaps down below the stop price at the 09:15:00 AM market open:
-     $$\text{Exit Price} = \text{round\_to\_tick}(\text{Day Open} \times 0.9985, \, 0.05, \, \text{"down"})$$
-     *Realism Guard:* Fills at the opening auction bell price rather than end-of-day low LTP, preventing distorted penalties while maintaining slippage realism.
-   - If stop breached intraday on Day 2+: $\text{Exit Price} = \text{round\_to\_tick}(\text{Current SL} \times 0.9985, \, 0.05, \, \text{"down"})$.
+### 8.4 Realistic Exit Fill Model & Universal Stop Ratchet Protection
+To prevent optimistic paper trading survival bias and eliminate false stop-outs:
+1. **Universal Stop Ratchet Protection (Day 1 & Day 2+):**
+   - If a stop loss is ratcheted higher *today* (e.g., via Rule 5 Day-1 Spurt Shield to breakeven, or Day 2+ Stage 3/4 locks):
+     $$\text{Ratchet Bucket} = \lfloor \text{Minute}_{\text{ratchet}} / 3 \rfloor \times 3$$
+     The engine inspects **only subsequent candles strictly following the ratchet bucket** ($\text{Bucket} > \text{Ratchet Bucket}$) plus live ticks.
+   - **Protection:** Prevents earlier morning dips (e.g. at 09:50 AM) that occurred before the ratchet from falsely stopping out the runner after a subsequent surge (e.g. at 10:30 AM).
+2. **Initial Stop Evaluation (Non-Ratcheted State):**
+   - **Day 1:** Evaluates candles starting at the entry bucket ($\text{Bucket} \ge \text{Entry Bucket}$) and live ticks. Safe because initial stop sits strictly below the pre-breakout low.
+   - **Day 2+:** Evaluates session `day_low` and live ticks.
+3. **Realistic Bar-Open Breach Fill Model:**
+   - In fast markets or overnight gaps where a candle opens below the stop price:
+     $$\text{Fill Reference Price} = \min(\text{Current SL}, \, \text{Breach Bar Open})$$
+     $$\text{Exit Price} = \text{round\_to\_tick}(\text{Fill Reference Price} \times 0.9985, \, 0.05, \, \text{"down"})$$
+     *Realism Guard:* Never assumes liquidity at the stop price if the bar opened below it.
 
-### 8.5 Dual $R$-Multiple Accounting Telemetry
-To prevent statistical ambiguity between target risk and actual capital at risk when the ATR floor binds:
-- **Effective Initial Risk Distance:**
-  $$\text{Effective Risk Per Share} = \max(\text{Entry Price} - \text{Initial Stop Loss}, \, 0.5 \times \text{ATR}_{14})$$
-  $$\text{Initial Risk INR} = \text{Quantity} \times \text{Effective Risk Per Share}$$
-- **Structural $R$ ($R_{\text{structural}}$):** Evaluated against actual capital at risk:
-  $$R_{\text{structural}} = \frac{\text{Realized PnL (INR)}}{\text{Initial Risk INR}}$$
+### 8.5 Dual $R$-Multiple & Net Cost Accounting Telemetry
+To maintain true Van Tharp risk accounting integrity without distortion from ATR sizing floors:
+- **True Structural Risk Denominator:**
+  $$\text{Actual Risk Per Share} = \text{Entry Price} - \text{Initial Stop Loss}$$
+  $$\text{Actual Initial Risk INR} = \text{Quantity} \times \text{Actual Risk Per Share}$$
+- **Structural $R$ ($R_{\text{structural}}$):** Evaluated against actual capital at risk at the initial stop:
+  $$R_{\text{structural}} = \frac{\text{Realized PnL (INR)}}{\text{Actual Initial Risk INR}}$$
+  *(Guarantees that a full stop-out at initial SL evaluates to exactly $-1.0\text{R}$ plus slippage).*
+- **Net $R$ ($R_{\text{net}}$):** Evaluates PnL after round-trip Indian equity statutory frictions (STT: 0.1%, Exchange: 0.003%, SEBI: 0.0001%, Stamp Duty: 0.015%, GST: 18% $\approx 0.25\%$ turnover):
+  $$\text{Turnover} = (\text{Entry Price} + \text{Exit Price}) \times \text{Quantity}$$
+  $$\text{Statutory Costs} = \text{round}(\text{Turnover} \times 0.0025)$$
+  $$R_{\text{net}} = \frac{\text{Realized PnL} - \text{Statutory Costs}}{\text{Actual Initial Risk INR}}$$
 - **Nominal $R$ ($R_{\text{nominal}}$):** Evaluated against the standard ₹1,000 risk unit:
   $$R_{\text{nominal}} = \frac{\text{Realized PnL (INR)}}{1000.0}$$
-Both metrics are permanently recorded in `shadow_portfolio.json` and `shadow_trade_log.json` and published in exit Telegram cards.
 
 ### 8.6 Unified NSE Exchange Holiday Calendar (2026–2027)
 Implemented via `count_trading_days(date_start, date_end)`:
@@ -457,19 +463,17 @@ Computed daily at 15:35:00 IST by `get_shadow_analytics()`:
 - **Profit Factor:** $\frac{\sum \text{Realized Wins (in R)}}{\sum |\text{Realized Losses (in R)}|}$
 - **Mathematical Expectancy:**
   $$\text{Expectancy } (R) = (P_{\text{win}} \times \overline{R}_{\text{win}}) - (P_{\text{loss}} \times \overline{R}_{\text{loss}})$$
-- **Max Drawdown ($R$):** Peak-to-trough drop of cumulative closed $R$.
+- **Max Closed-Trade Drawdown ($R$):** Peak-to-trough drop of cumulative closed $R$.
+- **Average Giveback ($R$):** Average difference between peak unrealized $R$ and realized exit $R$.
 
-### 8.8 Benchmark Integrity, Config Stamping & Rejected Signal Ledger
-- **Config Stamping:** All open position records, closed trade logs, and rejected signals are explicitly tagged with `"config_version": "v3.1.0-strict"`.
-- **Rejected Signal Ledger (`shadow_rejected_signals.json`):** Any candidate breakout setup that triggers in the scanner but is rejected by any of the 7 Hard Gates or receives a Soft Conviction Score $< 3 / 7$ is logged with its exact timestamp, failure reason, and technical metrics, ensuring 100% audit transparency for the 30-day autonomous benchmark.
-
-### 8.7 Mathematical Performance Analytics
-Computed daily at 15:35:00 IST by `get_shadow_analytics()`:
-- **Win Rate %:** $\frac{\text{Total Wins}}{\text{Total Closed Trades}} \times 100$
-- **Profit Factor:** $\frac{\sum \text{Realized Wins (in R)}}{\sum |\text{Realized Losses (in R)}|}$
-- **Mathematical Expectancy:**
-  $$\text{Expectancy } (R) = (P_{\text{win}} \times \overline{R}_{\text{win}}) - (P_{\text{loss}} \times \overline{R}_{\text{loss}})$$
-- **Max Drawdown ($R$):** Peak-to-trough drop of cumulative closed $R$.
+### 8.8 Benchmark Integrity, Immutable Hashing & Rejected Signal Ledger
+- **Config Versioning & SHA256 Parameter Hashing:**
+  To guarantee complete reproducibility, every entry, exit, and rejected signal is stamped with both `"config_version": "v3.1.0-strict"` and a cryptographic SHA256 digest of the frozen parameter set (`config_hash`).
+- **Concurrent Signal Priority Tie-Breaker:**
+  If multiple breakout setups trigger simultaneously during 09:30–10:15 AM with limited remaining portfolio risk slots, candidates are prioritized deterministically:
+  $$\text{Sort Priority} = \left(\text{Soft Score} \downarrow, \, \text{RVOL}_{\text{TOD}} \downarrow, \, \text{Risk \%} \uparrow, \, \text{Stretch \%} \uparrow\right)$$
+- **Rejected Signal Ledger (`shadow_rejected_signals.json`):**
+  Records every rejected candidate with full gate vectors (all 7 hard gates, all 7 soft scores, LTP, RVOL, Stretch, Wick, Gap). Deduplicated daily per symbol/reason, and audited at EOD for forward performance tracking (30m, 60m, EOD close).
 
 ---
 
@@ -620,6 +624,7 @@ sequenceDiagram
   "ADANIPOWER": {
     "symbol": "ADANIPOWER",
     "config_version": "v3.1.0-strict",
+    "config_hash": "1fe7a74b",
     "entry_price": 540.0,
     "initial_sl": 526.0,
     "current_sl": 554.0,
@@ -627,9 +632,11 @@ sequenceDiagram
     "sl_last_ratchet_time": "10:12:00",
     "target_price": 568.0,
     "risk_per_share": 14.0,
+    "actual_risk_per_share": 14.0,
     "risk_pct": 2.59,
     "quantity": 71,
     "initial_risk_inr": 994.0,
+    "actual_initial_risk_inr": 994.0,
     "fixed_risk_inr": 994.0,
     "effective_risk_dist": 14.0,
     "capital_invested": 38340.0,
@@ -653,6 +660,7 @@ sequenceDiagram
   {
     "symbol": "SUNTV",
     "config_version": "v3.1.0-strict",
+    "config_hash": "1fe7a74b",
     "entry_date": "2026-11-20",
     "exit_date": "2026-11-25",
     "entry_time": "09:36:00",
@@ -660,12 +668,17 @@ sequenceDiagram
     "entry_price": 750.0,
     "exit_price": 795.0,
     "quantity": 50,
-    "initial_risk_inr": 1000.0,
+    "initial_sl": 730.0,
+    "actual_risk_per_share": 20.0,
+    "actual_initial_risk_inr": 1000.0,
     "holding_days": 3,
     "realized_pnl_inr": 2250.0,
+    "statutory_costs_inr": 193.13,
+    "net_pnl_inr": 2056.87,
     "realized_r": 2.25,
     "r_structural": 2.25,
     "r_nominal": 2.25,
+    "r_net": 2.06,
     "peak_r": 2.8,
     "giveback_r": 0.55,
     "exit_reason": "🟢 10 EMA SWING TRAIL",
@@ -683,10 +696,23 @@ sequenceDiagram
     "timestamp": "2026-11-20 09:42:15",
     "reason": "Checklist Hard Gate failed: 10 EMA Stretch (<=3.0%)",
     "config_version": "v3.1.0-strict",
+    "config_hash": "1fe7a74b",
     "metadata": {
-      "gates": ["10 EMA Stretch (<=3.0%)"],
+      "failed_hard_gates": ["10 EMA Stretch (<=3.0%)"],
+      "all_hard_gates": [
+        {"name": "Regime Permission", "passed": true, "reason": "EXPANSION"},
+        {"name": "ORB Breakout", "passed": true, "reason": "H"},
+        {"name": "Volume Participation (>=1.0x TOD)", "passed": true, "reason": "RVOL 1.45x"},
+        {"name": "Stop Distance Collar (0.5x ATR to 4.0%)", "passed": true, "reason": "2.1%"},
+        {"name": "10 EMA Stretch (<=3.0%)", "passed": false, "reason": "3.4%"},
+        {"name": "Gap Extension (<=2.5%)", "passed": true, "reason": "1.2%"},
+        {"name": "Upper Wick Rejection (<=40%)", "passed": true, "reason": "15%"}
+      ],
+      "soft_score": 4,
       "ltp": 6840.5,
-      "risk_pct": 2.1
+      "risk_pct": 2.1,
+      "rvol": 1.45,
+      "stretch_pct": 3.4
     }
   }
 ]
@@ -695,7 +721,10 @@ sequenceDiagram
 ### 13.5 `data.json` (Real-Time Terminal Snapshot)
 ```json
 {
-  "last_updated": "2026-11-20 10:14:02",
+  "updated_at": "10:14:02 IST",
+  "generated_at_ist": "10:14:02 IST",
+  "updated_ts": 1795152242,
+  "timestamp_epoch_ms": 1795152242000,
   "market_regime": {
     "state_code": "EXPANSION",
     "state_label": "Expansion (Breadth Positive)",
@@ -743,7 +772,7 @@ If the entire codebase were lost, the system can be reconstructed from scratch f
 mkdir -p /home/opc/Jarvis
 cd /home/opc/Jarvis
 sudo dnf install -y python39 python39-pip
-pip3 install upstox-client requests urllib3 websockets protobuf openpyxl python-dotenv
+pip3 install upstox-client requests urllib3 websockets protobuf openpyxl python-dotenv pyotp
 ```
 
 ### Step 2: Implement Core Modules
