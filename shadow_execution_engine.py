@@ -93,11 +93,16 @@ def round_to_clean_int(val):
         return 0
 
 
-NSE_HOLIDAYS_2026 = {
+NSE_HOLIDAYS = {
+    # 2026 Official Exchange Holidays
     "2026-01-26", "2026-03-03", "2026-03-20", "2026-03-27", "2026-04-03",
     "2026-04-14", "2026-05-01", "2026-05-27", "2026-08-15", "2026-09-04",
-    "2026-10-02", "2026-10-20", "2026-11-08", "2026-11-10", "2026-11-24", "2026-12-25"
+    "2026-10-02", "2026-10-20", "2026-11-08", "2026-11-10", "2026-11-24", "2026-12-25",
+    # 2027 Projected Exchange Holidays (Statutory / National Holidays)
+    "2027-01-26", "2027-03-24", "2027-03-26", "2027-04-14", "2027-05-01",
+    "2027-08-15", "2027-10-02", "2027-12-25"
 }
+NSE_HOLIDAYS_2026 = NSE_HOLIDAYS
 
 
 def count_trading_days(date_start, date_end):
@@ -107,7 +112,7 @@ def count_trading_days(date_start, date_end):
     cur = date_start
     days = 0
     while cur <= date_end:
-        if cur.weekday() < 5 and cur.strftime("%Y-%m-%d") not in NSE_HOLIDAYS_2026:
+        if cur.weekday() < 5 and cur.strftime("%Y-%m-%d") not in NSE_HOLIDAYS:
             days += 1
         cur += timedelta(days=1)
     return max(1, days)
@@ -527,63 +532,47 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 if ema5 <= 0:
                     ema5 = float(c_meta.get("ema5") or 0.0)
 
-        # Multi-Stage Swing Trailing Stop Hierarchy (NO premature choking / NO premature liquidation)
+        # Multi-Stage Swing Trailing Stop Hierarchy (Strict Monotonic Non-Decreasing: Highest Stop Wins)
+        candidate_stops = [(current_sl, pos.get("last_trail_rule", "INITIAL LOD STOP"))]
+
         # 1. 🛡️ 30% PROFIT CAP (Milestone: +28% gain or 8.0R reached -> lock +25% profit)
         if peak_gain_pct >= 28.0 or highest_r >= 8.0:
-            rec_sl = round_to_clean_int(entry_p * 1.25)
-            if rec_sl > new_sl:
-                new_sl = rec_sl
-                new_rule = "🛡️ 30% PROFIT CAP (Lock +25% Gains)"
+            candidate_stops.append((round_to_clean_int(entry_p * 1.25), "🛡️ 30% PROFIT CAP (Lock +25% Gains)"))
 
-        # 2. ⚡ PARABOLIC 5 EMA (Vertical Momentum: R >= 4.0 -> trail closely under 5 EMA)
-        elif highest_r >= 4.0 and ema5 > 0:
-            rec_sl = round_to_clean_int(ema5 * 0.995)
-            if rec_sl > new_sl:
-                new_sl = rec_sl
-                new_rule = "⚡ PARABOLIC 5 EMA TRAIL"
+        # 2. ⚡ PARABOLIC 5 EMA (Vertical Momentum: R >= 4.0 -> trail 5 EMA with Stage 4 +2.0R floor!)
+        if highest_r >= 4.0:
+            floor_2r = round_to_clean_int(entry_p + (2.0 * risk_per_share))
+            s_5ema = round_to_clean_int(ema5 * 0.995) if ema5 > 0 else 0
+            candidate_stops.append((max(floor_2r, s_5ema), "⚡ PARABOLIC 5 EMA TRAIL (+2.0R Floor)"))
 
         # 3. 🎯 STAGE 4: R >= 3.0 (Lock at least +2.0R guaranteed profit while riding 10 EMA)
-        elif highest_r >= 3.0:
+        if highest_r >= 3.0:
             floor_2r = round_to_clean_int(entry_p + (2.0 * risk_per_share))
             ema10_trail = round_to_clean_int(ema10 * 0.992) if ema10 > 0 else 0
-            rec_sl = max(floor_2r, ema10_trail)
-            if rec_sl > new_sl:
-                new_sl = rec_sl
-                new_rule = "🎯 STAGE 4: +2.0R LOCKED (Riding 10 EMA)"
+            candidate_stops.append((max(floor_2r, ema10_trail), "🎯 STAGE 4: +2.0R LOCKED (Riding 10 EMA)"))
 
         # 4. 🎯 STAGE 3: R >= 2.0 (Lock at least +1.0R guaranteed profit on the orderbook)
-        elif highest_r >= 2.0:
+        if highest_r >= 2.0:
             floor_1r = round_to_clean_int(entry_p + (1.0 * risk_per_share))
             ema10_trail = round_to_clean_int(ema10 * 0.992) if ema10 > 0 else 0
-            rec_sl = max(floor_1r, ema10_trail)
-            if rec_sl > new_sl:
-                new_sl = rec_sl
-                new_rule = "🎯 STAGE 3: +1.0R LOCKED (Swing Runner Protected)"
+            candidate_stops.append((max(floor_1r, ema10_trail), "🎯 STAGE 3: +1.0R LOCKED (Swing Runner Protected)"))
 
         # 5. 🚀 DAY-1 SPURT SHIELD (Surge of +4.5% on Day 1 -> ratchet to breakeven +0.2%)
-        elif holding_days == 1 and peak_gain_pct >= 4.5:
-            rec_sl = round_to_clean_int(entry_p * 1.002)
-            if rec_sl > new_sl:
-                new_sl = rec_sl
-                new_rule = "🚀 DAY-1 SPURT SHIELD (+4.5% Surge -> Breakeven)"
+        if holding_days == 1 and peak_gain_pct >= 4.5:
+            candidate_stops.append((round_to_clean_int(entry_p * 1.002), "🚀 DAY-1 SPURT SHIELD (+4.5% Surge -> Breakeven)"))
 
         # 6. 🟢 10 EMA SWING TRAIL (Day 2+ trending position with R >= 1.5)
-        elif holding_days >= 2 and highest_r >= 1.5 and ema10 > 0:
-            rec_sl = round_to_clean_int(ema10 * 0.992)
-            if rec_sl > new_sl:
-                new_sl = rec_sl
-                new_rule = "🟢 10 EMA SWING TRAIL"
+        if holding_days >= 2 and highest_r >= 1.5 and ema10 > 0:
+            candidate_stops.append((round_to_clean_int(ema10 * 0.992), "🟢 10 EMA SWING TRAIL"))
 
         # 7. 🟢 20 EMA STRUCTURAL TRAIL (Day 3+ wider base runner with R >= 1.0)
-        elif holding_days >= 3 and highest_r >= 1.0 and ema20 > 0:
-            rec_sl = round_to_clean_int(ema20 * 0.990)
-            if rec_sl > new_sl:
-                new_sl = rec_sl
-                new_rule = "🟢 20 EMA STRUCTURAL TRAIL"
+        if holding_days >= 3 and highest_r >= 1.0 and ema20 > 0:
+            candidate_stops.append((round_to_clean_int(ema20 * 0.990), "🟢 20 EMA STRUCTURAL TRAIL"))
 
-        if new_sl > current_sl:
-            pos["current_sl"] = new_sl
-            pos["last_trail_rule"] = new_rule
+        best_sl, best_rule = max(candidate_stops, key=lambda x: x[0])
+        if best_sl > current_sl:
+            pos["current_sl"] = best_sl
+            pos["last_trail_rule"] = best_rule
             updates_count += 1
 
         # Check Simulated Exit Breaches
@@ -594,27 +583,31 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         # Structural Exit: Low breached the current trailed stop-loss
         is_sl_breached = False
         if holding_days == 1:
-            # On Day 1: Trigger SL only when live price (LTP) hits or drops below stop-loss.
-            # Avoids false liquidation from pre-entry morning wicks where session day_low occurred before breakout entry!
-            is_sl_breached = (ltp <= pos["current_sl"])
+            # On Day 1: Evaluate post-entry low from intra-day bars (to catch true resting stop wicks without false morning wicks)
+            entry_t = str(pos.get("entry_time") or "09:15:00")[:5]
+            post_bars = [c for c in (sc_meta.get("candles_3m") or (quote_data or {}).get("candles_3m") or []) if isinstance(c, dict) and (c.get("t") or "") >= entry_t]
+            post_low = min([float(c.get("l")) for c in post_bars if c.get("l") is not None] or [ltp])
+            is_sl_breached = (post_low <= pos["current_sl"] or ltp <= pos["current_sl"])
         else:
             # Day 2+: Today's entire session is post-entry, so any day_low breach is a valid structural stop hit
             is_sl_breached = (day_low <= pos["current_sl"] or ltp <= pos["current_sl"])
 
         if is_sl_breached:
             exit_triggered = True
-            # Edge Case Guard 6: Realistic Overnight Gap-Down Slippage
+            # Realistic Exit Fill Model:
+            # If overnight gap down on Day 2+, execute fill at opening auction price (day_open with 0.15% spread slippage)
             if holding_days >= 2 and day_open > 0 and day_open < pos["current_sl"]:
-                exit_price = round_to_clean_int(min(day_open, ltp, pos["current_sl"]) * 0.9985)
+                exit_price = round_to_clean_int(day_open * 0.9985)
             else:
-                exit_price = round_to_clean_int(min(pos["current_sl"], ltp) * 0.9985)
+                exit_price = round_to_clean_int(pos["current_sl"] * 0.9985)
             exit_reason = pos["last_trail_rule"]
 
         if exit_triggered:
             initial_risk_inr = max(1.0, float(pos.get("initial_risk_inr") or pos.get("fixed_risk_inr") or (qty * risk_per_share)))
             realized_pnl = round_to_clean_int((exit_price - entry_p) * qty)
-            realized_r = round(realized_pnl / initial_risk_inr, 2)
-            giveback_r = round(max(0.0, highest_r - realized_r), 2)
+            realized_r_structural = round(realized_pnl / initial_risk_inr, 2)
+            realized_r_nominal = round(realized_pnl / 1000.0, 2)
+            giveback_r = round(max(0.0, highest_r - realized_r_structural), 2)
 
             log_entry = {
                 "symbol": sym,
@@ -628,7 +621,9 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 "initial_risk_inr": initial_risk_inr,
                 "holding_days": holding_days,
                 "realized_pnl_inr": realized_pnl,
-                "realized_r": realized_r,
+                "realized_r": realized_r_structural,
+                "r_structural": realized_r_structural,
+                "r_nominal": realized_r_nominal,
                 "peak_r": highest_r,
                 "giveback_r": giveback_r,
                 "exit_reason": exit_reason,
