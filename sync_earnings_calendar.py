@@ -108,9 +108,15 @@ def process_calendar(records):
 def main():
     print("🔄 Fetching NSE Corporate Event Calendar...")
     records = fetch_nse_calendar()
+    if not records or len(records) == 0:
+        print("❌ Sourcing failed: NSE returned 0 records or request was rejected. Preserving existing data/earnings_calendar.json!")
+        return False
+
     print(f"Received {len(records)} raw records from NSE.")
     
     data = process_calendar(records)
+    if len(data.get("symbols", {})) == 0 and len(records) > 0:
+        print("⚠️ Warning: No major corporate actions matched keywords.")
     print(f"Identified {len(data['symbols'])} symbols with major corporate actions.")
 
     # Write to local data/earnings_calendar.json
@@ -120,16 +126,25 @@ def main():
 
     # Push to OCI VM
     ssh_key = BASE_DIR / "ssh-key-2026-09-21_new.key"
-    if ssh_key.is_file():
+    cfg_file = BASE_DIR / "config_credentials.json"
+    oci_host = None
+    if cfg_file.is_file():
+        try:
+            cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
+            oci_host = cfg.get("oci", {}).get("host")
+        except Exception:
+            pass
+
+    if ssh_key.is_file() and oci_host:
         cmd = [
             "scp",
             "-i", str(ssh_key),
             "-o", "StrictHostKeyChecking=no",
             str(OUT_FILE),
-            "opc@80.225.210.222:/home/opc/Jarvis/data/earnings_calendar.json"
+            f"opc@{oci_host}:/home/opc/Jarvis/data/earnings_calendar.json"
         ]
         try:
-            print("📤 Syncing earnings_calendar.json to OCI VM (80.225.210.222)...")
+            print("📤 Syncing earnings_calendar.json to OCI VM...")
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
             if res.returncode == 0:
                 print("✅ Successfully synced to OCI VM!")
