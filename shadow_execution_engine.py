@@ -103,7 +103,7 @@ def get_git_commit_sha():
                 return val[:8]
         except Exception:
             pass
-    return "1930a204"
+    return "bf105f23"
 
 FROZEN_PARAMS = {
     "version": CONFIG_VERSION,
