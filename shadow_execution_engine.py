@@ -491,6 +491,62 @@ def send_phase1_telegram_alert(message_html, topic_name="reports"):
 
 
 _last_earnings_cache_alert = [0.0]
+_rejection_tracker = {"window_date": None, "total_evals": 0, "reason_counts": {}}
+_last_anomaly_alert_time = [0.0]
+
+
+def track_and_audit_rejection(reason_code: str):
+    """
+    Intraday Rejection Anomaly Detector:
+    Tracks candidate evaluations between 09:30-10:15 IST.
+    If >= 80% of candidates (sample >= 5) are rejected for a single data-dependent reason
+    (ZERO_SELLER_DEPTH, FEED_STALE, EARNINGS_CALENDAR_UNAVAILABLE), alerts to Topic 9 ('risk').
+    """
+    try:
+        now_ist = get_ist_now()
+        d_str = now_ist.strftime("%Y-%m-%d")
+        if _rejection_tracker["window_date"] != d_str:
+            _rejection_tracker["window_date"] = d_str
+            _rejection_tracker["total_evals"] = 0
+            _rejection_tracker["reason_counts"] = {}
+
+        _rejection_tracker["total_evals"] += 1
+        _rejection_tracker["reason_counts"][reason_code] = _rejection_tracker["reason_counts"].get(reason_code, 0) + 1
+
+        total = _rejection_tracker["total_evals"]
+        if total >= 5:
+            count = _rejection_tracker["reason_counts"].get(reason_code, 0)
+            pct = (count / total) * 100.0
+            now_ep = time.time()
+            if pct >= 80.0 and (now_ep - _last_anomaly_alert_time[0] > 1800):
+                _last_anomaly_alert_time[0] = now_ep
+                send_phase1_telegram_alert(
+                    f"🚨 <b>DATA ANOMALY ALERT: {reason_code} ({pct:.0f}%)</b>\n"
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"• <b>Evaluations:</b> {total} candidate breakouts screened\n"
+                    f"• <b>Rejections:</b> {count}/{total} rejected solely due to {reason_code}\n"
+                    "• <b>Warning:</b> Potential broker quote or data feed anomaly suppressing signals.\n"
+                    "• <b>Action:</b> Check Upstox market depth and data feed status.",
+                    topic_name="risk"
+                )
+    except Exception:
+        pass
+
+
+def is_earnings_calendar_valid():
+    """Validates that earnings calendar file exists, is non-empty, and contains valid structured data."""
+    cal_file = BASE_DIR / "data" / "earnings_calendar.json"
+    if not cal_file.is_file():
+        return False
+    try:
+        if cal_file.stat().st_size < 10:
+            return False
+        with open(cal_file, "r", encoding="utf-8") as f:
+            d = json.load(f)
+        symbols = d.get("symbols", d)
+        return bool(symbols and len(symbols) > 0 and isinstance(symbols, dict))
+    except Exception:
+        return False
 
 
 def check_earnings_blackout(symbol: str, dt=None):
@@ -504,14 +560,14 @@ def check_earnings_blackout(symbol: str, dt=None):
     - If calendar file missing/unreadable: log warning to Topic 9 ('risk') and FAIL-OPEN so trading is not paralyzed.
     """
     cal_file = BASE_DIR / "data" / "earnings_calendar.json"
-    if not cal_file.is_file():
+    if not is_earnings_calendar_valid():
         now_ep = time.time()
         if now_ep - _last_earnings_cache_alert[0] > 14400:
             _last_earnings_cache_alert[0] = now_ep
             send_phase1_telegram_alert(
-                "⚠️ <b>WARNING: Earnings Calendar Cache Missing</b>\n"
+                "⚠️ <b>WARNING: Earnings Calendar Cache Missing or Unreadable</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "• <b>Status:</b> data/earnings_calendar.json not found on disk\n"
+                "• <b>Status:</b> data/earnings_calendar.json invalid or empty\n"
                 "• <b>Fallback:</b> Failing open for candidate entries with caution\n"
                 "• <b>Action:</b> Run sync_earnings_calendar.py to refresh cache",
                 topic_name="risk"
@@ -704,9 +760,16 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     total_sell_qty = (quote_data or {}).get("total_sell_quantity")
     depth = (quote_data or {}).get("depth") or {}
 
-    # 1. Total sell quantity check
-    if total_sell_qty is not None and int(total_sell_qty) == 0:
-        log_rejected_signal(sym, "Zero Seller Depth: Upper circuit locked with 0 ask quantity", {"ltp": fill_price})
+    # 1. Total sell quantity check (Zero ask depth near circuit ceiling)
+    is_near_circuit_price = False
+    if upper_circuit > 0:
+        is_near_circuit_price = (fill_price >= upper_circuit * 0.985)
+    elif prev_close > 0:
+        is_near_circuit_price = ((fill_price - prev_close) / prev_close >= 0.15)
+
+    if total_sell_qty is not None and int(total_sell_qty) == 0 and is_near_circuit_price:
+        log_rejected_signal(sym, "Zero Seller Depth: Upper circuit locked with 0 ask quantity", {"ltp": fill_price, "upper_circuit": upper_circuit})
+        track_and_audit_rejection("ZERO_SELLER_DEPTH")
         return False, "Zero Seller Depth: Stock locked at Upper Circuit with 0 sellers. Marketable fill physically impossible."
 
     # 2. Upper Circuit Collar (< 1.5% from ceiling)
@@ -726,9 +789,11 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
             return False, "Unquantified Liquidity Risk: Order book lacks both upper circuit limit and ask depth."
 
     # Earnings Blackout Window Check (Fail-Closed)
+    earnings_active = is_earnings_calendar_valid()
     is_blackout, blackout_reason = check_earnings_blackout(sym, now)
     if is_blackout:
         log_rejected_signal(sym, blackout_reason, {"symbol": sym})
+        track_and_audit_rejection("EARNINGS_BLACKOUT")
         return False, blackout_reason
 
     # Initial Structural Stop Loss: Day Low at trigger moment with buffer, tick-aware floor
@@ -863,6 +928,8 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         "sa_regime": reg_u,
         "trigger_name": trigger_name,
         "checklist_note": ck_note,
+        "earnings_filter_active": earnings_active,
+        "held_through_event": False,
         "status": "OPEN"
     }
 
@@ -948,6 +1015,12 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         except Exception:
             holding_days = pos.get("holding_days", 1)
         pos["holding_days"] = holding_days
+
+        # Check if held through corporate earnings / major action event
+        if not pos.get("held_through_event"):
+            is_blk, _ = check_earnings_blackout(sym, now)
+            if is_blk:
+                pos["held_through_event"] = True
 
         # Update peak LTP and peak R
         # Day 1: Track peak observed POST-ENTRY (ignore pre-entry 09:15-09:30 morning spikes)
@@ -1084,11 +1157,18 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
             is_unlocked = False
             first_liquid_price = None
 
+            # Only use day_open if the stock was locked from the market open (gap-down auction lock)
+            locked_from_open = (
+                day_open > 0 and lower_circuit > 0 and 
+                day_open <= lower_circuit * 1.002
+            )
+
             # 1. Depth check: buyers present and price unfreezing
             if total_buy_qty is not None and int(total_buy_qty) > 0:
                 if lower_circuit > 0 and ltp > lower_circuit * 1.002:
                     is_unlocked = True
-                    first_liquid_price = ltp
+                    # Fill at price at unlock: min(candle_open, ltp), only using day_open if locked from open
+                    first_liquid_price = min(day_open, ltp) if locked_from_open else ltp
                 elif lower_circuit <= 0 and ltp > day_low * 1.005:
                     is_unlocked = True
                     first_liquid_price = ltp
@@ -1098,14 +1178,18 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 for b in candles:
                     b_high = float(b.get("h") or 0.0)
                     b_open = float(b.get("o") or 0.0)
+                    b_close = float(b.get("c") or 0.0)
                     if lower_circuit > 0 and b_high > lower_circuit * 1.002:
                         is_unlocked = True
-                        first_liquid_price = max(b_open, lower_circuit)
+                        if b_open > lower_circuit * 1.002:
+                            first_liquid_price = min(b_open, ltp) if (ltp > 0 and ltp > lower_circuit) else b_open
+                        else:
+                            first_liquid_price = min(b_close, ltp) if (ltp > 0 and ltp > lower_circuit) else round_to_tick(lower_circuit + 0.05, tick=0.05, direction="up")
                         breach_bar_time = b.get("t")
                         break
                     elif lower_circuit <= 0 and b_high > day_low * 1.005:
                         is_unlocked = True
-                        first_liquid_price = max(b_open, day_low)
+                        first_liquid_price = min(b_open, ltp) if (b_open > day_low and ltp > 0) else (day_low * 1.005)
                         breach_bar_time = b.get("t")
                         break
 
@@ -1116,52 +1200,32 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 exit_reason = "⚠️ LOWER CIRCUIT UNLOCKED EXIT (Liquid Fill Post-Lock)"
                 pos["circuit_exit_blocked"] = False
                 pos["unfillable_exit_reason"] = None
-                print(f"🔓 [CIRCUIT UNLOCKED] {sym} buyers appeared! Filling deferred lower-circuit exit at ₹{exit_price:.2f} (Base: ₹{first_liquid_price:.2f}).")
+                print(f"🔓 [CIRCUIT UNLOCKED] {sym} buyers appeared! Filling deferred lower-circuit exit at ₹{exit_price:.2f} (Base: ₹{first_liquid_price:.2f}, Day Open: ₹{day_open:.2f}).")
             else:
                 pos["last_trail_rule"] = "⚠️ LOWER CIRCUIT UNFILLABLE (0 Buyers)"
                 continue
 
-        # Universal Stop Ratchet Protection (Day 1 and Day 2+):
-        # If the stop was ratcheted TODAY, never evaluate candles from before or during the ratchet bar!
-        was_ratcheted_today = (
-            pos.get("sl_last_ratchet_date") == today_str and
-            float(pos.get("current_sl", 0)) > float(pos.get("initial_sl", 0))
-        )
+        if not exit_triggered:
+            # Universal Stop Ratchet Protection (Day 1 and Day 2+):
+            # If the stop was ratcheted TODAY, never evaluate candles from before or during the ratchet bar!
+            was_ratcheted_today = (
+                pos.get("sl_last_ratchet_date") == today_str and
+                float(pos.get("current_sl", 0)) > float(pos.get("initial_sl", 0))
+            )
 
-        is_sl_breached = False
-        breach_bar_open = None
+            is_sl_breached = False
+            breach_bar_open = None
 
-        if was_ratcheted_today:
-            # Check strictly subsequent candles timestamped strictly after ratchet bucket, plus real-time LTP
-            r_str = str(pos.get("sl_last_ratchet_time") or "09:15:00")
-            r_parts = r_str.split(":")
-            r_h = int(r_parts[0]) if len(r_parts) > 0 and r_parts[0].isdigit() else 9
-            r_m = int(r_parts[1]) if len(r_parts) > 1 and r_parts[1].isdigit() else 15
-            ratchet_bucket = f"{r_h:02d}:{r_m:02d}" if use_1m else f"{r_h:02d}:{(r_m // 3) * 3:02d}"
-            # Strictly later buckets (> ratchet_bucket)
-            post_ratchet_bars = [c for c in candles if isinstance(c, dict) and (c.get("t") or "") > ratchet_bucket]
-            for b in post_ratchet_bars:
-                b_low = float(b.get("l") or 0.0)
-                if b_low > 0 and b_low <= pos["current_sl"]:
-                    is_sl_breached = True
-                    breach_bar_open = float(b.get("o") or b_low)
-                    breach_bar_time = b.get("t")
-                    break
-            if not is_sl_breached and ltp <= pos["current_sl"]:
-                is_sl_breached = True
-                breach_bar_open = ltp
-                breach_bar_time = now.strftime("%H:%M:%S")
-        else:
-            # Stop has NOT been ratcheted today (remains at initial LOD stop or previous session's stop)
-            if holding_days == 1:
-                # On Day 1 initial stop: check post-entry candles (entry candle bucket and later)
-                e_str = str(pos.get("entry_time") or "09:15:00")
-                e_parts = e_str.split(":")
-                e_h = int(e_parts[0]) if len(e_parts) > 0 and e_parts[0].isdigit() else 9
-                e_m = int(e_parts[1]) if len(e_parts) > 1 and e_parts[1].isdigit() else 15
-                entry_bucket = f"{e_h:02d}:{e_m:02d}" if use_1m else f"{e_h:02d}:{(e_m // 3) * 3:02d}"
-                post_bars = [c for c in candles if isinstance(c, dict) and (c.get("t") or "") >= entry_bucket]
-                for b in post_bars:
+            if was_ratcheted_today:
+                # Check strictly subsequent candles timestamped strictly after ratchet bucket, plus real-time LTP
+                r_str = str(pos.get("sl_last_ratchet_time") or "09:15:00")
+                r_parts = r_str.split(":")
+                r_h = int(r_parts[0]) if len(r_parts) > 0 and r_parts[0].isdigit() else 9
+                r_m = int(r_parts[1]) if len(r_parts) > 1 and r_parts[1].isdigit() else 15
+                ratchet_bucket = f"{r_h:02d}:{r_m:02d}" if use_1m else f"{r_h:02d}:{(r_m // 3) * 3:02d}"
+                # Strictly later buckets (> ratchet_bucket)
+                post_ratchet_bars = [c for c in candles if isinstance(c, dict) and (c.get("t") or "") > ratchet_bucket]
+                for b in post_ratchet_bars:
                     b_low = float(b.get("l") or 0.0)
                     if b_low > 0 and b_low <= pos["current_sl"]:
                         is_sl_breached = True
@@ -1173,61 +1237,82 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                     breach_bar_open = ltp
                     breach_bar_time = now.strftime("%H:%M:%S")
             else:
-                # Day 2+ previous day stop: evaluate 1m candles first for tick-exact breach time
-                if use_1m:
-                    for b in candles:
+                # Stop has NOT been ratcheted today (remains at initial LOD stop or previous session's stop)
+                if holding_days == 1:
+                    # On Day 1 initial stop: check post-entry candles (entry candle bucket and later)
+                    e_str = str(pos.get("entry_time") or "09:15:00")
+                    e_parts = e_str.split(":")
+                    e_h = int(e_parts[0]) if len(e_parts) > 0 and e_parts[0].isdigit() else 9
+                    e_m = int(e_parts[1]) if len(e_parts) > 1 and e_parts[1].isdigit() else 15
+                    entry_bucket = f"{e_h:02d}:{e_m:02d}" if use_1m else f"{e_h:02d}:{(e_m // 3) * 3:02d}"
+                    post_bars = [c for c in candles if isinstance(c, dict) and (c.get("t") or "") >= entry_bucket]
+                    for b in post_bars:
                         b_low = float(b.get("l") or 0.0)
                         if b_low > 0 and b_low <= pos["current_sl"]:
                             is_sl_breached = True
                             breach_bar_open = float(b.get("o") or b_low)
                             breach_bar_time = b.get("t")
                             break
-                if not is_sl_breached:
-                    if day_low <= pos["current_sl"]:
-                        is_sl_breached = True
-                        breach_bar_open = day_open if day_open > 0 else ltp
-                        breach_bar_time = now.strftime("%H:%M:%S")
-                    elif ltp <= pos["current_sl"]:
+                    if not is_sl_breached and ltp <= pos["current_sl"]:
                         is_sl_breached = True
                         breach_bar_open = ltp
                         breach_bar_time = now.strftime("%H:%M:%S")
+                else:
+                    # Day 2+ previous day stop: evaluate 1m candles first for tick-exact breach time
+                    if use_1m:
+                        for b in candles:
+                            b_low = float(b.get("l") or 0.0)
+                            if b_low > 0 and b_low <= pos["current_sl"]:
+                                is_sl_breached = True
+                                breach_bar_open = float(b.get("o") or b_low)
+                                breach_bar_time = b.get("t")
+                                break
+                    if not is_sl_breached:
+                        if day_low <= pos["current_sl"]:
+                            is_sl_breached = True
+                            breach_bar_open = day_open if day_open > 0 else ltp
+                            breach_bar_time = now.strftime("%H:%M:%S")
+                        elif ltp <= pos["current_sl"]:
+                            is_sl_breached = True
+                            breach_bar_open = ltp
+                            breach_bar_time = now.strftime("%H:%M:%S")
 
-        if is_sl_breached:
-            exit_triggered = True
-            # Realistic Exit Fill Model:
-            # 1. Overnight gap down on Day 2+: fill at opening auction price (day_open * 0.9985)
-            # 2. Fast intraday gap through stop: if breach_bar_open < SL, fill at breach_bar_open * 0.9985
-            # 3. Standard resting stop hit: fill at SL * 0.9985
-            fill_base = pos["current_sl"]
-            if holding_days >= 2 and day_open > 0 and day_open < pos["current_sl"]:
-                fill_base = day_open
-            elif breach_bar_open and breach_bar_open < pos["current_sl"]:
-                fill_base = breach_bar_open
+            if is_sl_breached:
+                exit_triggered = True
+                # Realistic Exit Fill Model:
+                # 1. Overnight gap down on Day 2+: fill at opening auction price (day_open * 0.9985)
+                # 2. Fast intraday gap through stop: if breach_bar_open < SL, fill at breach_bar_open * 0.9985
+                # 3. Standard resting stop hit: fill at SL * 0.9985
+                fill_base = pos["current_sl"]
+                if holding_days >= 2 and day_open > 0 and day_open < pos["current_sl"]:
+                    fill_base = day_open
+                elif breach_bar_open and breach_bar_open < pos["current_sl"]:
+                    fill_base = breach_bar_open
 
-            # Lower Circuit Unfillable Exit Protection (Zero-Bid Reality Check)
-            lower_circuit = float(q.get("lower_circuit_limit") or 0.0)
-            total_buy_qty = q.get("total_buy_quantity")
-            is_lower_circuit_locked = (
-                lower_circuit > 0 and 
-                (fill_base <= lower_circuit * 1.002 or day_low <= lower_circuit) and 
-                (total_buy_qty is not None and int(total_buy_qty) == 0)
-            )
-            # Replay candle check for lower circuit lock (depth data absent in historical candles)
-            if not is_lower_circuit_locked and lower_circuit > 0:
-                if breach_bar_open and breach_bar_open <= lower_circuit * 1.002:
-                    is_lower_circuit_locked = True
-                elif ltp <= lower_circuit * 1.002 and (total_buy_qty is None or int(total_buy_qty) == 0):
-                    is_lower_circuit_locked = True
+                # Lower Circuit Unfillable Exit Protection (Zero-Bid Reality Check)
+                lower_circuit = float(q.get("lower_circuit_limit") or 0.0)
+                total_buy_qty = q.get("total_buy_quantity")
+                is_lower_circuit_locked = (
+                    lower_circuit > 0 and 
+                    (fill_base <= lower_circuit * 1.002 or day_low <= lower_circuit) and 
+                    (total_buy_qty is not None and int(total_buy_qty) == 0)
+                )
+                # Replay candle check for lower circuit lock (depth data absent in historical candles)
+                if not is_lower_circuit_locked and lower_circuit > 0:
+                    if breach_bar_open and breach_bar_open <= lower_circuit * 1.002:
+                        is_lower_circuit_locked = True
+                    elif ltp <= lower_circuit * 1.002 and (total_buy_qty is None or int(total_buy_qty) == 0):
+                        is_lower_circuit_locked = True
 
-            if is_lower_circuit_locked:
-                pos["circuit_exit_blocked"] = True
-                pos["unfillable_exit_reason"] = "LOWER_CIRCUIT_ZERO_BID_LOCK"
-                pos["last_trail_rule"] = "⚠️ LOWER CIRCUIT UNFILLABLE (0 Buyers)"
-                print(f"⚠️ [CIRCUIT LOCK] {sym} breached stop at ₹{pos['current_sl']:.2f} but is locked at Lower Circuit (₹{lower_circuit:.2f}) with 0 buyers. Exit order unfillable.")
-                continue
+                if is_lower_circuit_locked:
+                    pos["circuit_exit_blocked"] = True
+                    pos["unfillable_exit_reason"] = "LOWER_CIRCUIT_ZERO_BID_LOCK"
+                    pos["last_trail_rule"] = "⚠️ LOWER CIRCUIT UNFILLABLE (0 Buyers)"
+                    print(f"⚠️ [CIRCUIT LOCK] {sym} breached stop at ₹{pos['current_sl']:.2f} but is locked at Lower Circuit (₹{lower_circuit:.2f}) with 0 buyers. Exit order unfillable.")
+                    continue
 
-            exit_price = round_to_tick(fill_base * 0.9985, tick=0.05, direction="down")
-            exit_reason = pos["last_trail_rule"]
+                exit_price = round_to_tick(fill_base * 0.9985, tick=0.05, direction="down")
+                exit_reason = pos["last_trail_rule"]
 
         if exit_triggered:
             # True Van Tharp Structural Risk: Actual dollar risk at risk based on initial stop distance
@@ -1295,7 +1380,9 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 "giveback_r": giveback_r,
                 "exit_reason": exit_reason,
                 "sa_regime": pos.get("sa_regime", "EXPANSION"),
-                "trigger_name": pos.get("trigger_name", "ORB Breakout")
+                "trigger_name": pos.get("trigger_name", "ORB Breakout"),
+                "earnings_filter_active": pos.get("earnings_filter_active", True),
+                "held_through_event": pos.get("held_through_event", False)
             }
 
             trade_log.append(log_entry)
