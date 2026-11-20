@@ -86,7 +86,7 @@ def get_ist_now():
     return datetime.now(timezone.utc).astimezone(IST)
 
 
-CONFIG_VERSION = "v3.2.0-strict"
+CONFIG_VERSION = "v3.3.0-strict"
 CONFIG_SNAPSHOTS_DIR = BASE_DIR / "config_snapshots"
 CONFIG_SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -102,6 +102,8 @@ FROZEN_PARAMS = {
     "cash_gated_execution": True,
     "circuit_ceiling_collar_pct": 1.5,
     "earnings_blackout_days": 3,
+    "earnings_sync_max_age_hours": 72,
+    "quotes_api_route": "v3/market-quote/quotes",
     "rvol_tod_min": 1.0,
     "stretch_max": 3.0,
     "gap_max": 2.5,
@@ -310,7 +312,7 @@ def fetch_1m_intraday_candles(symbol: str):
     [{'t': 'HH:MM', 'iso_time': str, 'o': float, 'h': float, 'l': float, 'c': float, 'v': int}, ...]
     """
     try:
-        from order_engine import get_instrument_key
+        from upstox_tablet_scanner import get_instrument_key
         tok = load_upstox_token()
         if not tok:
             return []
@@ -488,34 +490,74 @@ def send_phase1_telegram_alert(message_html, topic_name="reports"):
         return False, str(ex)
 
 
+_last_earnings_cache_alert = [0.0]
+
+
 def check_earnings_blackout(symbol: str, dt=None):
     """
-    Checks if symbol has quarterly earnings or board meeting within 3 trading days.
-    Data source: data/earnings_calendar.json (synced from NSE Corporate Announcements).
-    Fail-closed behavior: skips entry if within 3 days.
+    Checks if symbol has major corporate actions (Financial Results, Splits, Bonus, Rights, Mergers) within 3 trading days.
+    Data source: data/earnings_calendar.json (synced from NSE Corporate Announcements via sync_earnings_calendar.py).
+    Cache TTL: 72 hours.
+    Logic:
+    - If symbol NOT in calendar: PASS (negative confirmation, no earnings scheduled).
+    - If symbol in calendar and event date is within [now, now + 3 days]: FAIL-CLOSED (blackout entry).
+    - If calendar file missing/unreadable: log warning to Topic 9 ('risk') and FAIL-OPEN so trading is not paralyzed.
     """
     cal_file = BASE_DIR / "data" / "earnings_calendar.json"
     if not cal_file.is_file():
+        now_ep = time.time()
+        if now_ep - _last_earnings_cache_alert[0] > 14400:
+            _last_earnings_cache_alert[0] = now_ep
+            send_phase1_telegram_alert(
+                "⚠️ <b>WARNING: Earnings Calendar Cache Missing</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "• <b>Status:</b> data/earnings_calendar.json not found on disk\n"
+                "• <b>Fallback:</b> Failing open for candidate entries with caution\n"
+                "• <b>Action:</b> Run sync_earnings_calendar.py to refresh cache",
+                topic_name="risk"
+            )
         return False, None
+
     try:
+        file_age_hours = (time.time() - cal_file.stat().st_mtime) / 3600.0
+        now_ep = time.time()
+        if file_age_hours > 72.0 and (now_ep - _last_earnings_cache_alert[0] > 14400):
+            _last_earnings_cache_alert[0] = now_ep
+            send_phase1_telegram_alert(
+                f"⚠️ <b>WARNING: Earnings Calendar Stale ({file_age_hours:.1f}h old)</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"• <b>Cache Age:</b> {file_age_hours:.1f} hours (> 72h TTL limit)\n"
+                "• <b>Action:</b> Run sync_earnings_calendar.py to fetch latest NSE filings",
+                topic_name="risk"
+            )
+
         with open(cal_file, "r", encoding="utf-8") as f:
-            cal = json.load(f)
+            cal_data = json.load(f)
+
+        symbols_map = cal_data.get("symbols", cal_data)
         clean_s = resolve_symbol(symbol).strip().upper()
-        event_date_str = cal.get(clean_s)
+        event_info = symbols_map.get(clean_s)
+
+        if not event_info:
+            return False, None
+
+        event_date_str = event_info.get("date") if isinstance(event_info, dict) else str(event_info)
+        purpose = event_info.get("purpose", "Financial Results / Corporate Action") if isinstance(event_info, dict) else "Corporate Action"
+
         if event_date_str:
             d_event = datetime.strptime(event_date_str, "%Y-%m-%d").date()
             d_curr = (dt or get_ist_now()).date()
-            days_diff = abs((d_event - d_curr).days)
-            if days_diff <= 3:
-                return True, f"Earnings Blackout: Financial results / board meeting on {event_date_str} (within 3-day window)"
+            days_diff = (d_event - d_curr).days
+            if 0 <= days_diff <= 3:
+                return True, f"Earnings Blackout: {purpose} on {event_date_str} (within 3-day window)"
     except Exception as e:
         print(f"Notice reading earnings calendar: {e}")
     return False, None
 
 
-def assert_phase1_launch_readiness():
+def assert_monday_0900_launch_gate():
     """
-    Monday Launch Gate Pre-Flight Assertion (09:00 AM IST on Nov 23, 2026).
+    Monday Launch Gate Pre-Flight Assertion (Runs strictly once at 09:00 AM IST on Nov 23, 2026).
     Enforces strict pre-flight readiness before Phase 1 begins:
     1. Sentinel file archive/.day0_reset_completed must exist.
     2. shadow_portfolio.json must have 0 open positions (empty dict).
@@ -547,6 +589,40 @@ def assert_phase1_launch_readiness():
             return False, f"Could not parse shadow_mtm_equity_curve.json: {e}"
 
     return True, "All Phase 1 launch readiness assertions PASSED (Sentinel present, 0 open positions, pristine state files)."
+
+
+def assert_phase1_in_flight_state_integrity():
+    """
+    In-Flight Phase 1 State Integrity Assertion (Evaluated before every candidate trade during market hours).
+    Verifies that:
+    1. Sentinel file archive/.day0_reset_completed exists.
+    2. Open positions contain ZERO Day 0 contamination (no is_day0=True, no entry_date < 2026-11-23).
+    3. Trade log contains ZERO unarchived Day 0 trades.
+    Allows 0 to MAX_SYSTEM_SLOTS open positions (never rejects simply because trade #1 is already entered).
+    """
+    DAY0_SENTINEL_FILE = BASE_DIR / "archive" / ".day0_reset_completed"
+    if not DAY0_SENTINEL_FILE.is_file():
+        return False, "Sentinel file (archive/.day0_reset_completed) is missing. Day 0 reset has not been executed."
+
+    portfolio = load_shadow_portfolio()
+    contaminated_pos = [
+        sym for sym, p in portfolio.items()
+        if p.get("is_day0") or str(p.get("entry_date", "")) < START_DATE_STR
+    ]
+    if contaminated_pos:
+        return False, f"Open portfolio contaminated with {len(contaminated_pos)} Day 0 positions: {contaminated_pos}"
+
+    trades = load_shadow_trade_log()
+    unarchived_day0_trades = [t for t in trades if t.get("is_day0") or str(t.get("entry_date", "")) < START_DATE_STR]
+    if unarchived_day0_trades:
+        return False, f"Trade log contains {len(unarchived_day0_trades)} unarchived Day 0 trades in active log."
+
+    return True, "Phase 1 in-flight state integrity verified (No Day 0 contamination)."
+
+
+def assert_phase1_launch_readiness():
+    """Backwards-compatibility alias for Monday 09:00 launch gate."""
+    return assert_monday_0900_launch_gate()
 
 
 def is_entry_window_active(dt=None):
@@ -600,12 +676,12 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     today_str = now.strftime("%Y-%m-%d")
     trade_log = load_shadow_trade_log()
 
-    # Pre-Flight Launch Gate Assertion (Enforced on or after START_DATE_STR)
+    # In-Flight State Integrity Assertion (Enforced on or after START_DATE_STR)
     if today_str >= START_DATE_STR:
-        is_ready, gate_err = assert_phase1_launch_readiness()
+        is_ready, gate_err = assert_phase1_in_flight_state_integrity()
         if not is_ready:
-            print(f"🛑 [LAUNCH GATE BLOCKED] Cannot take new entry for {sym}: {gate_err}")
-            return False, f"Phase 1 Launch Gate Assertion Failed: {gate_err}"
+            print(f"🛑 [STATE INTEGRITY BLOCKED] Cannot take new entry for {sym}: {gate_err}")
+            return False, f"Phase 1 In-Flight State Integrity Assertion Failed: {gate_err}"
 
     already_traded_today = any(t.get("symbol") == sym and (t.get("entry_date") == today_str or t.get("exit_date") == today_str) for t in trade_log)
     if already_traded_today:
@@ -624,15 +700,30 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
 
     # Upper Circuit Ceiling & Liquidity Depth Check (Fail-Closed)
     upper_circuit = float((quote_data or {}).get("upper_circuit_limit") or 0.0)
+    prev_close = float((quote_data or {}).get("prev_close") or 0.0)
+    total_sell_qty = (quote_data or {}).get("total_sell_quantity")
+    depth = (quote_data or {}).get("depth") or {}
+
+    # 1. Total sell quantity check
+    if total_sell_qty is not None and int(total_sell_qty) == 0:
+        log_rejected_signal(sym, "Zero Seller Depth: Upper circuit locked with 0 ask quantity", {"ltp": fill_price})
+        return False, "Zero Seller Depth: Stock locked at Upper Circuit with 0 sellers. Marketable fill physically impossible."
+
+    # 2. Upper Circuit Collar (< 1.5% from ceiling)
     if upper_circuit > 0:
         if (upper_circuit - fill_price) / fill_price < 0.015:
             log_rejected_signal(sym, f"Upper Circuit Freeze Collar: Within 1.5% of upper circuit (₹{upper_circuit:.2f})", {"ltp": fill_price, "upper_circuit": upper_circuit})
             return False, f"Upper Circuit Freeze Collar: LTP ₹{fill_price:.2f} within 1.5% of upper circuit (₹{upper_circuit:.2f}). High risk of unfillable lockup."
+    else:
+        # Fallback when upper_circuit is 0 or missing from broker feed
+        if prev_close > 0 and (fill_price - prev_close) / prev_close >= 0.18:
+            log_rejected_signal(sym, f"Upper Circuit Fallback: Intraday gain +{((fill_price - prev_close)/prev_close)*100:.1f}% exceeds 18% limit", {"ltp": fill_price, "prev_close": prev_close})
+            return False, f"Upper Circuit Fallback: Intraday gain +{((fill_price - prev_close)/prev_close)*100:.1f}% exceeds 18% limit while circuit data is unquoted."
 
-    total_sell_qty = (quote_data or {}).get("total_sell_quantity")
-    if total_sell_qty is not None and int(total_sell_qty) == 0:
-        log_rejected_signal(sym, "Zero Seller Depth: Upper circuit locked with 0 ask quantity", {"ltp": fill_price})
-        return False, "Zero Seller Depth: Stock locked at Upper Circuit with 0 sellers. Marketable fill physically impossible."
+        sell_depth = depth.get("sell") if isinstance(depth, dict) else []
+        if (total_sell_qty is None or int(total_sell_qty) == 0) and not sell_depth:
+            log_rejected_signal(sym, "Unquantified Liquidity Risk: Order book lacks upper circuit limit and ask depth", {"ltp": fill_price})
+            return False, "Unquantified Liquidity Risk: Order book lacks both upper circuit limit and ask depth."
 
     # Earnings Blackout Window Check (Fail-Closed)
     is_blackout, blackout_reason = check_earnings_blackout(sym, now)
@@ -985,6 +1076,51 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         use_1m = len(candles_1m) > 0
         candles = candles_1m if use_1m else candles_3m
 
+        # Deferred Lower Circuit Unlock Check:
+        # If position was previously locked in Lower Circuit (0 buyers), check if liquidity has returned!
+        if pos.get("circuit_exit_blocked"):
+            lower_circuit = float(q.get("lower_circuit_limit") or 0.0)
+            total_buy_qty = q.get("total_buy_quantity")
+            is_unlocked = False
+            first_liquid_price = None
+
+            # 1. Depth check: buyers present and price unfreezing
+            if total_buy_qty is not None and int(total_buy_qty) > 0:
+                if lower_circuit > 0 and ltp > lower_circuit * 1.002:
+                    is_unlocked = True
+                    first_liquid_price = ltp
+                elif lower_circuit <= 0 and ltp > day_low * 1.005:
+                    is_unlocked = True
+                    first_liquid_price = ltp
+
+            # 2. Candle replay check if available
+            if not is_unlocked and candles:
+                for b in candles:
+                    b_high = float(b.get("h") or 0.0)
+                    b_open = float(b.get("o") or 0.0)
+                    if lower_circuit > 0 and b_high > lower_circuit * 1.002:
+                        is_unlocked = True
+                        first_liquid_price = max(b_open, lower_circuit)
+                        breach_bar_time = b.get("t")
+                        break
+                    elif lower_circuit <= 0 and b_high > day_low * 1.005:
+                        is_unlocked = True
+                        first_liquid_price = max(b_open, day_low)
+                        breach_bar_time = b.get("t")
+                        break
+
+            if is_unlocked and first_liquid_price and first_liquid_price > 0:
+                # Stock unfreezes! Execute fill immediately at first available liquid price with adverse slippage applied
+                exit_price = round_to_tick(first_liquid_price * 0.9985, tick=0.05, direction="down")
+                exit_triggered = True
+                exit_reason = "⚠️ LOWER CIRCUIT UNLOCKED EXIT (Liquid Fill Post-Lock)"
+                pos["circuit_exit_blocked"] = False
+                pos["unfillable_exit_reason"] = None
+                print(f"🔓 [CIRCUIT UNLOCKED] {sym} buyers appeared! Filling deferred lower-circuit exit at ₹{exit_price:.2f} (Base: ₹{first_liquid_price:.2f}).")
+            else:
+                pos["last_trail_rule"] = "⚠️ LOWER CIRCUIT UNFILLABLE (0 Buyers)"
+                continue
+
         # Universal Stop Ratchet Protection (Day 1 and Day 2+):
         # If the stop was ratcheted TODAY, never evaluate candles from before or during the ratchet bar!
         was_ratcheted_today = (
@@ -1076,6 +1212,13 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 (fill_base <= lower_circuit * 1.002 or day_low <= lower_circuit) and 
                 (total_buy_qty is not None and int(total_buy_qty) == 0)
             )
+            # Replay candle check for lower circuit lock (depth data absent in historical candles)
+            if not is_lower_circuit_locked and lower_circuit > 0:
+                if breach_bar_open and breach_bar_open <= lower_circuit * 1.002:
+                    is_lower_circuit_locked = True
+                elif ltp <= lower_circuit * 1.002 and (total_buy_qty is None or int(total_buy_qty) == 0):
+                    is_lower_circuit_locked = True
+
             if is_lower_circuit_locked:
                 pos["circuit_exit_blocked"] = True
                 pos["unfillable_exit_reason"] = "LOWER_CIRCUIT_ZERO_BID_LOCK"
@@ -1118,6 +1261,7 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
             net_stress_pnl_inr = round(realized_pnl - stress_costs_025_inr, 2)
 
             realized_r_structural = round(realized_pnl / initial_risk_inr, 2)
+            realized_r = realized_r_structural
             realized_r_nominal = round(realized_pnl / 1000.0, 2)
             realized_r_net = round(net_pnl_inr / initial_risk_inr, 2)
             realized_r_stress_025 = round(net_stress_pnl_inr / initial_risk_inr, 2)
@@ -1262,6 +1406,14 @@ def record_daily_mtm_snapshot(portfolio: dict, trade_log: list, unrealized_r: fl
             curve[idx] = snapshot
         else:
             curve.append(snapshot)
+
+        # Pre-Nov 23 / Day 0 Guard: If Day 0 reset sentinel exists and today is before Nov 23,
+        # divert write to archive/shadow_mtm_equity_curve_day0.json so active curve remains pristine for Nov 23!
+        DAY0_SENTINEL_FILE = BASE_DIR / "archive" / ".day0_reset_completed"
+        if today_str < START_DATE_STR and DAY0_SENTINEL_FILE.is_file():
+            day0_curve_archive = BASE_DIR / "archive" / "shadow_mtm_equity_curve_day0.json"
+            atomic_write_json(day0_curve_archive, curve)
+            return snapshot
 
         atomic_write_json(SHADOW_MTM_CURVE_FILE, curve)
         return snapshot
@@ -1456,6 +1608,10 @@ def generate_and_send_phase1_eod_report(notify=True):
                 q, _ = fetch_live_quote(sym)
                 if q and q.get("ltp"):
                     ltp = float(q["ltp"])
+                if pos.get("circuit_exit_blocked") and q and q.get("lower_circuit_limit"):
+                    lcl = float(q.get("lower_circuit_limit") or 0.0)
+                    if lcl > 0:
+                        ltp = lcl
             except Exception:
                 pass
 
