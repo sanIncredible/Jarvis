@@ -3793,6 +3793,53 @@ def run_upstox_scanner(once=False, auto_open_web=False):
 
     _last_phase1_eod_date = [None]
     _last_day0_reset_date = [None]
+    _last_launch_gate_date = [None]
+
+    def check_and_run_monday_launch_gate(curr_now=None):
+        """
+        Pre-flight Launch Gate Assertion:
+        Runs at 09:00 AM IST on Monday Nov 23, 2026 (and any session >= 2026-11-23).
+        Asserts sentinel file present, 0 open positions, and empty/clean state files.
+        Sends Telegram announcement if passed, or emergency alert if failed.
+        """
+        if curr_now is None:
+            curr_now = get_ist_now()
+        today_str = curr_now.strftime('%Y-%m-%d')
+        if today_str >= "2026-11-23" and curr_now.weekday() < 5 and ((curr_now.hour == 9 and curr_now.minute >= 0) or curr_now.hour >= 10):
+            if _last_launch_gate_date[0] != today_str:
+                _last_launch_gate_date[0] = today_str
+                try:
+                    from shadow_execution_engine import assert_phase1_launch_readiness, send_phase1_telegram_alert
+                    ready, msg = assert_phase1_launch_readiness()
+                    if ready:
+                        print(f"\n{GREEN}🚀 09:00 AM IST Monday Launch Gate PASSED: {msg}{RESET}")
+                        send_phase1_telegram_alert(
+                            f"🚀 <b>PHASE 1 LAUNCH GATE: PASSED</b>\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"• <b>Date:</b> {today_str} (Day 1 of 30)\n"
+                            f"• <b>Status:</b> All Pre-Flight Assertions Verified\n"
+                            f"• <b>Sentinel File:</b> Verified present\n"
+                            f"• <b>Open Holdings:</b> 0 positions (Pristine Slate)\n"
+                            f"• <b>Base Capital:</b> ₹5,00,000 (100% Cash Delivery, Zero Leverage)\n"
+                            f"• <b>Trading Window:</b> 09:30–10:15 AM IST\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"💡 <i>Autonomous shadow execution active. Ready for live signals.</i>",
+                            topic_name="risk"
+                        )
+                    else:
+                        print(f"\n{RED}🛑 09:00 AM IST Monday Launch Gate FAILED: {msg}{RESET}")
+                        send_phase1_telegram_alert(
+                            f"🛑 <b>CRITICAL: PHASE 1 LAUNCH GATE FAILED</b>\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"• <b>Date:</b> {today_str}\n"
+                            f"• <b>Failure Reason:</b> {msg}\n"
+                            f"• <b>Action:</b> Trading halted. All new entries rejected.\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"⚠️ <i>Please inspect archive and state files immediately.</i>",
+                            topic_name="risk"
+                        )
+                except Exception as ex:
+                    print(f"Notice on Launch Gate assertion: {ex}")
 
     def check_and_run_day0_flatten_and_archive(curr_now=None):
         """
@@ -3847,6 +3894,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                 check_and_run_orphan_sentry(now)
                 check_and_run_auto_gtt_rearm(now)
                 check_and_run_day0_flatten_and_archive(now)
+                check_and_run_monday_launch_gate(now)
                 check_and_run_phase1_eod_report(now)
                 try:
                     from shadow_execution_engine import update_shadow_trailing_and_exits
