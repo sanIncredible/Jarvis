@@ -739,7 +739,14 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
                 return (score, rvol_v, -risk_pct_v, -stretch_v)
 
             sorted_setups = sorted(active_breakout_setups, key=get_setup_sort_key, reverse=True)
+            now_epoch = time.time()
             for s_sym, s_d, s_m, s_trig in sorted_setups:
+                # Data Freshness & Staleness Watchdog Guard (30-second limit)
+                last_tick_t = float(s_d.get("last_tick_time") or s_d.get("timestamp") or 0.0)
+                if last_tick_t > 0 and (now_epoch - last_tick_t) > 30.0:
+                    print(f"⚠️ [Watchdog] Skipping entry for {s_sym}: Feed quote stale ({now_epoch - last_tick_t:.1f}s > 30s limit)")
+                    continue
+
                 s_ltp = float(s_d.get("ltp") or 0.0)
                 s_dl = float(s_m.get("day_low") or s_d.get("day_low") or (s_ltp * 0.985 if s_ltp > 0 else 0.0))
                 full_quote_data = {**s_d, **s_m, "ltp": s_ltp, "day_low": s_dl}
