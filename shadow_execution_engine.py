@@ -293,9 +293,11 @@ def load_upstox_token():
 def fetch_1m_intraday_candles(symbol: str):
     """
     Fetches 1-minute intraday historical candles for today directly from Upstox REST API:
-    GET /v2/historical-candle/intraday/{encoded_key}/1minute
+    Primary route: GET /v3/historical-candle/intraday/{encoded_key}/minutes/1
+    Fallback route: GET /v2/historical-candle/intraday/{encoded_key}/1minute
     Used for watchdog surveillance gap replay to reconstruct exact breach bars and fill prices.
-    Returns chronologically sorted list of candles for today:
+    Drops the currently forming/in-progress candle to evaluate strictly finalized bars.
+    Returns chronologically sorted list of finalized 1m candles for today:
     [{'t': 'HH:MM', 'iso_time': str, 'o': float, 'h': float, 'l': float, 'c': float, 'v': int}, ...]
     """
     try:
@@ -308,36 +310,55 @@ def fetch_1m_intraday_candles(symbol: str):
         if not ikey:
             return []
         enc_key = urllib.parse.quote(ikey, safe="")
-        url = f"https://api.upstox.com/v2/historical-candle/intraday/{enc_key}/1minute"
-        req = urllib.request.Request(url, headers={
+
+        headers = {
             "Authorization": f"Bearer {tok}",
             "Accept": "application/json",
             "User-Agent": "Jarvis-ShadowEngine"
-        })
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            raw_candles = data.get("data", {}).get("candles", [])
-            if not raw_candles:
-                return []
-            sorted_raw = sorted(raw_candles, key=lambda c: str(c[0]))
-            now_ist = get_ist_now()
-            today_prefix = now_ist.strftime("%Y-%m-%d")
-            parsed = []
-            for c in sorted_raw:
-                iso_ts = str(c[0])
-                if not iso_ts.startswith(today_prefix):
-                    continue
-                t_lbl = iso_ts[11:16] if len(iso_ts) >= 16 else iso_ts
-                parsed.append({
-                    "t": t_lbl,
-                    "iso_time": iso_ts,
-                    "o": round(float(c[1]), 2),
-                    "h": round(float(c[2]), 2),
-                    "l": round(float(c[3]), 2),
-                    "c": round(float(c[4]), 2),
-                    "v": int(c[5]) if len(c) > 5 else 0
-                })
-            return parsed
+        }
+
+        # Try v3 first, fallback to v2 if needed
+        raw_candles = []
+        for endpoint_url in [
+            f"https://api.upstox.com/v3/historical-candle/intraday/{enc_key}/minutes/1",
+            f"https://api.upstox.com/v2/historical-candle/intraday/{enc_key}/1minute"
+        ]:
+            try:
+                req = urllib.request.Request(endpoint_url, headers=headers)
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    raw_candles = data.get("data", {}).get("candles", [])
+                    if raw_candles:
+                        break
+            except Exception:
+                continue
+
+        if not raw_candles:
+            return []
+
+        sorted_raw = sorted(raw_candles, key=lambda c: str(c[0]))
+        now_ist = get_ist_now()
+        today_prefix = now_ist.strftime("%Y-%m-%d")
+        cur_min_str = now_ist.strftime("%H:%M")
+        parsed = []
+        for c in sorted_raw:
+            iso_ts = str(c[0])
+            if not iso_ts.startswith(today_prefix):
+                continue
+            t_lbl = iso_ts[11:16] if len(iso_ts) >= 16 else iso_ts
+            # Drop the current still-forming candle; evaluate only finalized completed bars
+            if t_lbl == cur_min_str:
+                continue
+            parsed.append({
+                "t": t_lbl,
+                "iso_time": iso_ts,
+                "o": round(float(c[1]), 2),
+                "h": round(float(c[2]), 2),
+                "l": round(float(c[3]), 2),
+                "c": round(float(c[4]), 2),
+                "v": int(c[5]) if len(c) > 5 else 0
+            })
+        return parsed
     except Exception as e:
         print(f"Notice fetching 1m candles for {symbol}: {e}")
         return []
@@ -820,10 +841,20 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         exit_reason = ""
         breach_bar_time = None
 
-        # Watchdog & Reconnect Surveillance Gap Detection (>60s gap since last surveillance check)
+        # Market-Hours Surveillance Gap Detection:
+        # Strictly count time inside 09:15:00 to 15:30:00 IST on trading days.
+        # Overnight transitions (yesterday to today) are handled by Day 2+ opening auction logic, not intraday replay.
         now_epoch = time.time()
         last_surv_epoch = float(pos.get("last_surveillance_epoch") or 0.0)
-        gap_detected = (last_surv_epoch > 0 and (now_epoch - last_surv_epoch) > 60.0)
+        last_surv_date = pos.get("last_surveillance_date")
+        is_market_hours = (now.weekday() < 5 and ((now.hour == 9 and now.minute >= 15) or (10 <= now.hour < 15) or (now.hour == 15 and now.minute <= 30)))
+        is_same_day = (last_surv_date == today_str)
+
+        gap_detected = False
+        if is_market_hours and is_same_day and last_surv_epoch > 0:
+            elapsed_sec = now_epoch - last_surv_epoch
+            if elapsed_sec > 60.0:
+                gap_detected = True
 
         # Resolve intraday candles for tick-accurate post-entry / post-ratchet low tracking (1m preferred, 3m fallback)
         candles_1m = q.get("candles_1m") or (c_meta.get("candles_1m") if c_meta else []) or []
@@ -832,7 +863,7 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
             if rest_1m:
                 candles_1m = rest_1m
                 if gap_detected:
-                    print(f"🔄 [Surveillance Gap Replay] Replaying {len(rest_1m)} 1m candles from Upstox REST for {sym} (gap: {now_epoch - last_surv_epoch:.1f}s)")
+                    print(f"🔄 [Surveillance Gap Replay] Replaying {len(rest_1m)} 1m candles from Upstox REST (v3) for {sym} (intraday market gap: {now_epoch - last_surv_epoch:.1f}s)")
 
         candles_3m = q.get("candles_3m") or (c_meta.get("candles_3m") if c_meta else []) or []
         use_1m = len(candles_1m) > 0
@@ -1022,6 +1053,7 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
     for sym, pos in portfolio.items():
         pos["last_surveillance_epoch"] = now_epoch
         pos["last_surveillance_time"] = now.strftime("%H:%M:%S")
+        pos["last_surveillance_date"] = today_str
 
     save_shadow_portfolio(portfolio)
     save_shadow_trade_log(trade_log)
@@ -1365,19 +1397,33 @@ def reset_and_archive_day0_state(force=False):
     """
     Safely flattens any open Day 0 positions and archives all pre-evaluation state files
     before the official Phase 1 start on Monday, Nov 23, 2026.
-    Ensures zero Day 0 contamination in active portfolio, trade logs, or MTM curves.
+    STRICTLY ONE-SHOT: Guarded by a sentinel file and date checks.
+    Permanently blocked from running once evaluation starts (2026-11-23 onwards).
     """
     now = get_ist_now()
     today_str = now.strftime("%Y-%m-%d")
 
-    # If force is False, only run if today is before START_DATE_STR
-    if not force and today_str >= START_DATE_STR:
-        print("Notice: Clean Phase 1 period active (>= START_DATE_STR); Day 0 reset bypassed.")
-        return {"status": "SKIPPED", "reason": "Phase 1 active"}
+    DAY0_SENTINEL_FILE = BASE_DIR / "archive" / ".day0_reset_completed"
+
+    # Sentinel Guard: One-shot execution only
+    if DAY0_SENTINEL_FILE.is_file():
+        print("🛡️ [SAFETY SHIELD] Day 0 Reset has already been executed (sentinel file present). Operation rejected to protect evaluation state.")
+        return {"status": "ALREADY_COMPLETED", "reason": "Sentinel file exists"}
+
+    # Hard Date Barrier: Never allow reset on or after START_DATE_STR
+    if today_str >= START_DATE_STR:
+        print(f"🛑 [SAFETY SHIELD] Current date {today_str} >= evaluation start date {START_DATE_STR}! Day 0 reset is permanently prohibited.")
+        return {"status": "BLOCKED", "reason": f"Evaluation period active ({today_str} >= {START_DATE_STR})"}
 
     with SHADOW_LOCK:
         portfolio = load_shadow_portfolio()
         trade_log = load_shadow_trade_log()
+
+        # Hard Trade Inspection Barrier: Never reset if any Phase 1 trades are already logged
+        if any(str(t.get("entry_date", "")) >= START_DATE_STR for t in trade_log) or any(str(p.get("entry_date", "")) >= START_DATE_STR for p in portfolio.values()):
+            print("🛑 [SAFETY SHIELD] Active records contain official Phase 1 trades (entry_date >= 2026-11-23)! Reset permanently blocked.")
+            return {"status": "BLOCKED", "reason": "Phase 1 trades present"}
+
         flattened_count = 0
 
         # Flatten any active open positions opened on or before Day 0
@@ -1453,12 +1499,26 @@ def reset_and_archive_day0_state(force=False):
         atomic_write_json(SHADOW_MTM_CURVE_FILE, [])
         atomic_write_json(REJECTED_SIGNALS_FILE, [])
 
+        # Write permanent sentinel file to lock out any future Day 0 resets
+        try:
+            DAY0_SENTINEL_FILE.parent.mkdir(parents=True, exist_ok=True)
+            DAY0_SENTINEL_FILE.write_text(
+                f"Day 0 Reset successfully executed at {now.isoformat()} IST\n"
+                f"Config Version: {CONFIG_VERSION}\n"
+                f"Config Hash: {CONFIG_HASH}\n"
+                f"Evaluation Start Date: {START_DATE_STR}\n",
+                encoding="utf-8"
+            )
+        except Exception as se:
+            print(f"Notice writing sentinel file: {se}")
+
         print(f"✅ [DAY 0 RESET] Flattened {flattened_count} positions. Archived state to {archive_dir}. Clean Phase 1 slate established for Nov 23.")
         return {
             "status": "SUCCESS",
             "flattened_count": flattened_count,
             "archive_dir": str(archive_dir),
-            "start_date": START_DATE_STR
+            "start_date": START_DATE_STR,
+            "sentinel_file": str(DAY0_SENTINEL_FILE)
         }
 
 
