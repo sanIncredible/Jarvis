@@ -351,7 +351,8 @@ def fetch_live_quote(symbol):
 
     if token:
         encoded_key = urllib.parse.quote(instrument_key)
-        url = f"https://api.upstox.com/v2/market-quote/quotes?instrument_key={encoded_key}"
+        # Upstox V3 Market Quote Quotes API (Upstox officially deprecated v2)
+        url = f"https://api.upstox.com/v3/market-quote/quotes?instrument_key={encoded_key}"
         req = urllib.request.Request(url, headers={
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",
