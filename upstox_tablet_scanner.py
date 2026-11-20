@@ -719,10 +719,29 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
     if is_prime_shadow_window and active_breakout_setups:
         try:
             from shadow_execution_engine import evaluate_and_record_shadow_entry
-            for s_sym, s_d, s_m, s_trig in active_breakout_setups:
+
+            # Multi-factor priority tie-breaker for concurrent triggers:
+            # Sort candidate setups by: (Soft Score DESC, RVOL DESC, Risk % ASC, Stretch % ASC)
+            def get_setup_sort_key(item):
+                s_sym, s_d, s_m, s_trig = item
                 s_ltp = float(s_d.get("ltp") or 0.0)
                 s_dl = float(s_m.get("day_low") or s_d.get("day_low") or (s_ltp * 0.985 if s_ltp > 0 else 0.0))
-                # Pass comprehensive quote data including day_open, prev_close, pdh, pdl, atr14, rvol
+                risk_pct_v = round(((s_ltp - s_dl) / s_ltp) * 100, 2) if s_ltp > 0 else 99.0
+                rvol_v = float(s_d.get("rvol") or s_m.get("rvol") or 0.0)
+                stretch_v = float(s_d.get("stretch_pct") or 0.0)
+                try:
+                    from order_engine import evaluate_strategy_checklist
+                    fq = {**s_d, **s_m, "ltp": s_ltp, "day_low": s_dl}
+                    ck = evaluate_strategy_checklist(s_sym, quote_data=fq, calc_data={"ltp": s_ltp, "day_low": s_dl, "risk_pct": risk_pct_v})
+                    score = int(ck.get("soft_score", 0)) if ck.get("hard_gates_passed") else -1
+                except Exception:
+                    score = 0
+                return (score, rvol_v, -risk_pct_v, -stretch_v)
+
+            sorted_setups = sorted(active_breakout_setups, key=get_setup_sort_key, reverse=True)
+            for s_sym, s_d, s_m, s_trig in sorted_setups:
+                s_ltp = float(s_d.get("ltp") or 0.0)
+                s_dl = float(s_m.get("day_low") or s_d.get("day_low") or (s_ltp * 0.985 if s_ltp > 0 else 0.0))
                 full_quote_data = {**s_d, **s_m, "ltp": s_ltp, "day_low": s_dl}
                 evaluate_and_record_shadow_entry(
                     symbol=s_sym,
@@ -3429,7 +3448,9 @@ def export_static_html(results, now_str, port, force_cloud_push=False):
 
         payload = {
             "updated_at": now_str,
+            "generated_at_ist": now_str,
             "updated_ts": int(time.time()),
+            "timestamp_epoch_ms": int(time.time() * 1000),
             "source": source_label,
             "market_regime": regime_data,
             "pre_market_summary": sa_summary_data,
