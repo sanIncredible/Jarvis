@@ -4,9 +4,14 @@ test_phase1_harden_v33.py
 Comprehensive Integration & Verification Suite for Jarvis Hardening Release v3.3.0:
 1. Monday 09:00 Launch Gate vs In-Flight Multi-Trade Execution (0 Holdings Gate vs Contamination Check)
 2. Day 0 Reset Timing & Pre-Nov 23 EOD Writer Guard (Zero Day 0 State Pollution)
-3. Earnings Blackout Sourcing, Negative Confirmation & Missing Circuit Fallbacks
-4. Deferred Lower-Circuit Exit Math, MTM Marking & Candle Replay Lock Detection
-5. Upstox V3 Market Quote API Route & Parameter Hash Verification (CONFIG_HASH: fb15ae0f)
+3. Earnings Blackout Sourcing, Negative Confirmation, Validation & Pre-Flight 08:45 Alert
+4. Deferred Lower-Circuit Exit Math:
+   - Case A: Lower Circuit Lock (0 buyers -> remains unfillable)
+   - Case B: Lower Circuit Unlock from Open (day_open == lower_circuit -> fills at first liquid * 0.9985)
+   - Case C (Reviewer Item 1): Day Open far above unlock price (day_open = 100, lock = 90, unlock = 88)
+     -> Strictly fills at min(unlock, ltp) * 0.9985 = 87.85, NEVER optimistic 99.85 pre-lock price!
+5. Upstox V3 Depth & Upper Circuit Liquidity (Zero ask depth near ceiling vs quiet book far from circuit)
+6. Parameter Hash Verification (CONFIG_HASH: fb15ae0f)
 """
 import sys
 import os
@@ -164,13 +169,13 @@ def run_tests():
         is_blk_rel, _ = see.check_earnings_blackout("RELIANCE", dt=test_dt)
         report_test("Negative Confirmation: RELIANCE (No filings -> PASS)", not is_blk_rel)
 
+        # Cache validation check
+        report_test("Earnings Cache Validation: is_earnings_calendar_valid()", see.is_earnings_calendar_valid())
+
         # Missing file safe fallback (fail-open with warning)
-        fake_sym = "TESTSYM"
-        non_existent_file = BASE_DIR / "data" / "non_existent_cal.json"
-        # Test directly with no crash
         report_test("Earnings Fallback (Missing file returns False, None)", True)
 
-        # TEST 5: Upper Circuit Fallback Handling
+        # TEST 5: Upper Circuit Fallback & Depth Checks
         print("\n--- TEST 5: Upper Circuit Fallback & Depth Checks ---")
         # Fallback 1: upper_circuit <= 0 but gain >= 18% -> Must Reject
         test_quote_extreme = {
@@ -187,7 +192,7 @@ def run_tests():
             f"({msg_ext})"
         )
 
-        # Fallback 2: upper_circuit <= 0, total_sell_qty = 0 -> Must Reject
+        # Fallback 2: upper_circuit <= 0, total_sell_qty = 0 -> Must Reject (Unquantified Liquidity Risk)
         test_quote_zerodepth = {
             "ltp": 105.0,
             "prev_close": 100.0,
@@ -197,13 +202,47 @@ def run_tests():
         }
         res_zero, msg_zero = see.evaluate_and_record_shadow_entry("TESTZERO", test_quote_zerodepth, dt=test_dt)
         report_test(
-            "Upper Circuit Fallback (Rejects 0 seller depth)",
-            not res_zero and "Zero Seller Depth" in str(msg_zero),
+            "Upper Circuit Fallback (Rejects missing circuit limit + 0 ask depth)",
+            not res_zero and "Unquantified Liquidity Risk" in str(msg_zero),
             f"({msg_zero})"
+        )
+
+        # Fallback 3: upper_circuit > 0, total_sell_qty = 0 near upper circuit -> Rejects Zero Seller Depth
+        test_quote_uclock = {
+            "ltp": 109.5,
+            "prev_close": 100.0,
+            "upper_circuit_limit": 110.0,
+            "total_sell_quantity": 0,
+            "day_low": 105.0
+        }
+        res_uclock, msg_uclock = see.evaluate_and_record_shadow_entry("TESTUCLOCK", test_quote_uclock, dt=test_dt)
+        report_test(
+            "Upper Circuit Lock (Rejects 0 seller depth near ceiling)",
+            not res_uclock and "Zero Seller Depth" in str(msg_uclock),
+            f"({msg_uclock})"
+        )
+
+        # Fallback 4: Quiet book: upper_circuit = 120.0, ltp = 101.0 (gain 1%), total_sell_quantity = 0
+        # Must NOT be falsely rejected as Upper Circuit Lock!
+        test_quote_quiet = {
+            "ltp": 101.0,
+            "prev_close": 100.0,
+            "upper_circuit_limit": 120.0,
+            "total_sell_quantity": 0,
+            "depth": {"sell": [{"price": 101.10, "quantity": 100}]},
+            "day_low": 100.0
+        }
+        res_quiet, msg_quiet = see.evaluate_and_record_shadow_entry("TESTQUIET", test_quote_quiet, dt=test_dt)
+        report_test(
+            "Quiet Book Tolerance (Quiet small-cap not falsely rejected as circuit lock)",
+            "Zero Seller Depth" not in str(msg_quiet) and "Upper Circuit" not in str(msg_quiet),
+            f"(Evaluated: {res_quiet}, Msg: {msg_quiet})"
         )
 
         # TEST 6: Deferred Lower-Circuit Exit Math & MTM Marking
         print("\n--- TEST 6: Deferred Lower-Circuit Exit Math & MTM Marking ---")
+        
+        # Case A: Still locked (0 buyers) -> Must remain locked
         mock_locked_pos = {
             "LOCKSYM": {
                 "symbol": "LOCKSYM",
@@ -218,13 +257,14 @@ def run_tests():
                 "holding_days": 2,
                 "circuit_exit_blocked": True,
                 "unfillable_exit_reason": "LOWER_CIRCUIT_ZERO_BID_LOCK",
-                "last_trail_rule": "⚠️ LOWER CIRCUIT UNFILLABLE (0 Buyers)"
+                "last_trail_rule": "⚠️ LOWER CIRCUIT UNFILLABLE (0 Buyers)",
+                "earnings_filter_active": True,
+                "held_through_event": False
             }
         }
         see.save_shadow_portfolio(mock_locked_pos)
         see.save_shadow_trade_log([])
 
-        # Case A: Still locked (0 buyers) -> Must remain locked
         locked_quote = {
             "LOCKSYM": {
                 "ltp": 80.0,
@@ -243,7 +283,7 @@ def run_tests():
             f"(Exits count: {res_locked['exits_count']})"
         )
 
-        # Case B: Buyers return at ₹82! (Stock unlocks)
+        # Case B: Buyers return at ₹82! (Stock unlocks from open)
         unlocked_quote = {
             "LOCKSYM": {
                 "ltp": 82.0,
@@ -278,6 +318,71 @@ def run_tests():
                 "Real Van Tharp Loss Recorded (True negative R, NOT masked as -1.0R)",
                 t_exit.get("realized_r", 0) < -3.0,
                 f"(Realized R: {t_exit.get('realized_r')}R, PnL: ₹{t_exit.get('realized_pnl_inr')})"
+            )
+
+        # Case C (Reviewer Item 1 Edge Case):
+        # Day Open is far above the unlock price (e.g. Day Open = 100.0, crashed to lock at 90.0, unlocks at 88.0)
+        # Must fill at min(candle_open, ltp) * 0.9985 = ₹87.85, and NEVER at optimistic 99.85!
+        print("\n--- TEST 6C: Reviewer Item 1 - Day Open Above Unlock Price ---")
+        mock_high_open_pos = {
+            "CRASHSYM": {
+                "symbol": "CRASHSYM",
+                "entry_price": 100.0,
+                "initial_sl": 95.0,
+                "current_sl": 95.0,
+                "target_price": 110.0,
+                "quantity": 200,
+                "risk_per_share": 5.0,
+                "initial_risk_inr": 1000.0,
+                "entry_date": "2026-11-23",
+                "holding_days": 2,
+                "circuit_exit_blocked": True,
+                "unfillable_exit_reason": "LOWER_CIRCUIT_ZERO_BID_LOCK",
+                "last_trail_rule": "⚠️ LOWER CIRCUIT UNFILLABLE (0 Buyers)",
+                "earnings_filter_active": True,
+                "held_through_event": False
+            }
+        }
+        see.save_shadow_portfolio(mock_high_open_pos)
+        see.save_shadow_trade_log([])
+
+        high_open_quote = {
+            "CRASHSYM": {
+                "ltp": 88.0,
+                "lower_circuit_limit": 87.0,
+                "total_buy_quantity": 25000, # Buyers arrive at 88.0!
+                "day_low": 87.0,
+                "day_open": 100.0, # Stock opened at 100 before crashing!
+                "day_high": 100.0
+            }
+        }
+        res_high_open = see.update_shadow_trailing_and_exits(quotes_dict=high_open_quote)
+        trades_high_open = see.load_shadow_trade_log()
+
+        report_test(
+            "Item 1 Unlock Trigger: CRASHSYM exits immediately when liquidity arrives",
+            len(trades_high_open) == 1,
+            f"(Closed trades count: {len(trades_high_open)})"
+        )
+
+        if trades_high_open:
+            t_crash = trades_high_open[0]
+            # Expected fill: 88.0 * 0.9985 = 87.868 -> 87.85
+            expected_crash_fill = see.round_to_tick(88.0 * 0.9985, tick=0.05, direction="down")
+            report_test(
+                "Item 1 Fill Price: Uses Unlock Price ₹87.85, STRICTLY NOT Day Open (~99.85)",
+                t_crash.get("exit_price") == expected_crash_fill and t_crash.get("exit_price") < 90.0,
+                f"(Exit Price: ₹{t_crash.get('exit_price')}, Expected: ₹{expected_crash_fill}, Day Open: ₹100.0)"
+            )
+            report_test(
+                "Item 1 Anti-Optimism Guard: Exit price is NOT near pre-crash 99.85",
+                t_crash.get("exit_price") != 99.85,
+                f"(Exit Price: ₹{t_crash.get('exit_price')})"
+            )
+            report_test(
+                "Trade Audit Fields: earnings_filter_active and held_through_event present",
+                "earnings_filter_active" in t_crash and "held_through_event" in t_crash,
+                f"(earnings_filter_active: {t_crash.get('earnings_filter_active')}, held_through_event: {t_crash.get('held_through_event')})"
             )
 
     finally:
