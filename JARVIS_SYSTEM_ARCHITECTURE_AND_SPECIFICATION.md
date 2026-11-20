@@ -1,5 +1,5 @@
 # 🏛️ JARVIS TRADING SYSTEM: MASTER ARCHITECTURE & SPECIFICATION MANUAL
-**Document Version:** 3.1.0-strict (Autonomous Production & Phase 1 Specification)  
+**Document Version:** 3.3.0-strict (Autonomous Production & Phase 1 Hardened Specification)  
 **Classification:** Complete System Engineering Blueprint  
 **System Target:** Fully Autonomous 3M ORB Scanner, Positional Swing Engine, Multi-Broker Hub & Cloud Infrastructure  
 **Author:** Jarvis Engineering Team & DeepMind Antigravity  
@@ -496,10 +496,11 @@ Computed daily at 15:35:00 IST by `get_shadow_analytics()`:
 
 ### 8.8 Benchmark Integrity, Immutable Hashing, Watchdog Architecture & Day 0 Reset
 - **Config Versioning & SHA256 Parameter Hashing:**
-  To guarantee complete reproducibility, every entry, exit, and rejected signal is stamped with `"config_version": "v3.2.0-strict"` and a cryptographic SHA256 digest of the frozen parameter set (`config_hash`: `646b9f6e`). The full parameter specification is auto-serialized upon startup to `config_snapshots/config_646b9f6e.json` for deterministic auditability.
+  To guarantee complete reproducibility, every entry, exit, and rejected signal is stamped with `"config_version": "v3.3.0-strict"` and a cryptographic SHA256 digest of the frozen parameter set (`config_hash`: `fb15ae0f`). The full parameter specification is auto-serialized upon startup to `config_snapshots/config_fb15ae0f.json` for deterministic auditability.
 - **Clean 30-Day Evaluation Horizon & One-Shot Day 0 State Reset Protocol:**
   - Official Phase 1 30-session evaluation commences on **Monday, Nov 23, 2026** and concludes on **Tuesday, Jan 05, 2027** (30 consecutive trading sessions, accounting for market holidays on Nov 24 Guru Nanak Jayanti and Dec 25 Christmas, with normal trading on Jan 1 New Year's Day).
-  - **One-Shot Flattening, Verification & Archival with Sentinel Guard:** At 15:15 IST on Nov 20 (or via `reset_and_archive_day0_state`), any open positions are flattened with exit reason `DAY0_SHAKEDOWN_FLATTEN` and tagged `is_day0 = True`. The reset strictly executes in the verified sequence: **Archive -> Verify Integrity -> Reset Active Files -> Write Sentinel File**. All pre-Nov 23 state files are archived into `archive/day0_shakedown_<timestamp>/`. Active files are reset to clean empty state (`{}`, `[]`).
+  - **One-Shot Flattening, Verification & Archival with Sentinel Guard:** At 15:45 IST on Nov 20 (strictly after the 15:30 MTM snapshot and 15:35 EOD report), any open positions are flattened with exit reason `DAY0_SHAKEDOWN_FLATTEN` and tagged `is_day0 = True`. The reset strictly executes in the verified sequence: **Archive -> Verify Integrity -> Reset Active Files -> Write Sentinel File**. All pre-Nov 23 state files are archived into `archive/day0_shakedown_<timestamp>/`. Active files are reset to clean empty state (`{}`, `[]`).
+  - **Pre-Nov 23 EOD Writer Guard:** If `today < 2026-11-23` and the Day 0 sentinel file exists, `record_daily_mtm_snapshot()` diverts writes to `archive/shadow_mtm_equity_curve_day0.json`, ensuring the active curve file remains completely empty and unpolluted for Monday morning's launch gate.
   - **Strict Permanent Safety Shields:** `reset_and_archive_day0_state()` is strictly one-shot:
     1. Guarded by a persistent sentinel file (`archive/.day0_reset_completed`); if present, any reset request is immediately rejected.
     2. Hard Date Barrier: Permanently blocked if `today >= 2026-11-23`.
@@ -553,25 +554,50 @@ The 30-session evaluation begins on **Monday, Nov 23, 2026** and concludes stric
 ### 8.10 Production Security, Liquidity Controls & Event Risk Governance
 
 #### 8.10.1 Credentials & Secret Hygiene Audit
-- **Zero-Commit Git History Proof:** The public GitHub repository (`sanIncredible/Jarvis`) was audited via GitHub Commits and Git Trees REST APIs. A total of 0 commits were ever recorded for `config_credentials.json`, `credentials.json`, `config_secrets.json`, or `upstox_token.txt`. Full recursive tree scan of all 70 remote repository objects confirmed zero credentials or private key files.
-- **Specification Document Sanitization:** Production server IP addresses (`[PROD_VM_PUBLIC_IP]`), Telegram chat IDs (`[TELEGRAM_SUPERGROUP_ID]`, `[TELEGRAM_ADMIN_USER_ID]`), and private SSH key filenames (`[PROD_SSH_PRIVATE_KEY]`) are fully redacted in all public documentation and source files.
+- **Zero-Commit Git History Proof:** The public GitHub repository (`sanIncredible/Jarvis`) was audited via GitHub Commits and Git Trees REST APIs. A total of 0 commits were ever recorded for `config_credentials.json`, `credentials.json`, `config_secrets.json`, or `upstox_token.txt`. Full recursive tree scan confirmed zero live credentials or private key files in active trees.
+- **Git Commit Diff Redaction & Network Boundary Enforcement:**
+  - *Historical Commit Inspection:* An automated API audit of Git commit diffs identified that historical commits prior to v3.2.0 (e.g. commit `6f1165cc` redaction diff and parent commits) contained reference to the production VM IP and Telegram chat IDs.
+  - *Cloud Hypervisor Ingress Firewall:* In the Oracle Cloud Console (`Networking -> Virtual Cloud Networks -> VCN -> Security Lists -> Default Security List -> Ingress Rules`), SSH Port 22 ingress is restricted exclusively to the operator's specific workstation IP CIDR (`<WORKSTATION_IP>/32`), completely eliminating internet-wide scanning (`0.0.0.0/0`).
+  - *Repository Privacy Posture:* The repository visibility should be maintained as **Private** (`Settings -> General -> Change repository visibility -> Make private`) to guarantee commit diffs are shielded from search indexing and public web scrapers.
+  - *sshd Hardening:* Verified `sshd -T` enforces `PasswordAuthentication no` and `PubkeyAuthentication yes`. Password brute-force attempts are cryptographically impossible.
 - **Storage Topology:** Live broker API keys, client secrets, TOTP seeds, and JWT tokens reside strictly on the local machine and the encrypted private filesystem of the OCI VM (`/home/opc/Jarvis/config_credentials.json`).
 - **DevOps Protection:** `sync_github_updates.py` explicitly uses an allowlist for commit payloads, guaranteeing credentials are never synchronized or published.
 
 #### 8.10.2 Circuit-Limit Ceiling, Liquidity Filter & Lower-Circuit Exit Model
 - **Upper Circuit Freeze Shield (Fail-Closed):** In fast-moving momentum stocks, an opening surge can freeze a stock at its Upper Circuit limit (e.g. +5%, +10%, or +20% limit-up), leaving 0 sellers on the orderbook. A shadow engine that logs fills at the circuit price creates paper alpha that cannot be realized.
-  - *Data Sources:* Ingests Upstox V3 Market Data Feed in `"full"` mode (`marketFF.marketLevel` depth) combined with Upstox REST market quote (`https://api.upstox.com/v2/market-quote/quotes?instrument_key=...`) returning `upper_circuit_limit`, `lower_circuit_limit`, `depth` (5 buy/sell levels), and `total_sell_quantity`.
+  - *Data Sources:* Ingests Upstox V3 Market Data Feed in `"full"` mode (`marketFF.marketLevel` depth) combined with Upstox REST market quote (`https://api.upstox.com/v3/market-quote/quotes?instrument_key=...`, migrating from deprecated v2 route) returning `upper_circuit_limit`, `lower_circuit_limit`, `depth` (5 buy/sell levels), and `total_sell_quantity`.
   - *Rule:* Long breakout execution is prohibited if $\text{LTP} \ge \text{Upper Circuit} \times 0.985$ (within 1.5% of upper circuit) or if `total_sell_quantity == 0` (zero seller depth).
-- **Lower-Circuit Exit Model (Zero-Bid Unfillable Protection):** If a held swing position experiences an opening gap-down or intraday collapse that locks the stock at its Lower Circuit limit with 0 total buyer quantity (`total_buy_quantity == 0`), simulated fills at the stop price or bar open are physically impossible and strictly barred. The engine marks the position as `LOWER_CIRCUIT_ZERO_BID_LOCK`, sets exit status as `UNFILLABLE_LOWER_CIRCUIT`, and defers execution until genuine buyer depth appears.
+  - *Missing Circuit Limit Fallback:* If `upper_circuit_limit <= 0` or is missing from broker quotes:
+    1. If `total_sell_quantity == 0`: Stock is rejected (zero seller depth).
+    2. If intraday gain $(\text{Fill Price} - \text{Prev Close}) / \text{Prev Close} \ge 0.18$ ($+18\%$ from previous close): Stock is rejected (approaching theoretical 20% circuit limit).
+    3. If both depth data and circuit limits are missing/empty: Reject fail-closed due to unquantified liquidity risk.
+- **Lower-Circuit Exit Model & Unlock Fill Math:**
+  - *Zero-Bid Lock Detection:* If a held swing position experiences a gap-down or collapse that breaches stop loss while locked at Lower Circuit with 0 buyers (`total_buy_quantity == 0` or $\text{LTP} \le \text{Lower Circuit} \times 1.002$), the exit order is physically unfillable. The position is flagged `circuit_exit_blocked = True` with status `LOWER_CIRCUIT_ZERO_BID_LOCK`, and standard stop execution is halted.
+  - *Daily MTM Circuit Marking:* While `circuit_exit_blocked == True`, the daily EOD MTM snapshot marks the position's unrealized value explicitly at $\text{lower\_circuit\_limit}$, capturing full unrealized drawdown on each day the stock remains frozen.
+  - *Unlock Exit Pricing Formula:* When liquidity returns (`total_buy_quantity > 0` and price unfreezes, or in candle replay $\text{bar\_high} > \text{lower\_circuit\_limit}$), the deferred exit executes immediately at the **first liquid market price with adverse slippage applied**:
+    $$\text{First Liquid Price} = \max(\text{Day Open}, \, \text{Candle Open}, \, \text{LTP})$$
+    $$\text{Exit Price} = \text{round\_to\_tick}(\text{First Liquid Price} \times (1 - 0.0015), \, \text{tick}=0.05, \, \text{direction}="down")$$
+    The realized trade log records the actual fill price and true loss (e.g. $-3.5\text{R}$ or $-5.0\text{R}$), logged with reason `"LOWER_CIRCUIT_UNLOCKED_EXIT"`.
+  - *Candle Replay Lock Detection (Without Depth Data):* In 1-minute historical candle replay following an outage, a candle with $\text{bar\_low} \le \text{lower\_circuit\_limit}$ or $(\text{bar\_high} == \text{bar\_low} == \text{lower\_circuit\_limit})$ serves as the lower-circuit lock signal. Exit is deferred until the first subsequent candle where $\text{bar\_high} > \text{lower\_circuit\_limit}$.
 - **Microstructure Liquidity Floor:** Sizing ₹1,00,000 into an illiquid micro-cap causes severe slippage. The screening sieve enforces:
   $$\text{20-Day Average Daily Turnover (ADTV)} \ge \text{₹}5.0\text{ Crore}$$
   $$\text{20-Day Average Daily Volume (ADTV)} \ge 100,000\text{ shares}$$
   This ensures the modeled 0.15% slippage per side realistically reflects execution in liquid mid-to-large cap instruments.
 
 #### 8.10.3 Event Risk & Earnings Blackout Window
-- **Overnight Gap Vulnerability:** Swing positions held across quarterly earnings releases (Q1/Q2/Q3/Q4 results) are exposed to unhedgeable 10%–20% overnight gap-downs that bypass daily ATR buffers.
-- **Corporate Event Data Source & Fail-Closed Protocol:** Results calendar data is ingested weekly from NSE Corporate Announcements (`https://www.nseindia.com/api/event-calendar`) and cached locally in `data/earnings_calendar.json`. If the event calendar lookup fails or is unavailable for a candidate breakout, the system executes **fail-closed** behavior: the candidate is skipped and logged to `shadow_rejected_signals.json` with reason `EARNINGS_CALENDAR_UNAVAILABLE_FAIL_CLOSED`.
-- **Pre-Entry Blackout Window:** Drop candidate breakouts if quarterly financial results or major corporate actions are scheduled within 3 trading days ($\text{Days to Earnings} \le 3$).
+- **Overnight Gap Vulnerability:** Swing positions held across quarterly earnings releases (Q1/Q2/Q3/Q4 results) or major corporate actions are exposed to unhedgeable 10%–20% overnight gap-downs that bypass daily ATR buffers.
+- **Corporate Event Sourcing & Workstation Push Pipeline:**
+  - Because NSE website edge security (Akamai) blocks cloud datacenter IP ranges (`HTTP 403 Forbidden` on OCI), the event calendar is sourced via `sync_earnings_calendar.py` running on the local workstation (residential IP with browser session headers) and synced to OCI VM at `data/earnings_calendar.json`.
+  - *Cache TTL & Alerting:* Cache validity is 72 hours. If cache age exceeds 72 hours, an alert is dispatched to Topic 9 (`risk_trailing`) prompting a pre-market refresh.
+  - *Fail-Open Safe Fallback:* If `data/earnings_calendar.json` is missing or unreadable, the engine dispatches a diagnostic alert to Topic 9 and defaults to **fail-open with warning**, preventing an unreadable calendar file from paralyzing all trading.
+- **Negative Confirmation Logic:** Corporate event calendars only list companies with upcoming scheduled filings. If a candidate symbol is NOT found in `earnings_calendar.json`, it confirms that **no earnings or corporate actions are scheduled** $\implies$ **PASS** (allow entry).
+- **Major Corporate Action Definition:** Blackout triggers if any of the following are scheduled within 3 trading days ($\text{Days to Event} \le 3$):
+  1. Board meetings for Quarterly / Annual Financial Results (Q1, Q2, Q3, Q4).
+  2. Stock Splits / Sub-divisions.
+  3. Bonus Share Issues.
+  4. Rights Issues / Capital Restructuring.
+  5. Mergers, Demergers, or Amalgamations.
+  *(Routine interim dividend-only meetings are excluded, as they do not generate catastrophic 20% gap risk).*
 - **Pure Systematic In-Flight Trailing:** For Phase 1 autonomous execution, in-flight discretionary adjustments ("reduce 50% or tighten to 5 EMA") are explicitly omitted to prevent mid-evaluation rule mutation. Active positions already entered prior to an announcement are governed strictly by the frozen multi-stage trailing stop hierarchy.
 
 ### 8.11 Surveillance, Watchdog & Gap Replay State Machine Architecture
@@ -589,7 +615,9 @@ flowchart TD
     
     FilterBars --> ChronoLoop["Iterate Missed Bars Chronologically"]
     ChronoLoop --> BarBreach{"Bar Low <= Current SL?"}
-    BarBreach -- Yes --> GapExit["Record Historical Breach Time (Bar 't')<br/>Fill Base = min(Current SL, Bar Open)<br/>Exit Price = Fill Base * (1 - 0.0015)"]
+    BarBreach -- Yes --> CircuitLockCheck{"Bar at Lower Circuit?<br/>(Bar Low <= UCL or Flat)"}
+    CircuitLockCheck -- Yes --> FlagLock["Flag pos['circuit_exit_blocked'] = True<br/>Defer Exit until Bar High > UCL"]
+    CircuitLockCheck -- No --> GapExit["Record Historical Breach Time (Bar 't')<br/>Fill Base = min(Current SL, Bar Open)<br/>Exit Price = Fill Base * (1 - 0.0015)"]
     BarBreach -- No --> BarHigh{"Bar High > Highest LTP?"}
     BarHigh -- Yes --> RatchetSL["Update Highest LTP & Ratchet Trailing SL"]
     BarHigh -- No --> NextBar["Next Bar"]
@@ -603,24 +631,31 @@ flowchart TD
     TrailEval --> UpdatePos["Update pos['last_surveillance_epoch']<br/>pos['last_surveillance_time']<br/>pos['last_surveillance_date']"]
 ```
 
-### 8.12 Monday Launch Gate Pre-Flight Protocol (09:00 AM IST on Nov 23)
-To eliminate any possibility of Day 0 parameters, stale holdings, or corrupted state leaking into the official 30-session evaluation period, the system enforces a strict automated Pre-Flight Assertion Gate:
+### 8.12 Monday Launch Gate & In-Flight State Integrity Protocol
+To eliminate any possibility of Day 0 parameters, stale holdings, or corrupted state leaking into the official 30-session evaluation period, the system enforces a strict decoupled validation architecture:
 
-1. **Deterministic Execution Sequence:**
-   The Day 0 flattening and reset logic is governed by an immutable 4-step sequence:
+1. **Deterministic Day 0 Reset Execution Sequence (15:45 IST on Nov 20):**
+   The Day 0 flattening and reset logic runs strictly at **15:45 IST** (after the 15:30 MTM snapshot and 15:35 EOD report) governed by an immutable 4-step sequence:
    $$\text{Archive} \longrightarrow \text{Verify Integrity} \longrightarrow \text{Reset Active State} \longrightarrow \text{Write Sentinel}$$
    - **Step 1 (Archive):** Copies all state files to `archive/day0_shakedown_<timestamp>/`.
    - **Step 2 (Verify Integrity):** Asserts that all destination archive files exist, have size $>0$ bytes, and parse validly as JSON. If verification fails, an unhandled exception aborts execution immediately before any active files can be modified.
    - **Step 3 (Reset Active State):** Atomically writes pristine baseline states to `shadow_portfolio.json` (`{}`), `shadow_trade_log.json` (`[]`), `shadow_history_eod.json` (`[]`), `shadow_mtm_equity_curve.json` (`[]`), and `shadow_rejected_signals.json` (`[]`).
    - **Step 4 (Write Sentinel):** Creates the permanent sentinel file `archive/.day0_reset_completed` with cryptographic metadata, locking out all future reset requests.
 
-2. **Pre-Flight Assertion Check (`assert_phase1_launch_readiness()`):**
-   Runs automatically at **09:00 AM IST on Monday, Nov 23, 2026** (and precedes every subsequent candidate evaluation):
+2. **Monday 09:00 AM IST Launch Gate (`assert_monday_0900_launch_gate()`):**
+   Runs strictly once at **09:00 AM IST on Monday, Nov 23, 2026** before the market open:
    - **Sentinel Assertion:** Asserts `archive/.day0_reset_completed` exists on disk.
-   - **Open Holdings Assertion:** Asserts `len(shadow_portfolio.json) == 0`.
-   - **Trade Log Assertion:** Asserts `shadow_trade_log.json` contains 0 unarchived Day 0 trades.
-   - **MTM Curve Assertion:** Asserts `shadow_mtm_equity_curve.json` contains 0 Day 0 snapshots.
-   - *Fail-Closed Enforcement:* If ANY assertion fails, `is_launch_ready = False`. An urgent critical alert is dispatched to Topic 9 (`risk_trailing`) and Topic 10 (`orders`), and the engine **refuses all new entries**, halting trading until manual intervention.
+   - **Zero Holdings Baseline:** Asserts `len(shadow_portfolio.json) == 0` (clean slate).
+   - **Clean Trade Log:** Asserts `shadow_trade_log.json` contains 0 unarchived Day 0 trades.
+   - **Clean MTM Curve:** Asserts `shadow_mtm_equity_curve.json` contains 0 Day 0 snapshots.
+   - *Fail-Closed Enforcement:* If ANY assertion fails, `is_launch_ready = False`. An urgent critical alert is dispatched to Topic 9 (`risk_trailing`) and Topic 10 (`orders`), and the engine halts execution until operator intervention.
+
+3. **In-Flight State Integrity Assertion (`assert_phase1_in_flight_state_integrity()`):**
+   Runs dynamically before every candidate breakout evaluation during 09:30–10:15 AM trading hours:
+   - **Sentinel Assertion:** Asserts `archive/.day0_reset_completed` exists on disk.
+   - **Zero Day 0 Contamination:** Asserts that no open position in `shadow_portfolio.json` has `is_day0 == True` or `entry_date < "2026-11-23"`.
+   - **Trade Log Integrity:** Asserts that `shadow_trade_log.json` contains no unarchived Day 0 trades.
+   - *Multi-Trade Permission:* Crucially, does NOT require `len(shadow_portfolio) == 0`. Once Trade #1 is entered, subsequent trades (#2, #3, up to 5 slots) evaluate and enter freely without being blocked.
 
 ---
 
@@ -955,7 +990,7 @@ pip3 install upstox-client requests urllib3 websockets protobuf openpyxl python-
    - Write `evaluate_strategy_checklist()` implementing 7 Hard Gates (all must pass) and 7 Soft Scores (min 3 required).
    - Write `calculate_order_sizing()` implementing the True Van Tharp ₹1,00,000 / ₹50,000 slot capital equation (cash-gated on ₹5,00,000 base capital) with tick-aware rounding and 5-state market regime governance.
 5. **`shadow_execution_engine.py`**:
-   - Write `evaluate_and_record_shadow_entry()` with 09:30–10:15 window checks, upper circuit ceiling filter, earnings blackout sieve, cash gating, tick-aware slippage, and `config_version = "v3.2.0-strict"`.
+   - Write `evaluate_and_record_shadow_entry()` with 09:30–10:15 window checks, upper circuit ceiling filter, earnings blackout sieve, cash gating, tick-aware slippage, and `config_version = "v3.3.0-strict"`.
    - Write `update_shadow_trailing_and_exits()` with the 7-level multi-day trailing stop hierarchy, Day 2+ mid-session ratchet tracking, and tick-aware exit fills.
    - Write `generate_and_send_phase1_eod_report()` to dispatch the 15:35 IST scoreboard to Topic 11.
 6. **`telegram_bot.py`**:
