@@ -86,13 +86,22 @@ def get_ist_now():
     return datetime.now(timezone.utc).astimezone(IST)
 
 
-CONFIG_VERSION = "v3.1.0-strict"
+CONFIG_VERSION = "v3.2.0-strict"
 CONFIG_SNAPSHOTS_DIR = BASE_DIR / "config_snapshots"
 CONFIG_SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+
+EVALUATION_BASE_CAPITAL = 500000.0  # ₹5,00,000 maximum gross exposure base (5 slots x ₹100,000, 100% CNC Delivery, 0 Leverage)
+MAX_SYSTEM_SLOTS = 5
 
 FROZEN_PARAMS = {
     "version": CONFIG_VERSION,
     "evaluation_start_date": "2026-11-23",
+    "evaluation_end_date": "2027-01-05",
+    "evaluation_base_capital_inr": 500000.0,
+    "max_portfolio_slots": 5,
+    "cash_gated_execution": True,
+    "circuit_ceiling_collar_pct": 1.5,
+    "earnings_blackout_days": 3,
     "rvol_tod_min": 1.0,
     "stretch_max": 3.0,
     "gap_max": 2.5,
@@ -479,6 +488,67 @@ def send_phase1_telegram_alert(message_html, topic_name="reports"):
         return False, str(ex)
 
 
+def check_earnings_blackout(symbol: str, dt=None):
+    """
+    Checks if symbol has quarterly earnings or board meeting within 3 trading days.
+    Data source: data/earnings_calendar.json (synced from NSE Corporate Announcements).
+    Fail-closed behavior: skips entry if within 3 days.
+    """
+    cal_file = BASE_DIR / "data" / "earnings_calendar.json"
+    if not cal_file.is_file():
+        return False, None
+    try:
+        with open(cal_file, "r", encoding="utf-8") as f:
+            cal = json.load(f)
+        clean_s = resolve_symbol(symbol).strip().upper()
+        event_date_str = cal.get(clean_s)
+        if event_date_str:
+            d_event = datetime.strptime(event_date_str, "%Y-%m-%d").date()
+            d_curr = (dt or get_ist_now()).date()
+            days_diff = abs((d_event - d_curr).days)
+            if days_diff <= 3:
+                return True, f"Earnings Blackout: Financial results / board meeting on {event_date_str} (within 3-day window)"
+    except Exception as e:
+        print(f"Notice reading earnings calendar: {e}")
+    return False, None
+
+
+def assert_phase1_launch_readiness():
+    """
+    Monday Launch Gate Pre-Flight Assertion (09:00 AM IST on Nov 23, 2026).
+    Enforces strict pre-flight readiness before Phase 1 begins:
+    1. Sentinel file archive/.day0_reset_completed must exist.
+    2. shadow_portfolio.json must have 0 open positions (empty dict).
+    3. shadow_trade_log.json must contain NO unarchived Day 0 trades.
+    4. shadow_mtm_equity_curve.json must contain NO unarchived Day 0 snapshots.
+    If ANY assertion fails, returns (False, reason), causing all new entries to be refused.
+    """
+    DAY0_SENTINEL_FILE = BASE_DIR / "archive" / ".day0_reset_completed"
+    if not DAY0_SENTINEL_FILE.is_file():
+        return False, "Sentinel file (archive/.day0_reset_completed) is missing. Day 0 reset has not been executed."
+
+    portfolio = load_shadow_portfolio()
+    if len(portfolio) > 0:
+        return False, f"Portfolio is not clean: {len(portfolio)} open positions found in shadow_portfolio.json ({list(portfolio.keys())})."
+
+    trades = load_shadow_trade_log()
+    unarchived_day0_trades = [t for t in trades if t.get("is_day0") or str(t.get("entry_date", "")) < START_DATE_STR]
+    if unarchived_day0_trades:
+        return False, f"Trade log contains {len(unarchived_day0_trades)} unarchived Day 0 trades in active log."
+
+    if SHADOW_MTM_CURVE_FILE.is_file():
+        try:
+            with open(SHADOW_MTM_CURVE_FILE, "r", encoding="utf-8") as cf:
+                curve = json.load(cf)
+            day0_snaps = [c for c in curve if c.get("session") == "DAY0_SHAKEDOWN" or str(c.get("date", "")) < START_DATE_STR]
+            if day0_snaps:
+                return False, f"MTM curve contains {len(day0_snaps)} unarchived Day 0 snapshots in active curve."
+        except Exception as e:
+            return False, f"Could not parse shadow_mtm_equity_curve.json: {e}"
+
+    return True, "All Phase 1 launch readiness assertions PASSED (Sentinel present, 0 open positions, pristine state files)."
+
+
 def is_entry_window_active(dt=None):
     """
     User Mandate: Entry timing is strictly from 09:30 to 10:15 AM IST (Mon-Fri).
@@ -496,7 +566,7 @@ def is_entry_window_active(dt=None):
     return t_start <= t <= t_end
 
 
-def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day_low=None, regime_code="EXPANSION", trigger_name="ORB Breakout"):
+def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day_low=None, regime_code="EXPANSION", trigger_name="ORB Breakout", dt=None):
     """
     Evaluates candidate breakout against strategy checklist and logs paper fill if qualified.
     Runs strictly during 09:30 - 10:15 AM IST.
@@ -512,7 +582,7 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     if not sym:
         return False, "Invalid symbol"
 
-    now = get_ist_now()
+    now = dt if dt is not None else get_ist_now()
     if not is_entry_window_active(now):
         t_str = now.strftime("%H:%M:%S")
         return False, f"Outside 09:30-10:15 AM momentum entry window (Current: {t_str})"
@@ -529,6 +599,14 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     # Edge Case Guard 1: Same-Day Re-Entry Trap (Check both entry_date and exit_date)
     today_str = now.strftime("%Y-%m-%d")
     trade_log = load_shadow_trade_log()
+
+    # Pre-Flight Launch Gate Assertion (Enforced on or after START_DATE_STR)
+    if today_str >= START_DATE_STR:
+        is_ready, gate_err = assert_phase1_launch_readiness()
+        if not is_ready:
+            print(f"🛑 [LAUNCH GATE BLOCKED] Cannot take new entry for {sym}: {gate_err}")
+            return False, f"Phase 1 Launch Gate Assertion Failed: {gate_err}"
+
     already_traded_today = any(t.get("symbol") == sym and (t.get("entry_date") == today_str or t.get("exit_date") == today_str) for t in trade_log)
     if already_traded_today:
         return False, f"{sym} already entered/exited today (Whipsaw protection: 1 trade per symbol per session)"
@@ -543,6 +621,24 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
 
     # Realistic Marketable Fill (+0.15% slippage collar, tick-aware ceil)
     fill_price = round_to_tick(ltp * 1.0015, tick=0.05, direction="up")
+
+    # Upper Circuit Ceiling & Liquidity Depth Check (Fail-Closed)
+    upper_circuit = float((quote_data or {}).get("upper_circuit_limit") or 0.0)
+    if upper_circuit > 0:
+        if (upper_circuit - fill_price) / fill_price < 0.015:
+            log_rejected_signal(sym, f"Upper Circuit Freeze Collar: Within 1.5% of upper circuit (₹{upper_circuit:.2f})", {"ltp": fill_price, "upper_circuit": upper_circuit})
+            return False, f"Upper Circuit Freeze Collar: LTP ₹{fill_price:.2f} within 1.5% of upper circuit (₹{upper_circuit:.2f}). High risk of unfillable lockup."
+
+    total_sell_qty = (quote_data or {}).get("total_sell_quantity")
+    if total_sell_qty is not None and int(total_sell_qty) == 0:
+        log_rejected_signal(sym, "Zero Seller Depth: Upper circuit locked with 0 ask quantity", {"ltp": fill_price})
+        return False, "Zero Seller Depth: Stock locked at Upper Circuit with 0 sellers. Marketable fill physically impossible."
+
+    # Earnings Blackout Window Check (Fail-Closed)
+    is_blackout, blackout_reason = check_earnings_blackout(sym, now)
+    if is_blackout:
+        log_rejected_signal(sym, blackout_reason, {"symbol": sym})
+        return False, blackout_reason
 
     # Initial Structural Stop Loss: Day Low at trigger moment with buffer, tick-aware floor
     dl = float(day_low or quote_data.get("day_low") or (fill_price * 0.975))
@@ -573,11 +669,31 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         log_rejected_signal(sym, f"Wide Stop-Loss: {risk_pct:.1f}% (> 4.0% limit)", {"risk_pct": risk_pct, "fill_price": fill_price, "sl": initial_sl})
         return False, f"Wide Stop-Loss: Distance to Day Low is {risk_pct:.1f}% (> 4.0% limit). Capital preserved against excessive tail risk."
 
-    # P0-11: Standardized 1.0R = ₹1,000 Position Sizing on True Structural Risk
-    max_capital_per_slot = 50000.0 if reg_u in ("NEUTRAL", "CHOP") else 100000.0
+    # Regime & System Portfolio Slot Limit Enforcement
+    reg_table = FROZEN_PARAMS.get("regime_table", {})
+    reg_conf = reg_table.get(reg_u, {"permitted": True, "max_slots": 3, "slot_capital_max": 100000.0})
+    max_slots = reg_conf.get("max_slots", 3)
+    if len(portfolio) >= max_slots:
+        log_rejected_signal(sym, f"Portfolio slot limit reached ({len(portfolio)}/{max_slots} active positions in {reg_u} regime)", {"open_positions": len(portfolio)})
+        return False, f"Portfolio slot limit reached ({len(portfolio)}/{max_slots} active positions in {reg_u} regime)"
+    if len(portfolio) >= MAX_SYSTEM_SLOTS:
+        log_rejected_signal(sym, f"System portfolio capacity reached ({len(portfolio)}/{MAX_SYSTEM_SLOTS} slots active)", {"open_positions": len(portfolio)})
+        return False, f"System portfolio capacity reached ({len(portfolio)}/{MAX_SYSTEM_SLOTS} slots active)"
+
+    # Cash-Gated Position Sizing (Delivery equity, 0 leverage, ₹5,00,000 capital base)
+    current_invested = sum(float(p.get("capital_invested", p.get("quantity", 0) * p.get("entry_price", 0))) for p in portfolio.values())
+    closed_pnl = sum(float(t.get("realized_pnl_inr", 0.0)) for t in trade_log)
+    available_cash = max(0.0, EVALUATION_BASE_CAPITAL + closed_pnl - current_invested)
+
+    if available_cash < fill_price:
+        log_rejected_signal(sym, f"Insufficient cash: Available ₹{available_cash:,.2f} < 1 share at ₹{fill_price:.2f}", {"available_cash": available_cash, "ltp": fill_price})
+        return False, f"Insufficient available cash: ₹{available_cash:,.2f} < 1 share at ₹{fill_price:.2f} (Base: ₹{EVALUATION_BASE_CAPITAL:,.0f}, Invested: ₹{current_invested:,.0f})"
+
+    max_capital_per_slot = float(reg_conf.get("slot_capital_max", 100000.0))
+    max_capital_for_slot = min(max_capital_per_slot, available_cash)
     qty = max(1, int(FIXED_RISK_PER_TRADE_INR // risk_per_share))
-    if qty * fill_price > max_capital_per_slot:
-        qty = max(1, int(max_capital_per_slot // fill_price))
+    if qty * fill_price > max_capital_for_slot:
+        qty = max(1, int(max_capital_for_slot // fill_price))
     target_price = round_to_tick(fill_price + (2.0 * risk_per_share), tick=0.05, direction="up")
     capital_invested = round(qty * fill_price, 2)
     initial_risk_inr = round(qty * risk_per_share, 2)
@@ -952,6 +1068,21 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
             elif breach_bar_open and breach_bar_open < pos["current_sl"]:
                 fill_base = breach_bar_open
 
+            # Lower Circuit Unfillable Exit Protection (Zero-Bid Reality Check)
+            lower_circuit = float(q.get("lower_circuit_limit") or 0.0)
+            total_buy_qty = q.get("total_buy_quantity")
+            is_lower_circuit_locked = (
+                lower_circuit > 0 and 
+                (fill_base <= lower_circuit * 1.002 or day_low <= lower_circuit) and 
+                (total_buy_qty is not None and int(total_buy_qty) == 0)
+            )
+            if is_lower_circuit_locked:
+                pos["circuit_exit_blocked"] = True
+                pos["unfillable_exit_reason"] = "LOWER_CIRCUIT_ZERO_BID_LOCK"
+                pos["last_trail_rule"] = "⚠️ LOWER CIRCUIT UNFILLABLE (0 Buyers)"
+                print(f"⚠️ [CIRCUIT LOCK] {sym} breached stop at ₹{pos['current_sl']:.2f} but is locked at Lower Circuit (₹{lower_circuit:.2f}) with 0 buyers. Exit order unfillable.")
+                continue
+
             exit_price = round_to_tick(fill_base * 0.9985, tick=0.05, direction="down")
             exit_reason = pos["last_trail_rule"]
 
@@ -1094,12 +1225,28 @@ def record_daily_mtm_snapshot(portfolio: dict, trade_log: list, unrealized_r: fl
         mtm_drawdown_r = round(max(0.0, peak_mtm_r - mtm_r), 2)
 
         session_tag = "DAY0_SHAKEDOWN" if today_str < START_DATE_STR else "PHASE1_EVALUATION"
+
+        base_capital = EVALUATION_BASE_CAPITAL
+        total_equity_inr = round(base_capital + mtm_pnl, 2)
+        return_pct = round(((total_equity_inr - base_capital) / base_capital) * 100.0, 2)
+
+        prev_peaks_inr = [float(c.get("peak_equity_inr") or base_capital) for c in curve if c.get("date") != today_str]
+        peak_equity_inr = max(prev_peaks_inr + [total_equity_inr, base_capital])
+        mtm_drawdown_inr = round(max(0.0, peak_equity_inr - total_equity_inr), 2)
+        mtm_drawdown_pct = round((mtm_drawdown_inr / peak_equity_inr) * 100.0, 2)
+
         snapshot = {
             "date": today_str,
             "session": session_tag,
             "timestamp": now_ist.strftime("%Y-%m-%d %H:%M:%S"),
             "open_positions_count": len(portfolio),
             "closed_trades_count": len(trade_log),
+            "base_capital_inr": base_capital,
+            "total_equity_inr": total_equity_inr,
+            "return_pct": return_pct,
+            "peak_equity_inr": round(peak_equity_inr, 2),
+            "mtm_drawdown_inr": mtm_drawdown_inr,
+            "mtm_drawdown_pct": mtm_drawdown_pct,
             "realized_pnl_inr": round(closed_pnl, 2),
             "unrealized_pnl_inr": round(unrealized_pnl, 2),
             "mtm_equity_pnl_inr": mtm_pnl,
@@ -1150,8 +1297,15 @@ def get_shadow_analytics():
             "avg_loss_r": 0.0,
             "expectancy_r": 0.0,
             "expectancy_inr": 0.0,
+            "base_capital_inr": EVALUATION_BASE_CAPITAL,
+            "total_equity_inr": EVALUATION_BASE_CAPITAL,
+            "total_return_pct": 0.0,
             "max_drawdown_r": 0.0,
+            "max_drawdown_inr": 0.0,
+            "max_drawdown_pct": 0.0,
             "max_mtm_drawdown_r": 0.0,
+            "max_mtm_drawdown_inr": 0.0,
+            "max_mtm_drawdown_pct": 0.0,
             "rule_counts": {}
         }
 
@@ -1178,18 +1332,36 @@ def get_shadow_analytics():
     expectancy_r = round((win_pct_dec * avg_win_r) - (loss_pct_dec * avg_loss_r), 2)
     expectancy_pnl_inr = round(net_pnl / total_trades, 2) if total_trades > 0 else 0.0
 
-    # Max Drawdown calculation in R
+    base_capital = EVALUATION_BASE_CAPITAL
+    total_equity = round(base_capital + net_pnl, 2)
+    total_return_pct = round((net_pnl / base_capital) * 100.0, 2) if base_capital > 0 else 0.0
+
+    # Max Drawdown calculation in R and INR / %
     peak_cum = 0.0
     running_cum = 0.0
     max_dd = 0.0
+
+    peak_cum_inr = 0.0
+    running_cum_inr = 0.0
+    max_dd_inr = 0.0
+
     for t in phase1_trades:
         running_cum += t.get("realized_r", 0)
         peak_cum = max(peak_cum, running_cum)
         dd = peak_cum - running_cum
         max_dd = max(max_dd, dd)
 
+        running_cum_inr += float(t.get("realized_pnl_inr", 0.0))
+        peak_cum_inr = max(peak_cum_inr, running_cum_inr)
+        dd_inr = peak_cum_inr - running_cum_inr
+        max_dd_inr = max(max_dd_inr, dd_inr)
+
+    max_dd_pct = round((max_dd_inr / (base_capital + peak_cum_inr)) * 100.0, 2) if (base_capital + peak_cum_inr) > 0 else 0.0
+
     # Max MTM Drawdown from daily mark-to-market curve (Strictly Phase 1 dates >= START_DATE_STR)
     max_mtm_dd = max_dd
+    max_mtm_dd_inr = max_dd_inr
+    max_mtm_dd_pct = max_dd_pct
     if SHADOW_MTM_CURVE_FILE.is_file():
         try:
             with open(SHADOW_MTM_CURVE_FILE, "r", encoding="utf-8") as mf:
@@ -1200,6 +1372,8 @@ def get_shadow_analytics():
                 ]
                 if phase1_curve:
                     max_mtm_dd = max([float(c.get("mtm_drawdown_r") or 0.0) for c in phase1_curve] + [max_dd])
+                    max_mtm_dd_inr = max([float(c.get("mtm_drawdown_inr") or 0.0) for c in phase1_curve] + [max_dd_inr])
+                    max_mtm_dd_pct = max([float(c.get("mtm_drawdown_pct") or 0.0) for c in phase1_curve] + [max_dd_pct])
         except Exception:
             pass
 
@@ -1223,8 +1397,15 @@ def get_shadow_analytics():
         "avg_loss_r": avg_loss_r,
         "expectancy_r": expectancy_r,
         "expectancy_inr": expectancy_pnl_inr,
+        "base_capital_inr": base_capital,
+        "total_equity_inr": total_equity,
+        "total_return_pct": total_return_pct,
         "max_drawdown_r": round(max_dd, 2),
+        "max_drawdown_inr": round(max_dd_inr, 2),
+        "max_drawdown_pct": max_dd_pct,
         "max_mtm_drawdown_r": round(max_mtm_dd, 2),
+        "max_mtm_drawdown_inr": round(max_mtm_dd_inr, 2),
+        "max_mtm_drawdown_pct": max_mtm_dd_pct,
         "rule_counts": rules
     }
 
@@ -1320,16 +1501,21 @@ def generate_and_send_phase1_eod_report(notify=True):
 
     mtm_r_val = mtm_snap['mtm_r'] if mtm_snap else round(today_closed_r + unrealized_r, 2)
     mtm_dd_val = mtm_snap['mtm_drawdown_r'] if mtm_snap else 0.0
+    eq_inr = mtm_snap.get("total_equity_inr", EVALUATION_BASE_CAPITAL) if mtm_snap else EVALUATION_BASE_CAPITAL
+    ret_pct = mtm_snap.get("return_pct", 0.0) if mtm_snap else 0.0
+    mtm_dd_pct = mtm_snap.get("mtm_drawdown_pct", 0.0) if mtm_snap else 0.0
 
     lines.extend([
         header_title,
         day_label,
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         "📊 <b>ACTIVE SWING PORTFOLIO HEALTH:</b>",
+        f"• <b>Base Capital:</b> ₹{EVALUATION_BASE_CAPITAL:,.0f} (100% Cash Delivery, Zero Leverage)",
         f"• <b>Open Swing Holdings:</b> {len(portfolio)} positions",
         f"• <b>Unrealized P&L:</b> {'+' if unrealized_r >= 0 else ''}{unrealized_r:.2f}R (₹{unrealized_pnl:+,})",
         f"• <b>Today's Closed P&L:</b> {'+' if today_closed_r >= 0 else ''}{today_closed_r:.2f}R",
-        f"• <b>MTM Total Equity:</b> {'+' if mtm_r_val >= 0 else ''}{mtm_r_val:.2f}R (Drawdown: -{mtm_dd_val:.2f}R)",
+        f"• <b>MTM Total Equity:</b> ₹{eq_inr:,.0f} ({'+' if ret_pct >= 0 else ''}{ret_pct:.2f}% | {'+' if mtm_r_val >= 0 else ''}{mtm_r_val:.2f}R)",
+        f"• <b>MTM Peak Drawdown:</b> -{mtm_dd_val:.2f}R (-{mtm_dd_pct:.2f}%)",
     ])
 
     if open_lines:
@@ -1352,12 +1538,13 @@ def generate_and_send_phase1_eod_report(notify=True):
     lines.append(f"• <b>Total Trades Completed:</b> {analytics['total_trades']} trades")
     lines.append(f"• <b>Win Rate:</b> {analytics['win_rate_pct']}% ({analytics['win_count']}W / {analytics['loss_count']}L)")
     lines.append(f"• <b>Net Realized Profit:</b> <b>{'+' if analytics['net_r'] >= 0 else ''}{analytics['net_r']:.2f}R (₹{analytics['net_pnl_inr']:+,})</b>")
+    lines.append(f"• <b>Total Return on Base:</b> {'+' if analytics['total_return_pct'] >= 0 else ''}{analytics['total_return_pct']:.2f}% (Base: ₹{analytics['base_capital_inr']:,.0f})")
     lines.append(f"• <b>Profit Factor:</b> {analytics['profit_factor']}")
     lines.append(f"• <b>Avg Win / Avg Loss:</b> +{analytics['avg_win_r']:.2f}R / -{analytics['avg_loss_r']:.2f}R")
     lines.append(f"• <b>Expectancy per Trade:</b> {'+' if analytics['expectancy_r'] >= 0 else ''}{analytics['expectancy_r']:.2f}R ({'+₹' if analytics.get('expectancy_inr', 0) >= 0 else '-₹'}{abs(analytics.get('expectancy_inr', 0)):,.0f})")
-    lines.append(f"• <b>Max Drawdown:</b> Closed: -{analytics['max_drawdown_r']:.2f}R | MTM: -{analytics.get('max_mtm_drawdown_r', analytics['max_drawdown_r']):.2f}R")
+    lines.append(f"• <b>Max Drawdown:</b> Closed: -{analytics['max_drawdown_r']:.2f}R (-{analytics['max_drawdown_pct']:.2f}%) | MTM: -{analytics.get('max_mtm_drawdown_r', analytics['max_drawdown_r']):.2f}R (-{analytics.get('max_mtm_drawdown_pct', analytics['max_drawdown_pct']):.2f}%)")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    lines.append("💡 <i>Pure forward test. Uncapped by portfolio limits. 1R = ₹1,000. Zero real money at risk.</i>")
+    lines.append("💡 <i>Phase 1 Systematic Evaluation. Base Capital: ₹5,00,000 (CNC Delivery, Cash-Gated, 0 Leverage). 1R = ₹1,000. Zero real money at risk.</i>")
 
     report_html = "\n".join(lines)
 
@@ -1483,36 +1670,52 @@ def reset_and_archive_day0_state(force=False):
         archive_dir = BASE_DIR / "archive" / f"day0_shakedown_{now.strftime('%Y%m%d_%H%M%S')}"
         archive_dir.mkdir(parents=True, exist_ok=True)
 
-        # Archive existing state files if present
-        for fpath in [SHADOW_PORTFOLIO_FILE, SHADOW_LOG_FILE, SHADOW_EOD_FILE, SHADOW_MTM_CURVE_FILE, REJECTED_SIGNALS_FILE]:
+        # Step 1: Archive existing state files if present
+        state_files = [SHADOW_PORTFOLIO_FILE, SHADOW_LOG_FILE, SHADOW_EOD_FILE, SHADOW_MTM_CURVE_FILE, REJECTED_SIGNALS_FILE]
+        archived_files = []
+        for fpath in state_files:
             if fpath.is_file():
                 try:
                     import shutil
-                    shutil.copy2(fpath, archive_dir / fpath.name)
+                    dest = archive_dir / fpath.name
+                    shutil.copy2(fpath, dest)
+                    archived_files.append(dest)
                 except Exception as ex:
                     print(f"Notice archiving {fpath.name}: {ex}")
 
-        # Reset active files to clean Phase 1 pristine baseline
+        # Step 2: Verify Archive Integrity (Must all exist, non-empty, and valid JSON)
+        for dest in archived_files:
+            if not dest.is_file() or dest.stat().st_size == 0:
+                raise RuntimeError(f"Archive verification failed: {dest.name} missing or empty.")
+            try:
+                with open(dest, "r", encoding="utf-8") as vf:
+                    json.load(vf)
+            except Exception as ve:
+                raise RuntimeError(f"Archive verification failed for {dest.name}: invalid JSON ({ve})")
+
+        # Step 3: Reset active files to clean Phase 1 pristine baseline
         atomic_write_json(SHADOW_PORTFOLIO_FILE, {})
         atomic_write_json(SHADOW_LOG_FILE, [])
         atomic_write_json(SHADOW_EOD_FILE, [])
         atomic_write_json(SHADOW_MTM_CURVE_FILE, [])
         atomic_write_json(REJECTED_SIGNALS_FILE, [])
 
-        # Write permanent sentinel file to lock out any future Day 0 resets
+        # Step 4: Write permanent sentinel file to lock out any future Day 0 resets
         try:
             DAY0_SENTINEL_FILE.parent.mkdir(parents=True, exist_ok=True)
             DAY0_SENTINEL_FILE.write_text(
                 f"Day 0 Reset successfully executed at {now.isoformat()} IST\n"
                 f"Config Version: {CONFIG_VERSION}\n"
                 f"Config Hash: {CONFIG_HASH}\n"
-                f"Evaluation Start Date: {START_DATE_STR}\n",
+                f"Evaluation Start Date: {START_DATE_STR}\n"
+                f"Archive Directory: {archive_dir}\n"
+                f"Execution Sequence: Archive -> Verify -> Reset -> Write Sentinel (100% Verified)\n",
                 encoding="utf-8"
             )
         except Exception as se:
             print(f"Notice writing sentinel file: {se}")
 
-        print(f"✅ [DAY 0 RESET] Flattened {flattened_count} positions. Archived state to {archive_dir}. Clean Phase 1 slate established for Nov 23.")
+        print(f"✅ [DAY 0 RESET] Flattened {flattened_count} positions. Archived state to {archive_dir}. Verified archive integrity. Clean Phase 1 slate established for Nov 23.")
         return {
             "status": "SUCCESS",
             "flattened_count": flattened_count,
@@ -1545,15 +1748,18 @@ def format_shadow_status_card():
         "🤖 <b>PHASE 1 AUTONOMOUS SHADOW ENGINE STATUS</b>",
         f"📅 <b>{day_str}</b>",
         "━━━━━━━━━━━━━━━━━━━━━━",
-        f"• <b>Active Swing Positions:</b> {len(portfolio)} open",
+        f"• <b>Base Capital:</b> ₹{EVALUATION_BASE_CAPITAL:,.0f} (100% Cash Delivery, Zero Leverage)",
+        f"• <b>Active Swing Positions:</b> {len(portfolio)} / {MAX_SYSTEM_SLOTS} slots",
         f"• <b>Entry Window:</b> 09:30–10:15 AM IST ({'🟢 OPEN' if is_entry_window_active(now) else '🔒 CLOSED'})",
-        f"• <b>Sizing Model:</b> Standardized Fixed Risk ($1R = ₹1,000)",
-        f"• <b>Capacity Mode:</b> UNCAPPED (Capturing every valid setup)",
+        f"• <b>Sizing Model:</b> Standardized Fixed Risk (1R = ₹1,000, Cash-Gated)",
         f"• <b>Total Closed Trades:</b> {analytics['total_trades']} completed",
         f"• <b>Win Rate:</b> {analytics['win_rate_pct']}% ({analytics['win_count']}W / {analytics['loss_count']}L)",
         f"• <b>Net Realized P&L:</b> <b>{'+' if analytics['net_r'] >= 0 else ''}{analytics['net_r']:.2f}R (₹{analytics['net_pnl_inr']:+,})</b>",
+        f"• <b>Total Return on Base:</b> {'+' if analytics['total_return_pct'] >= 0 else ''}{analytics['total_return_pct']:.2f}%",
+        f"• <b>Total Equity:</b> ₹{analytics.get('total_equity_inr', EVALUATION_BASE_CAPITAL):,}",
         f"• <b>Profit Factor:</b> {analytics['profit_factor']}",
         f"• <b>Expectancy:</b> {'+' if analytics['expectancy_r'] >= 0 else ''}{analytics['expectancy_r']:.2f}R / trade ({'+₹' if analytics.get('expectancy_inr', 0) >= 0 else '-₹'}{abs(analytics.get('expectancy_inr', 0)):,.0f})",
+        f"• <b>Max Drawdown:</b> Closed: -{analytics['max_drawdown_r']:.2f}R (-{analytics['max_drawdown_pct']:.2f}%) | MTM: -{analytics.get('max_mtm_drawdown_r', 0):.2f}R (-{analytics.get('max_mtm_drawdown_pct', 0):.2f}%)",
         "━━━━━━━━━━━━━━━━━━━━━━",
         "💡 <i>To view full EOD report:</i> <code>/shadowreport</code>\n"
         "💡 <i>To view open/closed trades:</i> <code>/shadowtrades</code>"
