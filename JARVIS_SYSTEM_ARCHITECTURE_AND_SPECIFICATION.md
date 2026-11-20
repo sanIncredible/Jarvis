@@ -43,7 +43,7 @@ Jarvis synthesizes two prominent quantitative trading methodologies:
 
 ### 1.3 Operational Modes
 - **Phase 1: 30-Day Autonomous Benchmark Engine (`shadow_execution_engine.py`)**:
-  - Starts November 20, 2026.
+  - Starts Monday, November 23, 2026; Concludes Tuesday, January 05, 2027 (Friday, Nov 20, 2026 designated as Day 0 Commissioning & Shakedown).
   - Standardized ₹1,000 INR (1.0R) risk per trade.
   - Multi-day position holding across 30 evaluation sessions.
   - Zero manual intervention required; hands-free execution and automated daily scoreboard published to Telegram Topic 11 (`reports`) at 15:35:00 IST.
@@ -522,6 +522,79 @@ Computed daily at 15:35:00 IST by `get_shadow_analytics()`:
   $$\text{Sort Priority} = \left(\text{Soft Score} \downarrow, \, \text{RVOL}_{\text{TOD}} \downarrow, \, \text{Risk \%} \uparrow, \, \text{Stretch \%} \uparrow\right)$$
 - **Rejected Signal Ledger (`shadow_rejected_signals.json`):**
   Records every rejected candidate with full gate vectors (all 7 hard gates, all 7 soft scores, LTP, RVOL, Stretch, Wick, Gap). Features `first_seen_timestamp`, `last_seen_timestamp`, `rejection_count`, and `peak_metadata` tracking to capture peak setup quality across the session. Deduplicated daily per symbol/reason.
+
+### 8.9 The 30-Session Official Benchmark Calendar & Maturity Matrix
+The 30-session evaluation begins on **Monday, Nov 23, 2026** and concludes strictly on **Tuesday, Jan 05, 2027**. The schedule accounts for all statutory exchange holidays:
+
+| Session # | Date | Day | Status / Notes | Milestone Target |
+| :---: | :---: | :---: | :--- | :--- |
+| **Day 0** | 2026-11-20 | Friday | **Commissioning & Shakedown** (Flattened at 15:15 IST, Archived) | Sentinel File Established |
+| **Day 1** | 2026-11-23 | Monday | **Official Evaluation Launch (Pristine Slate, ₹1,00,000 Base)** | Phase 1 Launch |
+| — | 2026-11-24 | Tuesday | *NSE Holiday: Guru Nanak Jayanti (Closed)* | Market Holiday |
+| **Day 2** | 2026-11-25 | Wednesday | Normal Trading Session | Multi-day Swing Carry |
+| **Day 3** | 2026-11-26 | Thursday | Weekly Expiry Session | First EMA10 Swing Trails |
+| **Day 4** | 2026-11-27 | Friday | Normal Trading Session | Weekend Exposure Audit |
+| **Day 5** | 2026-11-30 | Monday | End-of-Month Rebalance Session | Week 1 Performance Check |
+| **Days 6–10** | 2026-12-01 to 2026-12-07 | Tue–Mon | 5 Consecutive Sessions | Week 2 Trailing Convergence |
+| **Days 11–15** | 2026-12-08 to 2026-12-14 | Tue–Mon | 5 Consecutive Sessions | Midpoint Interim Review |
+| **Days 16–20** | 2026-12-15 to 2026-12-21 | Tue–Mon | 5 Consecutive Sessions | Stage 4 +2.0R Trail Locks |
+| **Days 21–23** | 2026-12-22 to 2026-12-24 | Tue–Thu | 3 Pre-Christmas Sessions | Holiday Risk Sizing |
+| — | 2026-12-25 | Friday | *NSE Holiday: Christmas (Closed)* | Market Holiday |
+| **Days 24–27** | 2026-12-28 to 2026-12-31 | Mon–Thu | 4 Year-End Sessions | Year-End Portfolio Audit |
+| **Day 28** | 2027-01-01 | Friday | Normal Session (*NSE Trades on New Year's Day*) | 2027 Boundary Transition |
+| **Day 29** | 2027-01-04 | Monday | Normal Trading Session | Penultimate Evaluation Session |
+| **Day 30** | 2027-01-05 | Tuesday | **Final Evaluation Session (Day 30 Maturity Banner at 15:35 IST)** | **Phase 1 Benchmark Mature** |
+
+> **Maturity Mandate:** When `day_num == 30` at 15:35 IST on Jan 05, 2027, the EOD reporter displays the `🏆 [30-DAY AUTONOMOUS PILOT MATURE — READY FOR PHASE 2 REVIEW]` banner and locks the historical dataset for comprehensive statistical sign-off.
+
+### 8.10 Production Security, Liquidity Controls & Event Risk Governance
+
+#### 8.10.1 Credentials & Secret Hygiene Audit
+- **Zero-Commit Git History Proof:** The public GitHub repository (`sanIncredible/Jarvis`) was audited via GitHub Commits and Git Trees REST APIs. A total of 0 commits were ever recorded for `config_credentials.json`, `credentials.json`, `config_secrets.json`, or `upstox_token.txt`.
+- **Storage Topology:** Live broker API keys, client secrets, TOTP seeds, and JWT tokens reside strictly on the local machine and the encrypted private filesystem of the OCI VM (`/home/opc/Jarvis/config_credentials.json`).
+- **DevOps Protection:** `sync_github_updates.py` explicitly uses an allowlist for commit payloads, guaranteeing credentials are never synchronized or published.
+
+#### 8.10.2 Circuit-Limit Ceiling & Liquidity Filter Model
+- **Upper Circuit Freeze Shield:** In fast-moving momentum stocks, an opening surge can freeze a stock at its Upper Circuit limit (e.g. +5%, +10%, or +20% limit-up), leaving 0 sellers on the orderbook. A shadow engine that logs fills at the circuit price creates paper alpha that cannot be realized.
+  - *Rule:* Long breakout execution is prohibited if $\text{LTP} \ge \text{Upper Circuit} \times 0.998$ or if total ask depth is 0.
+- **Microstructure Liquidity Floor:** Sizing ₹1,00,000 into an illiquid micro-cap causes severe slippage. The screening sieve enforces:
+  $$\text{20-Day Average Daily Turnover (ADTV)} \ge \text{₹}5.0\text{ Crore}$$
+  $$\text{20-Day Average Daily Volume (ADTV)} \ge 100,000\text{ shares}$$
+  This ensures the modeled 0.15% slippage per side realistically reflects execution in liquid mid-to-large cap instruments.
+
+#### 8.10.3 Event Risk & Earnings Blackout Window
+- **Overnight Gap Vulnerability:** Swing positions held across quarterly earnings releases (Q1/Q2/Q3/Q4 results) are exposed to unhedgeable 10%–20% overnight gap-downs that bypass daily ATR buffers.
+- **Pre-Entry Blackout:** Drop candidate breakouts if quarterly financial results or major corporate actions are scheduled within 3 trading days ($\text{Days to Earnings} \le 3$).
+- **In-Flight Position Management:** If an active runner reaches an earnings announcement date, position size is reduced by 50% into market strength, or stops are trailed tightly to the 5 EMA to lock in structural profit.
+
+### 8.11 Surveillance, Watchdog & Gap Replay State Machine Architecture
+```mermaid
+flowchart TD
+    Start["Surveillance Cycle Triggered (Every 2s / 60s)"] --> TimeCheck{"Time inside 09:15 - 15:30 IST<br/>on Mon - Fri?"}
+    TimeCheck -- No --> Idle["Sleep until Next Market Event"]
+    TimeCheck -- Yes --> GapCheck{"Intraday Gap > 60s<br/>& Same Day?<br/>(or WS Reconnect?)"}
+    
+    GapCheck -- Yes --> RESTQuery["Query Upstox v3 REST API<br/>/v3/historical-candle/intraday/{key}/minutes/1"]
+    RESTQuery --> Fallback{"v3 Success?"}
+    Fallback -- No --> v2Query["Fallback to v2 REST API<br/>/v2/historical-candle/intraday/{key}/1minute"]
+    Fallback -- Yes --> FilterBars["Filter Finalized Bars:<br/>Drop Still-Forming Bar (t == Current Minute)"]
+    v2Query --> FilterBars
+    
+    FilterBars --> ChronoLoop["Iterate Missed Bars Chronologically"]
+    ChronoLoop --> BarBreach{"Bar Low <= Current SL?"}
+    BarBreach -- Yes --> GapExit["Record Historical Breach Time (Bar 't')<br/>Fill Base = min(Current SL, Bar Open)<br/>Exit Price = Fill Base * (1 - 0.0015)"]
+    BarBreach -- No --> BarHigh{"Bar High > Highest LTP?"}
+    BarHigh -- Yes --> RatchetSL["Update Highest LTP & Ratchet Trailing SL"]
+    BarHigh -- No --> NextBar["Next Bar"]
+    NextBar --> ChronoLoop
+    
+    GapCheck -- No --> LiveEval["Evaluate Live Tick LTP vs Current SL"]
+    ChronoLoop -- All Bars Checked (No SL Hit) --> LiveEval
+    LiveEval --> LiveBreach{"Live LTP <= Current SL?"}
+    LiveBreach -- Yes --> LiveExit["Fill Base = Current SL<br/>Exit Price = Fill Base * (1 - 0.0015)<br/>Exit Time = now()"]
+    LiveBreach -- No --> TrailEval["Evaluate Multi-Stage Trail Rules<br/>(Day 1 Spurt / Stage 3 / Stage 4 / 5 EMA / 30% Cap)"]
+    TrailEval --> UpdatePos["Update pos['last_surveillance_epoch']<br/>pos['last_surveillance_time']<br/>pos['last_surveillance_date']"]
+```
 
 ---
 
