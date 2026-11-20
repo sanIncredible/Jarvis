@@ -1,16 +1,1 @@
-[
-  {
-    "date": "2026-11-20",
-    "timestamp": "2026-11-20 12:30:16",
-    "open_positions_count": 1,
-    "closed_trades_count": 1,
-    "realized_pnl_inr": 2000.0,
-    "unrealized_pnl_inr": 1500.0,
-    "mtm_equity_pnl_inr": 3500.0,
-    "realized_r": 2.0,
-    "unrealized_r": 1.5,
-    "mtm_r": 3.5,
-    "peak_mtm_r": 3.5,
-    "mtm_drawdown_r": 0.0
-  }
-]
+[]
