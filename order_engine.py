@@ -972,7 +972,7 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
         {"name": "ORB Breakout", "passed": orb_passed, "reason": orb_status or "Near High"},
         {"name": "Volume Participation (>=0.75x)", "passed": (rvol_val is None or rvol_val >= 0.75), "reason": f"RVOL {rvol_val:.2f}x" if rvol_val is not None else "N/A"},
         {"name": "Stop Distance (<=4.0%)", "passed": (risk_pct is None or risk_pct <= 4.0), "reason": f"{risk_pct:.1f}%" if risk_pct is not None else "N/A"},
-        {"name": "10 EMA Stretch (<=1.5%)", "passed": (stretch_pct is None or stretch_pct <= 1.5), "reason": f"{stretch_pct:.1f}%" if stretch_pct is not None else "N/A"},
+        {"name": "10 EMA Stretch (<=3.0%)", "passed": (stretch_pct is None or stretch_pct <= 3.0), "reason": f"{stretch_pct:.1f}%" if stretch_pct is not None else "N/A"},
         {"name": "Gap Extension (<=2.5%)", "passed": (gap_ext_pct is None or gap_ext_pct <= 2.5), "reason": f"{gap_ext_pct:.1f}%" if gap_ext_pct is not None else "N/A"},
         {"name": "Upper Wick Rejection (<=40%)", "passed": (upper_wick_pct is None or upper_wick_pct <= 40.0), "reason": f"{upper_wick_pct:.0f}%" if upper_wick_pct is not None else "N/A"}
     ]
