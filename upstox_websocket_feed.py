@@ -122,6 +122,7 @@ class UpstoxWebSocketFeed:
                     close = float(i_ltpc.get("cp") or close)
 
             if ltp > 0:
+                now_t = time.time()
                 return {
                     "last_price": ltp,
                     "ltp": ltp,
@@ -130,7 +131,8 @@ class UpstoxWebSocketFeed:
                     "high": high,
                     "low": low,
                     "volume": volume,
-                    "timestamp": time.time()
+                    "timestamp": now_t,
+                    "last_tick_time": now_t
                 }
         except Exception:
             pass
