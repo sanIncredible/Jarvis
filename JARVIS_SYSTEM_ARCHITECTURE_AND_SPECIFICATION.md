@@ -285,50 +285,30 @@ Status Transition Rules:
 
 **File:** [`order_engine.py`](file:///c:/ProjectDir/order_engine.py) (Length: ~5,443 lines)
 
-### 7.1 The 10-Point Strategy Checklist
+### 7.1 The Strategy Checklist: Hard Gates vs. Soft Scores
 Evaluated by `evaluate_strategy_checklist(symbol, quote_data, calc_data)`:
 
-```
-[1] Market Regime Permission:
-    PASS if regime is EXPANSION / NORMAL / NEUTRAL.
-    FAIL if regime is DEFENSIVE, DEFENSIVE_WATERFALL, CLIMAX, WASHOUT, or alloc_pct == 0.
+#### A. Hard Gates (7 Non-Negotiable Prerequisite Gates — Must ALL Pass)
+A failure in ANY single hard gate triggers an immediate, fatal rejection of the trade setup:
+1. **Regime Permission:** Market state is NOT `DEFENSIVE`, `DEFENSIVE_WATERFALL`, `CLIMAX`, `WASHOUT`, or `alloc_pct == 0`.
+2. **ORB Breakout Confirmation:** Price is actively breaking out (`orb_status in ("H", "L➔H")` or `LTP > ORB High`).
+3. **Volume Participation:** Minimum institutional participation threshold satisfied (`RVOL >= 0.75x`).
+4. **Stop Distance Collar:** Distance to structural Day Low is within risk limits (`risk_pct <= 4.0%`).
+5. **10 EMA Stretch Collar:** Micro-timeframe 3m 10 EMA stretch is controlled (`stretch_pct <= 1.5%`; prevents chasing local exhaustion spikes).
+6. **Opening Gap Extension:** Opening gap is not extended beyond the breakout trigger (`gap_ext_pct <= 2.5%`).
+7. **Candle Range Quality:** Rejection upper wick does not dominate the session range (`upper_wick_pct <= 40.0%`).
 
-[2] Dynamic ORB High Breakout:
-    PASS if orb_status in ("H", "L➔H") OR ltp > orb_high.
+#### B. Soft Quality Scores (7 Qualitative Edge Enhancers — Min 2 Required)
+Used to rank setup conviction and grade trade quality (0 to 7):
+1. **Strong Start (SS) Signature:** Opened above yesterday's close and held low buffer (+1).
+2. **PDH Cleared:** Overhead Previous Day High resistance cleared (+1).
+3. **Institutional Volume Surge:** Volume surge exceeds 20-day baseline (`RVOL >= 1.0x`) (+1).
+4. **Tight Micro-Risk Stop:** Structural Day Low stop is within prime tightness (`risk_pct <= 3.0%`) (+1).
+5. **Prime 10 EMA Coil:** Intraday coiling right along the 3m 10 EMA (`stretch_pct <= 0.6%`) (+1).
+6. **Prior Day Volatility Contraction:** Previous session was an Inside Day, NR7, or coiled (`prev_range_ratio <= 0.75x ATR`) (+1).
+7. **Sector Group Momentum:** 2 or more stocks in the same sector breaking out in sync (+1).
 
-[3] Previous Day High (PDH) Cleared:
-    PASS if ltp > pdh OR pdh_broken == True.
-
-[4] Strong Start (SS) Signature:
-    PASS if (day_open > prev_close) AND (day_low >= prev_close * 0.995).
-
-[5] Relative Volume (RVOL) Participation:
-    PASS if rvol >= 1.0 (Institutional surge) or rvol >= 0.75 (Moderate).
-    FAIL if rvol < 0.75 (Low volume trap).
-
-[6] Stop Distance / LOD Risk Proximity:
-    risk_pct = ((ltp - day_low) / ltp) * 100
-    PASS if risk_pct <= 3.0% (Tight) or risk_pct <= 4.0% (Acceptable).
-    FAIL if risk_pct > 4.0% (Excessive tail risk).
-
-[7] 10 EMA Stretch / Overextension:
-    stretch_pct = ((ltp - ema10) / ema10) * 100
-    PASS if stretch_pct <= 0.6% (Prime coil) or stretch_pct <= 1.5% (Normal).
-    FAIL (FATAL) if stretch_pct > 1.5% (Overextended chase trap).
-
-[8] Previous Day Narrow Range (NR) & Volatility Contraction:
-    PASS if prev_range_ratio <= 0.75 * ATR OR is_inside_day == True OR is_narrow_prev_day == True.
-
-[9] Opening Gap Extension Check (Qullamaggie 2.5% Rule):
-    gap_ext_pct = ((day_open - trigger_ref) / trigger_ref) * 100
-    PASS if gap_ext_pct <= 2.5%.
-    FAIL if gap_ext_pct > 2.5% (Wait for 3m shelf consolidation).
-
-[10] Candle Range Quality / Upper Wick Trap Check:
-    upper_wick_pct = (max(0.0, day_high - ltp) / (day_high - day_low)) * 100
-    PASS if upper_wick_pct <= 40.0% (Solid close near high).
-    FAIL (FATAL) if upper_wick_pct > 40.0% (Severe rejection / bull trap).
-```
+**Qualification Requirement:** All 7 Hard Gates must PASS, and Soft Score must be $\ge 2 / 7$.
 
 ### 7.2 Position Sizing Architecture (`calculate_order_sizing`)
 
@@ -595,22 +575,24 @@ sequenceDiagram
     "symbol": "ADANIPOWER",
     "entry_price": 540,
     "initial_sl": 526,
-    "current_sl": 540,
+    "current_sl": 554,
     "target_price": 568,
     "risk_per_share": 14.0,
     "risk_pct": 2.59,
     "quantity": 71,
+    "initial_risk_inr": 994,
     "fixed_risk_inr": 994,
+    "effective_risk_dist": 14.0,
     "capital_invested": 38340,
     "entry_date": "2026-11-20",
     "entry_time": "09:34:12",
-    "highest_ltp": 558,
-    "highest_r": 1.28,
+    "highest_ltp": 570,
+    "highest_r": 2.14,
     "last_trail_rule": "🎯 STAGE 3: +1.0R LOCKED (Swing Runner Protected)",
     "holding_days": 1,
     "sa_regime": "EXPANSION",
     "trigger_name": "ORB Breakout",
-    "checklist_note": "Checklist 8/8 Passed",
+    "checklist_note": "Hard Gates PASSED ✅ | Quality: 6/7 ⭐",
     "status": "OPEN"
   }
 }
@@ -622,12 +604,13 @@ sequenceDiagram
   {
     "symbol": "SUNTV",
     "entry_date": "2026-11-20",
-    "exit_date": "2026-11-24",
+    "exit_date": "2026-11-25",
     "entry_time": "09:36:00",
     "exit_time": "14:15:00",
     "entry_price": 750,
     "exit_price": 795,
     "quantity": 50,
+    "initial_risk_inr": 1000,
     "holding_days": 3,
     "realized_pnl_inr": 2250,
     "realized_r": 2.25,
