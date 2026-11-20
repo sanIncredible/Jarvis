@@ -255,67 +255,87 @@ def load_github_config():
 
 
 def sync_remote_files_from_github():
-    """Pulls latest watchlist.txt and self-updates upstox_tablet_scanner.py from GitHub over HTTPS (443)."""
-    # Windows is the master workstation: NEVER overwrite local watchlist.txt from remote GitHub!
-    if sys.platform == "win32":
-        return
-
-    gh_cfg = load_github_config()
-    if not gh_cfg or not gh_cfg.get("token"):
-        return
-    try:
-        import base64
-        token = gh_cfg["token"].strip()
-        owner = gh_cfg.get("username", "sanIncredible").strip()
-        repo = gh_cfg.get("repo", "Jarvis").strip()
-        branch = gh_cfg.get("branch", "main").strip()
-
-        # 1. Sync watchlist data from GitHub
-        for filename in ["watchlist.txt"]:
-            # If local watchlist.txt was modified within the last 60 seconds (e.g. Telegram bot edit), don't overwrite!
-            if os.path.isfile(filename):
-                try:
-                    if (time.time() - os.path.getmtime(filename)) < 60:
-                        continue
-                except Exception:
-                    pass
-            url = f"https://api.github.com/repos/{owner}/{repo}/contents/{filename}?ref={branch}"
-            req = urllib.request.Request(url, headers={
-                "Authorization": f"Bearer {token}",
-                "User-Agent": "Jarvis-GitHub-Pull",
-                "Accept": "application/vnd.github+json"
-            })
-            try:
-                with urllib.request.urlopen(req, timeout=5) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    content_b64 = data.get("content", "")
-                    if content_b64:
-                        content_str = base64.b64decode(content_b64).decode("utf-8").strip()
-                        if content_str:
-                            norm_content = content_str.replace("\r\n", "\n").replace("\r", "\n").strip()
-                            remote_syms = [l.strip().upper() for l in norm_content.splitlines() if l.strip() and not l.startswith("#")]
-                            # Authority policy: replace watchlist directly from remote master (don't merge old local symbols)
-                            lines_out = [
-                                "# Upstox 3m ORB Scanner Watchlist",
-                                "# Add or remove NSE stock tickers below (one per line, or space/comma separated)",
-                                ""
-                            ] + remote_syms
-                            with open(filename, "w", encoding="utf-8") as f:
-                                f.write("\n".join(lines_out) + "\n")
-            except Exception:
-                pass
-
-        # 2. Source code auto-download is STRICTLY DISABLED in production freeze
-        # Production source code is immutable and must never self-update from a floating git branch on boot.
-        pass
-    except Exception:
-        pass
+    """
+    Production Freeze Policy (v3.3.0):
+    Remote pulling of source code and watchlist.txt from GitHub on boot is strictly disabled.
+    Production files are pinned and managed via explicit deployment.
+    """
+    return
 
 
 # ---------------------------------------------------------
 # Telegram Instant Breakout Alert Engine
 # ---------------------------------------------------------
 sent_alerts = set()  # Tracks (symbol, alert_type, date_str) to prevent repetitive spam
+
+
+# ---------------------------------------------------------
+# Automated Feed Downtime & Session Health Tracker (09:30 - 10:15)
+# ---------------------------------------------------------
+FEED_SESSION_HEALTH_FILE = os.path.join(SCRIPT_DIR, "data", "feed_session_health.json")
+_FEED_DOWNTIME_TRACKER = {
+    "date": None,
+    "window_start": "09:30:00",
+    "window_end": "10:15:00",
+    "total_window_seconds": 2700,
+    "downtime_seconds": 0.0,
+    "unhealthy_intervals": 0,
+    "last_check_time": None,
+    "last_state": "HEALTHY"
+}
+
+def update_feed_downtime_tracker(is_healthy: bool):
+    """
+    Accumulates feed downtime during the 09:30 - 10:15 AM IST momentum entry window.
+    Persists real-time state to data/feed_session_health.json.
+    """
+    now = get_ist_now()
+    if now.weekday() >= 5:
+        return
+    t_str = now.strftime("%H:%M:%S")
+    today_str = now.strftime("%Y-%m-%d")
+
+    if _FEED_DOWNTIME_TRACKER["date"] != today_str:
+        _FEED_DOWNTIME_TRACKER["date"] = today_str
+        _FEED_DOWNTIME_TRACKER["downtime_seconds"] = 0.0
+        _FEED_DOWNTIME_TRACKER["unhealthy_intervals"] = 0
+        _FEED_DOWNTIME_TRACKER["last_check_time"] = time.time()
+        _FEED_DOWNTIME_TRACKER["last_state"] = "HEALTHY"
+
+    if not ("09:30:00" <= t_str <= "10:15:00"):
+        _FEED_DOWNTIME_TRACKER["last_check_time"] = time.time()
+        return
+
+    now_epoch = time.time()
+    last_epoch = _FEED_DOWNTIME_TRACKER.get("last_check_time") or now_epoch
+    delta_s = max(0.0, min(60.0, now_epoch - last_epoch))
+    _FEED_DOWNTIME_TRACKER["last_check_time"] = now_epoch
+
+    if not is_healthy:
+        _FEED_DOWNTIME_TRACKER["downtime_seconds"] += delta_s
+        _FEED_DOWNTIME_TRACKER["unhealthy_intervals"] += 1
+        _FEED_DOWNTIME_TRACKER["last_state"] = "UNHEALTHY"
+    else:
+        _FEED_DOWNTIME_TRACKER["last_state"] = "HEALTHY"
+
+    try:
+        os.makedirs(os.path.dirname(FEED_SESSION_HEALTH_FILE), exist_ok=True)
+        down_min = round(_FEED_DOWNTIME_TRACKER["downtime_seconds"] / 60.0, 1)
+        down_pct = round((_FEED_DOWNTIME_TRACKER["downtime_seconds"] / 2700.0) * 100.0, 1)
+        state_payload = {
+            "date": today_str,
+            "window": "09:30-10:15 IST",
+            "downtime_seconds": round(_FEED_DOWNTIME_TRACKER["downtime_seconds"], 1),
+            "downtime_minutes": down_min,
+            "downtime_pct": down_pct,
+            "unhealthy_intervals": _FEED_DOWNTIME_TRACKER["unhealthy_intervals"],
+            "max_allowed_downtime_minutes": 10.0,
+            "status": "NO_DATA_EXCLUDED" if down_min >= 10.0 else ("PARTIAL" if down_min >= 5.0 else "VALID")
+        }
+        with open(FEED_SESSION_HEALTH_FILE, "w", encoding="utf-8") as f:
+            json.dump(state_payload, f, indent=2)
+    except Exception:
+        pass
 
 
 def load_telegram_config():
@@ -4066,7 +4086,9 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                         try:
                             fast_quotes = {}
                             # Tier 1: Check in-memory decoded protobuf ticks from WebSocket (sub-millisecond)
-                            if ACTIVE_WS_FEED[0] and ACTIVE_WS_FEED[0].is_healthy():
+                            is_ws_healthy = bool(ACTIVE_WS_FEED[0] and ACTIVE_WS_FEED[0].is_healthy())
+                            update_feed_downtime_tracker(is_ws_healthy)
+                            if is_ws_healthy:
                                 fast_quotes = ACTIVE_WS_FEED[0].get_all_latest_quotes()
 
                             # Tier 2: Resilient Fallback - if WS reconnecting/token refresh, fetch 3s bulk REST batch
