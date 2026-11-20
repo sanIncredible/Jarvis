@@ -85,20 +85,53 @@ def get_ist_now():
 
 
 CONFIG_VERSION = "v3.1.0-strict"
+CONFIG_SNAPSHOTS_DIR = BASE_DIR / "config_snapshots"
+CONFIG_SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+
 FROZEN_PARAMS = {
     "version": CONFIG_VERSION,
     "rvol_tod_min": 1.0,
     "stretch_max": 3.0,
     "gap_max": 2.5,
     "wick_max": 40.0,
-    "risk_max": 4.0,
-    "risk_min_atr": 0.5,
+    "risk_max_pct": 4.0,
+    "risk_min_pct": 0.25,
     "soft_min": 3,
     "tick_size": 0.05,
+    "sl_adverse_slippage_pct": 0.0015,
+    "day1_spurt_threshold_pct": 4.5,
+    "trail_stage1_r": 1.5,
+    "trail_stage2_r": 2.0,
+    "trail_stage2_lock_r": 1.0,
+    "trail_ema5_floor_r": 2.0,
+    "statutory_rates": {
+        "stt_delivery": 0.001,
+        "stamp_duty_buy": 0.00015,
+        "exchange_turnover": 0.0000297,
+        "sebi_turnover": 0.000001,
+        "gst_rate": 0.18,
+        "dp_charges_flat": 15.93
+    },
+    "regime_table": {
+        "EXPANSION": {"permitted": True, "alloc_pct": 100, "max_slots": 3, "slot_capital_max": 100000},
+        "NORMAL": {"permitted": True, "alloc_pct": 100, "max_slots": 3, "slot_capital_max": 100000},
+        "NEUTRAL": {"permitted": True, "alloc_pct": 50, "max_slots": 1, "slot_capital_max": 50000},
+        "DEFENSIVE": {"permitted": False, "alloc_pct": 0, "max_slots": 0, "slot_capital_max": 0},
+        "WASHOUT": {"permitted": False, "alloc_pct": 0, "max_slots": 0, "slot_capital_max": 0}
+    },
     "tod_knots": [[0, 0.01], [15, 0.10], [60, 0.25], [285, 0.65], [375, 1.00]]
 }
 CONFIG_HASH = hashlib.sha256(json.dumps(FROZEN_PARAMS, sort_keys=True).encode("utf-8")).hexdigest()[:8]
+snapshot_file = CONFIG_SNAPSHOTS_DIR / f"config_{CONFIG_HASH}.json"
+if not snapshot_file.is_file():
+    try:
+        with open(snapshot_file, "w", encoding="utf-8") as sf:
+            json.dump(FROZEN_PARAMS, sf, indent=2)
+    except Exception:
+        pass
+
 REJECTED_SIGNALS_FILE = BASE_DIR / "shadow_rejected_signals.json"
+SHADOW_MTM_CURVE_FILE = BASE_DIR / "shadow_mtm_equity_curve.json"
 
 
 def round_to_tick(val, tick=0.05, direction="nearest"):
@@ -128,10 +161,11 @@ def round_to_clean_int(val):
 
 
 def log_rejected_signal(symbol: str, reason: str, metadata: dict = None):
-    """Logs rejected breakout setups to shadow_rejected_signals.json with full telemetry and daily deduplication."""
+    """Logs rejected breakout setups to shadow_rejected_signals.json with full telemetry and daily first/peak tracking."""
     try:
         now_ist = get_ist_now()
         today_prefix = now_ist.strftime("%Y-%m-%d")
+        now_ts = now_ist.strftime("%Y-%m-%d %H:%M:%S")
         rej_list = []
         if REJECTED_SIGNALS_FILE.is_file():
             try:
@@ -140,18 +174,40 @@ def log_rejected_signal(symbol: str, reason: str, metadata: dict = None):
             except Exception:
                 rej_list = []
 
-        # Deduplication: Prevent duplicate logs for same symbol and reason on the same trading day
-        for r in rej_list:
-            if r.get("symbol") == symbol and str(r.get("timestamp", ""))[:10] == today_prefix and r.get("reason") == reason:
-                return
+        found_idx = None
+        for i, r in enumerate(rej_list):
+            r_ts = str(r.get("first_seen_timestamp") or r.get("timestamp") or "")
+            if r.get("symbol") == symbol and r_ts[:10] == today_prefix and r.get("reason") == reason:
+                found_idx = i
+                break
+
+        curr_soft = (metadata or {}).get("soft_score", 0)
+        curr_rvol = float((metadata or {}).get("rvol") or 0.0)
+
+        if found_idx is not None:
+            existing = rej_list[found_idx]
+            existing["last_seen_timestamp"] = now_ts
+            existing["rejection_count"] = existing.get("rejection_count", 1) + 1
+            peak_m = existing.get("peak_metadata", existing.get("metadata", {}))
+            prev_peak_soft = peak_m.get("soft_score", 0)
+            prev_peak_rvol = float(peak_m.get("rvol") or 0.0)
+            if curr_soft > prev_peak_soft or (curr_soft == prev_peak_soft and curr_rvol > prev_peak_rvol):
+                existing["peak_metadata"] = metadata or {}
+                existing["peak_timestamp"] = now_ts
+            atomic_write_json(REJECTED_SIGNALS_FILE, rej_list)
+            return
 
         rej_entry = {
             "symbol": symbol,
-            "timestamp": now_ist.strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": now_ts,
+            "first_seen_timestamp": now_ts,
+            "last_seen_timestamp": now_ts,
+            "rejection_count": 1,
             "reason": reason,
             "config_version": CONFIG_VERSION,
             "config_hash": CONFIG_HASH,
-            "metadata": metadata or {}
+            "metadata": metadata or {},
+            "peak_metadata": metadata or {}
         }
         rej_list.append(rej_entry)
         atomic_write_json(REJECTED_SIGNALS_FILE, rej_list)
@@ -411,17 +467,14 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         log_rejected_signal(sym, f"Wide Stop-Loss: {risk_pct:.1f}% (> 4.0% limit)", {"risk_pct": risk_pct, "fill_price": fill_price, "sl": initial_sl})
         return False, f"Wide Stop-Loss: Distance to Day Low is {risk_pct:.1f}% (> 4.0% limit). Capital preserved against excessive tail risk."
 
-    # P0-11: Standardized 1.0R = ₹1,000 Position Sizing with Institutional ATR Risk Floor
-    atr_val = (quote_data or {}).get("atr14") or (quote_data or {}).get("atr_3m")
-    if not atr_val:
-        sc_d = get_cached_symbol_metrics(sym) or {}
-        atr_val = sc_d.get("atr14")
-    atr_14_f = float(atr_val) if (atr_val and float(atr_val) > 0) else (fill_price * 0.02)
-    effective_risk_dist = max(risk_per_share, atr_14_f * 0.75, 0.50)
-    qty = max(1, int(FIXED_RISK_PER_TRADE_INR // effective_risk_dist))
+    # P0-11: Standardized 1.0R = ₹1,000 Position Sizing on True Structural Risk
+    max_capital_per_slot = 50000.0 if reg_u in ("NEUTRAL", "CHOP") else 100000.0
+    qty = max(1, int(FIXED_RISK_PER_TRADE_INR // risk_per_share))
+    if qty * fill_price > max_capital_per_slot:
+        qty = max(1, int(max_capital_per_slot // fill_price))
     target_price = round_to_tick(fill_price + (2.0 * risk_per_share), tick=0.05, direction="up")
     capital_invested = round(qty * fill_price, 2)
-    initial_risk_inr = max(1.0, float(round(qty * risk_per_share, 2)))
+    initial_risk_inr = round(qty * risk_per_share, 2)
 
     # P0-7: Strategy Checklist (Hard Gates vs Soft Scores)
     ck_note = "Qualified Playbook Setup"
@@ -473,9 +526,6 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     except Exception:
         pass
 
-    actual_risk_per_share = round(max(0.05, fill_price - initial_sl), 2)
-    actual_initial_risk_inr = round(qty * actual_risk_per_share, 2)
-
     entry_record = {
         "symbol": sym,
         "config_version": CONFIG_VERSION,
@@ -486,14 +536,10 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         "sl_last_ratchet_date": today_str,
         "sl_last_ratchet_time": now.strftime("%H:%M:%S"),
         "target_price": target_price,
-        "risk_per_share": round(risk_per_share, 2),
-        "actual_risk_per_share": actual_risk_per_share,
+        "risk_per_share": risk_per_share,
         "risk_pct": risk_pct,
         "quantity": qty,
-        "initial_risk_inr": actual_initial_risk_inr,
-        "actual_initial_risk_inr": actual_initial_risk_inr,
-        "fixed_risk_inr": actual_initial_risk_inr,
-        "effective_risk_dist": round(effective_risk_dist, 2),
+        "initial_risk_inr": initial_risk_inr,
         "capital_invested": capital_invested,
         "entry_date": today_str,
         "entry_time": now.strftime("%H:%M:%S"),
@@ -517,7 +563,7 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         f"• <b>Symbol:</b> <b>{sym}</b> (Simulated Fill)\n"
         f"• <b>Entry Price:</b> ₹{fill_price:,} <i>(+0.15% slippage collar)</i>\n"
         f"• <b>Initial SL:</b> ₹{initial_sl:,} (-{risk_pct}% | LOD Support)\n"
-        f"• <b>Quantity:</b> {qty} shares (<b>1.0R Risk: ₹{initial_risk_inr:,.0f}</b> | Floor: ₹{effective_risk_dist:.1f}/sh)\n"
+        f"• <b>Quantity:</b> {qty} shares (<b>1.0R Risk: ₹{initial_risk_inr:,.0f}</b>)\n"
         f"• <b>Checklist:</b> {ck_note}\n"
         f"• <b>2.0R Target:</b> ₹{target_price:,}\n"
         f"• <b>Capital Exposure:</b> ₹{capital_invested:,}\n"
@@ -688,8 +734,11 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         exit_price = ltp
         exit_reason = ""
 
-        # Resolve intraday candles for tick-accurate post-entry / post-ratchet low tracking
+        # Resolve intraday candles for tick-accurate post-entry / post-ratchet low tracking (1m preferred, 3m fallback)
+        candles_1m = q.get("candles_1m") or (c_meta.get("candles_1m") if c_meta else []) or []
         candles_3m = q.get("candles_3m") or (c_meta.get("candles_3m") if c_meta else []) or []
+        use_1m = len(candles_1m) > 0
+        candles = candles_1m if use_1m else candles_3m
 
         # Universal Stop Ratchet Protection (Day 1 and Day 2+):
         # If the stop was ratcheted TODAY, never evaluate candles from before or during the ratchet bar!
@@ -707,9 +756,9 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
             r_parts = r_str.split(":")
             r_h = int(r_parts[0]) if len(r_parts) > 0 and r_parts[0].isdigit() else 9
             r_m = int(r_parts[1]) if len(r_parts) > 1 and r_parts[1].isdigit() else 15
-            ratchet_bucket = f"{r_h:02d}:{(r_m // 3) * 3:02d}"
+            ratchet_bucket = f"{r_h:02d}:{r_m:02d}" if use_1m else f"{r_h:02d}:{(r_m // 3) * 3:02d}"
             # Strictly later buckets (> ratchet_bucket)
-            post_ratchet_bars = [c for c in candles_3m if isinstance(c, dict) and (c.get("t") or "") > ratchet_bucket]
+            post_ratchet_bars = [c for c in candles if isinstance(c, dict) and (c.get("t") or "") > ratchet_bucket]
             for b in post_ratchet_bars:
                 b_low = float(b.get("l") or 0.0)
                 if b_low > 0 and b_low <= pos["current_sl"]:
@@ -727,8 +776,8 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 e_parts = e_str.split(":")
                 e_h = int(e_parts[0]) if len(e_parts) > 0 and e_parts[0].isdigit() else 9
                 e_m = int(e_parts[1]) if len(e_parts) > 1 and e_parts[1].isdigit() else 15
-                entry_bucket = f"{e_h:02d}:{(e_m // 3) * 3:02d}"
-                post_bars = [c for c in candles_3m if isinstance(c, dict) and (c.get("t") or "") >= entry_bucket]
+                entry_bucket = f"{e_h:02d}:{e_m:02d}" if use_1m else f"{e_h:02d}:{(e_m // 3) * 3:02d}"
+                post_bars = [c for c in candles if isinstance(c, dict) and (c.get("t") or "") >= entry_bucket]
                 for b in post_bars:
                     b_low = float(b.get("l") or 0.0)
                     if b_low > 0 and b_low <= pos["current_sl"]:
@@ -764,19 +813,39 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
 
         if exit_triggered:
             # True Van Tharp Structural Risk: Actual dollar risk at risk based on initial stop distance
-            actual_risk_per_share = max(0.05, float(pos.get("actual_risk_per_share") or (entry_p - pos.get("initial_sl", entry_p * 0.98))))
-            actual_initial_risk_inr = max(1.0, float(pos.get("actual_initial_risk_inr") or (qty * actual_risk_per_share)))
+            rps = max(0.05, float(pos.get("risk_per_share") or (entry_p - pos.get("initial_sl", entry_p * 0.98))))
+            initial_risk_inr = max(1.0, float(pos.get("initial_risk_inr") or (qty * rps)))
 
             realized_pnl = round((exit_price - entry_p) * qty, 2)
 
-            # Statutory Round-Trip Transaction Costs (STT, Exchange, GST, Stamp Duty ~0.25% turnover)
-            turnover_inr = round((entry_p + exit_price) * qty, 2)
-            statutory_costs_inr = round(turnover_inr * 0.0025, 2)
-            net_pnl_inr = round(realized_pnl - statutory_costs_inr, 2)
+            # Statutory Round-Trip Transaction Costs (NSE Cash Delivery Contract Note Model)
+            buy_val = round(entry_p * qty, 2)
+            sell_val = round(exit_price * qty, 2)
+            turnover_inr = round(buy_val + sell_val, 2)
 
-            realized_r_structural = round(realized_pnl / actual_initial_risk_inr, 2)
+            # 1. STT: 0.1% on buy leg + 0.1% on sell leg (delivery equity)
+            stt = round(0.001 * buy_val + 0.001 * sell_val, 2)
+            # 2. Stamp Duty: 0.015% on buy leg
+            stamp_duty = round(0.00015 * buy_val, 2)
+            # 3. Exchange Turnover Charge: 0.00297% round-trip
+            exch_turnover_fee = round(0.0000297 * turnover_inr, 2)
+            # 4. SEBI Turnover Fee: ₹10 per crore (0.000001)
+            sebi_fee = round(0.000001 * turnover_inr, 2)
+            # 5. GST: 18% on (Exchange Fee + SEBI Fee)
+            gst = round(0.18 * (exch_turnover_fee + sebi_fee), 2)
+            # 6. Depository Participant (DP) Sell Charge: Flat ₹15.93 per scrip
+            dp_charges = 15.93
+
+            statutory_costs_inr = round(stt + stamp_duty + exch_turnover_fee + sebi_fee + gst + dp_charges, 2)
+            stress_costs_025_inr = round(turnover_inr * 0.0025, 2)
+
+            net_pnl_inr = round(realized_pnl - statutory_costs_inr, 2)
+            net_stress_pnl_inr = round(realized_pnl - stress_costs_025_inr, 2)
+
+            realized_r_structural = round(realized_pnl / initial_risk_inr, 2)
             realized_r_nominal = round(realized_pnl / 1000.0, 2)
-            realized_r_net = round(net_pnl_inr / actual_initial_risk_inr, 2)
+            realized_r_net = round(net_pnl_inr / initial_risk_inr, 2)
+            realized_r_stress_025 = round(net_stress_pnl_inr / initial_risk_inr, 2)
             giveback_r = round(max(0.0, highest_r - realized_r_structural), 2)
 
             log_entry = {
@@ -791,16 +860,18 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 "exit_price": exit_price,
                 "quantity": qty,
                 "initial_sl": pos.get("initial_sl"),
-                "actual_risk_per_share": actual_risk_per_share,
-                "actual_initial_risk_inr": actual_initial_risk_inr,
+                "risk_per_share": rps,
+                "initial_risk_inr": initial_risk_inr,
                 "holding_days": holding_days,
                 "realized_pnl_inr": realized_pnl,
                 "statutory_costs_inr": statutory_costs_inr,
+                "stress_costs_025_inr": stress_costs_025_inr,
                 "net_pnl_inr": net_pnl_inr,
                 "realized_r": realized_r_structural,
                 "r_structural": realized_r_structural,
                 "r_nominal": realized_r_nominal,
                 "r_net": realized_r_net,
+                "r_stress_025": realized_r_stress_025,
                 "peak_r": highest_r,
                 "giveback_r": giveback_r,
                 "exit_reason": exit_reason,
@@ -846,10 +917,65 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
     }
 
 
+def record_daily_mtm_snapshot(portfolio: dict, trade_log: list, unrealized_r: float = 0.0, unrealized_pnl: float = 0.0):
+    """
+    Computes and records daily Mark-to-Market (MTM) equity snapshot at EOD (15:30 IST).
+    Persists to shadow_mtm_equity_curve.json, computing peak MTM R and path-dependent MTM drawdown.
+    """
+    try:
+        now_ist = get_ist_now()
+        today_str = now_ist.strftime("%Y-%m-%d")
+
+        closed_pnl = sum(float(t.get("realized_pnl_inr") or 0.0) for t in trade_log)
+        closed_r = sum(float(t.get("realized_r") or 0.0) for t in trade_log)
+
+        mtm_pnl = round(closed_pnl + float(unrealized_pnl), 2)
+        mtm_r = round(closed_r + float(unrealized_r), 2)
+
+        curve = []
+        if SHADOW_MTM_CURVE_FILE.is_file():
+            try:
+                with open(SHADOW_MTM_CURVE_FILE, "r", encoding="utf-8") as f:
+                    curve = json.load(f)
+            except Exception:
+                curve = []
+
+        prev_peaks = [float(c.get("peak_mtm_r") or c.get("mtm_r") or 0.0) for c in curve if c.get("date") != today_str]
+        peak_mtm_r = max(prev_peaks + [mtm_r, 0.0])
+        mtm_drawdown_r = round(max(0.0, peak_mtm_r - mtm_r), 2)
+
+        snapshot = {
+            "date": today_str,
+            "timestamp": now_ist.strftime("%Y-%m-%d %H:%M:%S"),
+            "open_positions_count": len(portfolio),
+            "closed_trades_count": len(trade_log),
+            "realized_pnl_inr": round(closed_pnl, 2),
+            "unrealized_pnl_inr": round(unrealized_pnl, 2),
+            "mtm_equity_pnl_inr": mtm_pnl,
+            "realized_r": round(closed_r, 2),
+            "unrealized_r": round(unrealized_r, 2),
+            "mtm_r": mtm_r,
+            "peak_mtm_r": round(peak_mtm_r, 2),
+            "mtm_drawdown_r": mtm_drawdown_r
+        }
+
+        idx = next((i for i, c in enumerate(curve) if c.get("date") == today_str), None)
+        if idx is not None:
+            curve[idx] = snapshot
+        else:
+            curve.append(snapshot)
+
+        atomic_write_json(SHADOW_MTM_CURVE_FILE, curve)
+        return snapshot
+    except Exception as e:
+        print(f"Notice recording daily MTM snapshot: {e}")
+        return None
+
+
 def get_shadow_analytics():
     """
     Computes comprehensive 30-day statistical performance:
-    Win Rate %, Profit Factor, Expectancy R, Avg Win vs Avg Loss, Max Drawdown in R.
+    Win Rate %, Profit Factor, Expectancy R, Avg Win vs Avg Loss, Max Closed Drawdown, and Max MTM Drawdown.
     """
     trades = load_shadow_trade_log()
     total_trades = len(trades)
@@ -868,6 +994,7 @@ def get_shadow_analytics():
             "avg_loss_r": 0.0,
             "expectancy_r": 0.0,
             "max_drawdown_r": 0.0,
+            "max_mtm_drawdown_r": 0.0,
             "rule_counts": {}
         }
 
@@ -903,6 +1030,17 @@ def get_shadow_analytics():
         dd = peak_cum - running_cum
         max_dd = max(max_dd, dd)
 
+    # Max MTM Drawdown from daily mark-to-market curve
+    max_mtm_dd = max_dd
+    if SHADOW_MTM_CURVE_FILE.is_file():
+        try:
+            with open(SHADOW_MTM_CURVE_FILE, "r", encoding="utf-8") as mf:
+                m_curve = json.load(mf)
+                if m_curve:
+                    max_mtm_dd = max([float(c.get("mtm_drawdown_r") or 0.0) for c in m_curve] + [max_dd])
+        except Exception:
+            pass
+
     # Rule breakdown
     rules = {}
     for t in trades:
@@ -923,6 +1061,7 @@ def get_shadow_analytics():
         "avg_loss_r": avg_loss_r,
         "expectancy_r": expectancy_r,
         "max_drawdown_r": round(max_dd, 2),
+        "max_mtm_drawdown_r": round(max_mtm_dd, 2),
         "rule_counts": rules
     }
 
@@ -985,7 +1124,8 @@ def generate_and_send_phase1_eod_report(notify=True):
     today_entries = [p for p in portfolio.values() if p.get("entry_date") == today_str]
     entry_lines = []
     for e in today_entries:
-        entry_lines.append(f"• <b>{e['symbol']}</b> | Fill: ₹{e['entry_price']:,} | SL: ₹{e['initial_sl']:,} | 1.0R (₹{e['fixed_risk_inr']:,}) | {e.get('sa_regime')}")
+        risk_amt = e.get("initial_risk_inr") or e.get("fixed_risk_inr") or 1000.0
+        entry_lines.append(f"• <b>{e['symbol']}</b> | Fill: ₹{e['entry_price']:,} | SL: ₹{e['initial_sl']:,} | 1.0R (₹{risk_amt:,.0f}) | {e.get('sa_regime')}")
 
     # Filter trades exited today
     today_exits = [t for t in trade_log if t.get("exit_date") == today_str]
@@ -998,12 +1138,16 @@ def generate_and_send_phase1_eod_report(notify=True):
         exit_lines.append(f"• <b>{ex['symbol']}</b> | {r_str} (₹{ex.get('realized_pnl_inr', 0):+,}) | {ex.get('exit_reason')}")
 
     today_closed_r = round(today_closed_r, 2)
+    mtm_snap = record_daily_mtm_snapshot(portfolio, trade_log, unrealized_r, unrealized_pnl)
 
     # Build EOD HTML Card
     lines = []
     if day_num >= EVALUATION_HORIZON_DAYS:
         lines.append("🏆 <b>[30-DAY AUTONOMOUS PILOT MATURE — READY FOR PHASE 2 REVIEW]</b>")
         lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+    mtm_r_val = mtm_snap['mtm_r'] if mtm_snap else round(today_closed_r + unrealized_r, 2)
+    mtm_dd_val = mtm_snap['mtm_drawdown_r'] if mtm_snap else 0.0
 
     lines.extend([
         "🤖 <b>PHASE 1 AUTONOMOUS SHADOW ENGINE — EOD REPORT</b>",
@@ -1013,6 +1157,7 @@ def generate_and_send_phase1_eod_report(notify=True):
         f"• <b>Open Swing Holdings:</b> {len(portfolio)} positions",
         f"• <b>Unrealized P&L:</b> {'+' if unrealized_r >= 0 else ''}{unrealized_r:.2f}R (₹{unrealized_pnl:+,})",
         f"• <b>Today's Closed P&L:</b> {'+' if today_closed_r >= 0 else ''}{today_closed_r:.2f}R",
+        f"• <b>MTM Total Equity:</b> {'+' if mtm_r_val >= 0 else ''}{mtm_r_val:.2f}R (Drawdown: -{mtm_dd_val:.2f}R)",
     ])
 
     if open_lines:
@@ -1038,7 +1183,7 @@ def generate_and_send_phase1_eod_report(notify=True):
     lines.append(f"• <b>Profit Factor:</b> {analytics['profit_factor']}")
     lines.append(f"• <b>Avg Win / Avg Loss:</b> +{analytics['avg_win_r']:.2f}R / -{analytics['avg_loss_r']:.2f}R")
     lines.append(f"• <b>Expectancy per Trade:</b> {'+' if analytics['expectancy_r'] >= 0 else ''}{analytics['expectancy_r']:.2f}R")
-    lines.append(f"• <b>Max Drawdown:</b> -{analytics['max_drawdown_r']:.2f}R")
+    lines.append(f"• <b>Max Drawdown:</b> Closed: -{analytics['max_drawdown_r']:.2f}R | MTM: -{analytics.get('max_mtm_drawdown_r', analytics['max_drawdown_r']):.2f}R")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("💡 <i>Pure forward test. Uncapped by portfolio limits. 1R = ₹1,000. Zero real money at risk.</i>")
 
