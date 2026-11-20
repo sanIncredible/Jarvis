@@ -1,0 +1,71 @@
+{
+  "_metadata": {
+    "last_synced_ist": "2026-11-20 15:27:56",
+    "source": "NSE Corporate Announcements / Board Meetings",
+    "total_blackout_symbols": 11,
+    "major_actions": [
+      "Financial Results",
+      "Bonus",
+      "Split",
+      "Rights",
+      "Merger/Demerger"
+    ]
+  },
+  "symbols": {
+    "BCSSL": {
+      "date": "2026-11-23",
+      "purpose": "Financial Results",
+      "desc": "To consider and approve the financial results for the period ended September 30, 2026"
+    },
+    "SFCTECH": {
+      "date": "2026-11-23",
+      "purpose": "Financial Results",
+      "desc": "To consider and approve the financial results for the period ended September 30, 2026"
+    },
+    "HEADSUP": {
+      "date": "2026-11-24",
+      "purpose": "Financial Results",
+      "desc": "To consider and approve the financial results for the period ended September 30, 2026"
+    },
+    "LEXUS": {
+      "date": "2026-11-24",
+      "purpose": "Financial Results/Other business matters",
+      "desc": "To consider and approve the financial results for the period ended September 30, 2026 and other business matters"
+    },
+    "MKJEWELS": {
+      "date": "2026-11-24",
+      "purpose": "Financial Results",
+      "desc": "To consider and approve the financial results for the period ended September 30, 2026"
+    },
+    "SETCO": {
+      "date": "2026-11-24",
+      "purpose": "Financial Results/Other business matters",
+      "desc": "To consider and approve the financial results for the period ended September 30, 2026 and other business matters"
+    },
+    "ENRIN": {
+      "date": "2026-11-25",
+      "purpose": "Financial Results/Dividend",
+      "desc": "To consider and approve the financial results for the period ended September 30, 2026 and dividend, if any."
+    },
+    "SIMBHALS": {
+      "date": "2026-11-25",
+      "purpose": "Financial Results",
+      "desc": "Simbhaoli Sugars Limited has informed the Exchange about IRP Convened Meeting scheduled to be held on 25 November 2026 inter-alia to consider, Review and Take Note of the Unaudited financial results for the quarter ended September 30, 2026"
+    },
+    "BRNL": {
+      "date": "2026-11-28",
+      "purpose": "Financial Results",
+      "desc": "BRNL : 28-Nov-2026 :  The Company has informed the Exchange that a Board meeting to be held on November 14, 2026 has been re-scheduled. Further, the Company has informed the Exchange that the meeting of the Board of Directors of the Company will be held on November 28, 2026,  To consider and approve the financial results for the period ended September 30, 2026"
+    },
+    "LATTEYS": {
+      "date": "2026-12-05",
+      "purpose": "Financial Results",
+      "desc": "To consider and approve the financial results for the period ended September 30, 2026"
+    },
+    "RNBDENIMS": {
+      "date": "2026-12-05",
+      "purpose": "Financial Results",
+      "desc": "To consider and approve the financial results for the period ended September 30, 2026"
+    }
+  }
+}
