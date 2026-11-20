@@ -29,7 +29,26 @@ import urllib.request
 import urllib.error
 import urllib.parse
 from pathlib import Path
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, date, timezone, timedelta
+
+NSE_HOLIDAYS_2026 = {
+    "2026-01-26", "2026-03-03", "2026-03-20", "2026-03-27", "2026-04-03",
+    "2026-04-14", "2026-05-01", "2026-05-27", "2026-08-15", "2026-09-04",
+    "2026-10-02", "2026-10-20", "2026-11-08", "2026-11-10", "2026-11-24", "2026-12-25"
+}
+
+
+def count_trading_days(date_start, date_end):
+    """Counts actual trading days (Monday to Friday, excluding exchange holidays) between two dates inclusive."""
+    if date_start > date_end:
+        return 1
+    cur = date_start
+    days = 0
+    while cur <= date_end:
+        if cur.weekday() < 5 and cur.strftime("%Y-%m-%d") not in NSE_HOLIDAYS_2026:
+            days += 1
+        cur += timedelta(days=1)
+    return max(1, days)
 
 # Ensure UTF-8 output on Windows consoles
 if sys.platform == "win32":
@@ -816,35 +835,80 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
             })
             warnings.append(f"Wide Stop-Loss: Distance to Day Low is {risk_pct:.1f}% (over 4.0% optimal threshold). High drawdown risk.")
 
-    # 7. 10 EMA Stretch / Overextension (Institutional Calibration: Prime <= 0.6%, Normal <= 1.5%, Extended > 1.5%)
+    # 7. 10 EMA Stretch / Overextension (Institutional Calibration: Prime <= 1.2% or <= 0.3 ATR, Normal <= 2.5% or <= 0.75 ATR, Extended > 3.0% and > 0.75 ATR)
     stretch_pct = sc_data.get("stretch_pct") if sc_data else None
+    atr14 = float(sc_data.get("atr14") or (quote_data or {}).get("atr14") or (calc_data or {}).get("atr14") or 0)
+    ema10 = float(sc_data.get("ema10") or 0)
+    stretch_atr = None
+    if atr14 > 0 and ema10 > 0 and ltp > 0:
+        stretch_atr = round(abs(ltp - ema10) / atr14, 2)
+    elif stretch_pct is not None and atr14 > 0 and ltp > 0:
+        stretch_atr = round(abs(stretch_pct / 100.0 * ltp) / atr14, 2)
+
     if stretch_pct is not None:
         sign = "+" if stretch_pct >= 0 else ""
-        if stretch_pct <= 0.6:
+        atr_tag = f" ({stretch_atr:.2f} ATR)" if stretch_atr is not None else ""
+        if stretch_pct <= 1.2 or (stretch_atr is not None and stretch_atr <= 0.3):
             checklist.append({
                 "rule": "10 EMA Stretch",
                 "passed": True,
                 "badge": "🟢",
-                "text": f"🟢 <b>10 EMA Stretch:</b> {sign}{stretch_pct:.1f}% (Prime Coil)",
-                "detail": "Tight base coiling right at 10 EMA - Micro-risk entry"
+                "text": f"🟢 <b>10 EMA Stretch:</b> {sign}{stretch_pct:.1f}%{atr_tag} (Prime Coil)",
+                "detail": "Tight base coiling near 10 EMA - Micro-risk entry"
             })
-        elif stretch_pct <= 1.5:
+        elif stretch_pct <= 2.5 or (stretch_atr is not None and stretch_atr <= 0.75):
             checklist.append({
                 "rule": "10 EMA Stretch",
                 "passed": True,
                 "badge": "⚪",
-                "text": f"⚪ <b>10 EMA Stretch:</b> {sign}{stretch_pct:.1f}% (Normal)",
+                "text": f"⚪ <b>10 EMA Stretch:</b> {sign}{stretch_pct:.1f}%{atr_tag} (Healthy Momentum)",
                 "detail": "Healthy 3m momentum expansion near 10 EMA"
+            })
+        elif stretch_pct <= 3.0:
+            checklist.append({
+                "rule": "10 EMA Stretch",
+                "passed": True,
+                "badge": "⚪",
+                "text": f"⚪ <b>10 EMA Stretch:</b> {sign}{stretch_pct:.1f}%{atr_tag} (Acceptable Extension)",
+                "detail": "Extended but within 3.0% risk threshold"
             })
         else:
             checklist.append({
                 "rule": "10 EMA Stretch",
                 "passed": False,
                 "badge": "⚠️",
-                "text": f"⚠️ <b>10 EMA Stretch:</b> {sign}{stretch_pct:.1f}% (Extended > 1.5%)",
+                "text": f"⚠️ <b>10 EMA Stretch:</b> {sign}{stretch_pct:.1f}%{atr_tag} (Extended > 3.0%)",
                 "detail": "Price overextended from 10 EMA - High trap / chase risk"
             })
-            warnings.append(f"Overextended: Price is stretched {sign}{stretch_pct:.1f}% above 10 EMA (>1.5% limit). High trap / pullback risk.")
+            warnings.append(f"Overextended: Price is stretched {sign}{stretch_pct:.1f}%{atr_tag} above 10 EMA (>3.0% and >0.75 ATR limit). High trap / pullback risk.")
+
+    # 7b. 50 SMA Daily Climax Extension Check
+    atr_mult = sc_data.get("atr_mult") if sc_data else None
+    if atr_mult is None and atr14 > 0:
+        sma50 = float(sc_data.get("sma50") or (quote_data or {}).get("sma50") or 0)
+        if sma50 > 0 and ltp > 0:
+            atr_mult = round((ltp - sma50) / atr14, 2)
+    is_climax_breach = bool(sc_data.get("is_breach", False)) if sc_data else False
+    if atr_mult is not None and abs(atr_mult) >= 5.0:
+        is_climax_breach = True
+
+    if is_climax_breach:
+        checklist.append({
+            "rule": "50 SMA Climax",
+            "passed": False,
+            "badge": "⚠️",
+            "text": f"⚠️ <b>50 SMA Climax:</b> {atr_mult:.1f}x ATR (Parabolic Breach >= 5.0x)",
+            "detail": "Price is parabolically overextended from 50 SMA (> 5.0 ATR). High exhaustion risk."
+        })
+        warnings.append(f"Climax Extension: Price is {atr_mult:.1f}x ATR above 50 SMA (limit 5.0x). High blow-off risk.")
+    elif atr_mult is not None:
+        checklist.append({
+            "rule": "50 SMA Climax",
+            "passed": True,
+            "badge": "✅",
+            "text": f"✅ <b>50 SMA Climax:</b> {atr_mult:.1f}x ATR (Controlled < 5.0x)",
+            "detail": "Sustainable daily trend structure relative to 50 SMA"
+        })
 
     # 8. Previous Day Narrow Range (NR) & Volatility Contraction
     prev_range_ratio = sc_data.get("prev_range_ratio") if sc_data else None
@@ -967,12 +1031,18 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
     )
     rvol_val = rvol if rvol is not None else None
 
+    stretch_passed = bool(
+        stretch_pct is None or stretch_pct <= 3.0 or (stretch_atr is not None and stretch_atr <= 0.75)
+    )
+    climax_passed = not is_climax_breach
+
     hard_gates = [
         {"name": "Regime Permission", "passed": not is_defensive, "reason": state_code},
         {"name": "ORB Breakout", "passed": orb_passed, "reason": orb_status or "Near High"},
         {"name": "Volume Participation (>=0.75x)", "passed": (rvol_val is None or rvol_val >= 0.75), "reason": f"RVOL {rvol_val:.2f}x" if rvol_val is not None else "N/A"},
         {"name": "Stop Distance (<=4.0%)", "passed": (risk_pct is None or risk_pct <= 4.0), "reason": f"{risk_pct:.1f}%" if risk_pct is not None else "N/A"},
-        {"name": "10 EMA Stretch (<=3.0%)", "passed": (stretch_pct is None or stretch_pct <= 3.0), "reason": f"{stretch_pct:.1f}%" if stretch_pct is not None else "N/A"},
+        {"name": "10 EMA Stretch (<=3.0% or <=0.75 ATR)", "passed": stretch_passed, "reason": f"{stretch_pct:.1f}% ({stretch_atr:.2f} ATR)" if (stretch_pct is not None and stretch_atr is not None) else (f"{stretch_pct:.1f}%" if stretch_pct is not None else "N/A")},
+        {"name": "50 SMA Daily Climax (<5.0x ATR)", "passed": climax_passed, "reason": f"{atr_mult:.1f}x ATR" if atr_mult is not None else "N/A"},
         {"name": "Gap Extension (<=2.5%)", "passed": (gap_ext_pct is None or gap_ext_pct <= 2.5), "reason": f"{gap_ext_pct:.1f}%" if gap_ext_pct is not None else "N/A"},
         {"name": "Upper Wick Rejection (<=40%)", "passed": (upper_wick_pct is None or upper_wick_pct <= 40.0), "reason": f"{upper_wick_pct:.0f}%" if upper_wick_pct is not None else "N/A"}
     ]
@@ -990,7 +1060,7 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
         {"name": "PDH Cleared", "passed": pdh_passed},
         {"name": "Surging Volume (>=1.0x)", "passed": (rvol_val is not None and rvol_val >= 1.0)},
         {"name": "Tight Stop (<=3.0%)", "passed": (risk_pct is not None and risk_pct <= 3.0)},
-        {"name": "Prime 10 EMA Coil (<=0.6%)", "passed": (stretch_pct is not None and stretch_pct <= 0.6)},
+        {"name": "Prime 10 EMA Coil (<=1.2%)", "passed": (stretch_pct is not None and (stretch_pct <= 1.2 or (stretch_atr is not None and stretch_atr <= 0.3)))},
         {"name": "Prior Day Contraction (NR/Inside)", "passed": is_coiled},
         {"name": "Sector Group Momentum", "passed": (theme_cnt >= 2)}
     ]
@@ -3568,11 +3638,11 @@ def fetch_all_positions():
                                 holding_days = 1
                                 if entry_dt:
                                     if hasattr(entry_dt, "date"):
-                                        holding_days = max(1, (date.today() - entry_dt.date()).days)
+                                        holding_days = count_trading_days(entry_dt.date(), date.today())
                                     elif isinstance(entry_dt, str):
                                         try:
                                             d_parsed = datetime.strptime(entry_dt[:10], "%Y-%m-%d").date()
-                                            holding_days = max(1, (date.today() - d_parsed).days)
+                                            holding_days = count_trading_days(d_parsed, date.today())
                                         except Exception:
                                             pass
 
@@ -3650,9 +3720,8 @@ def fetch_all_positions():
             e_dt_str = log_meta.get("date") or log_meta.get("timestamp")
             if e_dt_str:
                 try:
-                    from datetime import date, datetime
                     d_parsed = datetime.strptime(str(e_dt_str)[:10], "%Y-%m-%d").date()
-                    p["holding_days"] = max(0, (date.today() - d_parsed).days)
+                    p["holding_days"] = count_trading_days(d_parsed, date.today())
                     p["entry_date"] = str(e_dt_str)[:10]
                 except Exception:
                     p["holding_days"] = 0
@@ -4920,7 +4989,7 @@ def audit_dead_money_positions(max_days=4, min_r=1.0):
         if entry_date_str:
             try:
                 ed = datetime.strptime(entry_date_str.split()[0], "%Y-%m-%d").date()
-                holding_days = (today - ed).days
+                holding_days = count_trading_days(ed, today)
             except Exception:
                 pass
 
