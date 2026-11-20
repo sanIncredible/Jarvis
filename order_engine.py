@@ -879,8 +879,8 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
             warnings.append(f"Overextended: Price is stretched {sign}{stretch_pct:.1f}% above 10 EMA (>3.0% limit). High trap / pullback risk.")
 
     # 7b. 50 SMA Daily Climax Advisory Check (Prior-Close Inputs)
-    atr14 = float(sc_data.get("atr14") or (quote_data or {}).get("atr14") or (calc_data or {}).get("atr14") or 0)
-    sma50 = float(sc_data.get("sma50") or (quote_data or {}).get("sma50") or 0)
+    atr14 = float((sc_data.get("atr14") if sc_data else 0) or (quote_data or {}).get("atr14") or (calc_data or {}).get("atr14") or 0)
+    sma50 = float((sc_data.get("sma50") if sc_data else 0) or (quote_data or {}).get("sma50") or (calc_data or {}).get("sma50") or 0)
     prev_close_val = float((quote_data or {}).get("prev_close") or (calc_data or {}).get("prev_close") or 0)
     atr_mult = None
     if prev_close_val > 0 and sma50 > 0 and atr14 > 0:
