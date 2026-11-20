@@ -652,8 +652,8 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
     gap_ext_pct = None
     upper_wick_pct = None
 
-    # 1. Regime Permission
-    is_defensive = state_code in ("DEFENSIVE", "DEFENSIVE_WATERFALL", "CLIMAX", "WASHOUT", "CHOP") or alloc_pct == 0
+    # 1. Regime Permission (EXPANSION, NORMAL, NEUTRAL permitted; DEFENSIVE & WASHOUT blocked)
+    is_defensive = state_code in ("DEFENSIVE", "DEFENSIVE_WATERFALL", "CLIMAX", "WASHOUT") or alloc_pct == 0
     if is_defensive:
         checklist.append({
             "rule": "Market Regime",
@@ -1160,15 +1160,27 @@ def calculate_order_sizing(quote_data, mode_arg="mod", sl_mode="lod", **kwargs):
         actual_exposure = round(quantity * ltp, 2)
         total_risk_inr = round(risk_per_share * quantity, 2)
 
-    # P2.1 Defensive Regime Auto-Cap: strictly limit exposure to ₹50k max during defensive/cash breadth regimes
-    is_defensive = str(regime_code).upper() in ("DEFENSIVE", "DEFENSIVE_WATERFALL", "CLIMAX", "WASHOUT", "CHOP") or alloc_pct == 0
+    # P2.1 Sizing Adjustments by Market Regime:
+    # - DEFENSIVE / WASHOUT (0% allocation): Capital preservation mode (New entries blocked)
+    # - NEUTRAL (50% allocation / 0.5R): Exposure strictly capped to ₹50,000 max
+    reg_clean = str(regime_code).upper()
+    is_defensive = reg_clean in ("DEFENSIVE", "DEFENSIVE_WATERFALL", "CLIMAX", "WASHOUT") or alloc_pct == 0
+    is_neutral = reg_clean in ("NEUTRAL", "CHOP") or (0 < alloc_pct <= 50)
+
     if is_defensive:
+        quantity = 0
+        actual_exposure = 0.0
+        total_risk_inr = 0.0
+        mode_label = f"{mode_label} [DEFENSIVE BLOCKED: 0% Allocation]"
+        cap_msg = f"🛡️ Defensive Regime ({regime_code}): 0% swing allocation. Capital preservation active."
+        regime_note = f"{regime_note} | {cap_msg}" if regime_note else cap_msg
+    elif is_neutral:
         if actual_exposure > 50000:
             quantity = max(1, int(50000 // ltp))
             actual_exposure = round(quantity * ltp, 2)
             total_risk_inr = round(risk_per_share * quantity, 2)
-            mode_label = f"{mode_label} [DEFENSIVE CAP: ₹50k]"
-            cap_msg = f"🛡️ Defensive Regime ({regime_code}): Exposure capped to ₹50,000 max (Capital Preservation)"
+            mode_label = f"{mode_label} [NEUTRAL CAP: ₹50k / 0.5R]"
+            cap_msg = f"⚖️ Neutral Regime ({regime_code}): Exposure capped to ₹50,000 max (0.5R Conservative Sizing)"
             regime_note = f"{regime_note} | {cap_msg}" if regime_note else cap_msg
 
     # Dynamic "Risk-Free" Pyramiding Sizing (House Money Equation)
@@ -2929,10 +2941,10 @@ def check_portfolio_risk_capacity(symbol=None, additional_risk_inr=1000):
         swing_cfg = cfg.get("risk_parameters", {}).get("swing", {})
         max_total_slots = int(swing_cfg.get("total_portfolio_slots") or swing_cfg.get("max_open_positions") or 10)
         sa_limits = swing_cfg.get("sa_active_risk_slots", {
-            "EXPANSION": 5, "IGNITION": 5, "SELECTIVE": 4, "CHOP": 3, "WASHOUT": 1, "CLIMAX": 1, "DEFENSIVE": 2, "NORMAL": 5
+            "EXPANSION": 5, "IGNITION": 5, "SELECTIVE": 4, "CHOP": 3, "WASHOUT": 0, "CLIMAX": 0, "DEFENSIVE": 0, "NORMAL": 5, "NEUTRAL": 3
         })
         daily_limits = swing_cfg.get("daily_new_entry_limits", {
-            "EXPANSION": 3, "IGNITION": 3, "SELECTIVE": 2, "CHOP": 1, "WASHOUT": 0, "CLIMAX": 0, "DEFENSIVE": 1, "NORMAL": 2
+            "EXPANSION": 3, "IGNITION": 3, "SELECTIVE": 2, "CHOP": 1, "WASHOUT": 0, "CLIMAX": 0, "DEFENSIVE": 0, "NORMAL": 2, "NEUTRAL": 1
         })
         max_var = float(swing_cfg.get("max_portfolio_var_inr", MAX_PORTFOLIO_VAR_INR))
 
@@ -2974,22 +2986,22 @@ def check_portfolio_risk_capacity(symbol=None, additional_risk_inr=1000):
             elif p_entry > 0 and p_sl <= 0:
                 total_var += (p_entry * 0.02) * p_qty  # 2% fallback
 
-        total_var = round(total_var, 2)
+            total_var = round(total_var, 2)
 
         # Determine SA market regime
         regime = load_market_regime()
         regime_code = str(regime.get("state_code") or regime.get("regime_code", "NORMAL")).upper()
         alloc_pct = regime.get("swing_allocation_pct", 100)
-        is_defensive = regime_code in ("DEFENSIVE", "DEFENSIVE_WATERFALL", "CLIMAX", "WASHOUT", "CHOP") or alloc_pct == 0
+        is_defensive = regime_code in ("DEFENSIVE", "DEFENSIVE_WATERFALL", "CLIMAX", "WASHOUT") or alloc_pct == 0
 
         # Resolve SA active risk slot limit
-        default_sa_slots = 3 if is_defensive else 5
-        if "EXPANSION" in regime_code or "IGNITION" in regime_code:
+        default_sa_slots = 0 if is_defensive else 5
+        if "EXPANSION" in regime_code or "IGNITION" in regime_code or "NORMAL" in regime_code:
             default_sa_slots = 5
-        elif "CHOP" in regime_code:
+        elif "NEUTRAL" in regime_code or "CHOP" in regime_code or "SELECTIVE" in regime_code:
             default_sa_slots = 3
-        elif "WASHOUT" in regime_code or "CLIMAX" in regime_code:
-            default_sa_slots = 1
+        elif "WASHOUT" in regime_code or "CLIMAX" in regime_code or "DEFENSIVE" in regime_code:
+            default_sa_slots = 0
 
         max_slots = int(sa_limits.get(regime_code, default_sa_slots))
 
@@ -3010,12 +3022,14 @@ def check_portfolio_risk_capacity(symbol=None, additional_risk_inr=1000):
                 pass
 
         entries_today_count = len(distinct_entries_today)
-        default_daily_limit = 1 if is_defensive else 2
+        default_daily_limit = 0 if is_defensive else 2
         if "EXPANSION" in regime_code:
             default_daily_limit = 3
-        elif "CHOP" in regime_code:
+        elif "NORMAL" in regime_code:
+            default_daily_limit = 2
+        elif "NEUTRAL" in regime_code or "CHOP" in regime_code:
             default_daily_limit = 1
-        elif "WASHOUT" in regime_code or "CLIMAX" in regime_code:
+        elif "WASHOUT" in regime_code or "CLIMAX" in regime_code or "DEFENSIVE" in regime_code:
             default_daily_limit = 0
 
         max_daily_entries = int(daily_limits.get(regime_code, default_daily_limit))
