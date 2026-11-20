@@ -31,6 +31,7 @@ import sys
 import json
 import time
 import math
+import hashlib
 import tempfile
 import threading
 from datetime import datetime, time as dtime, timezone, timedelta
@@ -84,6 +85,19 @@ def get_ist_now():
 
 
 CONFIG_VERSION = "v3.1.0-strict"
+FROZEN_PARAMS = {
+    "version": CONFIG_VERSION,
+    "rvol_tod_min": 1.0,
+    "stretch_max": 3.0,
+    "gap_max": 2.5,
+    "wick_max": 40.0,
+    "risk_max": 4.0,
+    "risk_min_atr": 0.5,
+    "soft_min": 3,
+    "tick_size": 0.05,
+    "tod_knots": [[0, 0.01], [15, 0.10], [60, 0.25], [285, 0.65], [375, 1.00]]
+}
+CONFIG_HASH = hashlib.sha256(json.dumps(FROZEN_PARAMS, sort_keys=True).encode("utf-8")).hexdigest()[:8]
 REJECTED_SIGNALS_FILE = BASE_DIR / "shadow_rejected_signals.json"
 
 
@@ -114,8 +128,10 @@ def round_to_clean_int(val):
 
 
 def log_rejected_signal(symbol: str, reason: str, metadata: dict = None):
-    """Logs rejected breakout setups to shadow_rejected_signals.json for benchmark transparency."""
+    """Logs rejected breakout setups to shadow_rejected_signals.json with full telemetry and daily deduplication."""
     try:
+        now_ist = get_ist_now()
+        today_prefix = now_ist.strftime("%Y-%m-%d")
         rej_list = []
         if REJECTED_SIGNALS_FILE.is_file():
             try:
@@ -123,11 +139,18 @@ def log_rejected_signal(symbol: str, reason: str, metadata: dict = None):
                     rej_list = json.load(rf)
             except Exception:
                 rej_list = []
+
+        # Deduplication: Prevent duplicate logs for same symbol and reason on the same trading day
+        for r in rej_list:
+            if r.get("symbol") == symbol and str(r.get("timestamp", ""))[:10] == today_prefix and r.get("reason") == reason:
+                return
+
         rej_entry = {
             "symbol": symbol,
-            "timestamp": get_ist_now().strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": now_ist.strftime("%Y-%m-%d %H:%M:%S"),
             "reason": reason,
             "config_version": CONFIG_VERSION,
+            "config_hash": CONFIG_HASH,
             "metadata": metadata or {}
         }
         rej_list.append(rej_entry)
@@ -409,7 +432,21 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         # 1. Enforce Hard Gates (Must All Pass)
         if not ck.get("hard_gates_passed", True):
             failed_gates = ck.get("failed_hard_gates", [])
-            log_rejected_signal(sym, f"Checklist Hard Gate failed: {', '.join(failed_gates)}", {"gates": failed_gates, "ltp": ltp, "risk_pct": risk_pct})
+            log_rejected_signal(
+                sym,
+                f"Checklist Hard Gate failed: {', '.join(failed_gates)}",
+                {
+                    "failed_hard_gates": failed_gates,
+                    "all_hard_gates": ck.get("hard_gates", []),
+                    "soft_score": ck.get("soft_score", 0),
+                    "soft_scores_detail": ck.get("soft_scores", []),
+                    "ltp": ltp,
+                    "risk_pct": risk_pct,
+                    "rvol": (quote_data or {}).get("rvol"),
+                    "stretch_pct": (quote_data or {}).get("stretch_pct"),
+                    "gap_ext_pct": ck.get("gap_ext_pct")
+                }
+            )
             return False, f"Checklist Hard Gate failed: {', '.join(failed_gates)}"
 
         soft_score = ck.get("soft_score", 0)
@@ -418,14 +455,31 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
 
         # 2. Minimum Soft Score Conviction threshold (At least 3 quality points required)
         if soft_score < 3:
-            log_rejected_signal(sym, f"Checklist conviction low ({soft_score}/{soft_total} < 3 required)", {"score": soft_score, "ltp": ltp, "risk_pct": risk_pct})
+            log_rejected_signal(
+                sym,
+                f"Checklist conviction low ({soft_score}/{soft_total} < 3 required)",
+                {
+                    "soft_score": soft_score,
+                    "soft_total": soft_total,
+                    "soft_scores_detail": ck.get("soft_scores", []),
+                    "all_hard_gates": ck.get("hard_gates", []),
+                    "ltp": ltp,
+                    "risk_pct": risk_pct,
+                    "rvol": (quote_data or {}).get("rvol"),
+                    "stretch_pct": (quote_data or {}).get("stretch_pct")
+                }
+            )
             return False, f"Checklist conviction low ({soft_score}/{soft_total} < 3 required)"
     except Exception:
         pass
 
+    actual_risk_per_share = round(max(0.05, fill_price - initial_sl), 2)
+    actual_initial_risk_inr = round(qty * actual_risk_per_share, 2)
+
     entry_record = {
         "symbol": sym,
         "config_version": CONFIG_VERSION,
+        "config_hash": CONFIG_HASH,
         "entry_price": fill_price,
         "initial_sl": initial_sl,
         "current_sl": initial_sl,
@@ -433,10 +487,12 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         "sl_last_ratchet_time": now.strftime("%H:%M:%S"),
         "target_price": target_price,
         "risk_per_share": round(risk_per_share, 2),
+        "actual_risk_per_share": actual_risk_per_share,
         "risk_pct": risk_pct,
         "quantity": qty,
-        "initial_risk_inr": initial_risk_inr,
-        "fixed_risk_inr": initial_risk_inr,
+        "initial_risk_inr": actual_initial_risk_inr,
+        "actual_initial_risk_inr": actual_initial_risk_inr,
+        "fixed_risk_inr": actual_initial_risk_inr,
         "effective_risk_dist": round(effective_risk_dist, 2),
         "capital_invested": capital_invested,
         "entry_date": today_str,
@@ -635,52 +691,98 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         # Resolve intraday candles for tick-accurate post-entry / post-ratchet low tracking
         candles_3m = q.get("candles_3m") or (c_meta.get("candles_3m") if c_meta else []) or []
 
-        # Structural Exit: Low breached the current trailed stop-loss
+        # Universal Stop Ratchet Protection (Day 1 and Day 2+):
+        # If the stop was ratcheted TODAY, never evaluate candles from before or during the ratchet bar!
+        was_ratcheted_today = (
+            pos.get("sl_last_ratchet_date") == today_str and
+            float(pos.get("current_sl", 0)) > float(pos.get("initial_sl", 0))
+        )
+
         is_sl_breached = False
-        if holding_days == 1:
-            # On Day 1: Evaluate post-entry low from intra-day bars (to catch true resting stop wicks without false morning wicks)
-            # Safely include entry bar itself by flooring entry_time down to 3-minute candle bucket
-            e_parts = (str(pos.get("entry_time") or "09:15:00")).split(":")
-            e_h = int(e_parts[0]) if len(e_parts) > 0 and e_parts[0].isdigit() else 9
-            e_m = int(e_parts[1]) if len(e_parts) > 1 and e_parts[1].isdigit() else 15
-            entry_bucket = f"{e_h:02d}:{(e_m // 3) * 3:02d}"
-            post_bars = [c for c in candles_3m if isinstance(c, dict) and (c.get("t") or "") >= entry_bucket]
-            post_low = min([float(c.get("l")) for c in post_bars if c.get("l") is not None] or [ltp])
-            is_sl_breached = (post_low <= pos["current_sl"] or ltp <= pos["current_sl"])
+        breach_bar_open = None
+
+        if was_ratcheted_today:
+            # Check strictly subsequent candles timestamped strictly after ratchet bucket, plus real-time LTP
+            r_str = str(pos.get("sl_last_ratchet_time") or "09:15:00")
+            r_parts = r_str.split(":")
+            r_h = int(r_parts[0]) if len(r_parts) > 0 and r_parts[0].isdigit() else 9
+            r_m = int(r_parts[1]) if len(r_parts) > 1 and r_parts[1].isdigit() else 15
+            ratchet_bucket = f"{r_h:02d}:{(r_m // 3) * 3:02d}"
+            # Strictly later buckets (> ratchet_bucket)
+            post_ratchet_bars = [c for c in candles_3m if isinstance(c, dict) and (c.get("t") or "") > ratchet_bucket]
+            for b in post_ratchet_bars:
+                b_low = float(b.get("l") or 0.0)
+                if b_low > 0 and b_low <= pos["current_sl"]:
+                    is_sl_breached = True
+                    breach_bar_open = float(b.get("o") or b_low)
+                    break
+            if not is_sl_breached and ltp <= pos["current_sl"]:
+                is_sl_breached = True
+                breach_bar_open = ltp
         else:
-            # Day 2+: Guard against mid-session ratchet rogue wick bug:
-            # If the stop was ratcheted TODAY mid-session, do NOT let earlier morning dips before the ratchet trigger an exit!
-            if pos.get("sl_last_ratchet_date") == today_str and str(pos.get("sl_last_ratchet_time") or "") > "09:15:00":
-                r_parts = (str(pos.get("sl_last_ratchet_time") or "09:15:00")).split(":")
-                r_h = int(r_parts[0]) if len(r_parts) > 0 and r_parts[0].isdigit() else 9
-                r_m = int(r_parts[1]) if len(r_parts) > 1 and r_parts[1].isdigit() else 15
-                ratchet_bucket = f"{r_h:02d}:{(r_m // 3) * 3:02d}"
-                post_ratchet_bars = [c for c in candles_3m if isinstance(c, dict) and (c.get("t") or "") >= ratchet_bucket]
-                post_ratchet_low = min([float(c.get("l")) for c in post_ratchet_bars if c.get("l") is not None] or [ltp])
-                is_sl_breached = (post_ratchet_low <= pos["current_sl"] or ltp <= pos["current_sl"])
+            # Stop has NOT been ratcheted today (remains at initial LOD stop or previous session's stop)
+            if holding_days == 1:
+                # On Day 1 initial stop: check post-entry candles (entry candle bucket and later)
+                e_str = str(pos.get("entry_time") or "09:15:00")
+                e_parts = e_str.split(":")
+                e_h = int(e_parts[0]) if len(e_parts) > 0 and e_parts[0].isdigit() else 9
+                e_m = int(e_parts[1]) if len(e_parts) > 1 and e_parts[1].isdigit() else 15
+                entry_bucket = f"{e_h:02d}:{(e_m // 3) * 3:02d}"
+                post_bars = [c for c in candles_3m if isinstance(c, dict) and (c.get("t") or "") >= entry_bucket]
+                for b in post_bars:
+                    b_low = float(b.get("l") or 0.0)
+                    if b_low > 0 and b_low <= pos["current_sl"]:
+                        is_sl_breached = True
+                        breach_bar_open = float(b.get("o") or b_low)
+                        break
+                if not is_sl_breached and ltp <= pos["current_sl"]:
+                    is_sl_breached = True
+                    breach_bar_open = ltp
             else:
-                is_sl_breached = (day_low <= pos["current_sl"] or ltp <= pos["current_sl"])
+                # Day 2+ previous day stop: session day_low or live LTP
+                if day_low <= pos["current_sl"]:
+                    is_sl_breached = True
+                    breach_bar_open = day_open if day_open > 0 else ltp
+                elif ltp <= pos["current_sl"]:
+                    is_sl_breached = True
+                    breach_bar_open = ltp
 
         if is_sl_breached:
             exit_triggered = True
             # Realistic Exit Fill Model:
-            # If overnight gap down on Day 2+, execute fill at opening auction price (day_open with 0.15% spread slippage, rounded down to ₹0.05 tick)
+            # 1. Overnight gap down on Day 2+: fill at opening auction price (day_open * 0.9985)
+            # 2. Fast intraday gap through stop: if breach_bar_open < SL, fill at breach_bar_open * 0.9985
+            # 3. Standard resting stop hit: fill at SL * 0.9985
+            fill_base = pos["current_sl"]
             if holding_days >= 2 and day_open > 0 and day_open < pos["current_sl"]:
-                exit_price = round_to_tick(day_open * 0.9985, tick=0.05, direction="down")
-            else:
-                exit_price = round_to_tick(pos["current_sl"] * 0.9985, tick=0.05, direction="down")
+                fill_base = day_open
+            elif breach_bar_open and breach_bar_open < pos["current_sl"]:
+                fill_base = breach_bar_open
+
+            exit_price = round_to_tick(fill_base * 0.9985, tick=0.05, direction="down")
             exit_reason = pos["last_trail_rule"]
 
         if exit_triggered:
-            initial_risk_inr = max(1.0, float(pos.get("initial_risk_inr") or pos.get("fixed_risk_inr") or (qty * risk_per_share)))
+            # True Van Tharp Structural Risk: Actual dollar risk at risk based on initial stop distance
+            actual_risk_per_share = max(0.05, float(pos.get("actual_risk_per_share") or (entry_p - pos.get("initial_sl", entry_p * 0.98))))
+            actual_initial_risk_inr = max(1.0, float(pos.get("actual_initial_risk_inr") or (qty * actual_risk_per_share)))
+
             realized_pnl = round((exit_price - entry_p) * qty, 2)
-            realized_r_structural = round(realized_pnl / initial_risk_inr, 2)
+
+            # Statutory Round-Trip Transaction Costs (STT, Exchange, GST, Stamp Duty ~0.25% turnover)
+            turnover_inr = round((entry_p + exit_price) * qty, 2)
+            statutory_costs_inr = round(turnover_inr * 0.0025, 2)
+            net_pnl_inr = round(realized_pnl - statutory_costs_inr, 2)
+
+            realized_r_structural = round(realized_pnl / actual_initial_risk_inr, 2)
             realized_r_nominal = round(realized_pnl / 1000.0, 2)
+            realized_r_net = round(net_pnl_inr / actual_initial_risk_inr, 2)
             giveback_r = round(max(0.0, highest_r - realized_r_structural), 2)
 
             log_entry = {
                 "symbol": sym,
                 "config_version": CONFIG_VERSION,
+                "config_hash": CONFIG_HASH,
                 "entry_date": entry_date,
                 "exit_date": today_str,
                 "entry_time": pos.get("entry_time"),
@@ -688,12 +790,17 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 "entry_price": entry_p,
                 "exit_price": exit_price,
                 "quantity": qty,
-                "initial_risk_inr": initial_risk_inr,
+                "initial_sl": pos.get("initial_sl"),
+                "actual_risk_per_share": actual_risk_per_share,
+                "actual_initial_risk_inr": actual_initial_risk_inr,
                 "holding_days": holding_days,
                 "realized_pnl_inr": realized_pnl,
+                "statutory_costs_inr": statutory_costs_inr,
+                "net_pnl_inr": net_pnl_inr,
                 "realized_r": realized_r_structural,
                 "r_structural": realized_r_structural,
                 "r_nominal": realized_r_nominal,
+                "r_net": realized_r_net,
                 "peak_r": highest_r,
                 "giveback_r": giveback_r,
                 "exit_reason": exit_reason,
