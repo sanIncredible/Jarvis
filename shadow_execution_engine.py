@@ -1669,10 +1669,12 @@ def get_shadow_analytics():
     }
 
 
-def generate_and_send_phase1_eod_report(notify=True):
+def generate_and_send_phase1_eod_report(notify=True, session_status="VALID"):
     """
     Compiles and dispatches the daily Phase 1 EOD Report strictly at 15:35 IST to Topic 11 ('reports').
     Features Day 30 Maturity Banner when 30 days are reached.
+    MISSED-SESSION PROTOCOL: If session_status is 'NO_DATA_EXCLUDED', the day is excluded
+    from the 30-session evaluation denominator, and day_num is not incremented.
     """
     now = get_ist_now()
     today_str = now.strftime("%Y-%m-%d")
@@ -1681,7 +1683,15 @@ def generate_and_send_phase1_eod_report(notify=True):
     trade_log = load_shadow_trade_log()
     analytics = get_shadow_analytics()
 
-    # Calculate current business/trading day in 30-day evaluation
+    history = []
+    if SHADOW_EOD_FILE.is_file():
+        try:
+            with open(SHADOW_EOD_FILE, "r", encoding="utf-8") as f:
+                history = json.load(f)
+        except Exception:
+            history = []
+
+    # Calculate current business/trading day in 30-day evaluation based on valid completed sessions
     try:
         d_start = datetime.strptime(START_DATE_STR, "%Y-%m-%d").date()
         d_curr = now.date()
@@ -1689,8 +1699,24 @@ def generate_and_send_phase1_eod_report(notify=True):
             day_num = 0
             header_title = "🛠️ <b>DAY 0: COMMISSIONING & SHAKEDOWN (PRE-EVALUATION)</b>"
             day_label = f"Session: {now.strftime('%d-%b-%Y')} | 30-Day Official Clock Starts Mon Nov 23"
+        elif session_status == "NO_DATA_EXCLUDED":
+            valid_past = [
+                h for h in history
+                if h.get("date") != today_str
+                and h.get("date", "") >= START_DATE_STR
+                and h.get("status", "VALID") == "VALID"
+            ]
+            day_num = len(valid_past)
+            header_title = "⚠️ <b>SESSION INVALID / NO DATA — EXCLUDED FROM 30-DAY PILOT</b>"
+            day_label = f"Session: {now.strftime('%d-%b-%Y')} | Evaluation Clock Paused (Horizon Extended +1 Day)"
         else:
-            day_num = count_trading_days(d_start, d_curr)
+            valid_past = [
+                h for h in history
+                if h.get("date") != today_str
+                and h.get("date", "") >= START_DATE_STR
+                and h.get("status", "VALID") == "VALID"
+            ]
+            day_num = len(valid_past) + 1
             header_title = "🤖 <b>PHASE 1 AUTONOMOUS SHADOW ENGINE — EOD REPORT</b>"
             day_label = f"📅 <b>Day {day_num} of {EVALUATION_HORIZON_DAYS}</b> | Session: {now.strftime('%d-%b-%Y')} (15:35 IST)"
     except Exception:
@@ -1815,9 +1841,11 @@ def generate_and_send_phase1_eod_report(notify=True):
         send_phase1_telegram_alert(report_html, topic_name="reports")
 
     # Persist snapshot
+    snapshot_status = "DAY0_PRE_EVALUATION" if d_curr < d_start else session_status
     snapshot = {
         "date": today_str,
         "day_num": day_num,
+        "status": snapshot_status,
         "open_count": len(portfolio),
         "unrealized_r": unrealized_r,
         "unrealized_pnl": unrealized_pnl,
@@ -1826,14 +1854,6 @@ def generate_and_send_phase1_eod_report(notify=True):
         "today_exits_count": len(today_exits),
         "cumulative_analytics": analytics
     }
-
-    history = []
-    if SHADOW_EOD_FILE.is_file():
-        try:
-            with open(SHADOW_EOD_FILE, "r", encoding="utf-8") as f:
-                history = json.load(f)
-        except Exception:
-            history = []
 
     # Replace today if already present
     history = [h for h in history if h.get("date") != today_str]
