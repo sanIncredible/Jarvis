@@ -380,6 +380,11 @@ def fetch_live_quote(symbol):
                         "day_high": float(day_high) if day_high else float(ltp),
                         "day_open": float(day_open) if day_open else float(ltp),
                         "prev_close": float(prev_close) if prev_close else float(ltp),
+                        "upper_circuit_limit": float(first_q.get("upper_circuit_limit") or 0.0),
+                        "lower_circuit_limit": float(first_q.get("lower_circuit_limit") or 0.0),
+                        "total_buy_quantity": int(first_q.get("total_buy_quantity") or 0),
+                        "total_sell_quantity": int(first_q.get("total_sell_quantity") or 0),
+                        "depth": first_q.get("depth", {}),
                         "timestamp": first_q.get("timestamp"),
                         "source": "Upstox Live Quote"
                     }, None
