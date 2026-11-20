@@ -741,10 +741,32 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
             sorted_setups = sorted(active_breakout_setups, key=get_setup_sort_key, reverse=True)
             now_epoch = time.time()
             for s_sym, s_d, s_m, s_trig in sorted_setups:
-                # Data Freshness & Staleness Watchdog Guard (30-second limit)
-                last_tick_t = float(s_d.get("last_tick_time") or s_d.get("timestamp") or 0.0)
-                if last_tick_t > 0 and (now_epoch - last_tick_t) > 30.0:
-                    print(f"⚠️ [Watchdog] Skipping entry for {s_sym}: Feed quote stale ({now_epoch - last_tick_t:.1f}s > 30s limit)")
+                # 1. Feed-Level Global Heartbeat Watchdog Check
+                if ACTIVE_WS_FEED[0] is not None:
+                    try:
+                        f_stat = ACTIVE_WS_FEED[0].get_feed_status()
+                        if f_stat.get("is_feed_stale"):
+                            gap_s = f_stat.get("seconds_since_msg", 0.0)
+                            print(f"⚠️ [Watchdog] Skipping entry for {s_sym}: Global WebSocket feed stale ({gap_s:.1f}s silence > 30s limit)")
+                            try:
+                                from shadow_execution_engine import record_rejected_signal
+                                record_rejected_signal(s_sym, "FEED_STALE", f"Global WebSocket feed stale ({gap_s:.1f}s silence)", quote_data=s_d)
+                            except Exception:
+                                pass
+                            continue
+                    except Exception:
+                        pass
+
+                # 2. Per-Symbol Exchange Recency Watchdog Guard (30-second limit on exchange trade time)
+                exch_tick_t = float(s_d.get("exchange_tick_time") or s_d.get("last_tick_time") or s_d.get("timestamp") or 0.0)
+                if exch_tick_t > 0 and (now_epoch - exch_tick_t) > 30.0:
+                    age_s = now_epoch - exch_tick_t
+                    print(f"⚠️ [Watchdog] Skipping entry for {s_sym}: Symbol exchange tick stale ({age_s:.1f}s > 30s limit)")
+                    try:
+                        from shadow_execution_engine import record_rejected_signal
+                        record_rejected_signal(s_sym, "FEED_STALE", f"Symbol exchange tick stale ({age_s:.1f}s old)", quote_data=s_d)
+                    except Exception:
+                        pass
                     continue
 
                 s_ltp = float(s_d.get("ltp") or 0.0)
@@ -3717,6 +3739,25 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                     pass
 
     _last_phase1_eod_date = [None]
+    _last_day0_reset_date = [None]
+
+    def check_and_run_day0_flatten_and_archive(curr_now=None):
+        """
+        Flatten and archive Day 0 positions/state before Nov 23, 2026.
+        Runs at 15:15 IST on Nov 20, 2026 (or any pre-Nov 23 session).
+        """
+        if curr_now is None:
+            curr_now = get_ist_now()
+        today_str = curr_now.strftime('%Y-%m-%d')
+        if today_str < "2026-11-23" and curr_now.weekday() < 5 and ((curr_now.hour == 15 and curr_now.minute >= 15) or curr_now.hour >= 16):
+            if _last_day0_reset_date[0] != today_str:
+                _last_day0_reset_date[0] = today_str
+                try:
+                    from shadow_execution_engine import reset_and_archive_day0_state
+                    print(f"\n{YELLOW}🛑 15:15 PM IST: Day 0 Shakedown Reset & Flatten Active -> Archiving state for Nov 23 Clean Launch...{RESET}")
+                    reset_and_archive_day0_state(force=True)
+                except Exception as e:
+                    print(f"Notice on Day 0 reset: {e}")
 
     def check_and_run_phase1_eod_report(curr_now=None):
         """
@@ -3752,6 +3793,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                 now = get_ist_now()
                 check_and_run_orphan_sentry(now)
                 check_and_run_auto_gtt_rearm(now)
+                check_and_run_day0_flatten_and_archive(now)
                 check_and_run_phase1_eod_report(now)
                 try:
                     from shadow_execution_engine import update_shadow_trailing_and_exits
@@ -3793,6 +3835,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                     cur_loop_now = get_ist_now()
                     check_and_run_orphan_sentry(cur_loop_now)
                     check_and_run_auto_gtt_rearm(cur_loop_now)
+                    check_and_run_day0_flatten_and_archive(cur_loop_now)
                     check_and_run_phase1_eod_report(cur_loop_now)
                     try:
                         from shadow_execution_engine import update_shadow_trailing_and_exits
