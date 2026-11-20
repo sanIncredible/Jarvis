@@ -566,18 +566,20 @@ The 30-session evaluation begins on **Monday, Nov 23, 2026** and concludes stric
 #### 8.10.2 Circuit-Limit Ceiling, Liquidity Filter & Lower-Circuit Exit Model
 - **Upper Circuit Freeze Shield (Fail-Closed):** In fast-moving momentum stocks, an opening surge can freeze a stock at its Upper Circuit limit (e.g. +5%, +10%, or +20% limit-up), leaving 0 sellers on the orderbook. A shadow engine that logs fills at the circuit price creates paper alpha that cannot be realized.
   - *Data Sources:* Ingests Upstox V3 Market Data Feed in `"full"` mode (`marketFF.marketLevel` depth) combined with Upstox REST market quote (`https://api.upstox.com/v3/market-quote/quotes?instrument_key=...`, migrating from deprecated v2 route) returning `upper_circuit_limit`, `lower_circuit_limit`, `depth` (5 buy/sell levels), and `total_sell_quantity`.
-  - *Rule:* Long breakout execution is prohibited if $\text{LTP} \ge \text{Upper Circuit} \times 0.985$ (within 1.5% of upper circuit) or if `total_sell_quantity == 0` (zero seller depth).
+  - *Rule:* Long breakout execution is prohibited if $\text{LTP} \ge \text{Upper Circuit} \times 0.985$ (within 1.5% of upper circuit) or if `total_sell_quantity == 0` when near circuit ceiling ($\text{Fill Price} \ge \text{Upper Circuit} \times 0.985$ or gain $\ge +15\%$). Quiet small-cap books with thin orderbooks far from circuit ceilings are not falsely rejected as circuit locks.
   - *Missing Circuit Limit Fallback:* If `upper_circuit_limit <= 0` or is missing from broker quotes:
-    1. If `total_sell_quantity == 0`: Stock is rejected (zero seller depth).
+    1. If `total_sell_quantity == 0` and intraday gain $\ge +15\%$: Stock is rejected (presumed upper circuit lock).
     2. If intraday gain $(\text{Fill Price} - \text{Prev Close}) / \text{Prev Close} \ge 0.18$ ($+18\%$ from previous close): Stock is rejected (approaching theoretical 20% circuit limit).
     3. If both depth data and circuit limits are missing/empty: Reject fail-closed due to unquantified liquidity risk.
+  - *Intraday Rejection Anomaly Tracker:* The engine dynamically monitors screening rejections between 09:30–10:15 AM. If $\ge 80\%$ of evaluated candidates (minimum 5 samples) are rejected due to a single data-dependent cause (`ZERO_SELLER_DEPTH`, `FEED_STALE`, or `EARNINGS_CALENDAR_UNAVAILABLE`), an urgent alert is dispatched to Topic 9 (`risk_trailing`) to alert the operator of potential feed distortion.
 - **Lower-Circuit Exit Model & Unlock Fill Math:**
   - *Zero-Bid Lock Detection:* If a held swing position experiences a gap-down or collapse that breaches stop loss while locked at Lower Circuit with 0 buyers (`total_buy_quantity == 0` or $\text{LTP} \le \text{Lower Circuit} \times 1.002$), the exit order is physically unfillable. The position is flagged `circuit_exit_blocked = True` with status `LOWER_CIRCUIT_ZERO_BID_LOCK`, and standard stop execution is halted.
   - *Daily MTM Circuit Marking:* While `circuit_exit_blocked == True`, the daily EOD MTM snapshot marks the position's unrealized value explicitly at $\text{lower\_circuit\_limit}$, capturing full unrealized drawdown on each day the stock remains frozen.
-  - *Unlock Exit Pricing Formula:* When liquidity returns (`total_buy_quantity > 0` and price unfreezes, or in candle replay $\text{bar\_high} > \text{lower\_circuit\_limit}$), the deferred exit executes immediately at the **first liquid market price with adverse slippage applied**:
-    $$\text{First Liquid Price} = \max(\text{Day Open}, \, \text{Candle Open}, \, \text{LTP})$$
+  - *Unlock Exit Pricing Formula:* When liquidity returns (`total_buy_quantity > 0` and price unfreezes, or in candle replay $\text{bar\_high} > \text{lower\_circuit\_limit}$), the deferred exit executes immediately at the **first liquid market price at unlock with adverse slippage applied**:
+    $$\text{First Liquid Price} = \begin{cases} \min(\text{Day Open}, \, \text{LTP}) & \text{if locked from open } (\text{Day Open} \le 1.002 \times \text{Lower Circuit}) \\ \min(\text{Candle Open}, \, \text{LTP}) & \text{otherwise (intraday crash \& mid-day unlock)} \end{cases}$$
     $$\text{Exit Price} = \text{round\_to\_tick}(\text{First Liquid Price} \times (1 - 0.0015), \, \text{tick}=0.05, \, \text{direction}="down")$$
-    The realized trade log records the actual fill price and true loss (e.g. $-3.5\text{R}$ or $-5.0\text{R}$), logged with reason `"LOWER_CIRCUIT_UNLOCKED_EXIT"`.
+    *Anti-Optimism Guarantee:* Never uses pre-crash prices (e.g. if a stock opens at ₹100, collapses to lower circuit at ₹90, and unlocks at ₹88, the exit fills strictly at $88 \times 0.9985 = \text{₹}87.85$, strictly rejecting optimistic pre-lock fills like ₹99.85).
+    The realized trade log records the actual fill price and true loss (e.g. $-3.5\text{R}$ or $-5.0\text{R}$), logged with reason `"LOWER_CIRCUIT_UNLOCKED_EXIT"`, and tagged with `"held_through_event"` and `"earnings_filter_active"`.
   - *Candle Replay Lock Detection (Without Depth Data):* In 1-minute historical candle replay following an outage, a candle with $\text{bar\_low} \le \text{lower\_circuit\_limit}$ or $(\text{bar\_high} == \text{bar\_low} == \text{lower\_circuit\_limit})$ serves as the lower-circuit lock signal. Exit is deferred until the first subsequent candle where $\text{bar\_high} > \text{lower\_circuit\_limit}$.
 - **Microstructure Liquidity Floor:** Sizing ₹1,00,000 into an illiquid micro-cap causes severe slippage. The screening sieve enforces:
   $$\text{20-Day Average Daily Turnover (ADTV)} \ge \text{₹}5.0\text{ Crore}$$
@@ -588,8 +590,8 @@ The 30-session evaluation begins on **Monday, Nov 23, 2026** and concludes stric
 - **Overnight Gap Vulnerability:** Swing positions held across quarterly earnings releases (Q1/Q2/Q3/Q4 results) or major corporate actions are exposed to unhedgeable 10%–20% overnight gap-downs that bypass daily ATR buffers.
 - **Corporate Event Sourcing & Workstation Push Pipeline:**
   - Because NSE website edge security (Akamai) blocks cloud datacenter IP ranges (`HTTP 403 Forbidden` on OCI), the event calendar is sourced via `sync_earnings_calendar.py` running on the local workstation (residential IP with browser session headers) and synced to OCI VM at `data/earnings_calendar.json`.
-  - *Cache TTL & Alerting:* Cache validity is 72 hours. If cache age exceeds 72 hours, an alert is dispatched to Topic 9 (`risk_trailing`) prompting a pre-market refresh.
-  - *Fail-Open Safe Fallback:* If `data/earnings_calendar.json` is missing or unreadable, the engine dispatches a diagnostic alert to Topic 9 and defaults to **fail-open with warning**, preventing an unreadable calendar file from paralyzing all trading.
+  - *Cache TTL & Alerting:* Cache validity is 72 hours over weekends. On Monday mornings, a dedicated 08:45 AM pre-flight audit verifies that the calendar was refreshed within 24 hours (sync executed Sunday evening). If missing or stale (>24h on Monday), an alert is dispatched to Topic 9 (`risk_trailing`) prompting an immediate run of `sync_earnings_calendar.py`.
+  - *Fail-Open Safe Fallback & Telemetry Tagging:* If `data/earnings_calendar.json` is missing or unreadable, the engine dispatches a diagnostic alert to Topic 9 and defaults to **fail-open with warning**, preventing an unreadable calendar file from paralyzing all trading. Every executed trade is stamped with `"earnings_filter_active": True/False` so that performance during stale or fail-open periods can be isolated in retrospective analysis.
 - **Negative Confirmation Logic:** Corporate event calendars only list companies with upcoming scheduled filings. If a candidate symbol is NOT found in `earnings_calendar.json`, it confirms that **no earnings or corporate actions are scheduled** $\implies$ **PASS** (allow entry).
 - **Major Corporate Action Definition:** Blackout triggers if any of the following are scheduled within 3 trading days ($\text{Days to Event} \le 3$):
   1. Board meetings for Quarterly / Annual Financial Results (Q1, Q2, Q3, Q4).
@@ -598,7 +600,7 @@ The 30-session evaluation begins on **Monday, Nov 23, 2026** and concludes stric
   4. Rights Issues / Capital Restructuring.
   5. Mergers, Demergers, or Amalgamations.
   *(Routine interim dividend-only meetings are excluded, as they do not generate catastrophic 20% gap risk).*
-- **Pure Systematic In-Flight Trailing:** For Phase 1 autonomous execution, in-flight discretionary adjustments ("reduce 50% or tighten to 5 EMA") are explicitly omitted to prevent mid-evaluation rule mutation. Active positions already entered prior to an announcement are governed strictly by the frozen multi-stage trailing stop hierarchy.
+- **Pure Systematic In-Flight Trailing & Event Tracking:** For Phase 1 autonomous execution, in-flight discretionary adjustments ("reduce 50% or tighten to 5 EMA") are explicitly omitted to prevent mid-evaluation rule mutation. Active positions already entered prior to an announcement are governed strictly by the frozen multi-stage trailing stop hierarchy. If an earnings or corporate event date occurs while a swing position is open, the engine flags the trade with `"held_through_event": True` upon exit to track event risk exposure in the final 30-session post-mortem.
 
 ### 8.11 Surveillance, Watchdog & Gap Replay State Machine Architecture
 ```mermaid
@@ -722,6 +724,7 @@ The bot connects to Telegram Supergroup ID `[TELEGRAM_SUPERGROUP_ID]` (Personal 
 ### 11.1 Single-Page Application (`index.html` & `scanner_dashboard.html`)
 - Standalone HTML5/JavaScript dashboard rendered via GitHub Pages: `https://sanincredible.github.io/Jarvis/`.
 - Zero backend server required for viewing; loads state dynamically from `data.json`.
+- **Repository Visibility & Edge Access:** On free personal GitHub accounts, GitHub Pages is disabled on private repositories. Furthermore, jsDelivr CDN and unauthenticated client-side fetches for `data.json` fail on private repositories. Therefore, `sanIncredible/Jarvis` remains a public repository for the front-end web dashboard, with strict security isolation: all API secrets, OAuth tokens, SSH keys, and host credentials reside exclusively in local/ignored config files (`config_credentials.json`, `*.key`) and are never committed.
 - **Dual-Endpoint Low-Latency Edge Fetch Architecture:**
   - Primary target: jsDelivr Edge CDN (`https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/data.json`), purged automatically on each cycle via `https://purge.jsdelivr.net/gh/...` to deliver sub-second global cache invalidation.
   - Failover target: GitHub raw user content (`https://raw.githubusercontent.com/sanIncredible/Jarvis/main/data.json?_t=${Date.now()}`) to ensure zero downtime even if CDN cache purges delay.
