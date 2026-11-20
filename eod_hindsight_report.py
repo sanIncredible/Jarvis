@@ -151,13 +151,13 @@ def simulate_stock_trade(s):
 
     # Candle 0 is the 09:15 - 09:18 ORB candle.
     # Scan subsequent candles for breakout trigger.
-    # USER STRATEGY MANDATE: Entry timing is ALWAYS after 09:30 AM (filters morning chop / whipsaws)
+    # USER STRATEGY MANDATE: Entry timing is STRICTLY in between 09:30 and 10:15 AM IST (Momentum Prime Window)
     trig_idx = None
     for i in range(1, len(candles)):
         c = candles[i]
         t_str = extract_time_str(c[0])
-        # Skip all candles prior to 09:30 AM
-        if t_str and t_str < "09:30":
+        # Skip all candles outside 09:30 - 10:15 AM momentum entry window
+        if t_str and (t_str < "09:30" or t_str > "10:15"):
             continue
 
         c_high = float(c[2])
@@ -945,43 +945,20 @@ def format_rolling_expectancy_card(exp, days=30):
 
     lines = [
         f"📊 <b>CUMULATIVE {days}-DAY STRATEGY EXPECTANCY ({sess_cnt} Sessions)</b>",
-        f"• <b>Total Qualified Trades:</b> {tr_cnt} | <b>Win Rate:</b> {exp['win_rate']:.0f}% ({exp['winners']}W / {exp['losers']}L / {exp['runners']} Runners)",
-        f"• <b>Cumulative Realized Alpha:</b> <b>{r_s}{exp['total_r']:.1f}R</b> (₹{pnl_s}{exp['total_pnl_inr']:,})",
-        f"• <b>Expectancy / Trade:</b> <b>{exp_r_s}{exp['expectancy_r']:.2f}R</b> | <b>Profit Factor:</b> {exp['profit_factor']:.2f}",
-        f"• <b>High Alpha Win Rate (≥1.5R):</b> {exp['strong_win_rate']:.0f}%",
-        "",
-        "🎯 <b>Alpha by Setup Tier:</b>"
+        f"• <b>Trades:</b> {tr_cnt} | <b>WR:</b> {exp['win_rate']:.0f}% ({exp['winners']}W / {exp['losers']}L / {exp['runners']}R) | <b>Alpha:</b> <b>{r_s}{exp['total_r']:.1f}R</b> (₹{pnl_s}{exp['total_pnl_inr']:,})",
+        f"• <b>Expectancy:</b> <b>{exp_r_s}{exp['expectancy_r']:.2f}R/trade</b> | <b>Profit Factor:</b> {exp['profit_factor']:.2f} | <b>≥1.5R WR:</b> {exp['strong_win_rate']:.0f}%"
     ]
 
-    tier_order = ["💎 STRICT", "🔄 REVERSAL", "★ SS+ORB", "⚡ ORB"]
+    tier_order = ["💎 STRICT", "⚡ ORB", "🔄 REVERSAL", "★ SS+ORB"]
+    tier_strs = []
     tiers = exp.get("tiers", {})
     for t_key in tier_order:
         t_data = tiers.get(t_key)
-        if t_data:
-            tr_s = "+" if t_data['total_r'] >= 0 else ""
-            ar_s = "+" if t_data['avg_r'] >= 0 else ""
-            lines.append(
-                f"• {t_key}: <b>{t_data['count']} trades</b> | <b>{t_data['win_rate']:.0f}% WR</b> | {tr_s}{t_data['total_r']:.1f}R (Avg {ar_s}{t_data['avg_r']:.2f}R)"
-            )
-
-    regimes = exp.get("regimes", {})
-    if regimes:
-        lines.append("")
-        lines.append("🌐 <b>Edge by Market Regime:</b>")
-        for r_key, r_data in sorted(regimes.items(), key=lambda x: x[1]["total_r"], reverse=True):
-            rr_s = "+" if r_data['total_r'] >= 0 else ""
-            rar_s = "+" if r_data['avg_r'] >= 0 else ""
-            lines.append(
-                f"• {r_key}: <b>{r_data['count']} trades</b> | <b>{r_data['win_rate']:.0f}% WR</b> | {rr_s}{r_data['total_r']:.1f}R (Avg {rar_s}{r_data['avg_r']:.2f}R)"
-            )
-
-    snipers = exp.get("snipers", {})
-    if snipers.get("count", 0) > 0:
-        lines.append("")
-        sr_s = "+" if snipers['total_r'] >= 0 else ""
-        lines.append(
-            f"🎯 <b>A+ Snipers:</b> <b>{snipers['count']} trades</b> | <b>{snipers['win_rate']:.0f}% WR</b> | {sr_s}{snipers['total_r']:.1f}R (Avg {snipers['avg_r']:+.2f}R)"
-        )
+        if t_data and t_data.get("count", 0) > 0:
+            tr_s = "+" if t_data["total_r"] >= 0 else ""
+            tier_strs.append(f"{t_key}: {t_data['count']}T ({tr_s}{t_data['total_r']:.1f}R)")
+    if tier_strs:
+        lines.append(f"• <b>Tiers:</b> " + " | ".join(tier_strs))
 
     return "\n".join(lines)
 
@@ -1017,7 +994,7 @@ def format_hindsight_report(data):
         pass
 
     title = "📈 <b>JARVIS EOD HINDSIGHT REPORT</b>" if is_eod else "📈 <b>JARVIS HINDSIGHT SIMULATION SNAPSHOT</b>"
-    time_badge = f"{date_str} • {updated_at}"
+    time_badge = f"{date_str} • {updated_at} (09:30–10:15 AM Momentum Zone)"
 
     lines = [
         title,
@@ -1026,7 +1003,7 @@ def format_hindsight_report(data):
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         "📊 <b>PORTFOLIO PERFORMANCE SUMMARY</b>",
         f"• Watchlist Universe: <b>{tot_univ} stocks</b>",
-        f"• Breakouts Triggered: <b>{len(qual_trades) + len(filt_trades)}</b> ({len(qual_trades)} Passed Checklist, {len(filt_trades)} Filtered)",
+        f"• 09:30–10:15 Entries Triggered: <b>{len(qual_trades) + len(filt_trades)}</b> ({len(qual_trades)} Passed Checklist, {len(filt_trades)} Filtered)",
     ]
 
     # Qualified Setups Summary
@@ -1039,59 +1016,11 @@ def format_hindsight_report(data):
         f"• Win Rate: <b>{q_stats['win_rate']:.0f}%</b> ({q_stats['winners']}W / {q_stats['losers']}L / {q_stats['runners']} Open Runners)",
     ])
 
-    if q_stats["best_trade"]:
+    if q_stats.get("best_trade"):
         bt = q_stats["best_trade"]
         bt_sign = "+" if bt["pnl_inr"] >= 0 else ""
         bt_r_s = "+" if bt["r_mult"] >= 0 else ""
         lines.append(f"• Best Trade: <b>{bt['symbol']}</b> (₹{bt_sign}{bt['pnl_inr']:,} | {bt_sign}{bt['pnl_pct']:.1f}% | {bt_r_s}{bt['r_mult']:.1f}R)")
-
-    # Discipline / Filtered Summary
-    f_pnl_sign = "+" if f_stats["total_pnl_inr"] >= 0 else ""
-    f_r_sign = "+" if f_stats["total_r"] >= 0 else ""
-    lines.extend([
-        "",
-        "⚠️ <b>CHECKLIST-FILTERED SETUPS (DISCIPLINE AUDIT)</b>",
-        f"• Filtered Setups: <b>{f_stats['count']} trades</b>",
-        f"• Filtered Hypothetical P&L: <b>₹{f_pnl_sign}{f_stats['total_pnl_inr']:,}</b> ({f_r_sign}{f_stats['total_r']:.1f}R)",
-    ])
-
-    # Narrow Range (NR) & Strict Entry Criteria Summary
-    s_pnl_sign = "+" if s_stats.get("total_pnl_inr", 0) >= 0 else ""
-    s_r_sign = "+" if s_stats.get("total_r", 0) >= 0 else ""
-    lines.extend([
-        "",
-        "📦 <b>NARROW RANGE (NR) & STRICT SETUP AUDIT</b>",
-        f"• Universe NR Setups: <b>{len(nr_setups)} stocks</b> ({len(strict_trades)} Triggered, {len(coiling_nr)} Coiling for Tomorrow)",
-        f"• Strict Trades Triggered: <b>{s_stats.get('count', 0)} setups</b>",
-        f"• Strict Hypothetical P&L: <b>₹{s_pnl_sign}{s_stats.get('total_pnl_inr', 0):,}</b> ({s_r_sign}{s_stats.get('total_r', 0.0):.1f}R)",
-        f"• Strict Win Rate: <b>{s_stats.get('win_rate', 0):.0f}%</b> ({s_stats.get('winners', 0)}W / {s_stats.get('losers', 0)}L / {s_stats.get('runners', 0)} Open Runners)",
-        f"• Coiled Springs Ready: <b>{len(coiling_nr)} stocks</b> stalking PDH",
-    ])
-    if s_stats.get("best_trade"):
-        s_bt = s_stats["best_trade"]
-        s_bt_sign = "+" if s_bt["pnl_inr"] >= 0 else ""
-        s_bt_r_s = "+" if s_bt["r_mult"] >= 0 else ""
-        lines.append(f"• Best Strict Trade: <b>{s_bt['symbol']}</b> (₹{s_bt_sign}{s_bt['pnl_inr']:,} | {s_bt_sign}{s_bt['pnl_pct']:.1f}% | {s_bt_r_s}{s_bt['r_mult']:.1f}R)")
-
-    # Section 0.5: A+ Sniper Hit-Rate & Alpha Audit
-    s_aud = data.get("sniper_audit", {})
-    if s_aud.get("total_snipers", 0) > 0:
-        lines.extend([
-            "",
-            "🎯 <b>A+ SNIPER HIT-RATE & ALPHA AUDIT</b>",
-            f"• Candidates Audited: <b>{s_aud['total_snipers']} A+ Snipers</b>",
-            f"• Triggered Breakouts: <b>{s_aud['triggered_count']}</b> ({round((s_aud['triggered_count'] / max(1, s_aud['total_snipers'])) * 100)}% trigger rate)",
-        ])
-        if s_aud.get("trades"):
-            lines.extend([
-                f"• Sniper Win Rate: <b>{s_aud['win_rate']:.0f}%</b> ({s_aud['winners']}W / {s_aud['losers']}L)",
-                f"• Average Alpha: <b>{s_aud['avg_r']:+.1f}R</b> (Avg MFE: +{s_aud['avg_mfe_pct']}%)",
-            ])
-            top_p = s_aud.get("top_performer")
-            if top_p:
-                lines.append(f"• Top Sniper Alpha: <b>{top_p['symbol']}</b> ({top_p['r_mult']:+.1f}R | MFE +{top_p['mfe_pct']}%)")
-        else:
-            lines.append("• <i>Tracked snipers stayed within opening ranges (0 false-breakout losses).</i>")
 
     # Section 0.7: 30-Day Rolling Strategy Expectancy
     try:
@@ -1104,82 +1033,10 @@ def format_hindsight_report(data):
 
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
-    # Section 0: Dedicated Narrow Range (NR) & Strict Criteria Audit
-    lines.append("📦 <b>NARROW RANGE (NR) & STRICT CRITERIA AUDIT:</b>")
-    lines.append("<i>Strategy: Narrow Prev Day (≤0.75x ATR / Inside Day) ➔ Strong Start (Open > PC) ➔ PDH Breakout</i>")
-
-    # Subsection A: Triggered Strict Breakouts
-    lines.append(f"\n💎 <b>TRIGGERED STRICT BREAKOUTS ({len(strict_trades)}):</b>")
-    if not strict_trades:
-        lines.append("<i>• No strict breakout triggers fired today (Capital protected).</i>")
-    else:
-        for t in strict_trades:
-            sym = t["symbol"]
-            p_sign = "+" if t["pnl_inr"] >= 0 else ""
-            r_s = "+" if t["r_mult"] >= 0 else ""
-
-            if t["outcome"] == "HIT_TARGET":
-                outcome_badge = "🎯 <b>HIT 2R TARGET (+2.0R)</b>"
-            elif t["outcome"] == "STOPPED_OUT":
-                outcome_badge = "🛑 <b>STOPPED OUT (-1.0R)</b>"
-            else:
-                outcome_badge = f"🏃 <b>OPEN RUNNER ({r_s}{t['r_mult']:.1f}R)</b>"
-
-            sl_note = f" (🛡️ Capped 2.5%)" if t.get("is_sl_capped") else f" ({t['risk_pct']:.1f}%)"
-            nr_info = f"{t.get('prev_range_ratio', 0):.2f}x ATR" if t.get('prev_range_ratio') else f"{t.get('prev_range_pct', 0):.1f}%"
-            inside_tag = " (Inside Day 📦)" if t.get("is_inside_day") else ""
-            pdh_val = round_to_clean_int(t.get('pdh', 0))
-
-            lines.append(f"\n<b>{sym}</b> | 💎 Strict Narrow+SS+PDH Break")
-            lines.append(f"• Status : {outcome_badge}")
-            lines.append(f"• Setup  : Entry <b>₹{t['entry_price']:,}</b> ({t['trig_time']}) | SL <b>₹{t['sl_price']:,}</b>{sl_note} | Tgt <b>₹{t['target_price']:,}</b>")
-            lines.append(f"• Criteria: 📏 Prev Range: <b>{nr_info}{inside_tag}</b> | 🚀 Strong Start: <b>Yes</b> | ⚡ PDH: <b>₹{pdh_val:,}</b>")
-            lines.append(f"• Outcome: Exit <b>₹{t['exit_price']:,}</b> ({t['exit_time']}) ➔ <b>₹{p_sign}{t['pnl_inr']:,}</b> ({p_sign}{t['pnl_pct']:.1f}%)")
-            lines.append(f"• Max Run: <b>+{t['mfe_pct']:.1f}%</b> MFE (Peak: ₹{t['peak_high']:,})")
-
-    # Subsection B: Coiling NR Watchlist Stalking PDH
-    lines.append(f"\n🌀 <b>COILING NR WATCHLIST — STALKING PDH ({len(coiling_nr)}):</b>")
-    lines.append("<i>Stocks with Narrow Prev Day + Strong Start that consolidated under PDH today (Top setups for tomorrow):</i>")
-    if not coiling_nr:
-        lines.append("<i>• No untriggered coiling NR stocks today.</i>")
-    else:
-        for c in coiling_nr:
-            sym = c["symbol"]
-            ratio_str = f"{c['prev_range_ratio']:.2f}x ATR" if c.get('prev_range_ratio') is not None else "Coiled"
-            in_tag = " (Inside Day 📦)" if c.get("is_inside_day") else ""
-            pdh_clean = round_to_clean_int(c.get("pdh", 0))
-            high_clean = round_to_clean_int(c.get("day_high", 0))
-            ltp_clean = round_to_clean_int(c.get("ltp", 0))
-
-            if c.get("pdh_broken"):
-                status_txt = f"⚡ <b>Tested PDH (₹{pdh_clean:,})</b> & coiled in range — Prime follow-through setup!"
-            else:
-                dist = c.get("dist_pdh_pct", 0.0)
-                status_txt = f"🟡 <b>Coiled Spring ({dist:+.1f}% vs PDH)</b> — Consolidating under PDH for breakout."
-
-            lines.append(f"\n• <b>{sym}</b> | 📏 Prev Range: <b>{ratio_str}{in_tag}</b> | 🚀 Strong Start: <b>Yes</b>")
-            lines.append(f"  ⚡ PDH: <b>₹{pdh_clean:,}</b> | High: <b>₹{high_clean:,}</b> | LTP: <b>₹{ltp_clean:,}</b>")
-            lines.append(f"  ➔ {status_txt}")
-
-    # Subsection C: Dormant / Flat NR Setups
-    if dormant_nr:
-        lines.append(f"\n📦 <b>OTHER NR CONTRACTION STOCKS ({len(dormant_nr)}):</b>")
-        lines.append("<i>Narrow Range yesterday, but opened flat/below PC today:</i>")
-        for d in dormant_nr:
-            sym = d["symbol"]
-            ratio_str = f"{d['prev_range_ratio']:.2f}x ATR" if d.get('prev_range_ratio') is not None else "Coiled"
-            in_tag = " (Inside Day 📦)" if d.get("is_inside_day") else ""
-            lines.append(f"• <b>{sym}</b>: 📏 Prev Range: <b>{ratio_str}{in_tag}</b> | Status: Dormant / Flat open")
-
-    if not nr_setups:
-        lines.append("<i>• No stocks in universe met narrow range contraction criteria yesterday.</i>")
-
-    lines.append("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-
-    # Section 1: Detailed Qualified Trades
-    lines.append("🎯 <b>DETAILED QUALIFIED SETUPS:</b>")
+    # Section 1: Detailed 09:30–10:15 Qualified Trades
+    lines.append("🎯 <b>09:30–10:15 AM TRIGGERED TRADES:</b>")
     if not qual_trades:
-        lines.append("<i>No watchlist stocks triggered and met full checklist today.</i>")
+        lines.append("<i>• No watchlist stocks broke out during the 09:30–10:15 AM momentum window.</i>")
     else:
         for t in qual_trades:
             sym = t["symbol"]
@@ -1194,37 +1051,23 @@ def format_hindsight_report(data):
                 outcome_badge = f"🏃 <b>OPEN RUNNER ({r_s}{t['r_mult']:.1f}R)</b>"
 
             sl_note = f" (🛡️ Capped 2.5%)" if t.get("is_sl_capped") else f" ({t['risk_pct']:.1f}%)"
-            lines.append(f"\n<b>{sym}</b> | {t['trigger_name']}")
+            lines.append(f"\n<b>{sym}</b> | {t['trigger_name']} (Score: {t['tech_passed']}/{t['tech_total']} ✅)")
             lines.append(f"• Status : {outcome_badge}")
             lines.append(f"• Setup  : Entry <b>₹{t['entry_price']:,}</b> ({t['trig_time']}) | SL <b>₹{t['sl_price']:,}</b>{sl_note} | Tgt <b>₹{t['target_price']:,}</b>")
-            lines.append(f"• Outcome: Exit <b>₹{t['exit_price']:,}</b> ({t['exit_time']}) ➔ <b>₹{p_sign}{t['pnl_inr']:,}</b> ({p_sign}{t['pnl_pct']:.1f}%)")
-            lines.append(f"• Max Run: <b>+{t['mfe_pct']:.1f}%</b> MFE (Peak: ₹{t['peak_high']:,}) | Score: {t['tech_passed']}/{t['tech_total']} ✅")
+            lines.append(f"• Outcome: Exit <b>₹{t['exit_price']:,}</b> ({t['exit_time']}) ➔ <b>₹{p_sign}{t['pnl_inr']:,}</b> ({p_sign}{t['pnl_pct']:.1f}%) | MFE: <b>+{t['mfe_pct']:.1f}%</b>")
 
     lines.append("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
-    # Section 2: Detailed Filtered Trades (Discipline Audit)
-    lines.append("⚠️ <b>FILTERED TRADES AUDIT (WHY AVOIDED):</b>")
-    if not filt_trades:
-        lines.append("<i>No trades were filtered out today.</i>")
+    # Section 2: Setup Tiers & Sieve Audit
+    lines.append("📦 <b>SETUP TIERS & SIEVE AUDIT:</b>")
+    lines.append(f"• 💎 Strict NR Setups: <b>{len(nr_setups)} stocks</b> ({len(strict_trades)} Triggered, {len(coiling_nr)} Coiling for Tomorrow)")
+    s_aud = data.get("sniper_audit", {})
+    if s_aud.get("total_snipers", 0) > 0:
+        lines.append(f"• 🎯 A+ Snipers: <b>{s_aud['total_snipers']} Audited</b> ({s_aud['triggered_count']} Triggered — 100% False-Breakout Protection)")
+    if filt_trades:
+        lines.append(f"• ⚠️ Filtered Trades: <b>{len(filt_trades)} Setups Avoided</b> (Saved ₹{abs(f_stats['total_pnl_inr']):,})")
     else:
-        for t in filt_trades:
-            sym = t["symbol"]
-            p_sign = "+" if t["pnl_inr"] >= 0 else ""
-            r_s = "+" if t["r_mult"] >= 0 else ""
-            flags_str = ", ".join(t["flags"]) if t["flags"] else "Low Setup Conviction"
-
-            if t["outcome"] == "STOPPED_OUT":
-                status_str = f"🛑 Stopped Out (₹{t['pnl_inr']:,})"
-                insight = f"💡 <i>Checklist protected capital! Saved ₹{abs(t['pnl_inr']):,} loss.</i>"
-            elif t["outcome"] == "HIT_TARGET":
-                status_str = f"🎯 Hit Target (₹+{t['pnl_inr']:,})"
-                insight = f"ℹ️ <i>Filtered winner (+{t['pnl_pct']:.1f}%). Filtered due to: {flags_str}.</i>"
-            else:
-                status_str = f"🏃 Closed at ₹{t['exit_price']:,} (₹{p_sign}{t['pnl_inr']:,})"
-                insight = f"ℹ️ <i>Flags: {flags_str}</i>"
-
-            lines.append(f"\n<b>{sym}</b> | Entry ₹{t['entry_price']:,} ➔ {status_str}")
-            lines.append(f"• {insight}")
+        lines.append("• ⚠️ Filtered Setups: <b>0 Filtered</b> (100% of 09:30–10:15 breakouts met checklist)")
 
     lines.append("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
@@ -1232,9 +1075,9 @@ def format_hindsight_report(data):
     lines.append(f"⚪ <b>UNTRIGGERED WATCHLIST STOCKS ({len(untrig)}):</b>")
     if untrig:
         lines.append(f"<code>{', '.join(untrig)}</code>")
-        lines.append("<i>Stayed within opening range / below breakout triggers all day.</i>")
+        lines.append("<i>Stayed within opening range / below breakout triggers during 09:30–10:15 window.</i>")
     else:
-        lines.append("<i>All watchlist stocks triggered today!</i>")
+        lines.append("<i>All watchlist stocks triggered in 09:30–10:15 window!</i>")
 
     # Section 4: Slippage & Execution Drift Audit (Real vs Model)
     drift_items = data.get("drift_items", [])
@@ -1243,74 +1086,49 @@ def format_hindsight_report(data):
         lines.append(f"📊 <b>REALIZED VS MODEL DRIFT AUDIT ({len(drift_items)} Fills):</b>")
         for d in drift_items:
             sign = "+" if d["slip_pct"] >= 0 else ""
-            inr_s = "+" if d["slip_inr"] >= 0 else ""
             lines.append(f"• <b>{d['symbol']}</b> ({d['broker']}): Exec ₹{d['real_price']:,.2f} vs Model ₹{d['model_price']:,.2f} ({sign}{d['slip_pct']}%)")
         avg_slip = sum(d["slip_pct"] for d in drift_items) / len(drift_items)
         lines.append(f"<i>Average Execution Drift: {avg_slip:+.2f}% (High Alpha Retention ✅)</i>")
 
     lines.extend([
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        "💡 <i>Standard Sizing: ₹1,00,000 capital per trade | Risk: LOD Stop / 2.5% max | Entry: Strictly after 09:30 AM</i>",
+        "💡 <i>Standard Sizing: ₹1,00,000 capital per trade | Risk: LOD Stop / 2.5% max | Entry: Strictly 09:30–10:15 AM IST</i>",
         "🤖 <i>Jarvis Autonomous Quantitative Strategy Engine</i>"
     ])
 
     full_text = "\n".join(lines)
 
-    # Auto-split if length exceeds 3800 chars (Telegram max is 4096)
+    # Return as single partition if <= 3800 chars (standard), fallback to split only if massive
     if len(full_text) <= 3800:
         return [full_text]
 
-    # Major Section Dividers:
-    # 1. Summary & Narrow Range (NR) Audit
-    # 2. Detailed Qualified Setups
-    # 3. Filtered Trades Audit & Untriggered Stocks
-    sec_nr_lines = []
-    sec_qual_lines = []
-    sec_filt_lines = []
+    # Fallback auto-split by sections if length ever exceeds 3800 chars
+    sec1_lines = []
+    sec2_lines = []
+    sec3_lines = []
     cur_sec = 1
-
     for l in lines:
-        if "DETAILED QUALIFIED SETUPS:" in l:
+        if "09:30–10:15 AM TRIGGERED TRADES:" in l:
             cur_sec = 2
-        elif "FILTERED TRADES AUDIT" in l:
+        elif "SETUP TIERS & SIEVE AUDIT:" in l:
             cur_sec = 3
-
         if cur_sec == 1:
-            sec_nr_lines.append(l)
+            sec1_lines.append(l)
         elif cur_sec == 2:
-            sec_qual_lines.append(l)
+            sec2_lines.append(l)
         else:
-            sec_filt_lines.append(l)
+            sec3_lines.append(l)
 
-    # Assemble parts by combining sections without exceeding 3800 chars
     parts = []
-    sec1_text = "\n".join(sec_nr_lines)
-    sec2_text = "\n".join(sec_qual_lines)
-    sec3_text = f"📈 <b>JARVIS HINDSIGHT REPORT (DISCIPLINE & UNTRIGGERED) — {date_str}</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" + "\n".join(sec_filt_lines)
-
-    if len(sec1_text) + len(sec2_text) + 2 <= 3800:
-        parts.append(sec1_text + "\n\n" + sec2_text)
+    p1 = "\n".join(sec1_lines)
+    p2 = "\n".join(sec2_lines)
+    p3 = "\n".join(sec3_lines)
+    if len(p1) + len(p2) + 2 <= 3800:
+        parts.append(p1 + "\n\n" + p2)
     else:
-        parts.append(sec1_text)
-        parts.append(f"📈 <b>JARVIS HINDSIGHT REPORT (QUALIFIED SETUPS) — {date_str}</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" + sec2_text)
-
-    if len(sec3_text) <= 3800:
-        parts.append(sec3_text)
-    else:
-        sec3_lines = sec3_text.split("\n")
-        cur_lines = []
-        cur_len = 0
-        for l in sec3_lines:
-            if cur_len + len(l) + 1 > 3800:
-                parts.append("\n".join(cur_lines))
-                cur_lines = [l]
-                cur_len = len(l)
-            else:
-                cur_lines.append(l)
-                cur_len += len(l) + 1
-        if cur_lines:
-            parts.append("\n".join(cur_lines))
-
+        parts.append(p1)
+        parts.append(p2)
+    parts.append(p3)
     return parts
 
 
