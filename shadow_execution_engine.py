@@ -93,6 +93,18 @@ CONFIG_SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 EVALUATION_BASE_CAPITAL = 500000.0  # ₹5,00,000 maximum gross exposure base (5 slots x ₹100,000, 100% CNC Delivery, 0 Leverage)
 MAX_SYSTEM_SLOTS = 5
 
+def get_git_commit_sha():
+    """Returns the current Git commit SHA (short 8-char), cached or from file."""
+    commit_file = BASE_DIR / "git_commit.txt"
+    if commit_file.is_file():
+        try:
+            val = commit_file.read_text(encoding="utf-8").strip()
+            if val:
+                return val[:8]
+        except Exception:
+            pass
+    return "1930a204"
+
 FROZEN_PARAMS = {
     "version": CONFIG_VERSION,
     "evaluation_start_date": "2026-11-23",
@@ -101,8 +113,14 @@ FROZEN_PARAMS = {
     "max_portfolio_slots": 5,
     "cash_gated_execution": True,
     "circuit_ceiling_collar_pct": 1.5,
+    "depth_gate_circuit_proximity_pct": 1.5,
+    "depth_gate_unquoted_gain_pct": 15.0,
+    "circuit_unlock_fill_logic": "min_candle_open_ltp_v33",
+    "anomaly_rejection_pct_threshold": 80.0,
+    "anomaly_min_sample_size": 5,
     "earnings_blackout_days": 3,
     "earnings_sync_max_age_hours": 72,
+    "earnings_monday_cache_max_hours": 24.0,
     "quotes_api_route": "v3/market-quote/quotes",
     "rvol_tod_min": 1.0,
     "stretch_max": 3.0,
@@ -908,6 +926,7 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         "symbol": sym,
         "config_version": CONFIG_VERSION,
         "config_hash": CONFIG_HASH,
+        "git_commit": get_git_commit_sha(),
         "entry_price": fill_price,
         "initial_sl": initial_sl,
         "current_sl": initial_sl,
@@ -1356,6 +1375,7 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 "symbol": sym,
                 "config_version": CONFIG_VERSION,
                 "config_hash": CONFIG_HASH,
+                "git_commit": pos.get("git_commit") or get_git_commit_sha(),
                 "entry_date": entry_date,
                 "exit_date": today_str,
                 "entry_time": pos.get("entry_time"),
