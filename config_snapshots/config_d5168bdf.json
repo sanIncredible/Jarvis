@@ -1,0 +1,95 @@
+{
+  "version": "v3.3.0-strict",
+  "evaluation_start_date": "2026-11-23",
+  "evaluation_end_date": "2027-01-05",
+  "evaluation_base_capital_inr": 500000.0,
+  "max_portfolio_slots": 5,
+  "cash_gated_execution": true,
+  "circuit_ceiling_collar_pct": 1.5,
+  "depth_gate_circuit_proximity_pct": 1.5,
+  "depth_gate_unquoted_gain_pct": 15.0,
+  "circuit_unlock_fill_logic": "min_candle_open_ltp_v33",
+  "anomaly_rejection_pct_threshold": 80.0,
+  "anomaly_min_sample_size": 5,
+  "earnings_blackout_days": 3,
+  "earnings_sync_max_age_hours": 72,
+  "earnings_monday_cache_max_hours": 24.0,
+  "quotes_api_route": "v3/market-quote/quotes",
+  "rvol_tod_min": 1.0,
+  "stretch_max": 3.0,
+  "gap_max": 2.5,
+  "wick_max": 40.0,
+  "risk_max_pct": 4.0,
+  "risk_min_pct": 1.0,
+  "min_stop_distance_rule": "max(1.0%, 0.5 * ATR14)",
+  "soft_min": 3,
+  "tick_size": 0.05,
+  "sl_adverse_slippage_pct": 0.0015,
+  "day1_spurt_threshold_pct": 4.5,
+  "trail_stage1_r": 1.5,
+  "trail_stage2_r": 2.0,
+  "trail_stage2_lock_r": 1.0,
+  "trail_ema5_floor_r": 2.0,
+  "statutory_rates": {
+    "stt_delivery": 0.001,
+    "stamp_duty_buy": 0.00015,
+    "exchange_turnover": 2.97e-05,
+    "sebi_turnover": 1e-06,
+    "gst_rate": 0.18,
+    "dp_charges_flat": 15.93
+  },
+  "regime_table": {
+    "EXPANSION": {
+      "permitted": true,
+      "alloc_pct": 100,
+      "max_slots": 3,
+      "slot_capital_max": 100000
+    },
+    "NORMAL": {
+      "permitted": true,
+      "alloc_pct": 100,
+      "max_slots": 3,
+      "slot_capital_max": 100000
+    },
+    "NEUTRAL": {
+      "permitted": true,
+      "alloc_pct": 50,
+      "max_slots": 1,
+      "slot_capital_max": 50000
+    },
+    "DEFENSIVE": {
+      "permitted": false,
+      "alloc_pct": 0,
+      "max_slots": 0,
+      "slot_capital_max": 0
+    },
+    "WASHOUT": {
+      "permitted": false,
+      "alloc_pct": 0,
+      "max_slots": 0,
+      "slot_capital_max": 0
+    }
+  },
+  "tod_knots": [
+    [
+      0,
+      0.01
+    ],
+    [
+      15,
+      0.1
+    ],
+    [
+      60,
+      0.25
+    ],
+    [
+      285,
+      0.65
+    ],
+    [
+      375,
+      1.0
+    ]
+  ]
+}
