@@ -625,6 +625,8 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
 
     checklist = []
     warnings = []
+    gap_ext_pct = None
+    upper_wick_pct = None
 
     # 1. Regime Permission
     is_defensive = state_code in ("DEFENSIVE", "DEFENSIVE_WATERFALL", "CLIMAX", "WASHOUT", "CHOP") or alloc_pct == 0
@@ -956,17 +958,62 @@ def evaluate_strategy_checklist(symbol, quote_data=None, calc_data=None):
             "detail": f"Individual stock momentum in {theme_name}"
         })
 
+    # -------------------------------------------------------------
+    # P0-7: Compile Hard Gates (Must All Pass) vs Soft Scores (0-7)
+    # -------------------------------------------------------------
+    orb_passed = bool(
+        (sc_data and orb_status and (orb_status in ("H", "L➔H") or (orb_high and ltp > orb_high)))
+        or (not (sc_data and orb_status) and ltp and day_high and ltp >= day_high * 0.992)
+    )
+    rvol_val = rvol if rvol is not None else None
+
+    hard_gates = [
+        {"name": "Regime Permission", "passed": not is_defensive, "reason": state_code},
+        {"name": "ORB Breakout", "passed": orb_passed, "reason": orb_status or "Near High"},
+        {"name": "Volume Participation (>=0.75x)", "passed": (rvol_val is None or rvol_val >= 0.75), "reason": f"RVOL {rvol_val:.2f}x" if rvol_val is not None else "N/A"},
+        {"name": "Stop Distance (<=4.0%)", "passed": (risk_pct is None or risk_pct <= 4.0), "reason": f"{risk_pct:.1f}%" if risk_pct is not None else "N/A"},
+        {"name": "10 EMA Stretch (<=1.5%)", "passed": (stretch_pct is None or stretch_pct <= 1.5), "reason": f"{stretch_pct:.1f}%" if stretch_pct is not None else "N/A"},
+        {"name": "Gap Extension (<=2.5%)", "passed": (gap_ext_pct is None or gap_ext_pct <= 2.5), "reason": f"{gap_ext_pct:.1f}%" if gap_ext_pct is not None else "N/A"},
+        {"name": "Upper Wick Rejection (<=40%)", "passed": (upper_wick_pct is None or upper_wick_pct <= 40.0), "reason": f"{upper_wick_pct:.0f}%" if upper_wick_pct is not None else "N/A"}
+    ]
+    failed_hard_gates = [g["name"] for g in hard_gates if not g["passed"]]
+    hard_gates_passed = (len(failed_hard_gates) == 0)
+
+    pdh_passed = bool(
+        (sc_data and pdh and (pdh_broken or (ltp and ltp > pdh)))
+        or (quote_data and quote_data.get("prev_close") and ltp and ltp > quote_data["prev_close"])
+    )
+    is_coiled = bool((prev_range_ratio is not None and prev_range_ratio <= 0.75) or is_inside_day or is_narrow_prev)
+
+    soft_scores = [
+        {"name": "Strong Start (SS)", "passed": bool(is_ss)},
+        {"name": "PDH Cleared", "passed": pdh_passed},
+        {"name": "Surging Volume (>=1.0x)", "passed": (rvol_val is not None and rvol_val >= 1.0)},
+        {"name": "Tight Stop (<=3.0%)", "passed": (risk_pct is not None and risk_pct <= 3.0)},
+        {"name": "Prime 10 EMA Coil (<=0.6%)", "passed": (stretch_pct is not None and stretch_pct <= 0.6)},
+        {"name": "Prior Day Contraction (NR/Inside)", "passed": is_coiled},
+        {"name": "Sector Group Momentum", "passed": (theme_cnt >= 2)}
+    ]
+    soft_score = sum(1 for s in soft_scores if s["passed"])
+    soft_total = len(soft_scores)
+
     passed_count = sum(1 for c in checklist if c.get("passed"))
     total_count = len(checklist)
 
     return {
         "checklist": checklist,
         "warnings": warnings,
+        "hard_gates": hard_gates,
+        "hard_gates_passed": hard_gates_passed,
+        "failed_hard_gates": failed_hard_gates,
+        "soft_scores": soft_scores,
+        "soft_score": soft_score,
+        "soft_total": soft_total,
         "passed_count": passed_count,
         "total_count": total_count,
         "passed_rules": passed_count,
         "total_rules": total_count,
-        "is_all_passed": len(warnings) == 0,
+        "is_all_passed": hard_gates_passed and len(warnings) == 0,
         "scanner_signal": sc_data.get("signal") if sc_data else None
     }
 
