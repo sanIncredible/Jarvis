@@ -83,14 +83,57 @@ def get_ist_now():
     return datetime.now(timezone.utc).astimezone(IST)
 
 
-def round_to_clean_int(val):
-    """Rounds float price to nearest whole integer."""
+CONFIG_VERSION = "v3.1.0-strict"
+REJECTED_SIGNALS_FILE = BASE_DIR / "shadow_rejected_signals.json"
+
+
+def round_to_tick(val, tick=0.05, direction="nearest"):
+    """
+    Tick-aware price rounding for NSE equities (standard ₹0.05 tick size).
+    - direction='down': math.floor(f / tick) * tick (for protective stops & exit fills)
+    - direction='up': math.ceil(f / tick) * tick (for marketable buy fills)
+    - direction='nearest': round(f / tick) * tick
+    """
     if val is None:
-        return 0
+        return 0.0
     try:
-        return int(round(float(val)))
+        f = float(val)
+        if direction == "down":
+            return round(math.floor(round(f / tick, 6)) * tick, 2)
+        elif direction == "up":
+            return round(math.ceil(round(f / tick, 6)) * tick, 2)
+        else:
+            return round(round(f / tick) * tick, 2)
     except Exception:
-        return 0
+        return 0.0
+
+
+def round_to_clean_int(val):
+    """Backwards-compatibility alias: delegates to tick-aware rounding (0.05)."""
+    return round_to_tick(val, tick=0.05, direction="nearest")
+
+
+def log_rejected_signal(symbol: str, reason: str, metadata: dict = None):
+    """Logs rejected breakout setups to shadow_rejected_signals.json for benchmark transparency."""
+    try:
+        rej_list = []
+        if REJECTED_SIGNALS_FILE.is_file():
+            try:
+                with open(REJECTED_SIGNALS_FILE, "r", encoding="utf-8") as rf:
+                    rej_list = json.load(rf)
+            except Exception:
+                rej_list = []
+        rej_entry = {
+            "symbol": symbol,
+            "timestamp": get_ist_now().strftime("%Y-%m-%d %H:%M:%S"),
+            "reason": reason,
+            "config_version": CONFIG_VERSION,
+            "metadata": metadata or {}
+        }
+        rej_list.append(rej_entry)
+        atomic_write_json(REJECTED_SIGNALS_FILE, rej_list)
+    except Exception as e:
+        print(f"Notice logging rejected signal for {symbol}: {e}")
 
 
 NSE_HOLIDAYS = {
@@ -324,24 +367,25 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     if ltp < 20.0:
         return False, f"Penny stock filter: {sym} LTP ₹{ltp:.2f} < ₹20 threshold"
 
-    # Realistic Marketable Fill (+0.15% slippage collar)
-    fill_price = round_to_clean_int(ltp * 1.0015)
+    # Realistic Marketable Fill (+0.15% slippage collar, tick-aware ceil)
+    fill_price = round_to_tick(ltp * 1.0015, tick=0.05, direction="up")
 
-    # Initial Structural Stop Loss: Day Low at trigger moment with buffer
+    # Initial Structural Stop Loss: Day Low at trigger moment with buffer, tick-aware floor
     dl = float(day_low or quote_data.get("day_low") or (fill_price * 0.975))
-    buffer = max(1.0, round(dl * 0.002, 2))
-    initial_sl = round_to_clean_int(dl - buffer)
+    buffer = max(0.20, round(dl * 0.002, 2))
+    initial_sl = round_to_tick(dl - buffer, tick=0.05, direction="down")
 
-    # Edge Case Guard 3: Stop-Loss Sanitization (Ensure SL is strictly at least ₹1 below fill price)
+    # Edge Case Guard 3: Stop-Loss Sanitization (Ensure SL is strictly at least ₹0.50 below fill price)
     if initial_sl >= fill_price:
-        initial_sl = fill_price - 1
+        initial_sl = round_to_tick(fill_price - 0.50, tick=0.05, direction="down")
 
-    # Risk distance per share (ensures min 1.0 to prevent division by zero)
-    risk_per_share = max(1.0, float(fill_price - initial_sl))
+    # Risk distance per share (ensures min 0.50 to prevent division by zero)
+    risk_per_share = max(0.50, round(fill_price - initial_sl, 2))
     risk_pct = round((risk_per_share / fill_price) * 100.0, 2)
 
     # Edge Case Guard 4: Excessive Stop Distance Rejection (Checklist Rule 6: <= 4.0% Limit)
     if risk_pct > 4.0:
+        log_rejected_signal(sym, f"Wide Stop-Loss: {risk_pct:.1f}% (> 4.0% limit)", {"risk_pct": risk_pct, "fill_price": fill_price, "sl": initial_sl})
         return False, f"Wide Stop-Loss: Distance to Day Low is {risk_pct:.1f}% (> 4.0% limit). Capital preserved against excessive tail risk."
 
     # P0-11: Standardized 1.0R = ₹1,000 Position Sizing with Institutional ATR Risk Floor
@@ -350,11 +394,11 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         sc_d = get_cached_symbol_metrics(sym) or {}
         atr_val = sc_d.get("atr14")
     atr_14_f = float(atr_val) if (atr_val and float(atr_val) > 0) else (fill_price * 0.02)
-    effective_risk_dist = max(risk_per_share, atr_14_f * 0.75, 1.0)
+    effective_risk_dist = max(risk_per_share, atr_14_f * 0.75, 0.50)
     qty = max(1, int(FIXED_RISK_PER_TRADE_INR // effective_risk_dist))
-    target_price = round_to_clean_int(fill_price + (2.0 * risk_per_share))
-    capital_invested = round_to_clean_int(qty * fill_price)
-    initial_risk_inr = max(1.0, float(round_to_clean_int(qty * risk_per_share)))
+    target_price = round_to_tick(fill_price + (2.0 * risk_per_share), tick=0.05, direction="up")
+    capital_invested = round(qty * fill_price, 2)
+    initial_risk_inr = max(1.0, float(round(qty * risk_per_share, 2)))
 
     # P0-7: Strategy Checklist (Hard Gates vs Soft Scores)
     ck_note = "Qualified Playbook Setup"
@@ -365,6 +409,7 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         # 1. Enforce Hard Gates (Must All Pass)
         if not ck.get("hard_gates_passed", True):
             failed_gates = ck.get("failed_hard_gates", [])
+            log_rejected_signal(sym, f"Checklist Hard Gate failed: {', '.join(failed_gates)}", {"gates": failed_gates, "ltp": ltp, "risk_pct": risk_pct})
             return False, f"Checklist Hard Gate failed: {', '.join(failed_gates)}"
 
         soft_score = ck.get("soft_score", 0)
@@ -373,15 +418,19 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
 
         # 2. Minimum Soft Score Conviction threshold (At least 3 quality points required)
         if soft_score < 3:
+            log_rejected_signal(sym, f"Checklist conviction low ({soft_score}/{soft_total} < 3 required)", {"score": soft_score, "ltp": ltp, "risk_pct": risk_pct})
             return False, f"Checklist conviction low ({soft_score}/{soft_total} < 3 required)"
     except Exception:
         pass
 
     entry_record = {
         "symbol": sym,
+        "config_version": CONFIG_VERSION,
         "entry_price": fill_price,
         "initial_sl": initial_sl,
         "current_sl": initial_sl,
+        "sl_last_ratchet_date": today_str,
+        "sl_last_ratchet_time": now.strftime("%H:%M:%S"),
         "target_price": target_price,
         "risk_per_share": round(risk_per_share, 2),
         "risk_pct": risk_pct,
@@ -533,46 +582,49 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                     ema5 = float(c_meta.get("ema5") or 0.0)
 
         # Multi-Stage Swing Trailing Stop Hierarchy (Strict Monotonic Non-Decreasing: Highest Stop Wins)
+        # All trailing stops use tick-aware downward rounding (₹0.05 tick size)
         candidate_stops = [(current_sl, pos.get("last_trail_rule", "INITIAL LOD STOP"))]
 
         # 1. 🛡️ 30% PROFIT CAP (Milestone: +28% gain or 8.0R reached -> lock +25% profit)
         if peak_gain_pct >= 28.0 or highest_r >= 8.0:
-            candidate_stops.append((round_to_clean_int(entry_p * 1.25), "🛡️ 30% PROFIT CAP (Lock +25% Gains)"))
+            candidate_stops.append((round_to_tick(entry_p * 1.25, tick=0.05, direction="down"), "🛡️ 30% PROFIT CAP (Lock +25% Gains)"))
 
         # 2. ⚡ PARABOLIC 5 EMA (Vertical Momentum: R >= 4.0 -> trail 5 EMA with Stage 4 +2.0R floor!)
         if highest_r >= 4.0:
-            floor_2r = round_to_clean_int(entry_p + (2.0 * risk_per_share))
-            s_5ema = round_to_clean_int(ema5 * 0.995) if ema5 > 0 else 0
+            floor_2r = round_to_tick(entry_p + (2.0 * risk_per_share), tick=0.05, direction="down")
+            s_5ema = round_to_tick(ema5 * 0.995, tick=0.05, direction="down") if ema5 > 0 else 0
             candidate_stops.append((max(floor_2r, s_5ema), "⚡ PARABOLIC 5 EMA TRAIL (+2.0R Floor)"))
 
         # 3. 🎯 STAGE 4: R >= 3.0 (Lock at least +2.0R guaranteed profit while riding 10 EMA)
         if highest_r >= 3.0:
-            floor_2r = round_to_clean_int(entry_p + (2.0 * risk_per_share))
-            ema10_trail = round_to_clean_int(ema10 * 0.992) if ema10 > 0 else 0
+            floor_2r = round_to_tick(entry_p + (2.0 * risk_per_share), tick=0.05, direction="down")
+            ema10_trail = round_to_tick(ema10 * 0.992, tick=0.05, direction="down") if ema10 > 0 else 0
             candidate_stops.append((max(floor_2r, ema10_trail), "🎯 STAGE 4: +2.0R LOCKED (Riding 10 EMA)"))
 
         # 4. 🎯 STAGE 3: R >= 2.0 (Lock at least +1.0R guaranteed profit on the orderbook)
         if highest_r >= 2.0:
-            floor_1r = round_to_clean_int(entry_p + (1.0 * risk_per_share))
-            ema10_trail = round_to_clean_int(ema10 * 0.992) if ema10 > 0 else 0
+            floor_1r = round_to_tick(entry_p + (1.0 * risk_per_share), tick=0.05, direction="down")
+            ema10_trail = round_to_tick(ema10 * 0.992, tick=0.05, direction="down") if ema10 > 0 else 0
             candidate_stops.append((max(floor_1r, ema10_trail), "🎯 STAGE 3: +1.0R LOCKED (Swing Runner Protected)"))
 
         # 5. 🚀 DAY-1 SPURT SHIELD (Surge of +4.5% on Day 1 -> ratchet to breakeven +0.2%)
         if holding_days == 1 and peak_gain_pct >= 4.5:
-            candidate_stops.append((round_to_clean_int(entry_p * 1.002), "🚀 DAY-1 SPURT SHIELD (+4.5% Surge -> Breakeven)"))
+            candidate_stops.append((round_to_tick(entry_p * 1.002, tick=0.05, direction="down"), "🚀 DAY-1 SPURT SHIELD (+4.5% Surge -> Breakeven)"))
 
         # 6. 🟢 10 EMA SWING TRAIL (Day 2+ trending position with R >= 1.5)
         if holding_days >= 2 and highest_r >= 1.5 and ema10 > 0:
-            candidate_stops.append((round_to_clean_int(ema10 * 0.992), "🟢 10 EMA SWING TRAIL"))
+            candidate_stops.append((round_to_tick(ema10 * 0.992, tick=0.05, direction="down"), "🟢 10 EMA SWING TRAIL"))
 
         # 7. 🟢 20 EMA STRUCTURAL TRAIL (Day 3+ wider base runner with R >= 1.0)
         if holding_days >= 3 and highest_r >= 1.0 and ema20 > 0:
-            candidate_stops.append((round_to_clean_int(ema20 * 0.990), "🟢 20 EMA STRUCTURAL TRAIL"))
+            candidate_stops.append((round_to_tick(ema20 * 0.990, tick=0.05, direction="down"), "🟢 20 EMA STRUCTURAL TRAIL"))
 
         best_sl, best_rule = max(candidate_stops, key=lambda x: x[0])
         if best_sl > current_sl:
             pos["current_sl"] = best_sl
             pos["last_trail_rule"] = best_rule
+            pos["sl_last_ratchet_date"] = today_str
+            pos["sl_last_ratchet_time"] = now.strftime("%H:%M:%S")
             updates_count += 1
 
         # Check Simulated Exit Breaches
@@ -580,37 +632,55 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         exit_price = ltp
         exit_reason = ""
 
+        # Resolve intraday candles for tick-accurate post-entry / post-ratchet low tracking
+        candles_3m = q.get("candles_3m") or (c_meta.get("candles_3m") if c_meta else []) or []
+
         # Structural Exit: Low breached the current trailed stop-loss
         is_sl_breached = False
         if holding_days == 1:
             # On Day 1: Evaluate post-entry low from intra-day bars (to catch true resting stop wicks without false morning wicks)
-            entry_t = str(pos.get("entry_time") or "09:15:00")[:5]
-            post_bars = [c for c in (sc_meta.get("candles_3m") or (quote_data or {}).get("candles_3m") or []) if isinstance(c, dict) and (c.get("t") or "") >= entry_t]
+            # Safely include entry bar itself by flooring entry_time down to 3-minute candle bucket
+            e_parts = (str(pos.get("entry_time") or "09:15:00")).split(":")
+            e_h = int(e_parts[0]) if len(e_parts) > 0 and e_parts[0].isdigit() else 9
+            e_m = int(e_parts[1]) if len(e_parts) > 1 and e_parts[1].isdigit() else 15
+            entry_bucket = f"{e_h:02d}:{(e_m // 3) * 3:02d}"
+            post_bars = [c for c in candles_3m if isinstance(c, dict) and (c.get("t") or "") >= entry_bucket]
             post_low = min([float(c.get("l")) for c in post_bars if c.get("l") is not None] or [ltp])
             is_sl_breached = (post_low <= pos["current_sl"] or ltp <= pos["current_sl"])
         else:
-            # Day 2+: Today's entire session is post-entry, so any day_low breach is a valid structural stop hit
-            is_sl_breached = (day_low <= pos["current_sl"] or ltp <= pos["current_sl"])
+            # Day 2+: Guard against mid-session ratchet rogue wick bug:
+            # If the stop was ratcheted TODAY mid-session, do NOT let earlier morning dips before the ratchet trigger an exit!
+            if pos.get("sl_last_ratchet_date") == today_str and str(pos.get("sl_last_ratchet_time") or "") > "09:15:00":
+                r_parts = (str(pos.get("sl_last_ratchet_time") or "09:15:00")).split(":")
+                r_h = int(r_parts[0]) if len(r_parts) > 0 and r_parts[0].isdigit() else 9
+                r_m = int(r_parts[1]) if len(r_parts) > 1 and r_parts[1].isdigit() else 15
+                ratchet_bucket = f"{r_h:02d}:{(r_m // 3) * 3:02d}"
+                post_ratchet_bars = [c for c in candles_3m if isinstance(c, dict) and (c.get("t") or "") >= ratchet_bucket]
+                post_ratchet_low = min([float(c.get("l")) for c in post_ratchet_bars if c.get("l") is not None] or [ltp])
+                is_sl_breached = (post_ratchet_low <= pos["current_sl"] or ltp <= pos["current_sl"])
+            else:
+                is_sl_breached = (day_low <= pos["current_sl"] or ltp <= pos["current_sl"])
 
         if is_sl_breached:
             exit_triggered = True
             # Realistic Exit Fill Model:
-            # If overnight gap down on Day 2+, execute fill at opening auction price (day_open with 0.15% spread slippage)
+            # If overnight gap down on Day 2+, execute fill at opening auction price (day_open with 0.15% spread slippage, rounded down to ₹0.05 tick)
             if holding_days >= 2 and day_open > 0 and day_open < pos["current_sl"]:
-                exit_price = round_to_clean_int(day_open * 0.9985)
+                exit_price = round_to_tick(day_open * 0.9985, tick=0.05, direction="down")
             else:
-                exit_price = round_to_clean_int(pos["current_sl"] * 0.9985)
+                exit_price = round_to_tick(pos["current_sl"] * 0.9985, tick=0.05, direction="down")
             exit_reason = pos["last_trail_rule"]
 
         if exit_triggered:
             initial_risk_inr = max(1.0, float(pos.get("initial_risk_inr") or pos.get("fixed_risk_inr") or (qty * risk_per_share)))
-            realized_pnl = round_to_clean_int((exit_price - entry_p) * qty)
+            realized_pnl = round((exit_price - entry_p) * qty, 2)
             realized_r_structural = round(realized_pnl / initial_risk_inr, 2)
             realized_r_nominal = round(realized_pnl / 1000.0, 2)
             giveback_r = round(max(0.0, highest_r - realized_r_structural), 2)
 
             log_entry = {
                 "symbol": sym,
+                "config_version": CONFIG_VERSION,
                 "entry_date": entry_date,
                 "exit_date": today_str,
                 "entry_time": pos.get("entry_time"),
