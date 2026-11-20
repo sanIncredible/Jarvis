@@ -366,9 +366,9 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         soft_total = ck.get("soft_total", 7)
         ck_note = f"Hard Gates PASSED ✅ | Quality: {soft_score}/{soft_total} ⭐"
 
-        # 2. Minimum Soft Score Conviction threshold (At least 2 quality points required)
-        if soft_score < 2:
-            return False, f"Checklist conviction low ({soft_score}/{soft_total} < 2 required)"
+        # 2. Minimum Soft Score Conviction threshold (At least 3 quality points required)
+        if soft_score < 3:
+            return False, f"Checklist conviction low ({soft_score}/{soft_total} < 3 required)"
     except Exception:
         pass
 
