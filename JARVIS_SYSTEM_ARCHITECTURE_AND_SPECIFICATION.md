@@ -306,9 +306,9 @@ A failure in ANY single hard gate triggers an immediate, fatal rejection of the 
 1. **Regime Permission:** Market state is NOT `DEFENSIVE`, `WASHOUT`, or `alloc_pct == 0` (EXPANSION, NORMAL, and NEUTRAL permitted).
 2. **ORB Breakout Confirmation:** Price is actively breaking out (`orb_status in ("H", "L➔H")` or `LTP > ORB High`).
 3. **Volume Participation (Time-of-Day Hurdle):** Volume meets the expected session pace for the elapsed time (`RVOL_TOD >= 1.0x`).
-4. **Stop Distance Ceiling (0.25% to 4.0%):** Distance to Day Low stop is within valid structural boundaries:
-   $$\text{Stop Distance} \le 4.0\% \quad \text{AND} \quad \text{Stop Distance} \ge 0.25\%$$
-   *(Prevents wide tail risk while filtering sub-tick noise. Tight opening ranges <0.5 ATR are fully permitted to preserve volatility compression edge).*
+4. **Stop Distance Collar (1.0% to 4.0% with Noise Floor Padding):** Distance to protective stop is within valid structural boundaries:
+   $$\text{Stop Distance} \le 4.0\% \quad \text{AND} \quad \text{Stop Distance} \ge \max(1.0\%, \, 0.5 \times \text{ATR}_{14})$$
+   *(Prevents wide tail risk while filtering sub-noise fragility. If the raw Opening Range Low is shallower than $\max(1.0\%, 0.5 \times \text{ATR})$, the engine automatically pads the stop downwards to clear market noise and friction, sizing off that padded distance).*
 5. **10 EMA Stretch Collar:** Micro-timeframe 3m 10 EMA stretch is controlled (`stretch_pct <= 3.0%`; prevents chasing local blow-off tops).
 6. **Opening Gap Extension:** Opening gap is not extended beyond the breakout trigger (`gap_ext_pct <= 2.5%`).
 7. **Candle Range Quality:** Rejection upper wick does not dominate the session range (`upper_wick_pct <= 40.0%`).
@@ -332,16 +332,18 @@ Used to rank setup conviction and grade trade quality (0 to 7):
 
 ### 7.2 Position Sizing Architecture (`calculate_order_sizing`)
 
-#### 1. Volatility-Adaptive Stop-Loss Buffer
-Rather than placing stops directly at the raw Day Low (which gets hunted by market makers), Jarvis places stops buffered by intraday volatility:
+#### 1. Volatility-Adaptive Stop-Loss Buffer & Noise Floor Padding
+Rather than placing stops directly at the raw Day Low (which gets hunted by market makers), Jarvis places stops buffered by intraday volatility and padded against microstructure noise:
 $$\text{Adaptive Buffer} = \max\left(1.0, \text{round}\left(\frac{\text{ATR}_{14}}{6} \times 0.25\right), \text{round}(\text{Day Low} \times 0.0020)\right)$$
-$$\text{Stop Loss} = \text{round\_to\_tick}(\text{Day Low} - \text{Adaptive Buffer}, \text{tick}=0.05, \text{direction}="down")$$
+$$\text{Raw Stop} = \text{round\_to\_tick}(\text{Day Low} - \text{Adaptive Buffer}, \text{tick}=0.05, \text{direction}="down")$$
+$$\text{Min Stop Distance} = \max(\text{LTP} \times 0.010, \, 0.5 \times \text{ATR}_{14})$$
+$$\text{Stop Loss} = \min(\text{Raw Stop}, \, \text{round\_to\_tick}(\text{LTP} - \text{Min Stop Distance}, \text{tick}=0.05, \text{direction}="down"))$$
 
 #### 2. True Van Tharp Risk-Normalized Sizing (1.0R = ₹1,000 INR)
 $$\text{Risk Per Share} = \text{Fill Price} - \text{Initial Stop Loss}$$
 $$\text{Quantity} = \min\left(\left\lfloor \frac{\text{Target Risk INR (1000)}}{\text{Risk Per Share}} \right\rfloor, \, \left\lfloor \frac{\text{Max Capital Per Slot}}{\text{Fill Price}} \right\rfloor\right)$$
 $$\text{Initial Risk INR} = \text{Quantity} \times \text{Risk Per Share}$$
-> **Capital Constraint vs. Noise Sizing:** Sizing calculates directly on the actual structural risk per share. Oversized positions on ultra-tight stops are naturally governed by the Slot Capital Ceiling (₹50,000 in NEUTRAL, ₹100,000 in EXPANSION/NORMAL), completely eliminating the artificial ATR sizing floor and keeping initial stop-outs at exactly $-1.0\text{R}$.
+> **Noise Cleared & Friction Normalized:** Sizing calculates directly on the padded structural risk per share ($\ge 1.0\%$). This guarantees that the stop sits outside 1-minute random market noise, round-trip friction (~0.43%) does not distort stop-outs beyond $-1.4\text{R}$, and trailing locks trigger on genuine momentum expansions rather than random wiggles.
 
 #### 3. Neutral Regime Sizing & Exposure Auto-Cap (₹50k)
 - In **`DEFENSIVE`** and **`WASHOUT`** regimes, capital preservation is strictly enforced: swing allocation is 0%, daily entry limit is 0, new trade entries are prohibited (`Quantity = 0`), and Hard Gate 1 fatally blocks execution.
@@ -474,15 +476,20 @@ Implemented via `count_trading_days(date_start, date_end)`:
 Computed daily at 15:35:00 IST by `get_shadow_analytics()`:
 - **Win Rate %:** $\frac{\text{Total Wins}}{\text{Total Closed Trades}} \times 100$
 - **Profit Factor:** $\frac{\sum \text{Realized Wins (in R)}}{\sum |\text{Realized Losses (in R)}|}$
-- **Mathematical Expectancy:**
-  $$\text{Expectancy } (R) = (P_{\text{win}} \times \overline{R}_{\text{win}}) - (P_{\text{loss}} \times \overline{R}_{\text{loss}})$$
+- **Dual Expectancy Reporting:**
+  - **Expectancy ($R$):** $(P_{\text{win}} \times \overline{R}_{\text{win}}) - (P_{\text{loss}} \times \overline{R}_{\text{loss}})$
+  - **Expectancy (₹ / trade):** $\frac{\text{Net Realized PnL (INR)}}{\text{Total Closed Trades}}$ *(Eliminates R-multiple distortion from small risk denominators).*
 - **Max Closed-Trade Drawdown ($R$):** Peak-to-trough drop of cumulative closed $R$.
 - **Max MTM Drawdown ($R$):** Peak-to-trough drop of daily mark-to-market total portfolio equity curve.
 - **Average Giveback ($R$):** Average difference between peak unrealized $R$ and realized exit $R$.
 
 ### 8.8 Benchmark Integrity, Immutable Hashing & Rejected Signal Ledger
 - **Config Versioning & SHA256 Parameter Hashing:**
-  To guarantee complete reproducibility, every entry, exit, and rejected signal is stamped with `"config_version": "v3.1.0-strict"` and a cryptographic SHA256 digest of the frozen parameter set (`config_hash`: `30f9c9e7`). The full parameter specification is auto-serialized upon startup to `config_snapshots/config_30f9c9e7.json` for deterministic auditability.
+  To guarantee complete reproducibility, every entry, exit, and rejected signal is stamped with `"config_version": "v3.1.0-strict"` and a cryptographic SHA256 digest of the frozen parameter set (`config_hash`: `28fb7170`). The full parameter specification is auto-serialized upon startup to `config_snapshots/config_28fb7170.json` for deterministic auditability.
+- **Clean 30-Day Evaluation Horizon:**
+  Official Phase 1 30-session evaluation commences on **Monday, Nov 23, 2026** under an absolute code and configuration freeze. Friday, Nov 20, 2026 is designated as Day 0 (System Commissioning & Shakedown) to eliminate mid-session parameter pollution.
+- **30-Second Quote Staleness Watchdog Guard:**
+  During 09:30–10:15 AM IST, incoming candidate breakouts are verified against tick recency: if $\text{now} - \text{last\_tick\_time} > 30\text{ seconds}$, entry is fatally blocked (`FEED_STALE: No tick in >30s`), preventing trade execution on disconnected or frozen market feeds.
 - **Concurrent Signal Priority Tie-Breaker:**
   If multiple breakout setups trigger simultaneously during 09:30–10:15 AM with limited remaining portfolio risk slots, candidates are prioritized deterministically:
   $$\text{Sort Priority} = \left(\text{Soft Score} \downarrow, \, \text{RVOL}_{\text{TOD}} \downarrow, \, \text{Risk \%} \uparrow, \, \text{Stretch \%} \uparrow\right)$$
@@ -638,7 +645,7 @@ sequenceDiagram
   "ADANIPOWER": {
     "symbol": "ADANIPOWER",
     "config_version": "v3.1.0-strict",
-    "config_hash": "30f9c9e7",
+    "config_hash": "28fb7170",
     "entry_price": 540.0,
     "initial_sl": 526.0,
     "current_sl": 554.0,
@@ -670,7 +677,7 @@ sequenceDiagram
   {
     "symbol": "SUNTV",
     "config_version": "v3.1.0-strict",
-    "config_hash": "30f9c9e7",
+    "config_hash": "28fb7170",
     "entry_date": "2026-11-20",
     "exit_date": "2026-11-25",
     "entry_time": "09:36:00",
@@ -710,14 +717,14 @@ sequenceDiagram
     "rejection_count": 8,
     "reason": "Checklist Hard Gate failed: 10 EMA Stretch (<=3.0%)",
     "config_version": "v3.1.0-strict",
-    "config_hash": "30f9c9e7",
+    "config_hash": "28fb7170",
     "metadata": {
       "failed_hard_gates": ["10 EMA Stretch (<=3.0%)"],
       "all_hard_gates": [
         {"name": "Regime Permission", "passed": true, "reason": "EXPANSION"},
         {"name": "ORB Breakout", "passed": true, "reason": "H"},
         {"name": "Volume Participation (>=1.0x TOD)", "passed": true, "reason": "RVOL 1.45x"},
-        {"name": "Stop Distance Ceiling (<=4.0%)", "passed": true, "reason": "2.1%"},
+        {"name": "Stop Distance Collar (1.0% to 4.0%)", "passed": true, "reason": "2.1%"},
         {"name": "10 EMA Stretch (<=3.0%)", "passed": false, "reason": "3.4%"},
         {"name": "Gap Extension (<=2.5%)", "passed": true, "reason": "1.2%"},
         {"name": "Upper Wick Rejection (<=40%)", "passed": true, "reason": "15%"}
