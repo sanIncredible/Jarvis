@@ -1275,11 +1275,26 @@ def fetch_upstox_symbol_data(symbol, token, prefetched_quote=None):
                         "v": int(t_vol)
                     })
 
-                # Pine Script: avgv = ta.sma(volume[1], 20), rvol = volume / avgv
+                # Pine Script Parity: Compute Time-of-Day Adjusted RVOL to eliminate the 09:30 AM volume distortion
                 if len(vols) >= 21:
                     avg_v = sum(vols[1:21]) / 20.0
                     if avg_v > 0:
-                        rvol = vols[0] / avg_v
+                        raw_rvol = vols[0] / avg_v
+                        # Time-of-day expected volume fraction (NSE 09:15 - 15:30 U-shaped curve)
+                        now_dt = get_ist_now()
+                        session_mins = max(1, min(375, (now_dt.hour * 60 + now_dt.minute) - (9 * 60 + 15)))
+                        if session_mins <= 15:       # 09:15 - 09:30 (Opening surge zone)
+                            expected_pct = 0.05 + (session_mins / 15.0) * 0.08  # ~5% to 13%
+                        elif session_mins <= 60:     # 09:30 - 10:15 (Prime breakout zone)
+                            expected_pct = 0.13 + ((session_mins - 15) / 45.0) * 0.17 # ~13% to 30%
+                        elif session_mins <= 285:    # 10:15 - 14:00 (Mid-day session)
+                            expected_pct = 0.30 + ((session_mins - 60) / 225.0) * 0.35 # ~30% to 65%
+                        else:                        # 14:00 - 15:30 (Closing momentum)
+                            expected_pct = 0.65 + ((session_mins - 285) / 90.0) * 0.35 # ~65% to 100%
+                        expected_vol = avg_v * expected_pct
+                        rvol_tod = round(vols[0] / expected_vol, 2) if expected_vol > 0 else raw_rvol
+                        # Combined RVOL: Use time-of-day adjusted volume or raw daily volume
+                        rvol = max(round(raw_rvol, 2), round(rvol_tod, 2))
 
                 if len(closes) >= 50:
                     sma50 = sum(closes[:50]) / 50.0
@@ -1468,7 +1483,20 @@ def fetch_fallback_data(symbol):
             if len(vols) >= 21:
                 avg_vol = sum(vols[-21:-1]) / 20.0
                 if avg_vol > 0:
-                    rvol = vols[-1] / avg_vol
+                    raw_rvol = vols[-1] / avg_vol
+                    now_dt = get_ist_now()
+                    session_mins = max(1, min(375, (now_dt.hour * 60 + now_dt.minute) - (9 * 60 + 15)))
+                    if session_mins <= 15:
+                        expected_pct = 0.05 + (session_mins / 15.0) * 0.08
+                    elif session_mins <= 60:
+                        expected_pct = 0.13 + ((session_mins - 15) / 45.0) * 0.17
+                    elif session_mins <= 285:
+                        expected_pct = 0.30 + ((session_mins - 60) / 225.0) * 0.35
+                    else:
+                        expected_pct = 0.65 + ((session_mins - 285) / 90.0) * 0.35
+                    expected_vol = avg_vol * expected_pct
+                    rvol_tod = round(vols[-1] / expected_vol, 2) if expected_vol > 0 else raw_rvol
+                    rvol = max(round(raw_rvol, 2), round(rvol_tod, 2))
 
             if len(closes) >= 50:
                 sma50 = sum(closes[-50:]) / 50.0
@@ -1750,6 +1778,10 @@ def compute_metrics(d):
     ema10 = None
     if candles_3m:
         alpha = 2.0 / (10.0 + 1.0)
+        # Seed EMA with previous day close baseline to stabilize early morning warmup (prevents wild swings on bars 1-5)
+        seed_p = float(d.get("prev_close") or d.get("day_open") or 0.0)
+        if seed_p > 0:
+            ema10 = seed_p
         for c in candles_3m:
             close = c.get("c") if isinstance(c, dict) else float(c[4])
             if ema10 is None:
@@ -3187,6 +3219,8 @@ def export_static_html(results, now_str, port, force_cloud_push=False):
                 "l_pct": round(m["l_pct"], 1) if m.get("l_pct") is not None else None,
                 "sma50": round(d["sma50"], 2) if d.get("sma50") is not None else None,
                 "atr14": round(d["atr14"], 2) if d.get("atr14") is not None else None,
+                "atr_mult": round(m["atr_mult"], 2) if m.get("atr_mult") is not None else None,
+                "is_breach": bool(m.get("is_breach", False)),
                 "candles_3m": compact_3m,
                 "candles_d": compact_d
             }
