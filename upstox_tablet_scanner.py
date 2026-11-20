@@ -3795,6 +3795,92 @@ def run_upstox_scanner(once=False, auto_open_web=False):
     _last_day0_reset_date = [None]
     _last_launch_gate_date = [None]
     _last_earnings_preflight_date = [None]
+    _last_feed_sentinel_alert_time = [0.0]
+
+    def check_and_run_watchlist_feed_sentinel(curr_now=None, quotes_dict=None):
+        """
+        Pre-Entry Watchlist-Wide Feed Health Sentinel:
+        Runs between 09:15:00 and 09:30:00 IST (and during prime hours 09:30-10:15).
+        Inspects active watchlist symbols for:
+        - Missing depth (total_sell_quantity == 0 and total_buy_quantity == 0, or empty depth book)
+        - Missing circuit limits (upper_circuit_limit <= 0 and lower_circuit_limit <= 0)
+        - Stale ticks / zero quotes
+        If >= 30% of watchlist symbols exhibit data absence, dispatches an alert to Topic 9 ('risk').
+        """
+        if curr_now is None:
+            curr_now = get_ist_now()
+
+        if curr_now.weekday() >= 5:
+            return
+        t_now = curr_now.time()
+        if not (dtime(9, 15, 0) <= t_now <= dtime(10, 15, 0)):
+            return
+
+        now_epoch = time.time()
+        if (now_epoch - _last_feed_sentinel_alert_time[0]) < 600.0:
+            return
+
+        if t_now < dtime(9, 16, 0):
+            return
+
+        symbols = get_active_watchlist()
+        if not symbols or len(symbols) < 5:
+            return
+
+        if not quotes_dict:
+            try:
+                from order_engine import fetch_live_quotes_batch
+                quotes_dict = fetch_live_quotes_batch(symbols[:30])
+            except Exception:
+                quotes_dict = {}
+
+        if not quotes_dict or len(quotes_dict) < 5:
+            return
+
+        missing_circuit = 0
+        missing_depth = 0
+        stale_or_missing_ticks = 0
+        audited_count = len(quotes_dict)
+
+        for sym, q in quotes_dict.items():
+            if not q or not isinstance(q, dict) or float(q.get("ltp") or 0.0) <= 0:
+                stale_or_missing_ticks += 1
+                continue
+            ucl = float(q.get("upper_circuit_limit") or 0.0)
+            lcl = float(q.get("lower_circuit_limit") or 0.0)
+            if ucl <= 0 and lcl <= 0:
+                missing_circuit += 1
+            tot_sell = q.get("total_sell_quantity")
+            tot_buy = q.get("total_buy_quantity")
+            depth = q.get("depth") or {}
+            has_depth_levels = bool(depth.get("buy") or depth.get("sell"))
+            if (tot_sell is not None and int(tot_sell) == 0 and tot_buy is not None and int(tot_buy) == 0) and not has_depth_levels:
+                missing_depth += 1
+
+        pct_stale = (stale_or_missing_ticks / audited_count) * 100.0
+        pct_no_circuit = (missing_circuit / audited_count) * 100.0
+        pct_no_depth = (missing_depth / audited_count) * 100.0
+
+        is_critical_anomaly = (pct_stale >= 30.0 or pct_no_circuit >= 40.0 or pct_no_depth >= 30.0)
+        if is_critical_anomaly:
+            _last_feed_sentinel_alert_time[0] = now_epoch
+            try:
+                from shadow_execution_engine import send_phase1_telegram_alert
+                msg_html = (
+                    f"🚨 <b>[FEED HEALTH SENTINEL: MARKET DATA ANOMALY]</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"• <b>Audited Sample:</b> {audited_count} watchlist stocks\n"
+                    f"• <b>Missing/Zero Depth:</b> {missing_depth}/{audited_count} ({pct_no_depth:.1f}%)\n"
+                    f"• <b>Missing Circuit Limits:</b> {missing_circuit}/{audited_count} ({pct_no_circuit:.1f}%)\n"
+                    f"• <b>Stale/Empty Ticks:</b> {stale_or_missing_ticks}/{audited_count} ({pct_stale:.1f}%)\n"
+                    f"• <b>Time:</b> {curr_now.strftime('%H:%M:%S')} IST\n"
+                    f"• <b>Warning:</b> Potential broker quote or data feed distortion detected before momentum window.\n"
+                    f"• <b>Action:</b> Inspect Upstox WebSocket streamer and broker API status immediately."
+                )
+                print(f"\n{RED}{msg_html}{RESET}")
+                send_phase1_telegram_alert(msg_html, topic_name="risk")
+            except Exception as ex:
+                print(f"Notice sending feed sentinel alert: {ex}")
 
     def check_and_run_earnings_preflight_audit(curr_now=None):
         """
@@ -3810,7 +3896,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
             if _last_earnings_preflight_date[0] != today_str:
                 _last_earnings_preflight_date[0] = today_str
                 try:
-                    from shadow_execution_engine import is_earnings_calendar_valid, send_phase1_telegram_alert
+                    from shadow_execution_engine import BASE_DIR, is_earnings_calendar_valid, send_phase1_telegram_alert
                     cal_file = BASE_DIR / "data" / "earnings_calendar.json"
                     is_valid = is_earnings_calendar_valid()
                     
@@ -3938,6 +4024,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                 check_and_run_day0_flatten_and_archive(now)
                 check_and_run_earnings_preflight_audit(now)
                 check_and_run_monday_launch_gate(now)
+                check_and_run_watchlist_feed_sentinel(now)
                 check_and_run_phase1_eod_report(now)
                 try:
                     from shadow_execution_engine import update_shadow_trailing_and_exits
