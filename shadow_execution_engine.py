@@ -53,7 +53,7 @@ SHADOW_EOD_FILE = BASE_DIR / "shadow_history_eod.json"
 DATA_FILE = BASE_DIR / "data.json"
 
 FIXED_RISK_PER_TRADE_INR = 1000.0  # 1.0R = ₹1,000 INR
-START_DATE_STR = "2026-11-20"
+START_DATE_STR = "2026-11-23"  # Official 30-Session Clean Freeze Launch: Monday, Nov 23, 2026
 EVALUATION_HORIZON_DAYS = 30
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -90,12 +90,14 @@ CONFIG_SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 FROZEN_PARAMS = {
     "version": CONFIG_VERSION,
+    "evaluation_start_date": "2026-11-23",
     "rvol_tod_min": 1.0,
     "stretch_max": 3.0,
     "gap_max": 2.5,
     "wick_max": 40.0,
     "risk_max_pct": 4.0,
-    "risk_min_pct": 0.25,
+    "risk_min_pct": 1.0,
+    "min_stop_distance_rule": "max(1.0%, 0.5 * ATR14)",
     "soft_min": 3,
     "tick_size": 0.05,
     "sl_adverse_slippage_pct": 0.0015,
@@ -457,6 +459,17 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     # Edge Case Guard 3: Stop-Loss Sanitization (Ensure SL is strictly at least ₹0.50 below fill price)
     if initial_sl >= fill_price:
         initial_sl = round_to_tick(fill_price - 0.50, tick=0.05, direction="down")
+
+    # Volatility & Microstructure Noise Floor Padding: Ensure initial SL is at least max(1.0%, 0.5x ATR14) below entry
+    atr_val = (quote_data or {}).get("atr14") or (quote_data or {}).get("atr_3m")
+    if not atr_val:
+        sc_d = get_cached_symbol_metrics(sym) or {}
+        atr_val = sc_d.get("atr14")
+    atr_14_f = float(atr_val) if (atr_val and float(atr_val) > 0) else (fill_price * 0.02)
+    min_risk_dist = max(fill_price * 0.010, 0.5 * atr_14_f)
+
+    if (fill_price - initial_sl) < min_risk_dist:
+        initial_sl = round_to_tick(fill_price - min_risk_dist, tick=0.05, direction="down")
 
     # Risk distance per share (ensures min 0.50 to prevent division by zero)
     risk_per_share = max(0.50, round(fill_price - initial_sl, 2))
@@ -1019,6 +1032,7 @@ def get_shadow_analytics():
     win_pct_dec = win_count / total_trades
     loss_pct_dec = loss_count / total_trades
     expectancy_r = round((win_pct_dec * avg_win_r) - (loss_pct_dec * avg_loss_r), 2)
+    expectancy_pnl_inr = round(net_pnl / total_trades, 2) if total_trades > 0 else 0.0
 
     # Max Drawdown calculation in R
     peak_cum = 0.0
@@ -1060,6 +1074,7 @@ def get_shadow_analytics():
         "avg_win_r": avg_win_r,
         "avg_loss_r": avg_loss_r,
         "expectancy_r": expectancy_r,
+        "expectancy_inr": expectancy_pnl_inr,
         "max_drawdown_r": round(max_dd, 2),
         "max_mtm_drawdown_r": round(max_mtm_dd, 2),
         "rule_counts": rules
@@ -1182,7 +1197,7 @@ def generate_and_send_phase1_eod_report(notify=True):
     lines.append(f"• <b>Net Realized Profit:</b> <b>{'+' if analytics['net_r'] >= 0 else ''}{analytics['net_r']:.2f}R (₹{analytics['net_pnl_inr']:+,})</b>")
     lines.append(f"• <b>Profit Factor:</b> {analytics['profit_factor']}")
     lines.append(f"• <b>Avg Win / Avg Loss:</b> +{analytics['avg_win_r']:.2f}R / -{analytics['avg_loss_r']:.2f}R")
-    lines.append(f"• <b>Expectancy per Trade:</b> {'+' if analytics['expectancy_r'] >= 0 else ''}{analytics['expectancy_r']:.2f}R")
+    lines.append(f"• <b>Expectancy per Trade:</b> {'+' if analytics['expectancy_r'] >= 0 else ''}{analytics['expectancy_r']:.2f}R ({'+₹' if analytics.get('expectancy_inr', 0) >= 0 else '-₹'}{abs(analytics.get('expectancy_inr', 0)):,.0f})")
     lines.append(f"• <b>Max Drawdown:</b> Closed: -{analytics['max_drawdown_r']:.2f}R | MTM: -{analytics.get('max_mtm_drawdown_r', analytics['max_drawdown_r']):.2f}R")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("💡 <i>Pure forward test. Uncapped by portfolio limits. 1R = ₹1,000. Zero real money at risk.</i>")
@@ -1246,7 +1261,7 @@ def format_shadow_status_card():
         f"• <b>Win Rate:</b> {analytics['win_rate_pct']}% ({analytics['win_count']}W / {analytics['loss_count']}L)",
         f"• <b>Net Realized P&L:</b> <b>{'+' if analytics['net_r'] >= 0 else ''}{analytics['net_r']:.2f}R (₹{analytics['net_pnl_inr']:+,})</b>",
         f"• <b>Profit Factor:</b> {analytics['profit_factor']}",
-        f"• <b>Expectancy:</b> {'+' if analytics['expectancy_r'] >= 0 else ''}{analytics['expectancy_r']:.2f}R / trade",
+        f"• <b>Expectancy:</b> {'+' if analytics['expectancy_r'] >= 0 else ''}{analytics['expectancy_r']:.2f}R / trade ({'+₹' if analytics.get('expectancy_inr', 0) >= 0 else '-₹'}{abs(analytics.get('expectancy_inr', 0)):,.0f})",
         "━━━━━━━━━━━━━━━━━━━━━━",
         "💡 <i>To view full EOD report:</i> <code>/shadowreport</code>\n"
         "💡 <i>To view open/closed trades:</i> <code>/shadowtrades</code>"
