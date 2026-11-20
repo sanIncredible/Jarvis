@@ -4557,6 +4557,9 @@
     if (!isDaily && candles.length) {
       const alpha = 2.0 / (10.0 + 1.0);
       let currEma = null;
+      if (candles.length && candles[0].o) {
+        currEma = Number(candles[0].o);
+      }
       candles.forEach(c => {
         const close = Number(c.c);
         if (currEma === null) currEma = close;
