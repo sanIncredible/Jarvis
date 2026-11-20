@@ -371,7 +371,7 @@ $$\text{Friction Hurdle} = \frac{0.43\%}{1.00\%} = 0.43\text{R}$$
 **File:** [`shadow_execution_engine.py`](file:///c:/ProjectDir/shadow_execution_engine.py) (Length: ~936 lines)
 
 ### 8.1 Autonomous Execution Mandate
-- **Start Date:** `2026-11-23` (30 consecutive trading days: Monday, Nov 23, 2026 to Wednesday, Jan 06, 2027; Friday, Nov 20, 2026 designated as Day 0 Commissioning & Shakedown).
+- **Start Date:** `2026-11-23` (30 consecutive trading days: Monday, Nov 23, 2026 to Tuesday, Jan 05, 2027; Friday, Nov 20, 2026 designated as Day 0 Commissioning & Shakedown).
 - **Execution Window:** Strictly **09:30:00 to 10:15:00 AM IST** (Monday through Friday).
 - **Fixed Risk:** Standardized ₹1,000 INR per position.
 - **Reporting Channel:** Telegram Topic 11 (`reports`).
@@ -494,22 +494,29 @@ Computed daily at 15:35:00 IST by `get_shadow_analytics()`:
 ### 8.8 Benchmark Integrity, Immutable Hashing, Watchdog Architecture & Day 0 Reset
 - **Config Versioning & SHA256 Parameter Hashing:**
   To guarantee complete reproducibility, every entry, exit, and rejected signal is stamped with `"config_version": "v3.1.0-strict"` and a cryptographic SHA256 digest of the frozen parameter set (`config_hash`: `28fb7170`). The full parameter specification is auto-serialized upon startup to `config_snapshots/config_28fb7170.json` for deterministic auditability.
-- **Clean 30-Day Evaluation Horizon & Day 0 State Reset Protocol:**
-  - Official Phase 1 30-session evaluation commences on **Monday, Nov 23, 2026** under an absolute code and configuration freeze. Friday, Nov 20, 2026 is designated as Day 0 (System Commissioning & Shakedown) to eliminate mid-session parameter pollution.
-  - **Automated Flattening & Archival:** At 15:15 IST on Nov 20 (or via `reset_and_archive_day0_state`), any open positions are flattened with exit reason `DAY0_SHAKEDOWN_FLATTEN` and tagged `is_day0 = True`. All pre-Nov 23 state files (`shadow_portfolio.json`, `shadow_trade_log.json`, `shadow_history_eod.json`, `shadow_mtm_equity_curve.json`, `shadow_rejected_signals.json`) are archived into `archive/day0_shakedown_<timestamp>/`. Active files are reset to clean empty state (`{}`, `[]`), guaranteeing 0 open positions and ₹0 carry-over into Monday's launch.
+- **Clean 30-Day Evaluation Horizon & One-Shot Day 0 State Reset Protocol:**
+  - Official Phase 1 30-session evaluation commences on **Monday, Nov 23, 2026** and concludes on **Tuesday, Jan 05, 2027** (30 consecutive trading sessions, accounting for market holidays on Nov 24 Guru Nanak Jayanti and Dec 25 Christmas, with normal trading on Jan 1 New Year's Day).
+  - **One-Shot Flattening & Archival with Sentinel Guard:** At 15:15 IST on Nov 20 (or via `reset_and_archive_day0_state`), any open positions are flattened with exit reason `DAY0_SHAKEDOWN_FLATTEN` and tagged `is_day0 = True`. All pre-Nov 23 state files are archived into `archive/day0_shakedown_<timestamp>/`. Active files are reset to clean empty state (`{}`, `[]`).
+  - **Strict Permanent Safety Shields:** `reset_and_archive_day0_state()` is strictly one-shot:
+    1. Guarded by a persistent sentinel file (`archive/.day0_reset_completed`); if present, any reset request is immediately rejected.
+    2. Hard Date Barrier: Permanently blocked if `today >= 2026-11-23`.
+    3. Trade Log Barrier: Aborts immediately if any Phase 1 trades are present in `shadow_trade_log.json` or `shadow_portfolio.json`.
   - **Evaluation Start Boundary:** `get_shadow_analytics()`, `record_daily_mtm_snapshot()`, and `count_trading_days()` strictly filter for `entry_date >= 2026-11-23` and `session != "DAY0_SHAKEDOWN"`. Day 0 is reported as "Day 0 (Commissioning & Shakedown)" and excluded from the 30-session performance clock.
 - **Dual-Tier Watchdog Architecture (Feed Heartbeat + Exchange Timestamp):**
   - **Exchange Timestamp Definition:** "Tick time" is strictly defined as the exchange timestamp (`ltt` - Last Traded Time in epoch milliseconds parsed from Upstox quote packets) rather than local socket receive time. This prevents a frozen socket connection or proxy that endlessly resends cached ticks from appearing fresh.
   - **Feed-Level Heartbeat:** The WebSocket engine tracks the elapsed time since ANY message arrived from the broker across all instruments. If $\text{now} - \text{last\_feed\_msg\_time} > 30\text{ seconds}$, the entire feed is marked stale (`FEED_STALE: Global WebSocket feed silent >30s`), suspending breakout entries while distinguishing feed outages from illiquid symbols.
   - **Per-Symbol Recency Guard:** For candidate breakouts between 09:30–10:15 AM, the candidate's last exchange trade time is verified: if $\text{now} - \text{exchange\_tick\_time} > 30\text{ seconds}$, the entry is dropped (`FEED_STALE: Symbol exchange tick stale`).
+  - **Clock Skew Diagnostic:** OCI VM system clock is synchronized via Chrony NTP against Oracle Cloud hardware time (`169.254.169.254`) with microsecond precision. At scanner startup, `check_market_clock_offset()` benchmarks local system time against Upstox exchange last trade timestamps, logging the offset. If drift $> 2\text{s}$, warnings are raised.
 - **Stop & Trailing Surveillance Watchdog with REST 1-Minute Candle Gap Replay:**
-  - To prevent missed stop breaches or stale fills during feed outages or socket stalls, the surveillance engine tracks `last_surveillance_epoch` per position.
-  - **Automated Gap Replay:** If a surveillance gap exceeds 60 seconds (or upon WebSocket reconnection), the engine queries Upstox REST historical API (`GET /v2/historical-candle/intraday/{encoded_key}/1minute`) to retrieve and chronologically replay all missed 1-minute bars:
-    - **Precise Breach Detection:** Identifies the exact historical 1-minute candle where the stop was penetrated (`bar_low <= current_sl`).
-    - **Exact Breach Timestamp:** Records the historical candle timestamp (`breach_bar_time`, e.g. `10:18:00`), rather than the reconnect timestamp 10 minutes later.
-    - **Realistic Bar-Open Fill Model:** Fills using the bar-open gap equation:
+  - **Market-Hours Gap Definition:** Surveillance gaps are tracked strictly within market hours (09:15:00 to 15:30:00 IST on trading days) where `last_surveillance_date == today_str`. Overnight transitions (15:30 to 09:15) bypass intraday candle replay because Day 2+ opening auction logic (`fill_base = day_open`) models overnight gap-downs directly.
+  - **Upstox V3 Intraday Candle Route:** Historical 1-minute replay queries the modern Upstox v3 route `GET /v3/historical-candle/intraday/{encoded_key}/minutes/1` with automatic fallback to `/v2/historical-candle/intraday/{encoded_key}/1minute`.
+  - **Drop In-Progress Candle:** The currently forming 1-minute candle (`candle_minute == current_minute`) is dropped, ensuring stops and trails evaluate strictly finalized completed bars, while the current active minute is covered by real-time tick LTP.
+  - **Precise Breach Detection & Bar-Open Fill:**
+    - Identifies the exact historical 1-minute candle where the stop was penetrated (`bar_low <= current_sl`).
+    - Records the historical candle timestamp (`breach_bar_time`, e.g. `10:18:00`), rather than the reconnect timestamp 10 minutes later.
+    - Fills using the bar-open gap equation:
       $$\text{Fill Price} = \text{round\_to\_tick}(\min(\text{Current SL}, \, \text{Breach Bar Open}) \times (1 - 0.0015), \text{tick}=0.05, \text{direction}="down")$$
-    - **Trailing Ratchet Updates:** If the stock trended higher during the gap without breaching the stop, highest LTP is updated from bar highs and trailing stops are ratcheted forward accurately before resuming live evaluation.
+    - If the stock trended higher during the gap without breaching the stop, highest LTP is updated from bar highs and trailing stops are ratcheted forward accurately before resuming live evaluation.
 - **Concurrent Signal Priority Tie-Breaker:**
   If multiple breakout setups trigger simultaneously during 09:30–10:15 AM with limited remaining portfolio risk slots, candidates are prioritized deterministically:
   $$\text{Sort Priority} = \left(\text{Soft Score} \downarrow, \, \text{RVOL}_{\text{TOD}} \downarrow, \, \text{Risk \%} \uparrow, \, \text{Stretch \%} \uparrow\right)$$
