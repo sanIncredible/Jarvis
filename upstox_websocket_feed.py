@@ -61,6 +61,10 @@ class UpstoxWebSocketFeed:
         self.lock = threading.Lock()
         self._last_tick_time = 0.0
         self._last_connected_time = 0.0
+        self.last_feed_msg_epoch = 0.0
+        self.last_feed_exchange_epoch = 0.0
+        self.last_reconnect_epoch = 0.0
+        self.has_reconnected_recently = False
 
         # Build instrument key map
         self._build_key_mappings()
@@ -123,6 +127,25 @@ class UpstoxWebSocketFeed:
 
             if ltp > 0:
                 now_t = time.time()
+                exchange_ts = 0.0
+                ltt_candidate = (
+                    ltpc.get("ltt") or 
+                    (m_ltpc.get("ltt") if market_ff else None) or 
+                    (i_ltpc.get("ltt") if index_ff else None) or 
+                    feed_val.get("eFeedTime") or 
+                    (market_ff.get("eFeedTime") if market_ff else None)
+                )
+                if ltt_candidate is not None:
+                    try:
+                        ltt_num = float(ltt_candidate)
+                        if ltt_num > 1e11:  # Epoch milliseconds
+                            exchange_ts = ltt_num / 1000.0
+                        elif ltt_num > 0:   # Epoch seconds
+                            exchange_ts = ltt_num
+                    except Exception:
+                        exchange_ts = 0.0
+
+                final_tick_time = exchange_ts if exchange_ts > 0 else now_t
                 return {
                     "last_price": ltp,
                     "ltp": ltp,
@@ -132,7 +155,9 @@ class UpstoxWebSocketFeed:
                     "low": low,
                     "volume": volume,
                     "timestamp": now_t,
-                    "last_tick_time": now_t
+                    "receive_time": now_t,
+                    "exchange_tick_time": exchange_ts,
+                    "last_tick_time": final_tick_time
                 }
         except Exception:
             pass
@@ -140,11 +165,16 @@ class UpstoxWebSocketFeed:
 
     def _on_ws_open(self, *args):
         self.is_connected = True
-        self._last_connected_time = time.time()
+        now_t = time.time()
+        self._last_connected_time = now_t
+        self.last_reconnect_epoch = now_t
+        self.has_reconnected_recently = True
         print(f"⚡ [WebSocket] Upstox V3 Market Data Feed Connected ({len(self.symbol_to_key)} instruments streaming)")
 
     def _on_ws_message(self, message: Dict[str, Any], *args):
-        self._last_tick_time = time.time()
+        now_t = time.time()
+        self.last_feed_msg_epoch = now_t
+        self._last_tick_time = now_t
         feeds = message.get("feeds", {}) if isinstance(message, dict) else {}
         for key, val in feeds.items():
             sym = self.key_to_symbol.get(key)
@@ -158,6 +188,10 @@ class UpstoxWebSocketFeed:
 
             tick = self._extract_tick_data(key, val)
             if tick and tick["ltp"] > 0:
+                exch_t = float(tick.get("exchange_tick_time") or 0.0)
+                if exch_t > 0:
+                    self.last_feed_exchange_epoch = max(self.last_feed_exchange_epoch, exch_t)
+
                 with self.lock:
                     self.latest_quotes[sym] = tick
 
@@ -166,6 +200,33 @@ class UpstoxWebSocketFeed:
                         self.on_tick(sym, tick["ltp"], tick)
                     except Exception as ex:
                         print(f"Error in on_tick callback for {sym}: {ex}")
+
+    def get_feed_status(self) -> Dict[str, Any]:
+        """
+        Returns real-time health and recency diagnostics for the market data feed.
+        Distinguishes feed-level silence from individual symbol illiquidity.
+        """
+        now_t = time.time()
+        msg_age = (now_t - self.last_feed_msg_epoch) if self.last_feed_msg_epoch > 0 else 999999.0
+        exch_age = (now_t - self.last_feed_exchange_epoch) if self.last_feed_exchange_epoch > 0 else 999999.0
+        is_stale = (msg_age > 30.0)
+        return {
+            "is_connected": self.is_connected,
+            "is_running": self.is_running,
+            "last_feed_msg_epoch": self.last_feed_msg_epoch,
+            "last_feed_exchange_epoch": self.last_feed_exchange_epoch,
+            "seconds_since_msg": round(msg_age, 1),
+            "seconds_since_exchange_tick": round(exch_age, 1),
+            "is_feed_stale": is_stale,
+            "last_reconnect_epoch": self.last_reconnect_epoch,
+            "has_reconnected_recently": self.has_reconnected_recently
+        }
+
+    def consume_reconnect_flag(self) -> bool:
+        """Returns True if feed reconnected recently and clears the flag."""
+        val = self.has_reconnected_recently
+        self.has_reconnected_recently = False
+        return val
 
     def _on_ws_error(self, *args):
         self.is_connected = False
