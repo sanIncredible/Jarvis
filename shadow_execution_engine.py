@@ -594,17 +594,12 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         # Structural Exit: Low breached the current trailed stop-loss
         is_sl_breached = False
         if holding_days == 1:
-            # On Day 1: If stop was ratcheted above initial LOD stop (e.g. Day-1 Spurt Shield to BE),
-            # exit only if current live LTP hits or drops below the stop.
-            # Otherwise (initial LOD stop strictly below morning low), any session day_low breach is a valid structural stop hit!
-            is_trailed = (pos["current_sl"] > pos["initial_sl"])
-            if is_trailed:
-                is_sl_breached = (ltp <= pos["current_sl"])
-            else:
-                is_sl_breached = (day_low <= pos["current_sl"])
+            # On Day 1: Trigger SL only when live price (LTP) hits or drops below stop-loss.
+            # Avoids false liquidation from pre-entry morning wicks where session day_low occurred before breakout entry!
+            is_sl_breached = (ltp <= pos["current_sl"])
         else:
             # Day 2+: Today's entire session is post-entry, so any day_low breach is a valid structural stop hit
-            is_sl_breached = (day_low <= pos["current_sl"])
+            is_sl_breached = (day_low <= pos["current_sl"] or ltp <= pos["current_sl"])
 
         if is_sl_breached:
             exit_triggered = True
