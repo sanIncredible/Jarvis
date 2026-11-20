@@ -1,5 +1,5 @@
 # 🏛️ JARVIS TRADING SYSTEM: MASTER ARCHITECTURE & SPECIFICATION MANUAL
-**Document Version:** 3.0.0 (Autonomous Production & Phase 1 Specification)  
+**Document Version:** 3.1.0-strict (Autonomous Production & Phase 1 Specification)  
 **Classification:** Complete System Engineering Blueprint  
 **System Target:** Fully Autonomous 3M ORB Scanner, Positional Swing Engine, Multi-Broker Hub & Cloud Infrastructure  
 **Author:** Jarvis Engineering Team & DeepMind Antigravity  
@@ -30,15 +30,16 @@
 ### 1.1 Core Mission
 The **Jarvis Trading System** is an institutional-grade, hybrid intraday-to-swing algorithmic execution platform specifically calibrated for the Indian National Stock Exchange (NSE). It bridges technical momentum mechanics with strict quantitative risk controls, automating the entire trade lifecycle from pre-market screening to real-time 3-minute Opening Range Breakout (ORB) detection, multi-day trailing stops, trade reconciliation, and hindsight performance audit.
 
-### 1.2 Mathematical & Technical Philosophy
-Jarvis synthesizes two prominent trading methodologies:
-1. **Kristjan Qullamaggie High Tight Flag (HTF) / Episodic Pivot (EP) / 3M ORB:**
+### 1.2 Mathematical & Technical Philosophy: Kristjan Qullamaggie High Tight Flag (HTF) / 3-Minute ORB Breakout Engine
+Jarvis synthesizes two prominent quantitative trading methodologies:
+1. **Kristjan Qullamaggie High Tight Flag (HTF) / 3-Minute ORB Breakout Engine:**
    - Entering momentum leaders during the 09:30–10:15 AM IST window as volatility contracts and price breaks above opening ranges or previous day highs.
    - Micro-risk structural invalidation using Day Low (LOD) stops buffered by Average True Range (ATR).
    - Riding multi-day and multi-week swing runners along the 10 EMA and 20 EMA while aggressively capturing outsized gains (up to 30% profit cap).
+   - **Episodic Pivot (EP) Distinction:** True Episodic Pivots (which gap 8%–25%+ on major fundamental surprises or earnings releases) are intentionally excluded from the execution engine by Hard Gate 6 (Gap Extension $\le 2.5\%$). The engine specifically targets low-cheat, tight consolidation High Tight Flag (HTF) breakouts where morning gap extension is minimal ($\le 2.5\%$), avoiding the unhedged morning auction volatility and overnight gap exhaustion typical of massive post-earnings gaps.
 2. **Pradeep Bonde (Stockbee) Market Breadth Regime Framework:**
    - Capital allocation is dynamically governed by underlying market participation rather than index price alone.
-   - The ratio of daily 4% gainers to 4% losers, short-term word counts, and percentage of stocks trading above 20, 50, and 200 EMAs govern whether the engine operates in **EXPANSION (100% allocation)**, **CHOP / NEUTRAL (50% allocation)**, or **DEFENSIVE / WASHOUT (0% allocation / Cash Bunker Mode)**.
+   - The ratio of daily 4% gainers to 4% losers, short-term word counts, and percentage of stocks trading above 20, 50, and 200 EMAs govern whether the engine operates in **EXPANSION (100% allocation / 1.0R)**, **NORMAL (100% allocation / 1.0R)**, **NEUTRAL (50% allocation / 0.5R)**, **DEFENSIVE (0% allocation / Cash Bunker Mode)**, or **WASHOUT (0% allocation / Panic Bunker Mode)**.
 
 ### 1.3 Operational Modes
 - **Phase 1: 30-Day Autonomous Benchmark Engine (`shadow_execution_engine.py`)**:
@@ -75,7 +76,7 @@ flowchart TD
         UpstoxAPI["Upstox API v2 (WebSocket + REST)"]
         ZerodhaAPI["Zerodha Kite Connect"]
         DhanAPI["DhanHQ v2 API"]
-        TelegramCloud["Telegram Bot API (Group: 5066630232)"]
+        TelegramCloud["Telegram Bot API (Supergroup: -1005066630232)"]
         Dashboard["GitHub Pages (sanincredible.github.io/Jarvis/)"]
     end
 
@@ -209,15 +210,15 @@ Implemented in [`intraday_breadth_monitor.py`](file:///c:/ProjectDir/intraday_br
 - **Moving Average Breadth:** % of stocks above 20 EMA, 50 SMA, and 200 SMA.
 
 ### 5.2 Regime Classification State Machine
-Stored in `market_regime.json`:
+Stored in `market_regime.json` and evaluated by `order_engine.py`:
 
-| Regime Code | Market Condition | Breadth Criteria | Swing Allocation % | Action Mandate |
-| :--- | :--- | :--- | :---: | :--- |
-| **EXPANSION** | Strong Bull Trend | $4\%\text{ Gainers} > 2.5\times 4\%\text{ Losers}$, Ratio $> 2.0$ | **100%** | Full aggressive swing entries allowed |
-| **NORMAL** | Healthy Trend | Positive net breadth, above 20 EMA | **100%** | Standard 1.0R risk positioning |
-| **NEUTRAL** | Rangebound / Chop | Gainers $\approx$ Losers, choppy indices | **50%** | Half-size positions; tight stop requirements |
-| **DEFENSIVE** | Deteriorating Breadth | $4\%\text{ Losers} > 4\%\text{ Gainers}$, Index below 20 EMA | **0%** | Cash preservation; new long entries blocked |
-| **WASHOUT / CLIMAX** | Panic Liquidation | Massive $4\%\text{ Losers} > 150$, Waterfall decline | **0%** | Absolute bunker mode; existing stops ratcheted |
+| Regime Code | Market Condition | Breadth Criteria | Swing Allocation % | Target Risk | Active Slots | Daily Entry Limit | Action Mandate |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
+| **EXPANSION** | Strong Bull Trend | $4\%\text{ Gainers} > 2.5\times 4\%\text{ Losers}$, Ratio $> 2.0$ | **100%** | 1.0R | 5 | 3 | Full aggressive momentum breakout execution |
+| **NORMAL** | Healthy Trend | Positive net breadth, above 20 EMA | **100%** | 1.0R | 5 | 2 | Standard 1.0R positioning; standard playbook |
+| **NEUTRAL** | Rangebound / Chop | Gainers $\approx$ Losers, choppy index moving averages | **50%** | 0.5R | 3 | 1 | Conservative 0.5R risk; exposure capped to ₹50k max |
+| **DEFENSIVE** | Deteriorating Breadth | $4\%\text{ Losers} > 4\%\text{ Gainers}$, Index below 20 EMA | **0%** | 0.0R | 0 | 0 | Cash preservation; new long entries strictly blocked |
+| **WASHOUT** | Panic Liquidation | Massive $4\%\text{ Losers} > 150$, Waterfall market decline | **0%** | 0.0R | 0 | 0 | Absolute bunker mode; existing stops trailed aggressively |
 
 ---
 
@@ -279,9 +280,17 @@ Status Transition Rules:
   - **Smoothing Constant:** $\alpha = \frac{2}{10 + 1} = 0.1818$.
   $$\text{Stretch \%} = \frac{\text{LTP} - \text{EMA}_{10}}{\text{EMA}_{10}} \times 100$$
 - **Time-of-Day Normalized Relative Volume ($\text{RVOL}_{\text{TOD}}$):**
-  $$\text{Expected Volume}(t) = \text{Average Daily Volume (20D)} \times \text{Expected Session Fraction}(t)$$
-  $$\text{RVOL}_{\text{TOD}} = \frac{\text{Cumulative Session Volume}(t)}{\text{Expected Volume}(t)}$$
-  *Expected Session Fractions (NSE Volume U-Curve):* 09:15–09:30: 5%–13%; 09:30–10:15: 13%–30%; 10:15–14:00: 30%–65%; 14:00–15:30: 65%–100%.
+  $$\text{RVOL}_{\text{TOD}} = \frac{\text{Cumulative Session Volume}(m)}{\text{Average Daily Volume (20D)} \times F(m)}$$
+  Where $m \in [0, 375]$ represents elapsed trading minutes since the 09:15:00 AM IST market open ($m = (\text{Hour} \times 60 + \text{Minute}) - 555$).
+  The expected cumulative volume fraction $F(m)$ is evaluated using the continuous piecewise linear curve implemented in `calculate_tod_volume_fraction(session_mins)`:
+  $$F(m) = \begin{cases}
+  0.00 + \frac{m}{15} \times 0.10 & 0 \le m \le 15 \text{ (09:15–09:30 AM: Opening Discovery, } 0\% \to 10\% \text{)} \\
+  0.10 + \frac{m - 15}{45} \times 0.15 & 15 < m \le 60 \text{ (09:30–10:15 AM: Prime Breakout Window, } 10\% \to 25\% \text{)} \\
+  0.25 + \frac{m - 60}{225} \times 0.40 & 60 < m \le 285 \text{ (10:15–14:00 PM: Mid-Day Lull, } 25\% \to 65\% \text{)} \\
+  0.65 + \frac{m - 285}{90} \times 0.35 & 285 < m \le 375 \text{ (14:00–15:30 PM: Closing Volume Surge, } 65\% \to 100\% \text{)}
+  \end{cases}$$
+  With a safe numeric floor: $F_{\text{eff}}(m) = \max(0.01, F(m))$.
+  - **Threshold Justification:** Because $F(15) = 0.10$, a stock that trades $\ge 10\%$ of its 20-day daily volume in the first 15 minutes achieves $\text{RVOL}_{\text{TOD}} \ge 1.0x$. This accurately differentiates true institutional accumulation from morning retail noise while eliminating the opening-session jump discontinuities inherent in raw daily volume comparators. The hard gate is $\text{RVOL}_{\text{TOD}} \ge 1.0x$ (baseline pacing) and the soft point is $\text{RVOL}_{\text{TOD}} \ge 1.5x$ (institutional surge).
 
 ---
 
@@ -324,7 +333,7 @@ Used to rank setup conviction and grade trade quality (0 to 7):
 #### 1. Volatility-Adaptive Stop-Loss Buffer
 Rather than placing stops directly at the raw Day Low (which gets hunted by market makers), Jarvis places stops buffered by intraday volatility:
 $$\text{Adaptive Buffer} = \max\left(1.0, \text{round}\left(\frac{\text{ATR}_{14}}{6} \times 0.25\right), \text{round}(\text{Day Low} \times 0.0020)\right)$$
-$$\text{Stop Loss} = \text{round\_to\_clean\_int}(\text{Day Low} - \text{Adaptive Buffer})$$
+$$\text{Stop Loss} = \text{round\_to\_tick}(\text{Day Low} - \text{Adaptive Buffer}, \text{tick}=0.05, \text{direction}="down")$$
 
 #### 2. Risk-Normalized Sizing (1.0R = ₹1,000 INR)
 $$\text{Risk Per Share} = \text{LTP} - \text{Stop Loss}$$
@@ -333,8 +342,10 @@ $$\text{Effective Risk Distance} = \max(\text{Risk Per Share}, \text{ATR Floor},
 $$\text{Quantity} = \max\left(1, \left\lfloor \frac{\text{Target Risk INR (1000)}}{\text{Effective Risk Distance}} \right\rfloor\right)$$
 > **Crucial Safeguard:** The ATR floor prevents explosive, oversized position sizing when a stock has an artificially tight 0.1% day range.
 
-#### 3. Defensive Regime Auto-Cap
-If the market breadth enters `DEFENSIVE` or `CHOP`, gross capital allocation per trade is automatically clamped to a maximum of **₹50,000 INR**, regardless of how small the risk distance is.
+#### 3. Neutral Regime Sizing & Exposure Auto-Cap (₹50k)
+- In **`DEFENSIVE`** and **`WASHOUT`** regimes, capital preservation is strictly enforced: swing allocation is 0%, daily entry limit is 0, new trade entries are prohibited (`Quantity = 0`), and Hard Gate 1 fatally blocks execution.
+- In **`NEUTRAL`** (or rangebound chop) regimes where market breadth is mixed, swing allocation is halved (0.5R target risk, i.e., ₹500 INR target), and gross capital exposure per trade is strictly clamped to a maximum of **₹50,000 INR**:
+  $$\text{Quantity} = \min\left(\text{Quantity}, \, \left\lfloor \frac{50000}{\text{LTP}} \right\rfloor\right)$$
 
 #### 4. "House Money" Pyramiding Equation
 When pyramiding into an existing profitable holding:
@@ -359,7 +370,7 @@ $$\text{Pyramid Quantity} = \left\lfloor \frac{\text{Max Risk Allowed}}{\text{LT
 flowchart TD
     Trigger["ORB Breakout Triggered in upstox_tablet_scanner.py"] --> TimeCheck{"Time between<br/>09:30 - 10:15 AM?"}
     TimeCheck -- No --> Reject["Drop (Outside Entry Window)"]
-    TimeCheck -- Yes --> RegCheck{"Regime WASHOUT<br/>or CLIMAX?"}
+    TimeCheck -- Yes --> RegCheck{"Regime DEFENSIVE<br/>or WASHOUT?"}
     RegCheck -- Yes --> BunkerReject["Drop (Bunker Mode Active)"]
     RegCheck -- No --> DupCheck{"Symbol in Portfolio<br/>or Traded Today?"}
     DupCheck -- Yes --> WhipsawReject["Drop (Whipsaw Protection)"]
@@ -367,10 +378,10 @@ flowchart TD
     PennyCheck -- No --> PennyReject["Drop (Penny Stock Filter)"]
     PennyCheck -- Yes --> RiskCheck{"Risk % <= 4.0%?"}
     RiskCheck -- No --> TailReject["Drop (Wide Stop Loss)"]
-    RiskCheck -- Yes --> ScoreCheck{"Checklist >= 5/8 and<br/>No Fatal Flags?"}
-    ScoreCheck -- No --> QualReject["Drop (Checklist Failed)"]
-    ScoreCheck -- Yes --> ExecSim["Simulate Fill: LTP + 0.15% Slippage<br/>SL: Day Low - Buffer<br/>Qty: ₹1,000 / RiskPerShare"]
-    ExecSim --> LogOpen["Persist to shadow_portfolio.json"]
+    RiskCheck -- Yes --> ScoreCheck{"Hard Gates ALL Pass &<br/>Soft Score >= 3/7?"}
+    ScoreCheck -- No --> QualReject["Drop (Checklist Failed / Logged)"]
+    ScoreCheck -- Yes --> ExecSim["Simulate Fill: LTP + 0.15% Slippage (Tick ceil)<br/>SL: Day Low - Buffer (Tick floor)<br/>Qty: ₹1,000 / EffectiveRiskDist"]
+    ExecSim --> LogOpen["Persist to shadow_portfolio.json (v3.1.0-strict)"]
     LogOpen --> TGCard["Dispatch Entry Card to Telegram Topic 11"]
 ```
 
@@ -379,28 +390,30 @@ The trailing engine runs continuously in a background surveillance worker. To ma
 
 $$\text{New Stop Loss} = \max\left(\text{Current SL}, \, \text{Candidate}_1, \, \text{Candidate}_2, \, \dots, \, \text{Candidate}_7\right)$$
 
+> **Tick-Aware Downward Rounding (₹0.05 Tick Size):** All trailing stop candidates and exit fills are rounded strictly downward to the nearest valid NSE ₹0.05 tick size via `round_to_tick(val, tick=0.05, direction="down")`. This replaces integer rounding, preventing sub-₹100 equities from losing slippage realism or having stops rounded upward closer to price.
+
 #### Candidate Stop Rules (Evaluated in Parallel)
 1. **🛡️ 30% Profit Cap Milestone ($R \ge 8.0\text{R}$ or Gain $\ge +28\%$):**
-   $$\text{Candidate}_1 = \text{round\_to\_clean\_int}(\text{Entry Price} \times 1.25)$$
+   $$\text{Candidate}_1 = \text{round\_to\_tick}(\text{Entry Price} \times 1.25, \, 0.05, \, \text{"down"})$$
    *Rule:* `"🛡️ 30% PROFIT CAP (Lock +25% Gains)"`
 2. **⚡ Parabolic 5 EMA Vertical Trail ($R \ge 4.0\text{R}$):**
-   $$\text{Candidate}_2 = \max\left(\text{Entry} + 2.0\text{R}, \, \text{round\_to\_clean\_int}(\text{EMA}_5 \times 0.995)\right)$$
+   $$\text{Candidate}_2 = \max\left(\text{round\_to\_tick}(\text{Entry} + 2.0\text{R}, 0.05, \text{"down"}), \, \text{round\_to\_tick}(\text{EMA}_5 \times 0.995, 0.05, \text{"down"})\right)$$
    *Rule:* `"⚡ PARABOLIC 5 EMA TRAIL (+2.0R Floor)"`
    *(Includes the Stage 4 $+2.0\text{R}$ locked profit floor so a lagging 5 EMA can never undercut established gains).*
 3. **🎯 Stage 4 Institutional Lock ($R \ge 3.0\text{R}$):**
-   $$\text{Candidate}_3 = \max\left(\text{Entry} + 2.0\text{R}, \, \text{round\_to\_clean\_int}(\text{EMA}_{10} \times 0.992)\right)$$
+   $$\text{Candidate}_3 = \max\left(\text{round\_to\_tick}(\text{Entry} + 2.0\text{R}, 0.05, \text{"down"}), \, \text{round\_to\_tick}(\text{EMA}_{10} \times 0.992, 0.05, \text{"down"})\right)$$
    *Rule:* `"🎯 STAGE 4: +2.0R LOCKED (Riding 10 EMA)"`
 4. **🎯 Stage 3 Breakeven Runner Protection ($R \ge 2.0\text{R}$):**
-   $$\text{Candidate}_4 = \max\left(\text{Entry} + 1.0\text{R}, \, \text{round\_to\_clean\_int}(\text{EMA}_{10} \times 0.992)\right)$$
+   $$\text{Candidate}_4 = \max\left(\text{round\_to\_tick}(\text{Entry} + 1.0\text{R}, 0.05, \text{"down"}), \, \text{round\_to\_tick}(\text{EMA}_{10} \times 0.992, 0.05, \text{"down"})\right)$$
    *Rule:* `"🎯 STAGE 3: +1.0R LOCKED (Swing Runner Protected)"`
 5. **🚀 Day-1 Spurt Shield ($\text{Holding Days} == 1 \land \text{Peak Gain} \ge +4.5\%$):**
-   $$\text{Candidate}_5 = \text{round\_to\_clean\_int}(\text{Entry Price} \times 1.002)$$
+   $$\text{Candidate}_5 = \text{round\_to\_tick}(\text{Entry Price} \times 1.002, \, 0.05, \, \text{"down"})$$
    *Rule:* `"🚀 DAY-1 SPURT SHIELD (+4.5% Surge -> Breakeven)"`
 6. **🟢 10 EMA Swing Trail ($\text{Holding Days} \ge 2 \land R \ge 1.5\text{R}$):**
-   $$\text{Candidate}_6 = \text{round\_to\_clean\_int}(\text{EMA}_{10} \times 0.992)$$
+   $$\text{Candidate}_6 = \text{round\_to\_tick}(\text{EMA}_{10} \times 0.992, \, 0.05, \, \text{"down"})$$
    *Rule:* `"🟢 10 EMA SWING TRAIL"`
 7. **🟢 20 EMA Structural Base Trail ($\text{Holding Days} \ge 3 \land R \ge 1.0\text{R}$):**
-   $$\text{Candidate}_7 = \text{round\_to\_clean\_int}(\text{EMA}_{20} \times 0.990)$$
+   $$\text{Candidate}_7 = \text{round\_to\_tick}(\text{EMA}_{20} \times 0.990, \, 0.05, \, \text{"down"})$$
    *Rule:* `"🟢 20 EMA STRUCTURAL TRAIL"`
 
 > **Mathematical Guarantee:** Because `best_sl, best_rule = max(candidates)`, a higher-level state cannot loosen established lower-level floors, and Level 6 (10 EMA) and Level 7 (20 EMA) compete fairly with the tighter structural stop winning.
@@ -408,29 +421,47 @@ $$\text{New Stop Loss} = \max\left(\text{Current SL}, \, \text{Candidate}_1, \, 
 ### 8.4 Realistic Exit Fill Model & Post-Entry Bar Lows
 To prevent optimistic paper trading survival bias:
 1. **Day-1 Execution (Post-Entry Intra-Day Lows):**
-   - The engine isolates all 1-minute/3-minute candles strictly timestamped *at or after* `entry_time`:
-     $$\text{Post-Entry Low} = \min\left(\{ \text{Low}_i \mid \text{Time}_i \ge \text{Entry Time} \}\right)$$
+   - The engine isolates all 3-minute candles starting at the entry candle bucket:
+     $$\text{Entry Bucket} = \lfloor \text{Minute} / 3 \rfloor \times 3$$
+     $$\text{Post-Entry Low} = \min\left(\{ \text{Low}_i \mid \text{Bucket}_i \ge \text{Entry Bucket} \}\right)$$
    - Stop breach occurs if $\text{Post-Entry Low} \le \text{Current SL}$ or $\text{LTP} \le \text{Current SL}$.
-   - Prevents morning pre-breakout low wicks from stopping out entries, while accurately catching post-breakout intraday wicks that a real broker resting stop order would fill.
-   - **Simulated Fill:** $\text{Exit Price} = \text{round\_to\_clean\_int}(\text{Current SL} \times 0.9985)$ (0.15% realistic slippage on resting stop limit fill).
-2. **Day 2+ Execution (Overnight Gap-Down Auction Fills):**
-   - If a stock gaps down below the stop price at the 09:15:00 AM market open:
-     $$\text{Exit Price} = \text{round\_to\_clean\_int}(\text{Day Open} \times 0.9985)$$
+   - Safely includes the entry candle itself (safe because initial stop sits strictly below the pre-breakout day low), catching post-breakout intraday wicks that a real resting stop order would fill.
+   - **Simulated Fill:** $\text{Exit Price} = \text{round\_to\_tick}(\text{Current SL} \times 0.9985, \, 0.05, \, \text{"down"})$ (0.15% realistic slippage on resting stop limit fill).
+2. **Day 2+ Execution & Mid-Session Ratchet Rogue Wick Guard:**
+   - **Mid-Session Ratchet Guard:** If a stop is raised higher *today* mid-session (e.g., to +2.0R at 11:30 AM), inspecting full session `day_low` would falsely exit the trade if an earlier 09:20 AM morning dip dropped below the new stop. The engine tracks `sl_last_ratchet_date` and `sl_last_ratchet_time`. If the stop was ratcheted *today* mid-session, the engine only evaluates candles timestamped $\ge \text{last\_ratchet\_bucket}$, ensuring only true price action *following* the ratchet can trigger an exit. If stop was set prior to today, session `day_low` is checked.
+   - **Overnight Gap-Down Auction Fills:** If a stock gaps down below the stop price at the 09:15:00 AM market open:
+     $$\text{Exit Price} = \text{round\_to\_tick}(\text{Day Open} \times 0.9985, \, 0.05, \, \text{"down"})$$
      *Realism Guard:* Fills at the opening auction bell price rather than end-of-day low LTP, preventing distorted penalties while maintaining slippage realism.
-   - If stop breached intraday on Day 2+: $\text{Exit Price} = \text{round\_to\_clean\_int}(\text{Current SL} \times 0.9985)$.
+   - If stop breached intraday on Day 2+: $\text{Exit Price} = \text{round\_to\_tick}(\text{Current SL} \times 0.9985, \, 0.05, \, \text{"down"})$.
 
 ### 8.5 Dual $R$-Multiple Accounting Telemetry
 To prevent statistical ambiguity between target risk and actual capital at risk when the ATR floor binds:
+- **Effective Initial Risk Distance:**
+  $$\text{Effective Risk Per Share} = \max(\text{Entry Price} - \text{Initial Stop Loss}, \, 0.5 \times \text{ATR}_{14})$$
+  $$\text{Initial Risk INR} = \text{Quantity} \times \text{Effective Risk Per Share}$$
 - **Structural $R$ ($R_{\text{structural}}$):** Evaluated against actual capital at risk:
-  $$R_{\text{structural}} = \frac{\text{Realized PnL (INR)}}{\text{Quantity} \times (\text{Entry Price} - \text{Initial Stop Loss})}$$
+  $$R_{\text{structural}} = \frac{\text{Realized PnL (INR)}}{\text{Initial Risk INR}}$$
 - **Nominal $R$ ($R_{\text{nominal}}$):** Evaluated against the standard ₹1,000 risk unit:
   $$R_{\text{nominal}} = \frac{\text{Realized PnL (INR)}}{1000.0}$$
-Both metrics are permanently recorded in `shadow_portfolio.json` and published in exit Telegram cards.
+Both metrics are permanently recorded in `shadow_portfolio.json` and `shadow_trade_log.json` and published in exit Telegram cards.
 
 ### 8.6 Unified NSE Exchange Holiday Calendar (2026–2027)
 Implemented via `count_trading_days(date_start, date_end)`:
 - Includes official 2026 NSE exchange holidays and projected 2027 statutory holidays (Republic Day, Holi, Good Friday, Dr. Ambedkar Jayanti, Maharashtra Day, Independence Day, Gandhi Jayanti, Christmas).
+- Auto-fallback: Dates past December 31, 2026 fall back to standard Monday–Friday weekday counting.
 - Powers holding-day counts, dead-money capital recycling, and Phase 1 30-session progression seamlessly across year-end boundaries.
+
+### 8.7 Mathematical Performance Analytics
+Computed daily at 15:35:00 IST by `get_shadow_analytics()`:
+- **Win Rate %:** $\frac{\text{Total Wins}}{\text{Total Closed Trades}} \times 100$
+- **Profit Factor:** $\frac{\sum \text{Realized Wins (in R)}}{\sum |\text{Realized Losses (in R)}|}$
+- **Mathematical Expectancy:**
+  $$\text{Expectancy } (R) = (P_{\text{win}} \times \overline{R}_{\text{win}}) - (P_{\text{loss}} \times \overline{R}_{\text{loss}})$$
+- **Max Drawdown ($R$):** Peak-to-trough drop of cumulative closed $R$.
+
+### 8.8 Benchmark Integrity, Config Stamping & Rejected Signal Ledger
+- **Config Stamping:** All open position records, closed trade logs, and rejected signals are explicitly tagged with `"config_version": "v3.1.0-strict"`.
+- **Rejected Signal Ledger (`shadow_rejected_signals.json`):** Any candidate breakout setup that triggers in the scanner but is rejected by any of the 7 Hard Gates or receives a Soft Conviction Score $< 3 / 7$ is logged with its exact timestamp, failure reason, and technical metrics, ensuring 100% audit transparency for the 30-day autonomous benchmark.
 
 ### 8.7 Mathematical Performance Analytics
 Computed daily at 15:35:00 IST by `get_shadow_analytics()`:
@@ -447,7 +478,7 @@ Computed daily at 15:35:00 IST by `get_shadow_analytics()`:
 **File:** [`telegram_bot.py`](file:///c:/ProjectDir/telegram_bot.py) (Length: ~3,950 lines)
 
 ### 9.1 Multi-Topic Routing Architecture
-The bot connects to Telegram Supergroup ID `5066630232` using distinct forum topics to keep alerts organized:
+The bot connects to Telegram Supergroup ID `-1005066630232` (Personal Admin User ID: `5066630232`) using distinct forum topics to keep alerts organized:
 
 | Topic Name | Thread ID | Dedicated Function |
 | :--- | :---: | :--- |
@@ -505,10 +536,9 @@ The bot connects to Telegram Supergroup ID `5066630232` using distinct forum top
 ### 11.1 Single-Page Application (`index.html` & `scanner_dashboard.html`)
 - Standalone HTML5/JavaScript dashboard rendered via GitHub Pages: `https://sanincredible.github.io/Jarvis/`.
 - Zero backend server required for viewing; loads state dynamically from `data.json`.
-- **Cache-Busting Architecture:** Fetches data via:
-  ```javascript
-  const DATA_URL = `https://raw.githubusercontent.com/sanIncredible/Jarvis/main/data.json?_t=${Date.now()}`;
-  ```
+- **Dual-Endpoint Low-Latency Edge Fetch Architecture:**
+  - Primary target: jsDelivr Edge CDN (`https://cdn.jsdelivr.net/gh/sanIncredible/Jarvis@main/data.json`), purged automatically on each cycle via `https://purge.jsdelivr.net/gh/...` to deliver sub-second global cache invalidation.
+  - Failover target: GitHub raw user content (`https://raw.githubusercontent.com/sanIncredible/Jarvis/main/data.json?_t=${Date.now()}`) to ensure zero downtime even if CDN cache purges delay.
 - **TradingView Lightweight Charts:** Embedded interactive candlestick charts with overlays for:
   - Opening Range High (ORB-H) and Low (ORB-L) lines.
   - Previous Day High (PDH) and Low (PDL).
@@ -572,8 +602,7 @@ sequenceDiagram
       "risk_trailing": 9,
       "orders": 10,
       "reports": 11,
-      "token_refresh": 2469,
-      "tokens": 2469
+      "token_refresh": 2469
     }
   },
   "github": {
@@ -590,20 +619,23 @@ sequenceDiagram
 {
   "ADANIPOWER": {
     "symbol": "ADANIPOWER",
-    "entry_price": 540,
-    "initial_sl": 526,
-    "current_sl": 554,
-    "target_price": 568,
+    "config_version": "v3.1.0-strict",
+    "entry_price": 540.0,
+    "initial_sl": 526.0,
+    "current_sl": 554.0,
+    "sl_last_ratchet_date": "2026-11-20",
+    "sl_last_ratchet_time": "10:12:00",
+    "target_price": 568.0,
     "risk_per_share": 14.0,
     "risk_pct": 2.59,
     "quantity": 71,
-    "initial_risk_inr": 994,
-    "fixed_risk_inr": 994,
+    "initial_risk_inr": 994.0,
+    "fixed_risk_inr": 994.0,
     "effective_risk_dist": 14.0,
-    "capital_invested": 38340,
+    "capital_invested": 38340.0,
     "entry_date": "2026-11-20",
     "entry_time": "09:34:12",
-    "highest_ltp": 570,
+    "highest_ltp": 570.0,
     "highest_r": 2.14,
     "last_trail_rule": "🎯 STAGE 3: +1.0R LOCKED (Swing Runner Protected)",
     "holding_days": 1,
@@ -620,17 +652,20 @@ sequenceDiagram
 [
   {
     "symbol": "SUNTV",
+    "config_version": "v3.1.0-strict",
     "entry_date": "2026-11-20",
     "exit_date": "2026-11-25",
     "entry_time": "09:36:00",
     "exit_time": "14:15:00",
-    "entry_price": 750,
-    "exit_price": 795,
+    "entry_price": 750.0,
+    "exit_price": 795.0,
     "quantity": 50,
-    "initial_risk_inr": 1000,
+    "initial_risk_inr": 1000.0,
     "holding_days": 3,
-    "realized_pnl_inr": 2250,
+    "realized_pnl_inr": 2250.0,
     "realized_r": 2.25,
+    "r_structural": 2.25,
+    "r_nominal": 2.25,
     "peak_r": 2.8,
     "giveback_r": 0.55,
     "exit_reason": "🟢 10 EMA SWING TRAIL",
@@ -640,7 +675,24 @@ sequenceDiagram
 ]
 ```
 
-### 13.4 `data.json` (Real-Time Terminal Snapshot)
+### 13.4 `shadow_rejected_signals.json` (Rejected Setups Audit Log)
+```json
+[
+  {
+    "symbol": "TRENT",
+    "timestamp": "2026-11-20 09:42:15",
+    "reason": "Checklist Hard Gate failed: 10 EMA Stretch (<=3.0%)",
+    "config_version": "v3.1.0-strict",
+    "metadata": {
+      "gates": ["10 EMA Stretch (<=3.0%)"],
+      "ltp": 6840.5,
+      "risk_pct": 2.1
+    }
+  }
+]
+```
+
+### 13.5 `data.json` (Real-Time Terminal Snapshot)
 ```json
 {
   "last_updated": "2026-11-20 10:14:02",
@@ -687,31 +739,32 @@ If the entire codebase were lost, the system can be reconstructed from scratch f
 
 ### Step 1: Environment & Directory Initialization
 ```bash
+# Oracle Linux 9 (or RHEL/EL9 compatible cloud server)
 mkdir -p /home/opc/Jarvis
 cd /home/opc/Jarvis
-python3 -m venv venv
-source venv/bin/activate
-pip install upstox-client requests urllib3 websockets protobuf openpyxl python-dotenv
+sudo dnf install -y python39 python39-pip
+pip3 install upstox-client requests urllib3 websockets protobuf openpyxl python-dotenv
 ```
 
 ### Step 2: Implement Core Modules
-1. **`config_credentials.json`**: Populate broker tokens, Telegram group ID (`5066630232`), and GitHub PAT.
+1. **`config_credentials.json`**: Populate broker tokens, Telegram Supergroup ID (`-1005066630232`), and GitHub PAT.
 2. **`watchlist.txt`**: Create with the 14 curated symbols.
 3. **`upstox_websocket_feed.py`**: Implement the WebSocket listener parsing Upstox Protobuf packets and updating thread-safe quotes dictionary.
 4. **`order_engine.py`**:
-   - Write `evaluate_strategy_checklist()` implementing Rules 1 through 10.
-   - Write `calculate_order_sizing()` implementing the ATR-floored ₹1,000 risk equation.
+   - Write `evaluate_strategy_checklist()` implementing 7 Hard Gates (all must pass) and 7 Soft Scores (min 3 required).
+   - Write `calculate_order_sizing()` implementing the ATR-floored ₹1,000 risk equation with tick-aware rounding and 5-state market regime governance.
 5. **`shadow_execution_engine.py`**:
-   - Write `evaluate_and_record_shadow_entry()` with 09:30–10:15 window checks and $+0.15\%$ slippage.
-   - Write `update_shadow_trailing_and_exits()` with the 7-level multi-day trailing stop hierarchy.
+   - Write `evaluate_and_record_shadow_entry()` with 09:30–10:15 window checks, tick-aware slippage, and `config_version = "v3.1.0-strict"`.
+   - Write `update_shadow_trailing_and_exits()` with the 7-level multi-day trailing stop hierarchy, Day 2+ mid-session ratchet tracking, and tick-aware exit fills.
    - Write `generate_and_send_phase1_eod_report()` to dispatch the 15:35 IST scoreboard to Topic 11.
 6. **`telegram_bot.py`**:
    - Implement long-polling daemon against `https://api.telegram.org/bot{token}/getUpdates`.
    - Wire command router for `/add`, `/remove`, `/watchlist`, `/scan`, `/portfolio`.
 7. **`upstox_tablet_scanner.py`**:
    - Wire the 3-minute cycle loop and state machine (`get_next_market_event()`).
+   - Implement continuous time-of-day volume curve $F(m)$ for accurate RVOL normalization.
    - Implement `aggregate_1m_to_3m()` with strict `target_date` filter.
-   - Implement background GitHub REST API file commit helper (`sync_file_to_github_api()`).
+   - Implement background GitHub REST API file commit helper (`sync_file_to_github_api()`) and jsDelivr cache purging.
 
 ### Step 3: Configure Cloud Daemons
 ```bash
@@ -724,6 +777,7 @@ After=network.target
 Type=simple
 User=opc
 WorkingDirectory=/home/opc/Jarvis
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/usr/bin/python3 -u /home/opc/Jarvis/upstox_tablet_scanner.py
 Restart=always
 RestartSec=10
