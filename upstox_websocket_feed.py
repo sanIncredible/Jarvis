@@ -125,6 +125,16 @@ class UpstoxWebSocketFeed:
                     ltp = float(i_ltpc.get("ltp") or ltp)
                     close = float(i_ltpc.get("cp") or close)
 
+            upper_c = 0.0
+            lower_c = 0.0
+            tb_qty = 0
+            ts_qty = 0
+            if market_ff:
+                tb_qty = int(market_ff.get("tbq") or market_ff.get("totalBuyQuantity") or 0)
+                ts_qty = int(market_ff.get("tsq") or market_ff.get("totalSellQuantity") or 0)
+                upper_c = float(market_ff.get("ucl") or market_ff.get("upperCircuitLimit") or 0.0)
+                lower_c = float(market_ff.get("lcl") or market_ff.get("lowerCircuitLimit") or 0.0)
+
             if ltp > 0:
                 now_t = time.time()
                 exchange_ts = 0.0
@@ -154,6 +164,10 @@ class UpstoxWebSocketFeed:
                     "high": high,
                     "low": low,
                     "volume": volume,
+                    "upper_circuit_limit": upper_c,
+                    "lower_circuit_limit": lower_c,
+                    "total_buy_quantity": tb_qty,
+                    "total_sell_quantity": ts_qty,
                     "timestamp": now_t,
                     "receive_time": now_t,
                     "exchange_tick_time": exchange_ts,
