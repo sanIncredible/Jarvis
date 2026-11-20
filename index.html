@@ -4463,7 +4463,39 @@
 
         const ltpNum = Number(data.ltp);
         if (lastT && lastT < bucketStr) {
-          const openPrice = Number(lastC.c) || ltpNum;
+          const parseMin = (ts) => {
+            const p = ts.split(':');
+            return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+          };
+          const formatMin = (m) => {
+            const h = Math.floor(m / 60) % 24;
+            const min = m % 60;
+            return (h < 10 ? '0' : '') + h + ':' + (min < 10 ? '0' : '') + min;
+          };
+
+          let currM = parseMin(lastT) + 3;
+          const targetM = parseMin(bucketStr);
+
+          // Fill any missing intermediate closed 3m bars seamlessly
+          while (currM < targetM) {
+            const interTime = formatMin(currM);
+            const prevBar = candles[candles.length - 1];
+            const pClose = Number(prevBar.c) || ltpNum;
+            candles.push({
+              t: interTime,
+              o: pClose,
+              h: Math.max(pClose, ltpNum),
+              l: Math.min(pClose, ltpNum),
+              c: pClose,
+              v: 0,
+              isForming: false
+            });
+            currM += 3;
+          }
+
+          // Then push the current forming bar
+          const lastCandle = candles[candles.length - 1];
+          const openPrice = Number(lastCandle.c) || ltpNum;
           candles.push({
             t: bucketStr,
             o: openPrice,
