@@ -69,7 +69,7 @@ def run_tests():
     try:
         # TEST 1: Config Hash Verification
         print("\n--- TEST 1: Config Hash Verification ---")
-        expected_hash = "fb15ae0f"
+        expected_hash = "d5168bdf"
         report_test(
             "Config Hash Parity",
             see.CONFIG_HASH == expected_hash,
@@ -80,6 +80,11 @@ def run_tests():
             "Config Snapshot Auto-Persistence",
             snapshot_file.is_file(),
             f"({snapshot_file.name} present)"
+        )
+        report_test(
+            "Git Commit SHA Stamped",
+            bool(see.get_git_commit_sha() and len(see.get_git_commit_sha()) == 8),
+            f"(Git SHA: {see.get_git_commit_sha()})"
         )
 
         # TEST 2: Monday 09:00 Launch Gate vs In-Flight Multi-Trade Execution
@@ -380,9 +385,9 @@ def run_tests():
                 f"(Exit Price: ₹{t_crash.get('exit_price')})"
             )
             report_test(
-                "Trade Audit Fields: earnings_filter_active and held_through_event present",
-                "earnings_filter_active" in t_crash and "held_through_event" in t_crash,
-                f"(earnings_filter_active: {t_crash.get('earnings_filter_active')}, held_through_event: {t_crash.get('held_through_event')})"
+                "Trade Audit Fields: earnings_filter_active, held_through_event & git_commit present",
+                "earnings_filter_active" in t_crash and "held_through_event" in t_crash and "git_commit" in t_crash,
+                f"(earnings_filter_active: {t_crash.get('earnings_filter_active')}, held_through_event: {t_crash.get('held_through_event')}, git_commit: {t_crash.get('git_commit')})"
             )
 
     finally:
