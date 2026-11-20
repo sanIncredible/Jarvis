@@ -239,14 +239,14 @@ Governed by `get_next_market_event(now_ist)`:
 15:35:00+ IST          -> EOD_SLEEP           (Deep sleep until 09:14:00 next market day)
 ```
 
-### 6.2 Data Ingestion & WebSocket Feed
-- **WebSocket Daemon (`upstox_websocket_feed.py`):**
-  - Connects to Upstox Market Data Feed v2 via Protobuf binary stream.
+### 6.2 Data Ingestion & Feed Architecture
+- **WebSocket Streaming Daemon (`upstox_websocket_feed.py`):**
+  - Connects to the official **Upstox Market Data Feed V3** via Protobuf binary streaming.
   - Subscribes to all active watchlist symbols via instrument keys (`NSE_EQ|ISIN`).
-  - Updates in-memory dictionary `g_live_quotes[symbol]` every 2 seconds:
-    - `ltp`, `day_high`, `day_low`, `day_open`, `volume`, `v_change`.
-- **REST Polling Fallback:**
-  - If WebSocket connection drops, automatically falls back to `/v2/market-quote/quotes` batch endpoint.
+  - Decodes incoming tick feeds in real time, updating live metrics (`ltp`, `day_high`, `day_low`, `day_open`, `volume`, `v_change`).
+- **REST Fallback Engine (`upstox_tablet_scanner.py`):**
+  - Handles initial startup quote seeding, 1-minute historical candle ingestion, and daily candle lookbacks via Upstox REST endpoints.
+  - Transparent failover if the WebSocket connection disconnects during market hours.
 
 ### 6.3 3-Minute Candle Aggregator Algorithm
 `aggregate_1m_to_3m(candles_1m, target_date=None)`:
@@ -271,44 +271,53 @@ Status Transition Rules:
 - **`H➔L` (Reversal Breakdown):** Stock previously traded above $\text{ORB High}$ but failed and dropped below $\text{ORB Low}$.
 - **`IN` (Inside Range):** $\text{ORB Low} \le \text{LTP} \le \text{ORB High}$.
 
-### 6.5 Indicator Formulae
+### 6.5 Indicator Formulae & Baseline Calibration
 - **Strong Start (SS):**
-  $$\text{Strong Start} = (\text{Open} > \text{PrevClose}) \land (\text{Low} \ge \text{PrevClose} \times 0.995)$$
-- **10 EMA Stretch %:**
+  $$\text{Strong Start} = (\text{Day Open} > \text{PrevClose}) \land (\text{Day Low} \ge \text{PrevClose} \times 0.995)$$
+- **Intraday 10 EMA Seeding & Stretch %:**
+  - **Seeding Anchor:** The rolling 10 EMA is seeded directly with today's `day_open` (or the opening candle close). This strictly uncouples intraday moving average calculations from overnight gap sizes (preventing +2% opening gaps from masquerading as +2% intraday stretches on Bar 1).
+  - **Smoothing Constant:** $\alpha = \frac{2}{10 + 1} = 0.1818$.
   $$\text{Stretch \%} = \frac{\text{LTP} - \text{EMA}_{10}}{\text{EMA}_{10}} \times 100$$
-- **Relative Volume (RVOL):**
-  $$\text{RVOL} = \frac{\text{Cumulative Today's Volume}}{\text{Expected Volume for Elapsed Time based on 20-Day SMA}}$$
+- **Time-of-Day Normalized Relative Volume ($\text{RVOL}_{\text{TOD}}$):**
+  $$\text{Expected Volume}(t) = \text{Average Daily Volume (20D)} \times \text{Expected Session Fraction}(t)$$
+  $$\text{RVOL}_{\text{TOD}} = \frac{\text{Cumulative Session Volume}(t)}{\text{Expected Volume}(t)}$$
+  *Expected Session Fractions (NSE Volume U-Curve):* 09:15–09:30: 5%–13%; 09:30–10:15: 13%–30%; 10:15–14:00: 30%–65%; 14:00–15:30: 65%–100%.
 
 ---
 
 ## 7. Strategy Rules & Position Sizing Engine
 
-**File:** [`order_engine.py`](file:///c:/ProjectDir/order_engine.py) (Length: ~5,443 lines)
+**File:** [`order_engine.py`](file:///c:/ProjectDir/order_engine.py) (Length: ~5,550 lines)
 
 ### 7.1 The Strategy Checklist: Hard Gates vs. Soft Scores
 Evaluated by `evaluate_strategy_checklist(symbol, quote_data, calc_data)`:
 
-#### A. Hard Gates (7 Non-Negotiable Prerequisite Gates — Must ALL Pass)
+#### A. Hard Gates (Strictly 7 Non-Negotiable Prerequisite Gates — Must ALL Pass)
 A failure in ANY single hard gate triggers an immediate, fatal rejection of the trade setup:
 1. **Regime Permission:** Market state is NOT `DEFENSIVE`, `DEFENSIVE_WATERFALL`, `CLIMAX`, `WASHOUT`, or `alloc_pct == 0`.
 2. **ORB Breakout Confirmation:** Price is actively breaking out (`orb_status in ("H", "L➔H")` or `LTP > ORB High`).
-3. **Volume Participation:** Minimum institutional participation threshold satisfied (`RVOL >= 0.75x`).
+3. **Volume Participation (Time-of-Day Hurdle):** Volume meets the expected session pace for the elapsed time (`RVOL_TOD >= 1.0x`).
 4. **Stop Distance Collar:** Distance to structural Day Low is within risk limits (`risk_pct <= 4.0%`).
-5. **10 EMA Stretch Collar:** Micro-timeframe 3m 10 EMA stretch is controlled (`stretch_pct <= 1.5%`; prevents chasing local exhaustion spikes).
+5. **10 EMA Stretch Collar:** Micro-timeframe 3m 10 EMA stretch is controlled (`stretch_pct <= 3.0%`; prevents chasing local blow-off tops).
 6. **Opening Gap Extension:** Opening gap is not extended beyond the breakout trigger (`gap_ext_pct <= 2.5%`).
 7. **Candle Range Quality:** Rejection upper wick does not dominate the session range (`upper_wick_pct <= 40.0%`).
 
-#### B. Soft Quality Scores (7 Qualitative Edge Enhancers — Min 2 Required)
+#### B. Advisory Extension Check (50 SMA Climax Filter)
+- **Formula (Prior-Close Inputs):**
+  $$\text{SMA}_{50}\text{ Climax Multiplier} = \frac{\text{PrevClose} - \text{SMA}_{50}}{\text{ATR}_{14}}$$
+- Evaluates multi-month parabolic extension. When $\ge 5.0\text{x ATR}$, dispatches an advisory warning against chasing extended runs. To avoid cutting off institutional momentum outliers, it acts as an informative risk alert rather than an unverified hard gate.
+
+#### C. Soft Quality Scores (7 Qualitative Edge Enhancers — Min 3 Required)
 Used to rank setup conviction and grade trade quality (0 to 7):
 1. **Strong Start (SS) Signature:** Opened above yesterday's close and held low buffer (+1).
 2. **PDH Cleared:** Overhead Previous Day High resistance cleared (+1).
-3. **Institutional Volume Surge:** Volume surge exceeds 20-day baseline (`RVOL >= 1.0x`) (+1).
+3. **Institutional Volume Surge:** Volume surge significantly exceeds time-of-day baseline (`RVOL_TOD >= 1.5x`) (+1).
 4. **Tight Micro-Risk Stop:** Structural Day Low stop is within prime tightness (`risk_pct <= 3.0%`) (+1).
-5. **Prime 10 EMA Coil:** Intraday coiling right along the 3m 10 EMA (`stretch_pct <= 0.6%`) (+1).
+5. **Prime 10 EMA Coil:** Intraday coiling directly at the 3m 10 EMA (`stretch_pct <= 0.6%`) (+1).
 6. **Prior Day Volatility Contraction:** Previous session was an Inside Day, NR7, or coiled (`prev_range_ratio <= 0.75x ATR`) (+1).
 7. **Sector Group Momentum:** 2 or more stocks in the same sector breaking out in sync (+1).
 
-**Qualification Requirement:** All 7 Hard Gates must PASS, and Soft Score must be $\ge 2 / 7$.
+**Qualification Requirement:** All 7 Hard Gates must PASS, and Soft Score must be $\ge 3 / 7$ for Phase 1 trade execution.
 
 ### 7.2 Position Sizing Architecture (`calculate_order_sizing`)
 
@@ -365,57 +374,65 @@ flowchart TD
     LogOpen --> TGCard["Dispatch Entry Card to Telegram Topic 11"]
 ```
 
-### 8.3 Multi-Day Swing Trailing Stop Hierarchy
-The trailing engine runs continuously in a background surveillance worker, evaluating all active positions against multi-day momentum rules:
+### 8.3 Monotonic Multi-Day Swing Trailing Stop Hierarchy (Strict $\max()$ Architecture)
+The trailing engine runs continuously in a background surveillance worker. To mathematically guarantee that a trailing stop **never loosens or drops** under any market condition, all eligible rules generate candidate stops, and the engine takes the maximum:
 
-```
-[Level 1: 30% Profit Cap Milestone]
-IF Peak Gain >= +28% OR Highest R >= +8.0R:
-    New SL = Entry Price * 1.25 (Lock +25% absolute gain)
-    Rule = "🛡️ 30% PROFIT CAP (Lock +25% Gains)"
+$$\text{New Stop Loss} = \max\left(\text{Current SL}, \, \text{Candidate}_1, \, \text{Candidate}_2, \, \dots, \, \text{Candidate}_7\right)$$
 
-[Level 2: Parabolic 5 EMA Vertical Trail]
-ELSE IF Highest R >= +4.0R AND EMA5 > 0:
-    New SL = EMA5 * 0.995 (Trail tightly below 5 EMA)
-    Rule = "⚡ PARABOLIC 5 EMA TRAIL"
+#### Candidate Stop Rules (Evaluated in Parallel)
+1. **🛡️ 30% Profit Cap Milestone ($R \ge 8.0\text{R}$ or Gain $\ge +28\%$):**
+   $$\text{Candidate}_1 = \text{round\_to\_clean\_int}(\text{Entry Price} \times 1.25)$$
+   *Rule:* `"🛡️ 30% PROFIT CAP (Lock +25% Gains)"`
+2. **⚡ Parabolic 5 EMA Vertical Trail ($R \ge 4.0\text{R}$):**
+   $$\text{Candidate}_2 = \max\left(\text{Entry} + 2.0\text{R}, \, \text{round\_to\_clean\_int}(\text{EMA}_5 \times 0.995)\right)$$
+   *Rule:* `"⚡ PARABOLIC 5 EMA TRAIL (+2.0R Floor)"`
+   *(Includes the Stage 4 $+2.0\text{R}$ locked profit floor so a lagging 5 EMA can never undercut established gains).*
+3. **🎯 Stage 4 Institutional Lock ($R \ge 3.0\text{R}$):**
+   $$\text{Candidate}_3 = \max\left(\text{Entry} + 2.0\text{R}, \, \text{round\_to\_clean\_int}(\text{EMA}_{10} \times 0.992)\right)$$
+   *Rule:* `"🎯 STAGE 4: +2.0R LOCKED (Riding 10 EMA)"`
+4. **🎯 Stage 3 Breakeven Runner Protection ($R \ge 2.0\text{R}$):**
+   $$\text{Candidate}_4 = \max\left(\text{Entry} + 1.0\text{R}, \, \text{round\_to\_clean\_int}(\text{EMA}_{10} \times 0.992)\right)$$
+   *Rule:* `"🎯 STAGE 3: +1.0R LOCKED (Swing Runner Protected)"`
+5. **🚀 Day-1 Spurt Shield ($\text{Holding Days} == 1 \land \text{Peak Gain} \ge +4.5\%$):**
+   $$\text{Candidate}_5 = \text{round\_to\_clean\_int}(\text{Entry Price} \times 1.002)$$
+   *Rule:* `"🚀 DAY-1 SPURT SHIELD (+4.5% Surge -> Breakeven)"`
+6. **🟢 10 EMA Swing Trail ($\text{Holding Days} \ge 2 \land R \ge 1.5\text{R}$):**
+   $$\text{Candidate}_6 = \text{round\_to\_clean\_int}(\text{EMA}_{10} \times 0.992)$$
+   *Rule:* `"🟢 10 EMA SWING TRAIL"`
+7. **🟢 20 EMA Structural Base Trail ($\text{Holding Days} \ge 3 \land R \ge 1.0\text{R}$):**
+   $$\text{Candidate}_7 = \text{round\_to\_clean\_int}(\text{EMA}_{20} \times 0.990)$$
+   *Rule:* `"🟢 20 EMA STRUCTURAL TRAIL"`
 
-[Level 3: Stage 4 Institutional Lock]
-ELSE IF Highest R >= +3.0R:
-    New SL = max(Entry Price + 2.0 * RiskPerShare, EMA10 * 0.992)
-    Rule = "🎯 STAGE 4: +2.0R LOCKED (Riding 10 EMA)"
+> **Mathematical Guarantee:** Because `best_sl, best_rule = max(candidates)`, a higher-level state cannot loosen established lower-level floors, and Level 6 (10 EMA) and Level 7 (20 EMA) compete fairly with the tighter structural stop winning.
 
-[Level 4: Stage 3 Breakeven Runner Protection]
-ELSE IF Highest R >= +2.0R:
-    New SL = max(Entry Price + 1.0 * RiskPerShare, EMA10 * 0.992)
-    Rule = "🎯 STAGE 3: +1.0R LOCKED (Swing Runner Protected)"
+### 8.4 Realistic Exit Fill Model & Post-Entry Bar Lows
+To prevent optimistic paper trading survival bias:
+1. **Day-1 Execution (Post-Entry Intra-Day Lows):**
+   - The engine isolates all 1-minute/3-minute candles strictly timestamped *at or after* `entry_time`:
+     $$\text{Post-Entry Low} = \min\left(\{ \text{Low}_i \mid \text{Time}_i \ge \text{Entry Time} \}\right)$$
+   - Stop breach occurs if $\text{Post-Entry Low} \le \text{Current SL}$ or $\text{LTP} \le \text{Current SL}$.
+   - Prevents morning pre-breakout low wicks from stopping out entries, while accurately catching post-breakout intraday wicks that a real broker resting stop order would fill.
+   - **Simulated Fill:** $\text{Exit Price} = \text{round\_to\_clean\_int}(\text{Current SL} \times 0.9985)$ (0.15% realistic slippage on resting stop limit fill).
+2. **Day 2+ Execution (Overnight Gap-Down Auction Fills):**
+   - If a stock gaps down below the stop price at the 09:15:00 AM market open:
+     $$\text{Exit Price} = \text{round\_to\_clean\_int}(\text{Day Open} \times 0.9985)$$
+     *Realism Guard:* Fills at the opening auction bell price rather than end-of-day low LTP, preventing distorted penalties while maintaining slippage realism.
+   - If stop breached intraday on Day 2+: $\text{Exit Price} = \text{round\_to\_clean\_int}(\text{Current SL} \times 0.9985)$.
 
-[Level 5: Day-1 Spurt Shield]
-ELSE IF Holding Days == 1 AND Peak Gain >= +4.5%:
-    New SL = Entry Price * 1.002 (Ratchet to Breakeven +0.2%)
-    Rule = "🚀 DAY-1 SPURT SHIELD (+4.5% Surge -> Breakeven)"
+### 8.5 Dual $R$-Multiple Accounting Telemetry
+To prevent statistical ambiguity between target risk and actual capital at risk when the ATR floor binds:
+- **Structural $R$ ($R_{\text{structural}}$):** Evaluated against actual capital at risk:
+  $$R_{\text{structural}} = \frac{\text{Realized PnL (INR)}}{\text{Quantity} \times (\text{Entry Price} - \text{Initial Stop Loss})}$$
+- **Nominal $R$ ($R_{\text{nominal}}$):** Evaluated against the standard ₹1,000 risk unit:
+  $$R_{\text{nominal}} = \frac{\text{Realized PnL (INR)}}{1000.0}$$
+Both metrics are permanently recorded in `shadow_portfolio.json` and published in exit Telegram cards.
 
-[Level 6: 10 EMA Swing Trail (Day 2+)]
-ELSE IF Holding Days >= 2 AND Highest R >= +1.5R AND EMA10 > 0:
-    New SL = EMA10 * 0.992
-    Rule = "🟢 10 EMA SWING TRAIL"
+### 8.6 Unified NSE Exchange Holiday Calendar (2026–2027)
+Implemented via `count_trading_days(date_start, date_end)`:
+- Includes official 2026 NSE exchange holidays and projected 2027 statutory holidays (Republic Day, Holi, Good Friday, Dr. Ambedkar Jayanti, Maharashtra Day, Independence Day, Gandhi Jayanti, Christmas).
+- Powers holding-day counts, dead-money capital recycling, and Phase 1 30-session progression seamlessly across year-end boundaries.
 
-[Level 7: 20 EMA Structural Base Trail (Day 3+)]
-ELSE IF Holding Days >= 3 AND Highest R >= +1.0R AND EMA20 > 0:
-    New SL = EMA20 * 0.990
-    Rule = "🟢 20 EMA STRUCTURAL TRAIL"
-
-[Baseline]
-DEFAULT: Retain Initial Structural LOD Stop
-```
-
-### 8.4 Exit Simulation & Overnight Gap-Down Realism
-- On Day 1: Stops are evaluated against live LTP (if trailed) or Session Day Low.
-- On Day 2+: Any session breach of `current_sl` triggers an exit.
-- **Overnight Gap-Down Slippage:** If a stock opens the day below the stop price:
-  $$\text{Exit Price} = \min(\text{Day Open}, \text{LTP}, \text{Current SL}) \times 0.9985$$
-  This prevents unrealistic paper trading profits by factoring in true market execution slippage.
-
-### 8.5 Mathematical Performance Analytics
+### 8.7 Mathematical Performance Analytics
 Computed daily at 15:35:00 IST by `get_shadow_analytics()`:
 - **Win Rate %:** $\frac{\text{Total Wins}}{\text{Total Closed Trades}} \times 100$
 - **Profit Factor:** $\frac{\sum \text{Realized Wins (in R)}}{\sum |\text{Realized Losses (in R)}|}$
