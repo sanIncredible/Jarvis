@@ -3794,6 +3794,48 @@ def run_upstox_scanner(once=False, auto_open_web=False):
     _last_phase1_eod_date = [None]
     _last_day0_reset_date = [None]
     _last_launch_gate_date = [None]
+    _last_earnings_preflight_date = [None]
+
+    def check_and_run_earnings_preflight_audit(curr_now=None):
+        """
+        Pre-flight Earnings Calendar Audit:
+        Runs at 08:45 AM IST on trading days (Monday - Friday).
+        Alerts to Topic 9 ('risk') if data/earnings_calendar.json is missing, empty,
+        or older than 24 hours on a Monday morning.
+        """
+        if curr_now is None:
+            curr_now = get_ist_now()
+        today_str = curr_now.strftime('%Y-%m-%d')
+        if curr_now.weekday() < 5 and ((curr_now.hour == 8 and curr_now.minute >= 45) or curr_now.hour >= 9):
+            if _last_earnings_preflight_date[0] != today_str:
+                _last_earnings_preflight_date[0] = today_str
+                try:
+                    from shadow_execution_engine import is_earnings_calendar_valid, send_phase1_telegram_alert
+                    cal_file = BASE_DIR / "data" / "earnings_calendar.json"
+                    is_valid = is_earnings_calendar_valid()
+                    
+                    if not is_valid:
+                        msg = "⚠️ <b>[EARNINGS PRE-FLIGHT AUDIT: MISSING/CORRUPT]</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n• <b>File:</b> data/earnings_calendar.json is missing or contains 0 records.\n• <b>Impact:</b> Earnings blackout filter will fail open.\n• <b>Action:</b> Run sync_earnings_calendar.py immediately before 09:15 AM."
+                        print(f"\n{RED}{msg}{RESET}")
+                        send_phase1_telegram_alert(msg, topic_name="risk")
+                    else:
+                        age_hours = (time.time() - cal_file.stat().st_mtime) / 3600.0
+                        is_monday = (curr_now.weekday() == 0)
+                        max_allowed_age = 24.0 if is_monday else 36.0
+                        if age_hours > max_allowed_age:
+                            msg = (
+                                f"⚠️ <b>[EARNINGS PRE-FLIGHT AUDIT: STALE CACHE]</b>\n"
+                                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                f"• <b>Cache Age:</b> {age_hours:.1f} hours old (> {max_allowed_age}h limit)\n"
+                                f"• <b>Warning:</b> Fresh weekend corporate action filings not synced.\n"
+                                f"• <b>Action:</b> Execute sync_earnings_calendar.py before 09:15 AM."
+                            )
+                            print(f"\n{YELLOW}{msg}{RESET}")
+                            send_phase1_telegram_alert(msg, topic_name="risk")
+                        else:
+                            print(f"\n{GREEN}✅ [EARNINGS PRE-FLIGHT AUDIT: OK] Earnings calendar verified fresh ({age_hours:.1f}h old).{RESET}")
+                except Exception as ex:
+                    print(f"Notice on Earnings Pre-flight audit: {ex}")
 
     def check_and_run_monday_launch_gate(curr_now=None):
         """
@@ -3894,6 +3936,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                 check_and_run_orphan_sentry(now)
                 check_and_run_auto_gtt_rearm(now)
                 check_and_run_day0_flatten_and_archive(now)
+                check_and_run_earnings_preflight_audit(now)
                 check_and_run_monday_launch_gate(now)
                 check_and_run_phase1_eod_report(now)
                 try:
