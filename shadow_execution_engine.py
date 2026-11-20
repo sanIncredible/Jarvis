@@ -34,6 +34,8 @@ import math
 import hashlib
 import tempfile
 import threading
+import urllib.request
+import urllib.parse
 from datetime import datetime, time as dtime, timezone, timedelta
 from pathlib import Path
 
@@ -232,14 +234,14 @@ NSE_HOLIDAYS_2026 = NSE_HOLIDAYS
 def count_trading_days(date_start, date_end):
     """Counts actual trading days (Monday to Friday, excluding exchange holidays) between two dates inclusive."""
     if date_start > date_end:
-        return 1
+        return 0
     cur = date_start
     days = 0
     while cur <= date_end:
         if cur.weekday() < 5 and cur.strftime("%Y-%m-%d") not in NSE_HOLIDAYS:
             days += 1
         cur += timedelta(days=1)
-    return max(1, days)
+    return max(0, days)
 
 
 def atomic_write_json(file_path: Path, data):
@@ -269,6 +271,76 @@ def load_config():
         except Exception:
             pass
     return {}
+
+
+UPSTOX_TOKEN_FILE = BASE_DIR / "upstox_token.txt"
+
+def load_upstox_token():
+    """Loads active Upstox access token from config_credentials.json or upstox_token.txt."""
+    cfg = load_config()
+    tok = cfg.get("upstox", {}).get("access_token", "").strip()
+    if tok:
+        return tok
+    if UPSTOX_TOKEN_FILE.is_file():
+        try:
+            with open(UPSTOX_TOKEN_FILE, "r", encoding="utf-8") as f:
+                return f.read().strip()
+        except Exception:
+            pass
+    return ""
+
+
+def fetch_1m_intraday_candles(symbol: str):
+    """
+    Fetches 1-minute intraday historical candles for today directly from Upstox REST API:
+    GET /v2/historical-candle/intraday/{encoded_key}/1minute
+    Used for watchdog surveillance gap replay to reconstruct exact breach bars and fill prices.
+    Returns chronologically sorted list of candles for today:
+    [{'t': 'HH:MM', 'iso_time': str, 'o': float, 'h': float, 'l': float, 'c': float, 'v': int}, ...]
+    """
+    try:
+        from order_engine import get_instrument_key
+        tok = load_upstox_token()
+        if not tok:
+            return []
+        norm_sym = resolve_symbol(symbol)
+        ikey = get_instrument_key(norm_sym)
+        if not ikey:
+            return []
+        enc_key = urllib.parse.quote(ikey, safe="")
+        url = f"https://api.upstox.com/v2/historical-candle/intraday/{enc_key}/1minute"
+        req = urllib.request.Request(url, headers={
+            "Authorization": f"Bearer {tok}",
+            "Accept": "application/json",
+            "User-Agent": "Jarvis-ShadowEngine"
+        })
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            raw_candles = data.get("data", {}).get("candles", [])
+            if not raw_candles:
+                return []
+            sorted_raw = sorted(raw_candles, key=lambda c: str(c[0]))
+            now_ist = get_ist_now()
+            today_prefix = now_ist.strftime("%Y-%m-%d")
+            parsed = []
+            for c in sorted_raw:
+                iso_ts = str(c[0])
+                if not iso_ts.startswith(today_prefix):
+                    continue
+                t_lbl = iso_ts[11:16] if len(iso_ts) >= 16 else iso_ts
+                parsed.append({
+                    "t": t_lbl,
+                    "iso_time": iso_ts,
+                    "o": round(float(c[1]), 2),
+                    "h": round(float(c[2]), 2),
+                    "l": round(float(c[3]), 2),
+                    "c": round(float(c[4]), 2),
+                    "v": int(c[5]) if len(c) > 5 else 0
+                })
+            return parsed
+    except Exception as e:
+        print(f"Notice fetching 1m candles for {symbol}: {e}")
+        return []
 
 
 def load_shadow_portfolio():
@@ -746,9 +818,22 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
         exit_triggered = False
         exit_price = ltp
         exit_reason = ""
+        breach_bar_time = None
+
+        # Watchdog & Reconnect Surveillance Gap Detection (>60s gap since last surveillance check)
+        now_epoch = time.time()
+        last_surv_epoch = float(pos.get("last_surveillance_epoch") or 0.0)
+        gap_detected = (last_surv_epoch > 0 and (now_epoch - last_surv_epoch) > 60.0)
 
         # Resolve intraday candles for tick-accurate post-entry / post-ratchet low tracking (1m preferred, 3m fallback)
         candles_1m = q.get("candles_1m") or (c_meta.get("candles_1m") if c_meta else []) or []
+        if not candles_1m or gap_detected:
+            rest_1m = fetch_1m_intraday_candles(sym)
+            if rest_1m:
+                candles_1m = rest_1m
+                if gap_detected:
+                    print(f"🔄 [Surveillance Gap Replay] Replaying {len(rest_1m)} 1m candles from Upstox REST for {sym} (gap: {now_epoch - last_surv_epoch:.1f}s)")
+
         candles_3m = q.get("candles_3m") or (c_meta.get("candles_3m") if c_meta else []) or []
         use_1m = len(candles_1m) > 0
         candles = candles_1m if use_1m else candles_3m
@@ -777,10 +862,12 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 if b_low > 0 and b_low <= pos["current_sl"]:
                     is_sl_breached = True
                     breach_bar_open = float(b.get("o") or b_low)
+                    breach_bar_time = b.get("t")
                     break
             if not is_sl_breached and ltp <= pos["current_sl"]:
                 is_sl_breached = True
                 breach_bar_open = ltp
+                breach_bar_time = now.strftime("%H:%M:%S")
         else:
             # Stop has NOT been ratcheted today (remains at initial LOD stop or previous session's stop)
             if holding_days == 1:
@@ -796,18 +883,31 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                     if b_low > 0 and b_low <= pos["current_sl"]:
                         is_sl_breached = True
                         breach_bar_open = float(b.get("o") or b_low)
+                        breach_bar_time = b.get("t")
                         break
                 if not is_sl_breached and ltp <= pos["current_sl"]:
                     is_sl_breached = True
                     breach_bar_open = ltp
+                    breach_bar_time = now.strftime("%H:%M:%S")
             else:
-                # Day 2+ previous day stop: session day_low or live LTP
-                if day_low <= pos["current_sl"]:
-                    is_sl_breached = True
-                    breach_bar_open = day_open if day_open > 0 else ltp
-                elif ltp <= pos["current_sl"]:
-                    is_sl_breached = True
-                    breach_bar_open = ltp
+                # Day 2+ previous day stop: evaluate 1m candles first for tick-exact breach time
+                if use_1m:
+                    for b in candles:
+                        b_low = float(b.get("l") or 0.0)
+                        if b_low > 0 and b_low <= pos["current_sl"]:
+                            is_sl_breached = True
+                            breach_bar_open = float(b.get("o") or b_low)
+                            breach_bar_time = b.get("t")
+                            break
+                if not is_sl_breached:
+                    if day_low <= pos["current_sl"]:
+                        is_sl_breached = True
+                        breach_bar_open = day_open if day_open > 0 else ltp
+                        breach_bar_time = now.strftime("%H:%M:%S")
+                    elif ltp <= pos["current_sl"]:
+                        is_sl_breached = True
+                        breach_bar_open = ltp
+                        breach_bar_time = now.strftime("%H:%M:%S")
 
         if is_sl_breached:
             exit_triggered = True
@@ -868,7 +968,7 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 "entry_date": entry_date,
                 "exit_date": today_str,
                 "entry_time": pos.get("entry_time"),
-                "exit_time": now.strftime("%H:%M:%S"),
+                "exit_time": breach_bar_time if breach_bar_time else now.strftime("%H:%M:%S"),
                 "entry_price": entry_p,
                 "exit_price": exit_price,
                 "quantity": qty,
@@ -919,6 +1019,10 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
     for s in exited_symbols:
         portfolio.pop(s, None)
 
+    for sym, pos in portfolio.items():
+        pos["last_surveillance_epoch"] = now_epoch
+        pos["last_surveillance_time"] = now.strftime("%H:%M:%S")
+
     save_shadow_portfolio(portfolio)
     save_shadow_trade_log(trade_log)
 
@@ -957,8 +1061,10 @@ def record_daily_mtm_snapshot(portfolio: dict, trade_log: list, unrealized_r: fl
         peak_mtm_r = max(prev_peaks + [mtm_r, 0.0])
         mtm_drawdown_r = round(max(0.0, peak_mtm_r - mtm_r), 2)
 
+        session_tag = "DAY0_SHAKEDOWN" if today_str < START_DATE_STR else "PHASE1_EVALUATION"
         snapshot = {
             "date": today_str,
+            "session": session_tag,
             "timestamp": now_ist.strftime("%Y-%m-%d %H:%M:%S"),
             "open_positions_count": len(portfolio),
             "closed_trades_count": len(trade_log),
@@ -989,9 +1095,14 @@ def get_shadow_analytics():
     """
     Computes comprehensive 30-day statistical performance:
     Win Rate %, Profit Factor, Expectancy R, Avg Win vs Avg Loss, Max Closed Drawdown, and Max MTM Drawdown.
+    Strictly filters for Phase 1 official evaluation trades (entry_date >= START_DATE_STR and not is_day0).
     """
     trades = load_shadow_trade_log()
-    total_trades = len(trades)
+    phase1_trades = [
+        t for t in trades 
+        if str(t.get("entry_date", "")) >= START_DATE_STR and not t.get("is_day0", False)
+    ]
+    total_trades = len(phase1_trades)
     if total_trades == 0:
         return {
             "total_trades": 0,
@@ -1006,13 +1117,14 @@ def get_shadow_analytics():
             "avg_win_r": 0.0,
             "avg_loss_r": 0.0,
             "expectancy_r": 0.0,
+            "expectancy_inr": 0.0,
             "max_drawdown_r": 0.0,
             "max_mtm_drawdown_r": 0.0,
             "rule_counts": {}
         }
 
-    wins = [t for t in trades if t.get("realized_r", 0) > 0]
-    losses = [t for t in trades if t.get("realized_r", 0) <= 0]
+    wins = [t for t in phase1_trades if t.get("realized_r", 0) > 0]
+    losses = [t for t in phase1_trades if t.get("realized_r", 0) <= 0]
 
     win_count = len(wins)
     loss_count = len(losses)
@@ -1022,7 +1134,7 @@ def get_shadow_analytics():
     gross_loss_r = abs(sum(t.get("realized_r", 0) for t in losses))
 
     net_r = round(gross_profit_r - gross_loss_r, 2)
-    net_pnl = sum(t.get("realized_pnl_inr", 0) for t in trades)
+    net_pnl = sum(t.get("realized_pnl_inr", 0) for t in phase1_trades)
 
     profit_factor = round(gross_profit_r / gross_loss_r, 2) if gross_loss_r > 0 else (round(gross_profit_r, 2) if gross_profit_r > 0 else 0.0)
     avg_win_r = round(gross_profit_r / win_count, 2) if win_count > 0 else 0.0
@@ -1038,26 +1150,30 @@ def get_shadow_analytics():
     peak_cum = 0.0
     running_cum = 0.0
     max_dd = 0.0
-    for t in trades:
+    for t in phase1_trades:
         running_cum += t.get("realized_r", 0)
         peak_cum = max(peak_cum, running_cum)
         dd = peak_cum - running_cum
         max_dd = max(max_dd, dd)
 
-    # Max MTM Drawdown from daily mark-to-market curve
+    # Max MTM Drawdown from daily mark-to-market curve (Strictly Phase 1 dates >= START_DATE_STR)
     max_mtm_dd = max_dd
     if SHADOW_MTM_CURVE_FILE.is_file():
         try:
             with open(SHADOW_MTM_CURVE_FILE, "r", encoding="utf-8") as mf:
                 m_curve = json.load(mf)
-                if m_curve:
-                    max_mtm_dd = max([float(c.get("mtm_drawdown_r") or 0.0) for c in m_curve] + [max_dd])
+                phase1_curve = [
+                    c for c in m_curve 
+                    if str(c.get("date", "")) >= START_DATE_STR and c.get("session") != "DAY0_SHAKEDOWN"
+                ]
+                if phase1_curve:
+                    max_mtm_dd = max([float(c.get("mtm_drawdown_r") or 0.0) for c in phase1_curve] + [max_dd])
         except Exception:
             pass
 
     # Rule breakdown
     rules = {}
-    for t in trades:
+    for t in phase1_trades:
         r = t.get("exit_reason", "OTHER")
         rules[r] = rules.get(r, 0) + 1
 
@@ -1097,9 +1213,18 @@ def generate_and_send_phase1_eod_report(notify=True):
     try:
         d_start = datetime.strptime(START_DATE_STR, "%Y-%m-%d").date()
         d_curr = now.date()
-        day_num = count_trading_days(d_start, d_curr)
+        if d_curr < d_start:
+            day_num = 0
+            header_title = "🛠️ <b>DAY 0: COMMISSIONING & SHAKEDOWN (PRE-EVALUATION)</b>"
+            day_label = f"Session: {now.strftime('%d-%b-%Y')} | 30-Day Official Clock Starts Mon Nov 23"
+        else:
+            day_num = count_trading_days(d_start, d_curr)
+            header_title = "🤖 <b>PHASE 1 AUTONOMOUS SHADOW ENGINE — EOD REPORT</b>"
+            day_label = f"📅 <b>Day {day_num} of {EVALUATION_HORIZON_DAYS}</b> | Session: {now.strftime('%d-%b-%Y')} (15:35 IST)"
     except Exception:
         day_num = 1
+        header_title = "🤖 <b>PHASE 1 AUTONOMOUS SHADOW ENGINE — EOD REPORT</b>"
+        day_label = f"📅 <b>Day {day_num} of {EVALUATION_HORIZON_DAYS}</b> | Session: {now.strftime('%d-%b-%Y')} (15:35 IST)"
 
     # Fetch live quotes for open positions to calculate unrealized PnL
     unrealized_r = 0.0
@@ -1165,8 +1290,8 @@ def generate_and_send_phase1_eod_report(notify=True):
     mtm_dd_val = mtm_snap['mtm_drawdown_r'] if mtm_snap else 0.0
 
     lines.extend([
-        "🤖 <b>PHASE 1 AUTONOMOUS SHADOW ENGINE — EOD REPORT</b>",
-        f"📅 <b>Day {day_num} of {EVALUATION_HORIZON_DAYS}</b> | Session: {now.strftime('%d-%b-%Y')} (15:35 IST)",
+        header_title,
+        day_label,
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         "📊 <b>ACTIVE SWING PORTFOLIO HEALTH:</b>",
         f"• <b>Open Swing Holdings:</b> {len(portfolio)} positions",
@@ -1236,6 +1361,107 @@ def generate_and_send_phase1_eod_report(notify=True):
     return report_html
 
 
+def reset_and_archive_day0_state(force=False):
+    """
+    Safely flattens any open Day 0 positions and archives all pre-evaluation state files
+    before the official Phase 1 start on Monday, Nov 23, 2026.
+    Ensures zero Day 0 contamination in active portfolio, trade logs, or MTM curves.
+    """
+    now = get_ist_now()
+    today_str = now.strftime("%Y-%m-%d")
+
+    # If force is False, only run if today is before START_DATE_STR
+    if not force and today_str >= START_DATE_STR:
+        print("Notice: Clean Phase 1 period active (>= START_DATE_STR); Day 0 reset bypassed.")
+        return {"status": "SKIPPED", "reason": "Phase 1 active"}
+
+    with SHADOW_LOCK:
+        portfolio = load_shadow_portfolio()
+        trade_log = load_shadow_trade_log()
+        flattened_count = 0
+
+        # Flatten any active open positions opened on or before Day 0
+        if portfolio:
+            try:
+                from order_engine import fetch_live_quote
+            except Exception:
+                fetch_live_quote = None
+
+            for sym, pos in list(portfolio.items()):
+                ltp = pos.get("entry_price", 0.0)
+                if fetch_live_quote:
+                    try:
+                        q, _ = fetch_live_quote(sym)
+                        if q and q.get("ltp"):
+                            ltp = float(q["ltp"])
+                    except Exception:
+                        pass
+
+                qty = pos.get("quantity", 0)
+                entry_p = pos.get("entry_price", ltp)
+                rps = max(0.05, float(pos.get("risk_per_share") or (entry_p - pos.get("initial_sl", entry_p * 0.98))))
+                init_risk = max(1.0, float(pos.get("initial_risk_inr") or (qty * rps)))
+                realized_pnl = round((ltp - entry_p) * qty, 2)
+                realized_r = round(realized_pnl / init_risk, 2)
+
+                pos_flattened = {
+                    "symbol": sym,
+                    "is_day0": True,
+                    "config_version": CONFIG_VERSION,
+                    "config_hash": CONFIG_HASH,
+                    "entry_date": pos.get("entry_date", today_str),
+                    "exit_date": today_str,
+                    "entry_time": pos.get("entry_time", "09:30:00"),
+                    "exit_time": now.strftime("%H:%M:%S"),
+                    "entry_price": entry_p,
+                    "exit_price": ltp,
+                    "quantity": qty,
+                    "initial_sl": pos.get("initial_sl"),
+                    "risk_per_share": rps,
+                    "initial_risk_inr": init_risk,
+                    "holding_days": 1,
+                    "realized_pnl_inr": realized_pnl,
+                    "statutory_costs_inr": 0.0,
+                    "net_pnl_inr": realized_pnl,
+                    "realized_r": realized_r,
+                    "r_structural": realized_r,
+                    "r_nominal": round(realized_pnl / 1000.0, 2),
+                    "exit_reason": "DAY0_SHAKEDOWN_FLATTEN",
+                    "sa_regime": pos.get("sa_regime", "DEFENSIVE"),
+                    "trigger_name": pos.get("trigger_name", "Day 0 Shakedown")
+                }
+                trade_log.append(pos_flattened)
+                flattened_count += 1
+
+        # Archive directory
+        archive_dir = BASE_DIR / "archive" / f"day0_shakedown_{now.strftime('%Y%m%d_%H%M%S')}"
+        archive_dir.mkdir(parents=True, exist_ok=True)
+
+        # Archive existing state files if present
+        for fpath in [SHADOW_PORTFOLIO_FILE, SHADOW_LOG_FILE, SHADOW_EOD_FILE, SHADOW_MTM_CURVE_FILE, REJECTED_SIGNALS_FILE]:
+            if fpath.is_file():
+                try:
+                    import shutil
+                    shutil.copy2(fpath, archive_dir / fpath.name)
+                except Exception as ex:
+                    print(f"Notice archiving {fpath.name}: {ex}")
+
+        # Reset active files to clean Phase 1 pristine baseline
+        atomic_write_json(SHADOW_PORTFOLIO_FILE, {})
+        atomic_write_json(SHADOW_LOG_FILE, [])
+        atomic_write_json(SHADOW_EOD_FILE, [])
+        atomic_write_json(SHADOW_MTM_CURVE_FILE, [])
+        atomic_write_json(REJECTED_SIGNALS_FILE, [])
+
+        print(f"✅ [DAY 0 RESET] Flattened {flattened_count} positions. Archived state to {archive_dir}. Clean Phase 1 slate established for Nov 23.")
+        return {
+            "status": "SUCCESS",
+            "flattened_count": flattened_count,
+            "archive_dir": str(archive_dir),
+            "start_date": START_DATE_STR
+        }
+
+
 def format_shadow_status_card():
     """Returns quick status card for Telegram /phase1 or /shadow command."""
     now = get_ist_now()
@@ -1245,13 +1471,19 @@ def format_shadow_status_card():
     try:
         d_start = datetime.strptime(START_DATE_STR, "%Y-%m-%d").date()
         d_curr = now.date()
-        day_num = count_trading_days(d_start, d_curr)
+        if d_curr < d_start:
+            day_num = 0
+            day_str = "Day 0 (Commissioning & Shakedown) | Official Launch: Mon Nov 23"
+        else:
+            day_num = count_trading_days(d_start, d_curr)
+            day_str = f"Day {day_num} of {EVALUATION_HORIZON_DAYS} | 30-Day Evaluation Active"
     except Exception:
         day_num = 1
+        day_str = f"Day {day_num} of {EVALUATION_HORIZON_DAYS}"
 
     lines = [
         "🤖 <b>PHASE 1 AUTONOMOUS SHADOW ENGINE STATUS</b>",
-        f"📅 <b>Day {day_num} of {EVALUATION_HORIZON_DAYS}</b> | 30-Day Evaluation Active",
+        f"📅 <b>{day_str}</b>",
         "━━━━━━━━━━━━━━━━━━━━━━",
         f"• <b>Active Swing Positions:</b> {len(portfolio)} open",
         f"• <b>Entry Window:</b> 09:30–10:15 AM IST ({'🟢 OPEN' if is_entry_window_active(now) else '🔒 CLOSED'})",
