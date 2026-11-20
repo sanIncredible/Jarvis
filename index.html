@@ -4782,8 +4782,9 @@
         hoveredCandle = Object.assign({}, c, { cx, oY, cY, hY, lY, isBull, bWidth, barIndex: i });
       }
 
-      // Volume Bar in bottom sub-pane
-      const vH = maxVol > 0 ? (c.v / maxVol) * volH : 0;
+      // Volume Bar in bottom sub-pane with dynamic outlier scaling
+      const effectiveMaxVol = Math.max(avgVol * 2.5, maxVol * 0.4, 1);
+      const vH = Math.min((Number(c.v || 0) / effectiveMaxVol) * volH, volH);
       const vY = (H - padBottom) - vH;
       ctx.fillStyle = isBull ? 'rgba(0, 192, 135, 0.25)' : 'rgba(244, 63, 94, 0.25)';
       ctx.fillRect(cx - bWidth / 2, vY, bWidth, vH);
@@ -5049,6 +5050,16 @@
     if (!data) return;
     drawCanvasChart(canvas, data);
   });
+  canvas.addEventListener('touchstart', function(e) {
+    if (!activeSym) return;
+    const data = getStockChartData(activeSym);
+    if (!data) return;
+    if (e.touches && e.touches[0]) {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.touches[0].clientX - rect.left;
+      drawCanvasChart(canvas, data, x);
+    }
+  }, { passive: true });
   canvas.addEventListener('touchmove', function(e) {
     if (!activeSym) return;
     const data = getStockChartData(activeSym);
