@@ -93,14 +93,21 @@ def round_to_clean_int(val):
         return 0
 
 
+NSE_HOLIDAYS_2026 = {
+    "2026-01-26", "2026-03-03", "2026-03-20", "2026-03-27", "2026-04-03",
+    "2026-04-14", "2026-05-01", "2026-05-27", "2026-08-15", "2026-09-04",
+    "2026-10-02", "2026-10-20", "2026-11-08", "2026-11-10", "2026-11-24", "2026-12-25"
+}
+
+
 def count_trading_days(date_start, date_end):
-    """Counts actual trading days (Monday to Friday) between two dates inclusive."""
+    """Counts actual trading days (Monday to Friday, excluding exchange holidays) between two dates inclusive."""
     if date_start > date_end:
         return 1
     cur = date_start
     days = 0
     while cur <= date_end:
-        if cur.weekday() < 5:  # Mon=0, Fri=4
+        if cur.weekday() < 5 and cur.strftime("%Y-%m-%d") not in NSE_HOLIDAYS_2026:
             days += 1
         cur += timedelta(days=1)
     return max(1, days)
@@ -332,35 +339,36 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
     if risk_pct > 4.0:
         return False, f"Wide Stop-Loss: Distance to Day Low is {risk_pct:.1f}% (> 4.0% limit). Capital preserved against excessive tail risk."
 
-    # Standardized 1.0R = ₹1,000 Position Sizing
-    qty = max(1, int(round(FIXED_RISK_PER_TRADE_INR / risk_per_share)))
+    # P0-11: Standardized 1.0R = ₹1,000 Position Sizing with Institutional ATR Risk Floor
+    atr_val = (quote_data or {}).get("atr14") or (quote_data or {}).get("atr_3m")
+    if not atr_val:
+        sc_d = get_cached_symbol_metrics(sym) or {}
+        atr_val = sc_d.get("atr14")
+    atr_14_f = float(atr_val) if (atr_val and float(atr_val) > 0) else (fill_price * 0.02)
+    effective_risk_dist = max(risk_per_share, atr_14_f * 0.75, 1.0)
+    qty = max(1, int(FIXED_RISK_PER_TRADE_INR // effective_risk_dist))
     target_price = round_to_clean_int(fill_price + (2.0 * risk_per_share))
     capital_invested = round_to_clean_int(qty * fill_price)
+    initial_risk_inr = max(1.0, float(round_to_clean_int(qty * risk_per_share)))
 
-    # Check 11-point strategy checklist if order_engine available
+    # P0-7: Strategy Checklist (Hard Gates vs Soft Scores)
     ck_note = "Qualified Playbook Setup"
     try:
         from order_engine import evaluate_strategy_checklist
         ck = evaluate_strategy_checklist(sym, quote_data=quote_data, calc_data={"ltp": fill_price, "day_low": initial_sl, "day_high": float((quote_data or {}).get("day_high") or fill_price), "risk_pct": risk_pct})
-        score = ck.get("passed_count") or ck.get("passed_rules") or 0
-        total = ck.get("total_count") or ck.get("total_rules") or 11
-        warnings = ck.get("warnings", [])
+        
+        # 1. Enforce Hard Gates (Must All Pass)
+        if not ck.get("hard_gates_passed", True):
+            failed_gates = ck.get("failed_hard_gates", [])
+            return False, f"Checklist Hard Gate failed: {', '.join(failed_gates)}"
 
-        # Check for fatal trade-killing red flags:
-        fatal_flags = []
-        for w in warnings:
-            w_u = str(w).upper()
-            if "OVEREXTENDED" in w_u or "10 EMA" in w_u:
-                fatal_flags.append("Overextended 10 EMA (>1.5%)")
-            elif "UPPER WICK" in w_u:
-                fatal_flags.append("Upper Wick Rejection (>40%)")
+        soft_score = ck.get("soft_score", 0)
+        soft_total = ck.get("soft_total", 7)
+        ck_note = f"Hard Gates PASSED ✅ | Quality: {soft_score}/{soft_total} ⭐"
 
-        if fatal_flags:
-            return False, f"Checklist filter: {', '.join(fatal_flags)}"
-
-        ck_note = f"Checklist {score}/{total} Passed"
-        if score < 5 or (total > 0 and (score / total) < 0.5):
-            return False, f"Checklist score insufficient ({score}/{total})"
+        # 2. Minimum Soft Score Conviction threshold (At least 2 quality points required)
+        if soft_score < 2:
+            return False, f"Checklist conviction low ({soft_score}/{soft_total} < 2 required)"
     except Exception:
         pass
 
@@ -373,7 +381,9 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         "risk_per_share": round(risk_per_share, 2),
         "risk_pct": risk_pct,
         "quantity": qty,
-        "fixed_risk_inr": round_to_clean_int(qty * risk_per_share),
+        "initial_risk_inr": initial_risk_inr,
+        "fixed_risk_inr": initial_risk_inr,
+        "effective_risk_dist": round(effective_risk_dist, 2),
         "capital_invested": capital_invested,
         "entry_date": today_str,
         "entry_time": now.strftime("%H:%M:%S"),
@@ -397,7 +407,8 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         f"• <b>Symbol:</b> <b>{sym}</b> (Simulated Fill)\n"
         f"• <b>Entry Price:</b> ₹{fill_price:,} <i>(+0.15% slippage collar)</i>\n"
         f"• <b>Initial SL:</b> ₹{initial_sl:,} (-{risk_pct}% | LOD Support)\n"
-        f"• <b>Quantity:</b> {qty} shares (<b>Fixed Risk: ₹{entry_record['fixed_risk_inr']:,} ~ 1.0R</b>)\n"
+        f"• <b>Quantity:</b> {qty} shares (<b>1.0R Risk: ₹{initial_risk_inr:,.0f}</b> | Floor: ₹{effective_risk_dist:.1f}/sh)\n"
+        f"• <b>Checklist:</b> {ck_note}\n"
         f"• <b>2.0R Target:</b> ₹{target_price:,}\n"
         f"• <b>Capital Exposure:</b> ₹{capital_invested:,}\n"
         f"• <b>SA Market Regime:</b> {reg_u}\n"
@@ -476,7 +487,8 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
             highest_ltp = max(pos.get("highest_ltp", entry_p), ltp)
         else:
             highest_ltp = max(pos.get("highest_ltp", entry_p), day_high, ltp)
-        highest_r = round(max(0.0, highest_ltp - entry_p) / risk_per_share, 2)
+        initial_risk_inr = max(1.0, float(pos.get("initial_risk_inr") or pos.get("fixed_risk_inr") or (qty * risk_per_share)))
+        highest_r = round(max(0.0, (highest_ltp - entry_p) * qty) / initial_risk_inr, 2)
         pos["highest_ltp"] = highest_ltp
         pos["highest_r"] = highest_r
 
@@ -600,12 +612,13 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
             if holding_days >= 2 and day_open > 0 and day_open < pos["current_sl"]:
                 exit_price = round_to_clean_int(min(day_open, ltp, pos["current_sl"]) * 0.9985)
             else:
-                exit_price = round_to_clean_int(min(pos["current_sl"], ltp * 0.9985))
+                exit_price = round_to_clean_int(min(pos["current_sl"], ltp) * 0.9985)
             exit_reason = pos["last_trail_rule"]
 
         if exit_triggered:
+            initial_risk_inr = max(1.0, float(pos.get("initial_risk_inr") or pos.get("fixed_risk_inr") or (qty * risk_per_share)))
             realized_pnl = round_to_clean_int((exit_price - entry_p) * qty)
-            realized_r = round((exit_price - entry_p) / risk_per_share, 2)
+            realized_r = round(realized_pnl / initial_risk_inr, 2)
             giveback_r = round(max(0.0, highest_r - realized_r), 2)
 
             log_entry = {
@@ -617,6 +630,7 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 "entry_price": entry_p,
                 "exit_price": exit_price,
                 "quantity": qty,
+                "initial_risk_inr": initial_risk_inr,
                 "holding_days": holding_days,
                 "realized_pnl_inr": realized_pnl,
                 "realized_r": realized_r,
