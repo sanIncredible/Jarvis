@@ -759,15 +759,18 @@ def evaluate_and_dispatch_alerts(results, current_time_str):
 
                 # 2. Per-Symbol Exchange Recency Watchdog Guard (30-second limit on exchange trade time)
                 exch_tick_t = float(s_d.get("exchange_tick_time") or s_d.get("last_tick_time") or s_d.get("timestamp") or 0.0)
-                if exch_tick_t > 0 and (now_epoch - exch_tick_t) > 30.0:
+                if exch_tick_t > 0:
                     age_s = now_epoch - exch_tick_t
-                    print(f"⚠️ [Watchdog] Skipping entry for {s_sym}: Symbol exchange tick stale ({age_s:.1f}s > 30s limit)")
-                    try:
-                        from shadow_execution_engine import record_rejected_signal
-                        record_rejected_signal(s_sym, "FEED_STALE", f"Symbol exchange tick stale ({age_s:.1f}s old)", quote_data=s_d)
-                    except Exception:
-                        pass
-                    continue
+                    if age_s < -5.0:
+                        print(f"⚠️ [Clock Skew] Exchange timestamp is {-age_s:.1f}s in future for {s_sym}! Check system clock sync.")
+                    elif age_s > 30.0:
+                        print(f"⚠️ [Watchdog] Skipping entry for {s_sym}: Symbol exchange tick stale ({age_s:.1f}s > 30s limit)")
+                        try:
+                            from shadow_execution_engine import record_rejected_signal
+                            record_rejected_signal(s_sym, "FEED_STALE", f"Symbol exchange tick stale ({age_s:.1f}s old)", quote_data=s_d)
+                        except Exception:
+                            pass
+                        continue
 
                 s_ltp = float(s_d.get("ltp") or 0.0)
                 s_dl = float(s_m.get("day_low") or s_d.get("day_low") or (s_ltp * 0.985 if s_ltp > 0 else 0.0))
@@ -1177,13 +1180,22 @@ def fetch_upstox_symbol_data(symbol, token, prefetched_quote=None):
                 is_strong_start = True
 
         # 2. Intraday 3-Minute Candles (Pine Script f_orb() logic)
-        # Use 1minute candles and aggregate to 3minute (supported across all NSE stocks & indices)
-        candle_url = f"https://api.upstox.com/v2/historical-candle/intraday/{encoded_key}/1minute"
+        # Use modern Upstox v3 historical candle route (with v2 fallback) and aggregate 1m to 3m
+            raw_candles = []
+            for c_url in [
+                f"https://api.upstox.com/v3/historical-candle/intraday/{encoded_key}/minutes/1",
+                f"https://api.upstox.com/v2/historical-candle/intraday/{encoded_key}/1minute"
+            ]:
+                try:
+                    req_c = urllib.request.Request(c_url, headers=headers)
+                    with urllib.request.urlopen(req_c, timeout=4) as resp:
+                        c_json = json.loads(resp.read().decode('utf-8'))
+                        raw_candles = c_json.get("data", {}).get("candles", [])
+                        if raw_candles:
+                            break
+                except Exception:
+                    continue
 
-        req_c = urllib.request.Request(candle_url, headers=headers)
-        with urllib.request.urlopen(req_c, timeout=4) as resp:
-            c_json = json.loads(resp.read().decode('utf-8'))
-            raw_candles = c_json.get("data", {}).get("candles", [])
             if raw_candles:
                 candles_3m = aggregate_1m_to_3m(raw_candles)
 
@@ -3651,9 +3663,50 @@ def get_next_candle_target(now=None, buffer_seconds=10):
     return wait_secs, target
 
 
+def check_market_clock_offset():
+    """
+    Checks system clock offset against Upstox server and exchange timestamps.
+    Logs clock health, chrony/NTP sync status, and warns if drift > 2 seconds.
+    """
+    try:
+        tok = load_upstox_token()
+        if not tok:
+            return 0.0
+        ikey = get_instrument_key("RELIANCE")
+        if not ikey:
+            return 0.0
+        enc = urllib.parse.quote(ikey, safe="")
+        url = f"https://api.upstox.com/v2/market-quote/quotes?instrument_key={enc}"
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {tok}", "Accept": "application/json", "User-Agent": "Jarvis-ClockCheck"})
+        t0 = time.time()
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            t1 = time.time()
+            data = json.loads(resp.read().decode("utf-8"))
+            first_item = list(data.get("data", {}).values())[0] if data.get("data") else {}
+            ltt_ms = float(first_item.get("last_trade_time") or 0.0)
+            if ltt_ms > 0:
+                exch_sec = ltt_ms / 1000.0 if ltt_ms > 1e11 else ltt_ms
+                mid_t = (t0 + t1) / 2.0
+                offset = round(mid_t - exch_sec, 2)
+                status_icon = "✅" if abs(offset) <= 2.0 else "⚠️"
+                print(f"{status_icon} [CLOCK SYNC] VM System Clock vs Upstox Exchange Timestamp Offset: {offset:+.2f}s (HTTP Latency: {(t1 - t0)*1000:.1f}ms)")
+                if abs(offset) > 5.0:
+                    print(f"⚠️ [CLOCK SKEW WARNING] Clock drift is {abs(offset):.1f}s (> 5s)! Ensure chronyd or ntpd is active on this host.")
+                return offset
+    except Exception as e:
+        print(f"Notice on clock offset check: {e}")
+    return 0.0
+
+
 def run_upstox_scanner(once=False, auto_open_web=False):
     """Main dashboard execution loop with market session state machine."""
     global latest_results, last_scan_time, active_web_port, next_refresh_timestamp, current_market_event
+
+    # Check system clock offset against exchange clock at startup
+    try:
+        check_market_clock_offset()
+    except Exception:
+        pass
 
     # Start background web server (for 1-tap browser view)
     server_thread = threading.Thread(target=start_web_server, daemon=True)
