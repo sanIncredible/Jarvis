@@ -306,9 +306,9 @@ A failure in ANY single hard gate triggers an immediate, fatal rejection of the 
 1. **Regime Permission:** Market state is NOT `DEFENSIVE`, `WASHOUT`, or `alloc_pct == 0` (EXPANSION, NORMAL, and NEUTRAL permitted).
 2. **ORB Breakout Confirmation:** Price is actively breaking out (`orb_status in ("H", "L➔H")` or `LTP > ORB High`).
 3. **Volume Participation (Time-of-Day Hurdle):** Volume meets the expected session pace for the elapsed time (`RVOL_TOD >= 1.0x`).
-4. **Stop Distance Collar (0.5x ATR to 4.0%):** Distance to Day Low stop is within valid structural boundaries:
-   $$\text{Stop Distance} \le 4.0\% \quad \text{AND} \quad \text{Stop Distance} \ge 0.5 \times \text{ATR}_{14}$$
-   *(Prevents wide tail risk while fatally rejecting artificially tight, sub-noise stops that result in immediate noise shakeouts).*
+4. **Stop Distance Ceiling (0.25% to 4.0%):** Distance to Day Low stop is within valid structural boundaries:
+   $$\text{Stop Distance} \le 4.0\% \quad \text{AND} \quad \text{Stop Distance} \ge 0.25\%$$
+   *(Prevents wide tail risk while filtering sub-tick noise. Tight opening ranges <0.5 ATR are fully permitted to preserve volatility compression edge).*
 5. **10 EMA Stretch Collar:** Micro-timeframe 3m 10 EMA stretch is controlled (`stretch_pct <= 3.0%`; prevents chasing local blow-off tops).
 6. **Opening Gap Extension:** Opening gap is not extended beyond the breakout trigger (`gap_ext_pct <= 2.5%`).
 7. **Candle Range Quality:** Rejection upper wick does not dominate the session range (`upper_wick_pct <= 40.0%`).
@@ -337,12 +337,11 @@ Rather than placing stops directly at the raw Day Low (which gets hunted by mark
 $$\text{Adaptive Buffer} = \max\left(1.0, \text{round}\left(\frac{\text{ATR}_{14}}{6} \times 0.25\right), \text{round}(\text{Day Low} \times 0.0020)\right)$$
 $$\text{Stop Loss} = \text{round\_to\_tick}(\text{Day Low} - \text{Adaptive Buffer}, \text{tick}=0.05, \text{direction}="down")$$
 
-#### 2. Risk-Normalized Sizing (1.0R = ₹1,000 INR)
-$$\text{Risk Per Share} = \text{LTP} - \text{Stop Loss}$$
-$$\text{ATR Floor} = \text{ATR}_{14} \times 0.75$$
-$$\text{Effective Risk Distance} = \max(\text{Risk Per Share}, \text{ATR Floor}, 1.0)$$
-$$\text{Quantity} = \max\left(1, \left\lfloor \frac{\text{Target Risk INR (1000)}}{\text{Effective Risk Distance}} \right\rfloor\right)$$
-> **Crucial Safeguard:** The ATR floor prevents explosive, oversized position sizing when a stock has an artificially tight 0.1% day range.
+#### 2. True Van Tharp Risk-Normalized Sizing (1.0R = ₹1,000 INR)
+$$\text{Risk Per Share} = \text{Fill Price} - \text{Initial Stop Loss}$$
+$$\text{Quantity} = \min\left(\left\lfloor \frac{\text{Target Risk INR (1000)}}{\text{Risk Per Share}} \right\rfloor, \, \left\lfloor \frac{\text{Max Capital Per Slot}}{\text{Fill Price}} \right\rfloor\right)$$
+$$\text{Initial Risk INR} = \text{Quantity} \times \text{Risk Per Share}$$
+> **Capital Constraint vs. Noise Sizing:** Sizing calculates directly on the actual structural risk per share. Oversized positions on ultra-tight stops are naturally governed by the Slot Capital Ceiling (₹50,000 in NEUTRAL, ₹100,000 in EXPANSION/NORMAL), completely eliminating the artificial ATR sizing floor and keeping initial stop-outs at exactly $-1.0\text{R}$.
 
 #### 3. Neutral Regime Sizing & Exposure Auto-Cap (₹50k)
 - In **`DEFENSIVE`** and **`WASHOUT`** regimes, capital preservation is strictly enforced: swing allocation is 0%, daily entry limit is 0, new trade entries are prohibited (`Quantity = 0`), and Hard Gate 1 fatally blocks execution.
@@ -430,26 +429,40 @@ To prevent optimistic paper trading survival bias and eliminate false stop-outs:
 2. **Initial Stop Evaluation (Non-Ratcheted State):**
    - **Day 1:** Evaluates candles starting at the entry bucket ($\text{Bucket} \ge \text{Entry Bucket}$) and live ticks. Safe because initial stop sits strictly below the pre-breakout low.
    - **Day 2+:** Evaluates session `day_low` and live ticks.
-3. **Realistic Bar-Open Breach Fill Model:**
+3. **1-Minute Candle Granularity:**
+   Intraday candle surveillance inspects 1-minute bars (`ratchet_bucket = f"{r_h:02d}:{r_m:02d}"`) with 3-minute fallback, shrinking intra-bucket blind spots to $<60$ seconds.
+4. **Realistic Bar-Open Breach Fill Model:**
    - In fast markets or overnight gaps where a candle opens below the stop price:
      $$\text{Fill Reference Price} = \min(\text{Current SL}, \, \text{Breach Bar Open})$$
      $$\text{Exit Price} = \text{round\_to\_tick}(\text{Fill Reference Price} \times 0.9985, \, 0.05, \, \text{"down"})$$
      *Realism Guard:* Never assumes liquidity at the stop price if the bar opened below it.
 
-### 8.5 Dual $R$-Multiple & Net Cost Accounting Telemetry
-To maintain true Van Tharp risk accounting integrity without distortion from ATR sizing floors:
+### 8.5 Dual $R$-Multiple, Contract-Note Statutory Costs & Daily MTM Equity
+To maintain true Van Tharp risk accounting integrity:
 - **True Structural Risk Denominator:**
-  $$\text{Actual Risk Per Share} = \text{Entry Price} - \text{Initial Stop Loss}$$
-  $$\text{Actual Initial Risk INR} = \text{Quantity} \times \text{Actual Risk Per Share}$$
+  $$\text{Risk Per Share} = \text{Entry Price} - \text{Initial Stop Loss}$$
+  $$\text{Initial Risk INR} = \text{Quantity} \times \text{Risk Per Share}$$
 - **Structural $R$ ($R_{\text{structural}}$):** Evaluated against actual capital at risk at the initial stop:
-  $$R_{\text{structural}} = \frac{\text{Realized PnL (INR)}}{\text{Actual Initial Risk INR}}$$
+  $$R_{\text{structural}} = \frac{\text{Realized PnL (INR)}}{\text{Initial Risk INR}}$$
   *(Guarantees that a full stop-out at initial SL evaluates to exactly $-1.0\text{R}$ plus slippage).*
-- **Net $R$ ($R_{\text{net}}$):** Evaluates PnL after round-trip Indian equity statutory frictions (STT: 0.1%, Exchange: 0.003%, SEBI: 0.0001%, Stamp Duty: 0.015%, GST: 18% $\approx 0.25\%$ turnover):
-  $$\text{Turnover} = (\text{Entry Price} + \text{Exit Price}) \times \text{Quantity}$$
-  $$\text{Statutory Costs} = \text{round}(\text{Turnover} \times 0.0025)$$
-  $$R_{\text{net}} = \frac{\text{Realized PnL} - \text{Statutory Costs}}{\text{Actual Initial Risk INR}}$$
+- **Exact Contract-Note Statutory Fee Engine:**
+  Instead of an arbitrary flat turnover percentage, Jarvis models exact Indian cash delivery statutory fees per broker contract note:
+  - **STT (Securities Transaction Tax):** $0.1\%$ on buy leg + $0.1\%$ on sell leg
+  - **Stamp Duty:** $0.015\%$ on buy leg
+  - **Exchange Turnover Charge (NSE):** $0.00297\%$ round-trip
+  - **SEBI Turnover Fee:** ₹10 per crore ($0.0001\%$)
+  - **GST:** $18\%$ on (Exchange Turnover Charge + SEBI Fee)
+  - **Depository Participant (DP) Charge:** Flat ₹15.93 per scrip on sell leg
+  $$\text{Statutory Costs} = \text{STT} + \text{Stamp} + \text{Exchange} + \text{SEBI} + \text{GST} + \text{DP} \approx 0.13\% \text{ turnover}$$
+  $$R_{\text{net}} = \frac{\text{Realized PnL} - \text{Statutory Costs}}{\text{Initial Risk INR}}$$
+  *(Flat 0.25% factor is maintained purely as a secondary stress-test metric: $R_{\text{stress\_025}}$).*
 - **Nominal $R$ ($R_{\text{nominal}}$):** Evaluated against the standard ₹1,000 risk unit:
   $$R_{\text{nominal}} = \frac{\text{Realized PnL (INR)}}{1000.0}$$
+- **Daily Mark-to-Market (MTM) Drawdown Curve (`shadow_mtm_equity_curve.json`):**
+  Evaluated daily at 15:30 IST to capture intra-trade path volatility:
+  $$\text{MTM Total Equity}_t = \sum_{\text{closed}} \text{Realized PnL} + \sum_{\text{open}} \text{Unrealized PnL}$$
+  $$\text{MTM } R_t = \sum_{\text{closed}} R_{\text{realized}} + \sum_{\text{open}} R_{\text{unrealized}}$$
+  $$\text{Peak MTM } R_t = \max_{s \le t}(\text{MTM } R_s), \quad \text{MTM Drawdown } (R) = \text{Peak MTM } R_t - \text{MTM } R_t$$
 
 ### 8.6 Unified NSE Exchange Holiday Calendar (2026–2027)
 Implemented via `count_trading_days(date_start, date_end)`:
@@ -464,16 +477,17 @@ Computed daily at 15:35:00 IST by `get_shadow_analytics()`:
 - **Mathematical Expectancy:**
   $$\text{Expectancy } (R) = (P_{\text{win}} \times \overline{R}_{\text{win}}) - (P_{\text{loss}} \times \overline{R}_{\text{loss}})$$
 - **Max Closed-Trade Drawdown ($R$):** Peak-to-trough drop of cumulative closed $R$.
+- **Max MTM Drawdown ($R$):** Peak-to-trough drop of daily mark-to-market total portfolio equity curve.
 - **Average Giveback ($R$):** Average difference between peak unrealized $R$ and realized exit $R$.
 
 ### 8.8 Benchmark Integrity, Immutable Hashing & Rejected Signal Ledger
 - **Config Versioning & SHA256 Parameter Hashing:**
-  To guarantee complete reproducibility, every entry, exit, and rejected signal is stamped with both `"config_version": "v3.1.0-strict"` and a cryptographic SHA256 digest of the frozen parameter set (`config_hash`).
+  To guarantee complete reproducibility, every entry, exit, and rejected signal is stamped with `"config_version": "v3.1.0-strict"` and a cryptographic SHA256 digest of the frozen parameter set (`config_hash`: `30f9c9e7`). The full parameter specification is auto-serialized upon startup to `config_snapshots/config_30f9c9e7.json` for deterministic auditability.
 - **Concurrent Signal Priority Tie-Breaker:**
   If multiple breakout setups trigger simultaneously during 09:30–10:15 AM with limited remaining portfolio risk slots, candidates are prioritized deterministically:
   $$\text{Sort Priority} = \left(\text{Soft Score} \downarrow, \, \text{RVOL}_{\text{TOD}} \downarrow, \, \text{Risk \%} \uparrow, \, \text{Stretch \%} \uparrow\right)$$
 - **Rejected Signal Ledger (`shadow_rejected_signals.json`):**
-  Records every rejected candidate with full gate vectors (all 7 hard gates, all 7 soft scores, LTP, RVOL, Stretch, Wick, Gap). Deduplicated daily per symbol/reason, and audited at EOD for forward performance tracking (30m, 60m, EOD close).
+  Records every rejected candidate with full gate vectors (all 7 hard gates, all 7 soft scores, LTP, RVOL, Stretch, Wick, Gap). Features `first_seen_timestamp`, `last_seen_timestamp`, `rejection_count`, and `peak_metadata` tracking to capture peak setup quality across the session. Deduplicated daily per symbol/reason.
 
 ---
 
@@ -624,7 +638,7 @@ sequenceDiagram
   "ADANIPOWER": {
     "symbol": "ADANIPOWER",
     "config_version": "v3.1.0-strict",
-    "config_hash": "1fe7a74b",
+    "config_hash": "30f9c9e7",
     "entry_price": 540.0,
     "initial_sl": 526.0,
     "current_sl": 554.0,
@@ -632,13 +646,9 @@ sequenceDiagram
     "sl_last_ratchet_time": "10:12:00",
     "target_price": 568.0,
     "risk_per_share": 14.0,
-    "actual_risk_per_share": 14.0,
     "risk_pct": 2.59,
     "quantity": 71,
     "initial_risk_inr": 994.0,
-    "actual_initial_risk_inr": 994.0,
-    "fixed_risk_inr": 994.0,
-    "effective_risk_dist": 14.0,
     "capital_invested": 38340.0,
     "entry_date": "2026-11-20",
     "entry_time": "09:34:12",
@@ -660,7 +670,7 @@ sequenceDiagram
   {
     "symbol": "SUNTV",
     "config_version": "v3.1.0-strict",
-    "config_hash": "1fe7a74b",
+    "config_hash": "30f9c9e7",
     "entry_date": "2026-11-20",
     "exit_date": "2026-11-25",
     "entry_time": "09:36:00",
@@ -669,16 +679,17 @@ sequenceDiagram
     "exit_price": 795.0,
     "quantity": 50,
     "initial_sl": 730.0,
-    "actual_risk_per_share": 20.0,
-    "actual_initial_risk_inr": 1000.0,
+    "risk_per_share": 20.0,
+    "initial_risk_inr": 1000.0,
     "holding_days": 3,
     "realized_pnl_inr": 2250.0,
-    "statutory_costs_inr": 193.13,
-    "net_pnl_inr": 2056.87,
+    "statutory_costs_inr": 101.62,
+    "net_pnl_inr": 2148.38,
     "realized_r": 2.25,
     "r_structural": 2.25,
     "r_nominal": 2.25,
-    "r_net": 2.06,
+    "r_net": 2.15,
+    "r_stress_025": 2.06,
     "peak_r": 2.8,
     "giveback_r": 0.55,
     "exit_reason": "🟢 10 EMA SWING TRAIL",
@@ -694,16 +705,19 @@ sequenceDiagram
   {
     "symbol": "TRENT",
     "timestamp": "2026-11-20 09:42:15",
+    "first_seen_timestamp": "2026-11-20 09:42:15",
+    "last_seen_timestamp": "2026-11-20 10:11:40",
+    "rejection_count": 8,
     "reason": "Checklist Hard Gate failed: 10 EMA Stretch (<=3.0%)",
     "config_version": "v3.1.0-strict",
-    "config_hash": "1fe7a74b",
+    "config_hash": "30f9c9e7",
     "metadata": {
       "failed_hard_gates": ["10 EMA Stretch (<=3.0%)"],
       "all_hard_gates": [
         {"name": "Regime Permission", "passed": true, "reason": "EXPANSION"},
         {"name": "ORB Breakout", "passed": true, "reason": "H"},
         {"name": "Volume Participation (>=1.0x TOD)", "passed": true, "reason": "RVOL 1.45x"},
-        {"name": "Stop Distance Collar (0.5x ATR to 4.0%)", "passed": true, "reason": "2.1%"},
+        {"name": "Stop Distance Ceiling (<=4.0%)", "passed": true, "reason": "2.1%"},
         {"name": "10 EMA Stretch (<=3.0%)", "passed": false, "reason": "3.4%"},
         {"name": "Gap Extension (<=2.5%)", "passed": true, "reason": "1.2%"},
         {"name": "Upper Wick Rejection (<=40%)", "passed": true, "reason": "15%"}
@@ -713,18 +727,43 @@ sequenceDiagram
       "risk_pct": 2.1,
       "rvol": 1.45,
       "stretch_pct": 3.4
+    },
+    "peak_metadata": {
+      "soft_score": 5,
+      "rvol": 1.62,
+      "stretch_pct": 3.1
     }
   }
 ]
 ```
 
-### 13.5 `data.json` (Real-Time Terminal Snapshot)
+### 13.5 `shadow_mtm_equity_curve.json` (Daily Mark-to-Market Equity & Drawdown Curve)
+```json
+[
+  {
+    "date": "2026-11-20",
+    "timestamp": "2026-11-20 15:35:00",
+    "open_positions_count": 1,
+    "closed_trades_count": 0,
+    "realized_pnl_inr": 0.0,
+    "unrealized_pnl_inr": 1420.0,
+    "mtm_equity_pnl_inr": 1420.0,
+    "realized_r": 0.0,
+    "unrealized_r": 1.43,
+    "mtm_r": 1.43,
+    "peak_mtm_r": 1.43,
+    "mtm_drawdown_r": 0.0
+  }
+]
+```
+
+### 13.6 `data.json` (Real-Time Terminal Snapshot)
 ```json
 {
   "updated_at": "10:14:02 IST",
   "generated_at_ist": "10:14:02 IST",
-  "updated_ts": 1795152242,
-  "timestamp_epoch_ms": 1795152242000,
+  "updated_ts": 1795149842,
+  "timestamp_epoch_ms": 1795149842000,
   "market_regime": {
     "state_code": "EXPANSION",
     "state_label": "Expansion (Breadth Positive)",
@@ -781,7 +820,7 @@ pip3 install upstox-client requests urllib3 websockets protobuf openpyxl python-
 3. **`upstox_websocket_feed.py`**: Implement the WebSocket listener parsing Upstox Protobuf packets and updating thread-safe quotes dictionary.
 4. **`order_engine.py`**:
    - Write `evaluate_strategy_checklist()` implementing 7 Hard Gates (all must pass) and 7 Soft Scores (min 3 required).
-   - Write `calculate_order_sizing()` implementing the ATR-floored ₹1,000 risk equation with tick-aware rounding and 5-state market regime governance.
+   - Write `calculate_order_sizing()` implementing the True Van Tharp ₹1,000 risk equation with tick-aware rounding, slot capital limits, and 5-state market regime governance.
 5. **`shadow_execution_engine.py`**:
    - Write `evaluate_and_record_shadow_entry()` with 09:30–10:15 window checks, tick-aware slippage, and `config_version = "v3.1.0-strict"`.
    - Write `update_shadow_trailing_and_exits()` with the 7-level multi-day trailing stop hierarchy, Day 2+ mid-session ratchet tracking, and tick-aware exit fills.
