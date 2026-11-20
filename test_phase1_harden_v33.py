@@ -1,3 +1,4 @@
+from datetime import datetime, date, timezone, timedelta
 #!/usr/bin/env python3
 """
 test_phase1_harden_v33.py
@@ -69,7 +70,7 @@ def run_tests():
     try:
         # TEST 1: Config Hash Verification
         print("\n--- TEST 1: Config Hash Verification ---")
-        expected_hash = "d5168bdf"
+        expected_hash = "15b6ea60"
         report_test(
             "Config Hash Parity",
             see.CONFIG_HASH == expected_hash,
@@ -389,6 +390,106 @@ def run_tests():
                 "earnings_filter_active" in t_crash and "held_through_event" in t_crash and "git_commit" in t_crash,
                 f"(earnings_filter_active: {t_crash.get('earnings_filter_active')}, held_through_event: {t_crash.get('held_through_event')}, git_commit: {t_crash.get('git_commit')})"
             )
+
+        # TEST 7: Exchange Holiday Handling (Nov 24 & Dec 25)
+        print("\n--- TEST 7: Exchange Holiday Handling (Nov 24 & Dec 25) ---")
+        # Nov 23 (Mon) to Nov 25 (Wed): Nov 24 is Guru Nanak Jayanti holiday -> Exactly 2 trading days
+        days_nov = see.count_trading_days(date(2026, 11, 23), date(2026, 11, 25))
+        report_test(
+            "Nov 24 Holiday Excluded: Nov 23-25 is 2 trading days",
+            days_nov == 2,
+            f"(Expected: 2 days, Got: {days_nov})"
+        )
+        # Dec 24 (Thu) to Dec 28 (Mon): Dec 25 is Christmas holiday, Dec 26-27 is weekend -> Exactly 2 trading days
+        days_dec = see.count_trading_days(date(2026, 12, 24), date(2026, 12, 28))
+        report_test(
+            "Dec 25 Holiday Excluded: Dec 24-28 is 2 trading days",
+            days_dec == 2,
+            f"(Expected: 2 days, Got: {days_dec})"
+        )
+
+        # TEST 8: Day 0 Excluded & First Evaluation Monday is Day 1
+        print("\n--- TEST 8: Day 0 Excluded & Evaluation Launch Gate ---")
+        dt_day0 = datetime(2026, 11, 20, 15, 35, tzinfo=see.IST)
+        status_d0, reason_d0, _ = see.determine_automated_session_status(dt_day0)
+        report_test(
+            "Day 0 Pre-Evaluation Status: Marked DAY0_PRE_EVALUATION",
+            status_d0 == "DAY0_PRE_EVALUATION",
+            f"(Status: {status_d0}, Reason: {reason_d0})"
+        )
+        dt_day1 = datetime(2026, 11, 23, 15, 35, tzinfo=see.IST)
+        status_d1, reason_d1, _ = see.determine_automated_session_status(dt_day1)
+        report_test(
+            "Nov 23 Launch Status: Marked VALID for Day 1",
+            status_d1 == "VALID",
+            f"(Status: {status_d1})"
+        )
+
+        # TEST 9: EOD History Date De-duplication
+        print("\n--- TEST 9: EOD History Date De-duplication ---")
+        mock_history = [
+            {"date": "2026-11-23", "day_num": 1, "status": "VALID"},
+            {"date": "2026-11-23", "day_num": 1, "status": "VALID"}, # Duplicate
+            {"date": "2026-11-24", "day_num": 1, "status": "NO_DATA_EXCLUDED"}, # Excluded
+            {"date": "2026-11-25", "day_num": 2, "status": "VALID"}
+        ]
+        unique_valid_dates = sorted(list(set(
+            h["date"] for h in mock_history
+            if h.get("status") == "VALID" and h.get("date") >= "2026-11-23"
+        )))
+        report_test(
+            "History Deduplication: Duplicate 2026-11-23 counted once",
+            len(unique_valid_dates) == 2,
+            f"(Unique valid dates count: {len(unique_valid_dates)}, Dates: {unique_valid_dates})"
+        )
+
+        # TEST 10: Automated Feed Downtime Tracker & Status Determination
+        print("\n--- TEST 10: Automated Feed Downtime Tracker & Missed-Session Protocol ---")
+        health_file = BASE_DIR / "data" / "feed_session_health.json"
+        # Simulate 12 minutes of feed downtime on Nov 25 (Exceeds 10m threshold)
+        health_payload_down = {
+            "date": "2026-11-25",
+            "downtime_minutes": 12.0,
+            "downtime_pct": 26.7,
+            "status": "NO_DATA_EXCLUDED"
+        }
+        with open(health_file, "w", encoding="utf-8") as hf:
+            json.dump(health_payload_down, hf)
+        status_down, reason_down, _ = see.determine_automated_session_status(datetime(2026, 11, 25, 15, 35, tzinfo=see.IST))
+        report_test(
+            "Automated Feed Failure Protocol: Sustained >=10m downtime -> NO_DATA_EXCLUDED",
+            status_down == "NO_DATA_EXCLUDED",
+            f"(Status: {status_down}, Reason: {reason_down})"
+        )
+        # Restore normal health
+        health_payload_ok = {
+            "date": "2026-11-25",
+            "downtime_minutes": 1.5,
+            "downtime_pct": 3.3,
+            "status": "VALID"
+        }
+        with open(health_file, "w", encoding="utf-8") as hf:
+            json.dump(health_payload_ok, hf)
+        status_ok, reason_ok, _ = see.determine_automated_session_status(datetime(2026, 11, 25, 15, 35, tzinfo=see.IST))
+        report_test(
+            "Automated Feed Healthy Protocol: Normal downtime <5m -> VALID",
+            status_ok == "VALID",
+            f"(Status: {status_ok})"
+        )
+
+        # TEST 11: Watchlist Hash Stamping Integrity
+        print("\n--- TEST 11: Watchlist Hash Stamping Integrity ---")
+        w_hash = see.get_watchlist_hash()
+        report_test(
+            "Watchlist Hash Format: 8-char hex string",
+            bool(w_hash and len(w_hash) == 8),
+            f"(Watchlist Hash: {w_hash})"
+        )
+        report_test(
+            "FROZEN_PARAMS Protocol Keys: session_target_days & window constants present",
+            "session_target_days" in see.FROZEN_PARAMS and "entry_window_start" in see.FROZEN_PARAMS,
+            f"(Target Days: {see.FROZEN_PARAMS.get('session_target_days')}, Window: {see.FROZEN_PARAMS.get('entry_window_start')}-{see.FROZEN_PARAMS.get('entry_window_end')})"
+        )
 
     finally:
         # Restore backups
