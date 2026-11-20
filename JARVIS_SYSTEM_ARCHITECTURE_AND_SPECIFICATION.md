@@ -356,6 +356,14 @@ $$\text{Unrealized PnL} = (\text{LTP} - \text{Entry Price}) \times \text{Holding
 $$\text{Max Risk Allowed} = \text{Unrealized PnL} \times 0.50$$
 $$\text{Pyramid Quantity} = \left\lfloor \frac{\text{Max Risk Allowed}}{\text{LTP} - \text{Stop Loss}} \right\rfloor$$
 
+#### 5. Friction Hurdle Ratio Analysis & Net Edge Mandate
+At the mandatory minimum stop distance of $1.0\%$:
+$$\text{Round-Trip Friction} = \text{Entry Slip } (0.15\%) + \text{Exit Slip } (0.15\%) + \text{Statutory Delivery Costs } (\approx 0.13\%) = 0.43\%$$
+$$\text{Friction Hurdle} = \frac{0.43\%}{1.00\%} = 0.43\text{R}$$
+- **The Hurdle Reality:** Every setup entering at the minimum $1.0\%$ stop distance must clear a baseline hurdle of $0.43\text{R}$ in gross price advance before generating net alpha.
+- **Strict Net Evaluation:** All Phase 1 benchmark metrics (`expectancy_r`, `net_pnl_inr`, `win_rate_pct`) are reported strictly **net of all modeled slippage and statutory costs**.
+- **Empirical Calibration:** During the 30-session pilot, actual fill prices and broker contract notes will be benchmarked to assess whether 0.15% per side accurately models or conservatively over-penalizes liquid NSE large/mid-cap execution between 09:30–10:15 AM IST.
+
 ---
 
 ## 8. Phase 1 Autonomous Swing Shadow Engine
@@ -363,7 +371,7 @@ $$\text{Pyramid Quantity} = \left\lfloor \frac{\text{Max Risk Allowed}}{\text{LT
 **File:** [`shadow_execution_engine.py`](file:///c:/ProjectDir/shadow_execution_engine.py) (Length: ~936 lines)
 
 ### 8.1 Autonomous Execution Mandate
-- **Start Date:** `2026-11-20` (30 consecutive trading days).
+- **Start Date:** `2026-11-23` (30 consecutive trading days: Monday, Nov 23, 2026 to Wednesday, Jan 06, 2027; Friday, Nov 20, 2026 designated as Day 0 Commissioning & Shakedown).
 - **Execution Window:** Strictly **09:30:00 to 10:15:00 AM IST** (Monday through Friday).
 - **Fixed Risk:** Standardized ₹1,000 INR per position.
 - **Reporting Channel:** Telegram Topic 11 (`reports`).
@@ -483,13 +491,25 @@ Computed daily at 15:35:00 IST by `get_shadow_analytics()`:
 - **Max MTM Drawdown ($R$):** Peak-to-trough drop of daily mark-to-market total portfolio equity curve.
 - **Average Giveback ($R$):** Average difference between peak unrealized $R$ and realized exit $R$.
 
-### 8.8 Benchmark Integrity, Immutable Hashing & Rejected Signal Ledger
+### 8.8 Benchmark Integrity, Immutable Hashing, Watchdog Architecture & Day 0 Reset
 - **Config Versioning & SHA256 Parameter Hashing:**
   To guarantee complete reproducibility, every entry, exit, and rejected signal is stamped with `"config_version": "v3.1.0-strict"` and a cryptographic SHA256 digest of the frozen parameter set (`config_hash`: `28fb7170`). The full parameter specification is auto-serialized upon startup to `config_snapshots/config_28fb7170.json` for deterministic auditability.
-- **Clean 30-Day Evaluation Horizon:**
-  Official Phase 1 30-session evaluation commences on **Monday, Nov 23, 2026** under an absolute code and configuration freeze. Friday, Nov 20, 2026 is designated as Day 0 (System Commissioning & Shakedown) to eliminate mid-session parameter pollution.
-- **30-Second Quote Staleness Watchdog Guard:**
-  During 09:30–10:15 AM IST, incoming candidate breakouts are verified against tick recency: if $\text{now} - \text{last\_tick\_time} > 30\text{ seconds}$, entry is fatally blocked (`FEED_STALE: No tick in >30s`), preventing trade execution on disconnected or frozen market feeds.
+- **Clean 30-Day Evaluation Horizon & Day 0 State Reset Protocol:**
+  - Official Phase 1 30-session evaluation commences on **Monday, Nov 23, 2026** under an absolute code and configuration freeze. Friday, Nov 20, 2026 is designated as Day 0 (System Commissioning & Shakedown) to eliminate mid-session parameter pollution.
+  - **Automated Flattening & Archival:** At 15:15 IST on Nov 20 (or via `reset_and_archive_day0_state`), any open positions are flattened with exit reason `DAY0_SHAKEDOWN_FLATTEN` and tagged `is_day0 = True`. All pre-Nov 23 state files (`shadow_portfolio.json`, `shadow_trade_log.json`, `shadow_history_eod.json`, `shadow_mtm_equity_curve.json`, `shadow_rejected_signals.json`) are archived into `archive/day0_shakedown_<timestamp>/`. Active files are reset to clean empty state (`{}`, `[]`), guaranteeing 0 open positions and ₹0 carry-over into Monday's launch.
+  - **Evaluation Start Boundary:** `get_shadow_analytics()`, `record_daily_mtm_snapshot()`, and `count_trading_days()` strictly filter for `entry_date >= 2026-11-23` and `session != "DAY0_SHAKEDOWN"`. Day 0 is reported as "Day 0 (Commissioning & Shakedown)" and excluded from the 30-session performance clock.
+- **Dual-Tier Watchdog Architecture (Feed Heartbeat + Exchange Timestamp):**
+  - **Exchange Timestamp Definition:** "Tick time" is strictly defined as the exchange timestamp (`ltt` - Last Traded Time in epoch milliseconds parsed from Upstox quote packets) rather than local socket receive time. This prevents a frozen socket connection or proxy that endlessly resends cached ticks from appearing fresh.
+  - **Feed-Level Heartbeat:** The WebSocket engine tracks the elapsed time since ANY message arrived from the broker across all instruments. If $\text{now} - \text{last\_feed\_msg\_time} > 30\text{ seconds}$, the entire feed is marked stale (`FEED_STALE: Global WebSocket feed silent >30s`), suspending breakout entries while distinguishing feed outages from illiquid symbols.
+  - **Per-Symbol Recency Guard:** For candidate breakouts between 09:30–10:15 AM, the candidate's last exchange trade time is verified: if $\text{now} - \text{exchange\_tick\_time} > 30\text{ seconds}$, the entry is dropped (`FEED_STALE: Symbol exchange tick stale`).
+- **Stop & Trailing Surveillance Watchdog with REST 1-Minute Candle Gap Replay:**
+  - To prevent missed stop breaches or stale fills during feed outages or socket stalls, the surveillance engine tracks `last_surveillance_epoch` per position.
+  - **Automated Gap Replay:** If a surveillance gap exceeds 60 seconds (or upon WebSocket reconnection), the engine queries Upstox REST historical API (`GET /v2/historical-candle/intraday/{encoded_key}/1minute`) to retrieve and chronologically replay all missed 1-minute bars:
+    - **Precise Breach Detection:** Identifies the exact historical 1-minute candle where the stop was penetrated (`bar_low <= current_sl`).
+    - **Exact Breach Timestamp:** Records the historical candle timestamp (`breach_bar_time`, e.g. `10:18:00`), rather than the reconnect timestamp 10 minutes later.
+    - **Realistic Bar-Open Fill Model:** Fills using the bar-open gap equation:
+      $$\text{Fill Price} = \text{round\_to\_tick}(\min(\text{Current SL}, \, \text{Breach Bar Open}) \times (1 - 0.0015), \text{tick}=0.05, \text{direction}="down")$$
+    - **Trailing Ratchet Updates:** If the stock trended higher during the gap without breaching the stop, highest LTP is updated from bar highs and trailing stops are ratcheted forward accurately before resuming live evaluation.
 - **Concurrent Signal Priority Tie-Breaker:**
   If multiple breakout setups trigger simultaneously during 09:30–10:15 AM with limited remaining portfolio risk slots, candidates are prioritized deterministically:
   $$\text{Sort Priority} = \left(\text{Soft Score} \downarrow, \, \text{RVOL}_{\text{TOD}} \downarrow, \, \text{Risk \%} \uparrow, \, \text{Stretch \%} \uparrow\right)$$
