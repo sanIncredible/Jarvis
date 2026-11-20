@@ -3775,11 +3775,38 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                                         # Update 3m candle live tick if available
                                         c_3m = d.get("candles_3m") or d.get("candles") or []
                                         if c_3m:
+                                            cur_loop_m = cur_loop_now.minute
+                                            cur_bucket_m = (cur_loop_m // 3) * 3
+                                            cur_bucket_str = f"{cur_loop_now.hour:02d}:{cur_bucket_m:02d}"
                                             last_c = c_3m[-1]
-                                            if isinstance(last_c, dict):
-                                                last_c["c"] = live_p
-                                                last_c["h"] = max(last_c.get("h", live_p), live_p)
-                                                last_c["l"] = min(last_c.get("l", live_p), live_p)
+                                            last_t = last_c.get("t") if isinstance(last_c, dict) else (str(last_c[0])[-5:] if len(last_c) > 0 else "")
+                                            if last_t and last_t < cur_bucket_str:
+                                                prev_c_val = float(last_c.get("c") if isinstance(last_c, dict) else last_c[4])
+                                                new_bar = {
+                                                    "t": cur_bucket_str,
+                                                    "o": prev_c_val,
+                                                    "h": max(prev_c_val, live_p),
+                                                    "l": min(prev_c_val, live_p),
+                                                    "c": live_p,
+                                                    "v": 0
+                                                } if isinstance(last_c, dict) else [
+                                                    cur_bucket_str,
+                                                    prev_c_val,
+                                                    max(prev_c_val, live_p),
+                                                    min(prev_c_val, live_p),
+                                                    live_p,
+                                                    0
+                                                ]
+                                                c_3m.append(new_bar)
+                                            else:
+                                                if isinstance(last_c, dict):
+                                                    last_c["c"] = live_p
+                                                    last_c["h"] = max(last_c.get("h", live_p), live_p)
+                                                    last_c["l"] = min(last_c.get("l", live_p), live_p)
+                                                elif isinstance(last_c, list) and len(last_c) >= 5:
+                                                    last_c[4] = live_p
+                                                    last_c[2] = max(float(last_c[2]), live_p)
+                                                    last_c[3] = min(float(last_c[3]), live_p)
                                         new_m = compute_metrics(d)
                                         new_score = compute_strength_score(d, new_m)
                                         new_m["strength_score"] = new_score
@@ -3825,7 +3852,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                     latest_results = new_res
                     last_scan_time = cur_time
 
-                export_static_html(new_res, cur_time, active_web_port)
+                export_static_html(new_res, cur_time, active_web_port, force_cloud_push=True)
 
                 clear_screen()
                 print_terminal_view(new_res, cur_time, active_web_port, next_str)
