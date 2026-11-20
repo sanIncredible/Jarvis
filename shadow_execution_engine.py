@@ -105,6 +105,20 @@ def get_git_commit_sha():
             pass
     return "bf105f23"
 
+def get_watchlist_hash():
+    """Returns SHA-256 (first 8 hex chars) of sorted normalized watchlist.txt symbols."""
+    w_file = BASE_DIR / "watchlist.txt"
+    if w_file.is_file():
+        try:
+            with open(w_file, "r", encoding="utf-8") as f:
+                lines = [l.strip().upper() for l in f if l.strip() and not l.startswith("#")]
+            content = ",".join(sorted(lines))
+            return hashlib.sha256(content.encode("utf-8")).hexdigest()[:8]
+        except Exception:
+            pass
+    return "00000000"
+
+
 FROZEN_PARAMS = {
     "version": CONFIG_VERSION,
     "evaluation_start_date": "2026-11-23",
@@ -152,7 +166,14 @@ FROZEN_PARAMS = {
         "DEFENSIVE": {"permitted": False, "alloc_pct": 0, "max_slots": 0, "slot_capital_max": 0},
         "WASHOUT": {"permitted": False, "alloc_pct": 0, "max_slots": 0, "slot_capital_max": 0}
     },
-    "tod_knots": [[0, 0.01], [15, 0.10], [60, 0.25], [285, 0.65], [375, 1.00]]
+    "tod_knots": [[0, 0.01], [15, 0.10], [60, 0.25], [285, 0.65], [375, 1.00]],
+    "session_target_days": 30,
+    "entry_window_start": "09:30:00",
+    "entry_window_end": "10:15:00",
+    "max_feed_downtime_minutes": 10.0,
+    "session_status_valid": "VALID",
+    "session_status_excluded": "NO_DATA_EXCLUDED",
+    "session_status_partial": "PARTIAL"
 }
 CONFIG_HASH = hashlib.sha256(json.dumps(FROZEN_PARAMS, sort_keys=True).encode("utf-8")).hexdigest()[:8]
 snapshot_file = CONFIG_SNAPSHOTS_DIR / f"config_{CONFIG_HASH}.json"
@@ -927,6 +948,7 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         "config_version": CONFIG_VERSION,
         "config_hash": CONFIG_HASH,
         "git_commit": get_git_commit_sha(),
+        "watchlist_hash": get_watchlist_hash(),
         "entry_price": fill_price,
         "initial_sl": initial_sl,
         "current_sl": initial_sl,
@@ -1376,6 +1398,7 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 "config_version": CONFIG_VERSION,
                 "config_hash": CONFIG_HASH,
                 "git_commit": pos.get("git_commit") or get_git_commit_sha(),
+                "watchlist_hash": pos.get("watchlist_hash") or get_watchlist_hash(),
                 "entry_date": entry_date,
                 "exit_date": today_str,
                 "entry_time": pos.get("entry_time"),
@@ -1669,7 +1692,44 @@ def get_shadow_analytics():
     }
 
 
-def generate_and_send_phase1_eod_report(notify=True, session_status="VALID"):
+def determine_automated_session_status(dt=None):
+    """
+    Automated Missed-Session Protocol (v3.3.0 Strict):
+    Determines whether today's session is VALID, PARTIAL, or NO_DATA_EXCLUDED
+    strictly based on automated signals (Sentinel and Feed Telemetry):
+    1. Pre-evaluation gate: Date < START_DATE_STR -> DAY0_PRE_EVALUATION.
+    2. Feed health telemetry: Checks data/feed_session_health.json during 09:30-10:15 window.
+    3. Sustained downtime >= 10m -> NO_DATA_EXCLUDED (Evaluation clock paused).
+    4. Degradation >= 5m -> PARTIAL (Logged with full telemetry).
+    """
+    now = dt if dt is not None else get_ist_now()
+    today_str = now.strftime("%Y-%m-%d")
+
+    # 1. Pre-Evaluation Gate
+    if today_str < START_DATE_STR:
+        return "DAY0_PRE_EVALUATION", f"Pre-evaluation session (Official launch {START_DATE_STR})", {}
+
+    # 2. Check automated feed health telemetry
+    health_file = BASE_DIR / "data" / "feed_session_health.json"
+    if health_file.is_file():
+        try:
+            with open(health_file, "r", encoding="utf-8") as f:
+                health_data = json.load(f)
+            if health_data.get("date") == today_str:
+                down_min = float(health_data.get("downtime_minutes", 0.0))
+                max_down = float(FROZEN_PARAMS.get("max_feed_downtime_minutes", 10.0))
+                if down_min >= max_down:
+                    return "NO_DATA_EXCLUDED", f"Excessive feed downtime during 09:30-10:15 ({down_min:.1f}m >= {max_down:.1f}m limit)", health_data
+                elif down_min >= 5.0:
+                    return "PARTIAL", f"Sustained feed degradation during 09:30-10:15 ({down_min:.1f}m downtime)", health_data
+                return "VALID", "Feed health within normal operational parameters", health_data
+        except Exception:
+            pass
+
+    return "VALID", "Normal operational session", {}
+
+
+def generate_and_send_phase1_eod_report(notify=True, session_status=None, status_reason=None):
     """
     Compiles and dispatches the daily Phase 1 EOD Report strictly at 15:35 IST to Topic 11 ('reports').
     Features Day 30 Maturity Banner when 30 days are reached.
@@ -1699,24 +1759,29 @@ def generate_and_send_phase1_eod_report(notify=True, session_status="VALID"):
             day_num = 0
             header_title = "🛠️ <b>DAY 0: COMMISSIONING & SHAKEDOWN (PRE-EVALUATION)</b>"
             day_label = f"Session: {now.strftime('%d-%b-%Y')} | 30-Day Official Clock Starts Mon Nov 23"
-        elif session_status == "NO_DATA_EXCLUDED":
-            valid_past = [
-                h for h in history
-                if h.get("date") != today_str
-                and h.get("date", "") >= START_DATE_STR
-                and h.get("status", "VALID") == "VALID"
-            ]
-            day_num = len(valid_past)
+        # Determine automated status if not explicitly overridden
+        auto_status, auto_reason, _ = determine_automated_session_status(now)
+        effective_status = session_status if session_status is not None else auto_status
+        effective_reason = status_reason if status_reason is not None else auto_reason
+
+        # De-duplicate past valid sessions by unique calendar date
+        valid_past_dates = sorted(list(set(
+            h.get("date") for h in history
+            if h.get("date") != today_str
+            and h.get("date", "") >= START_DATE_STR
+            and h.get("status", "VALID") == "VALID"
+        )))
+
+        if effective_status == "NO_DATA_EXCLUDED":
+            day_num = len(valid_past_dates)
             header_title = "⚠️ <b>SESSION INVALID / NO DATA — EXCLUDED FROM 30-DAY PILOT</b>"
-            day_label = f"Session: {now.strftime('%d-%b-%Y')} | Evaluation Clock Paused (Horizon Extended +1 Day)"
+            day_label = f"Session: {now.strftime('%d-%b-%Y')} | Reason: {effective_reason} | Evaluation Clock Paused (+1 Day)"
+        elif effective_status == "PARTIAL":
+            day_num = len(valid_past_dates) + 1
+            header_title = "⚠️ <b>SESSION PARTIAL / DEGRADED FEED — FLAGGED</b>"
+            day_label = f"📅 <b>Day {day_num} of {EVALUATION_HORIZON_DAYS} (PARTIAL)</b> | Session: {now.strftime('%d-%b-%Y')} | {effective_reason}"
         else:
-            valid_past = [
-                h for h in history
-                if h.get("date") != today_str
-                and h.get("date", "") >= START_DATE_STR
-                and h.get("status", "VALID") == "VALID"
-            ]
-            day_num = len(valid_past) + 1
+            day_num = len(valid_past_dates) + 1
             header_title = "🤖 <b>PHASE 1 AUTONOMOUS SHADOW ENGINE — EOD REPORT</b>"
             day_label = f"📅 <b>Day {day_num} of {EVALUATION_HORIZON_DAYS}</b> | Session: {now.strftime('%d-%b-%Y')} (15:35 IST)"
     except Exception:
@@ -1841,11 +1906,12 @@ def generate_and_send_phase1_eod_report(notify=True, session_status="VALID"):
         send_phase1_telegram_alert(report_html, topic_name="reports")
 
     # Persist snapshot
-    snapshot_status = "DAY0_PRE_EVALUATION" if d_curr < d_start else session_status
+    snapshot_status = "DAY0_PRE_EVALUATION" if d_curr < d_start else (effective_status if 'effective_status' in locals() else (session_status or "VALID"))
     snapshot = {
         "date": today_str,
         "day_num": day_num,
         "status": snapshot_status,
+        "watchlist_hash": get_watchlist_hash(),
         "open_count": len(portfolio),
         "unrealized_r": unrealized_r,
         "unrealized_pnl": unrealized_pnl,
@@ -1855,10 +1921,16 @@ def generate_and_send_phase1_eod_report(notify=True, session_status="VALID"):
         "cumulative_analytics": analytics
     }
 
-    # Replace today if already present
-    history = [h for h in history if h.get("date") != today_str]
-    history.append(snapshot)
-    atomic_write_json(SHADOW_EOD_FILE, history)
+    # Replace today if already present and strictly de-duplicate all dates
+    deduped_history = []
+    seen_dates = set()
+    for h in history:
+        d_h = h.get("date")
+        if d_h and d_h != today_str and d_h not in seen_dates:
+            seen_dates.add(d_h)
+            deduped_history.append(h)
+    deduped_history.append(snapshot)
+    atomic_write_json(SHADOW_EOD_FILE, deduped_history)
 
     return report_html
 
