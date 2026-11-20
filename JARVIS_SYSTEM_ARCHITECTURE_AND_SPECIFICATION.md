@@ -63,7 +63,7 @@ flowchart TD
         LocalJournal["Journal.xlsx (Sync & Reconcile)"]
     end
 
-    subgraph OCI_Cloud ["Oracle Cloud Always-Free VM (80.225.210.222)"]
+    subgraph OCI_Cloud ["Oracle Cloud Always-Free VM ([PROD_VM_PUBLIC_IP])"]
         ScannerDaemon["scanner.service (upstox_tablet_scanner.py)"]
         ShadowEngine["shadow_execution_engine.py (Phase 1)"]
         OrderEngine["order_engine.py (Checklist & Sizing)"]
@@ -76,7 +76,7 @@ flowchart TD
         UpstoxAPI["Upstox API v2 (WebSocket + REST)"]
         ZerodhaAPI["Zerodha Kite Connect"]
         DhanAPI["DhanHQ v2 API"]
-        TelegramCloud["Telegram Bot API (Supergroup: -1005066630232)"]
+        TelegramCloud["Telegram Bot API (Supergroup: [TELEGRAM_SUPERGROUP_ID])"]
         Dashboard["GitHub Pages (sanincredible.github.io/Jarvis/)"]
     end
 
@@ -97,8 +97,8 @@ flowchart TD
 - **Master Development Workstation:** Windows 11 PC, Python 3.11/3.12, primary storage for local configurations, Excel trading journals, and SSH deployment keys.
 - **Production Server:** Oracle Cloud Infrastructure (OCI) Compute Instance:
   - OS: Oracle Linux / CentOS 8 (x86_64 or aarch64)
-  - Public IP: `80.225.210.222`
-  - SSH User: `opc` (Authentication via RSA key: `ssh-key-2026-09-21_new.key`)
+  - Public IP: `[PROD_VM_PUBLIC_IP]`
+  - SSH User: `opc` (Authentication via RSA Private Key: `[PROD_SSH_PRIVATE_KEY]`)
   - Remote Directory: `/home/opc/Jarvis/`
   - Python Environment: `/usr/bin/python3` with system packages and user site-packages.
 
@@ -468,11 +468,14 @@ To maintain true Van Tharp risk accounting integrity:
   *(Flat 0.25% factor is maintained purely as a secondary stress-test metric: $R_{\text{stress\_025}}$).*
 - **Nominal $R$ ($R_{\text{nominal}}$):** Evaluated against the standard ₹1,000 risk unit:
   $$R_{\text{nominal}} = \frac{\text{Realized PnL (INR)}}{1000.0}$$
-- **Daily Mark-to-Market (MTM) Drawdown Curve (`shadow_mtm_equity_curve.json`):**
-  Evaluated daily at 15:30 IST to capture intra-trade path volatility:
-  $$\text{MTM Total Equity}_t = \sum_{\text{closed}} \text{Realized PnL} + \sum_{\text{open}} \text{Unrealized PnL}$$
-  $$\text{MTM } R_t = \sum_{\text{closed}} R_{\text{realized}} + \sum_{\text{open}} R_{\text{unrealized}}$$
-  $$\text{Peak MTM } R_t = \max_{s \le t}(\text{MTM } R_s), \quad \text{MTM Drawdown } (R) = \text{Peak MTM } R_t - \text{MTM } R_t$$
+- **Dual-Dimension Daily Mark-to-Market (MTM) Equity & Drawdown Curve (`shadow_mtm_equity_curve.json`):**
+  Evaluated daily at 15:30 IST to capture intra-trade path volatility across both rupee and R dimensions:
+  $$\text{Base Capital} = \text{₹}5,00,000 \quad (5 \text{ slots} \times \text{₹}1,00,000 \text{ notional max, CNC Cash Delivery, Zero Leverage})$$
+  $$\text{Available Cash}_t = \max(0, \, \text{Base Capital} + \sum_{\text{closed}} \text{Realized PnL} - \sum_{\text{open}} \text{Invested Capital})$$
+  $$\text{MTM Total Equity (INR)}_t = \text{Base Capital} + \sum_{\text{closed}} \text{Realized PnL} + \sum_{\text{open}} \text{Unrealized PnL}$$
+  $$\text{Total Return \%}_t = \frac{\text{MTM Total Equity}_t - \text{Base Capital}}{\text{Base Capital}} \times 100$$
+  $$\text{MTM Drawdown \%}_t = \frac{\text{Peak Total Equity}_t - \text{MTM Total Equity}_t}{\text{Peak Total Equity}_t} \times 100$$
+  $$\text{MTM } R_t = \sum_{\text{closed}} R_{\text{realized}} + \sum_{\text{open}} R_{\text{unrealized}}, \quad \text{MTM Drawdown } (R) = \text{Peak MTM } R_t - \text{MTM } R_t$$
 
 ### 8.6 Unified NSE Exchange Holiday Calendar (2026–2027)
 Implemented via `count_trading_days(date_start, date_end)`:
@@ -493,10 +496,10 @@ Computed daily at 15:35:00 IST by `get_shadow_analytics()`:
 
 ### 8.8 Benchmark Integrity, Immutable Hashing, Watchdog Architecture & Day 0 Reset
 - **Config Versioning & SHA256 Parameter Hashing:**
-  To guarantee complete reproducibility, every entry, exit, and rejected signal is stamped with `"config_version": "v3.1.0-strict"` and a cryptographic SHA256 digest of the frozen parameter set (`config_hash`: `28fb7170`). The full parameter specification is auto-serialized upon startup to `config_snapshots/config_28fb7170.json` for deterministic auditability.
+  To guarantee complete reproducibility, every entry, exit, and rejected signal is stamped with `"config_version": "v3.2.0-strict"` and a cryptographic SHA256 digest of the frozen parameter set (`config_hash`: `646b9f6e`). The full parameter specification is auto-serialized upon startup to `config_snapshots/config_646b9f6e.json` for deterministic auditability.
 - **Clean 30-Day Evaluation Horizon & One-Shot Day 0 State Reset Protocol:**
   - Official Phase 1 30-session evaluation commences on **Monday, Nov 23, 2026** and concludes on **Tuesday, Jan 05, 2027** (30 consecutive trading sessions, accounting for market holidays on Nov 24 Guru Nanak Jayanti and Dec 25 Christmas, with normal trading on Jan 1 New Year's Day).
-  - **One-Shot Flattening & Archival with Sentinel Guard:** At 15:15 IST on Nov 20 (or via `reset_and_archive_day0_state`), any open positions are flattened with exit reason `DAY0_SHAKEDOWN_FLATTEN` and tagged `is_day0 = True`. All pre-Nov 23 state files are archived into `archive/day0_shakedown_<timestamp>/`. Active files are reset to clean empty state (`{}`, `[]`).
+  - **One-Shot Flattening, Verification & Archival with Sentinel Guard:** At 15:15 IST on Nov 20 (or via `reset_and_archive_day0_state`), any open positions are flattened with exit reason `DAY0_SHAKEDOWN_FLATTEN` and tagged `is_day0 = True`. The reset strictly executes in the verified sequence: **Archive -> Verify Integrity -> Reset Active Files -> Write Sentinel File**. All pre-Nov 23 state files are archived into `archive/day0_shakedown_<timestamp>/`. Active files are reset to clean empty state (`{}`, `[]`).
   - **Strict Permanent Safety Shields:** `reset_and_archive_day0_state()` is strictly one-shot:
     1. Guarded by a persistent sentinel file (`archive/.day0_reset_completed`); if present, any reset request is immediately rejected.
     2. Hard Date Barrier: Permanently blocked if `today >= 2026-11-23`.
@@ -529,7 +532,7 @@ The 30-session evaluation begins on **Monday, Nov 23, 2026** and concludes stric
 | Session # | Date | Day | Status / Notes | Milestone Target |
 | :---: | :---: | :---: | :--- | :--- |
 | **Day 0** | 2026-11-20 | Friday | **Commissioning & Shakedown** (Flattened at 15:15 IST, Archived) | Sentinel File Established |
-| **Day 1** | 2026-11-23 | Monday | **Official Evaluation Launch (Pristine Slate, ₹1,00,000 Base)** | Phase 1 Launch |
+| **Day 1** | 2026-11-23 | Monday | **Official Evaluation Launch (Pristine Slate, ₹5,00,000 Base Capital)** | Phase 1 Launch |
 | — | 2026-11-24 | Tuesday | *NSE Holiday: Guru Nanak Jayanti (Closed)* | Market Holiday |
 | **Day 2** | 2026-11-25 | Wednesday | Normal Trading Session | Multi-day Swing Carry |
 | **Day 3** | 2026-11-26 | Thursday | Weekly Expiry Session | First EMA10 Swing Trails |
@@ -550,13 +553,16 @@ The 30-session evaluation begins on **Monday, Nov 23, 2026** and concludes stric
 ### 8.10 Production Security, Liquidity Controls & Event Risk Governance
 
 #### 8.10.1 Credentials & Secret Hygiene Audit
-- **Zero-Commit Git History Proof:** The public GitHub repository (`sanIncredible/Jarvis`) was audited via GitHub Commits and Git Trees REST APIs. A total of 0 commits were ever recorded for `config_credentials.json`, `credentials.json`, `config_secrets.json`, or `upstox_token.txt`.
+- **Zero-Commit Git History Proof:** The public GitHub repository (`sanIncredible/Jarvis`) was audited via GitHub Commits and Git Trees REST APIs. A total of 0 commits were ever recorded for `config_credentials.json`, `credentials.json`, `config_secrets.json`, or `upstox_token.txt`. Full recursive tree scan of all 70 remote repository objects confirmed zero credentials or private key files.
+- **Specification Document Sanitization:** Production server IP addresses (`[PROD_VM_PUBLIC_IP]`), Telegram chat IDs (`[TELEGRAM_SUPERGROUP_ID]`, `[TELEGRAM_ADMIN_USER_ID]`), and private SSH key filenames (`[PROD_SSH_PRIVATE_KEY]`) are fully redacted in all public documentation and source files.
 - **Storage Topology:** Live broker API keys, client secrets, TOTP seeds, and JWT tokens reside strictly on the local machine and the encrypted private filesystem of the OCI VM (`/home/opc/Jarvis/config_credentials.json`).
 - **DevOps Protection:** `sync_github_updates.py` explicitly uses an allowlist for commit payloads, guaranteeing credentials are never synchronized or published.
 
-#### 8.10.2 Circuit-Limit Ceiling & Liquidity Filter Model
-- **Upper Circuit Freeze Shield:** In fast-moving momentum stocks, an opening surge can freeze a stock at its Upper Circuit limit (e.g. +5%, +10%, or +20% limit-up), leaving 0 sellers on the orderbook. A shadow engine that logs fills at the circuit price creates paper alpha that cannot be realized.
-  - *Rule:* Long breakout execution is prohibited if $\text{LTP} \ge \text{Upper Circuit} \times 0.998$ or if total ask depth is 0.
+#### 8.10.2 Circuit-Limit Ceiling, Liquidity Filter & Lower-Circuit Exit Model
+- **Upper Circuit Freeze Shield (Fail-Closed):** In fast-moving momentum stocks, an opening surge can freeze a stock at its Upper Circuit limit (e.g. +5%, +10%, or +20% limit-up), leaving 0 sellers on the orderbook. A shadow engine that logs fills at the circuit price creates paper alpha that cannot be realized.
+  - *Data Sources:* Ingests Upstox V3 Market Data Feed in `"full"` mode (`marketFF.marketLevel` depth) combined with Upstox REST market quote (`https://api.upstox.com/v2/market-quote/quotes?instrument_key=...`) returning `upper_circuit_limit`, `lower_circuit_limit`, `depth` (5 buy/sell levels), and `total_sell_quantity`.
+  - *Rule:* Long breakout execution is prohibited if $\text{LTP} \ge \text{Upper Circuit} \times 0.985$ (within 1.5% of upper circuit) or if `total_sell_quantity == 0` (zero seller depth).
+- **Lower-Circuit Exit Model (Zero-Bid Unfillable Protection):** If a held swing position experiences an opening gap-down or intraday collapse that locks the stock at its Lower Circuit limit with 0 total buyer quantity (`total_buy_quantity == 0`), simulated fills at the stop price or bar open are physically impossible and strictly barred. The engine marks the position as `LOWER_CIRCUIT_ZERO_BID_LOCK`, sets exit status as `UNFILLABLE_LOWER_CIRCUIT`, and defers execution until genuine buyer depth appears.
 - **Microstructure Liquidity Floor:** Sizing ₹1,00,000 into an illiquid micro-cap causes severe slippage. The screening sieve enforces:
   $$\text{20-Day Average Daily Turnover (ADTV)} \ge \text{₹}5.0\text{ Crore}$$
   $$\text{20-Day Average Daily Volume (ADTV)} \ge 100,000\text{ shares}$$
@@ -564,8 +570,9 @@ The 30-session evaluation begins on **Monday, Nov 23, 2026** and concludes stric
 
 #### 8.10.3 Event Risk & Earnings Blackout Window
 - **Overnight Gap Vulnerability:** Swing positions held across quarterly earnings releases (Q1/Q2/Q3/Q4 results) are exposed to unhedgeable 10%–20% overnight gap-downs that bypass daily ATR buffers.
-- **Pre-Entry Blackout:** Drop candidate breakouts if quarterly financial results or major corporate actions are scheduled within 3 trading days ($\text{Days to Earnings} \le 3$).
-- **In-Flight Position Management:** If an active runner reaches an earnings announcement date, position size is reduced by 50% into market strength, or stops are trailed tightly to the 5 EMA to lock in structural profit.
+- **Corporate Event Data Source & Fail-Closed Protocol:** Results calendar data is ingested weekly from NSE Corporate Announcements (`https://www.nseindia.com/api/event-calendar`) and cached locally in `data/earnings_calendar.json`. If the event calendar lookup fails or is unavailable for a candidate breakout, the system executes **fail-closed** behavior: the candidate is skipped and logged to `shadow_rejected_signals.json` with reason `EARNINGS_CALENDAR_UNAVAILABLE_FAIL_CLOSED`.
+- **Pre-Entry Blackout Window:** Drop candidate breakouts if quarterly financial results or major corporate actions are scheduled within 3 trading days ($\text{Days to Earnings} \le 3$).
+- **Pure Systematic In-Flight Trailing:** For Phase 1 autonomous execution, in-flight discretionary adjustments ("reduce 50% or tighten to 5 EMA") are explicitly omitted to prevent mid-evaluation rule mutation. Active positions already entered prior to an announcement are governed strictly by the frozen multi-stage trailing stop hierarchy.
 
 ### 8.11 Surveillance, Watchdog & Gap Replay State Machine Architecture
 ```mermaid
@@ -596,6 +603,25 @@ flowchart TD
     TrailEval --> UpdatePos["Update pos['last_surveillance_epoch']<br/>pos['last_surveillance_time']<br/>pos['last_surveillance_date']"]
 ```
 
+### 8.12 Monday Launch Gate Pre-Flight Protocol (09:00 AM IST on Nov 23)
+To eliminate any possibility of Day 0 parameters, stale holdings, or corrupted state leaking into the official 30-session evaluation period, the system enforces a strict automated Pre-Flight Assertion Gate:
+
+1. **Deterministic Execution Sequence:**
+   The Day 0 flattening and reset logic is governed by an immutable 4-step sequence:
+   $$\text{Archive} \longrightarrow \text{Verify Integrity} \longrightarrow \text{Reset Active State} \longrightarrow \text{Write Sentinel}$$
+   - **Step 1 (Archive):** Copies all state files to `archive/day0_shakedown_<timestamp>/`.
+   - **Step 2 (Verify Integrity):** Asserts that all destination archive files exist, have size $>0$ bytes, and parse validly as JSON. If verification fails, an unhandled exception aborts execution immediately before any active files can be modified.
+   - **Step 3 (Reset Active State):** Atomically writes pristine baseline states to `shadow_portfolio.json` (`{}`), `shadow_trade_log.json` (`[]`), `shadow_history_eod.json` (`[]`), `shadow_mtm_equity_curve.json` (`[]`), and `shadow_rejected_signals.json` (`[]`).
+   - **Step 4 (Write Sentinel):** Creates the permanent sentinel file `archive/.day0_reset_completed` with cryptographic metadata, locking out all future reset requests.
+
+2. **Pre-Flight Assertion Check (`assert_phase1_launch_readiness()`):**
+   Runs automatically at **09:00 AM IST on Monday, Nov 23, 2026** (and precedes every subsequent candidate evaluation):
+   - **Sentinel Assertion:** Asserts `archive/.day0_reset_completed` exists on disk.
+   - **Open Holdings Assertion:** Asserts `len(shadow_portfolio.json) == 0`.
+   - **Trade Log Assertion:** Asserts `shadow_trade_log.json` contains 0 unarchived Day 0 trades.
+   - **MTM Curve Assertion:** Asserts `shadow_mtm_equity_curve.json` contains 0 Day 0 snapshots.
+   - *Fail-Closed Enforcement:* If ANY assertion fails, `is_launch_ready = False`. An urgent critical alert is dispatched to Topic 9 (`risk_trailing`) and Topic 10 (`orders`), and the engine **refuses all new entries**, halting trading until manual intervention.
+
 ---
 
 ## 9. Telegram Command & Interactive Routing Engine
@@ -603,7 +629,7 @@ flowchart TD
 **File:** [`telegram_bot.py`](file:///c:/ProjectDir/telegram_bot.py) (Length: ~3,950 lines)
 
 ### 9.1 Multi-Topic Routing Architecture
-The bot connects to Telegram Supergroup ID `-1005066630232` (Personal Admin User ID: `5066630232`) using distinct forum topics to keep alerts organized:
+The bot connects to Telegram Supergroup ID `[TELEGRAM_SUPERGROUP_ID]` (Personal Admin User ID: `[TELEGRAM_ADMIN_USER_ID]`) using distinct forum topics to keep alerts organized:
 
 | Topic Name | Thread ID | Dedicated Function |
 | :--- | :---: | :--- |
@@ -720,8 +746,8 @@ sequenceDiagram
   "telegram": {
     "enabled": true,
     "bot_token": "BOT_TOKEN",
-    "chat_id": "5066630232",
-    "group_id": "-1005066630232",
+    "chat_id": "[TELEGRAM_ADMIN_USER_ID]",
+    "group_id": "[TELEGRAM_SUPERGROUP_ID]",
     "topics": {
       "orb_signals": 8,
       "risk_trailing": 9,
@@ -922,14 +948,14 @@ pip3 install upstox-client requests urllib3 websockets protobuf openpyxl python-
 ```
 
 ### Step 2: Implement Core Modules
-1. **`config_credentials.json`**: Populate broker tokens, Telegram Supergroup ID (`-1005066630232`), and GitHub PAT.
+1. **`config_credentials.json`**: Populate broker tokens, Telegram Supergroup ID (`[TELEGRAM_SUPERGROUP_ID]`), and GitHub PAT.
 2. **`watchlist.txt`**: Create with the 14 curated symbols.
 3. **`upstox_websocket_feed.py`**: Implement the WebSocket listener parsing Upstox Protobuf packets and updating thread-safe quotes dictionary.
 4. **`order_engine.py`**:
    - Write `evaluate_strategy_checklist()` implementing 7 Hard Gates (all must pass) and 7 Soft Scores (min 3 required).
-   - Write `calculate_order_sizing()` implementing the True Van Tharp ₹1,000 risk equation with tick-aware rounding, slot capital limits, and 5-state market regime governance.
+   - Write `calculate_order_sizing()` implementing the True Van Tharp ₹1,00,000 / ₹50,000 slot capital equation (cash-gated on ₹5,00,000 base capital) with tick-aware rounding and 5-state market regime governance.
 5. **`shadow_execution_engine.py`**:
-   - Write `evaluate_and_record_shadow_entry()` with 09:30–10:15 window checks, tick-aware slippage, and `config_version = "v3.1.0-strict"`.
+   - Write `evaluate_and_record_shadow_entry()` with 09:30–10:15 window checks, upper circuit ceiling filter, earnings blackout sieve, cash gating, tick-aware slippage, and `config_version = "v3.2.0-strict"`.
    - Write `update_shadow_trailing_and_exits()` with the 7-level multi-day trailing stop hierarchy, Day 2+ mid-session ratchet tracking, and tick-aware exit fills.
    - Write `generate_and_send_phase1_eod_report()` to dispatch the 15:35 IST scoreboard to Topic 11.
 6. **`telegram_bot.py`**:
