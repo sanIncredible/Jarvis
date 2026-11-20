@@ -1293,8 +1293,8 @@ def fetch_upstox_symbol_data(symbol, token, prefetched_quote=None):
                             expected_pct = 0.65 + ((session_mins - 285) / 90.0) * 0.35 # ~65% to 100%
                         expected_vol = avg_v * expected_pct
                         rvol_tod = round(vols[0] / expected_vol, 2) if expected_vol > 0 else raw_rvol
-                        # Combined RVOL: Use time-of-day adjusted volume or raw daily volume
-                        rvol = max(round(raw_rvol, 2), round(rvol_tod, 2))
+                        # Time-of-day normalized relative volume
+                        rvol = round(rvol_tod, 2)
 
                 if len(closes) >= 50:
                     sma50 = sum(closes[:50]) / 50.0
@@ -1496,7 +1496,7 @@ def fetch_fallback_data(symbol):
                         expected_pct = 0.65 + ((session_mins - 285) / 90.0) * 0.35
                     expected_vol = avg_vol * expected_pct
                     rvol_tod = round(vols[-1] / expected_vol, 2) if expected_vol > 0 else raw_rvol
-                    rvol = max(round(raw_rvol, 2), round(rvol_tod, 2))
+                    rvol = round(rvol_tod, 2)
 
             if len(closes) >= 50:
                 sma50 = sum(closes[-50:]) / 50.0
@@ -1778,8 +1778,8 @@ def compute_metrics(d):
     ema10 = None
     if candles_3m:
         alpha = 2.0 / (10.0 + 1.0)
-        # Seed EMA with previous day close baseline to stabilize early morning warmup (prevents wild swings on bars 1-5)
-        seed_p = float(d.get("prev_close") or d.get("day_open") or 0.0)
+        # Seed EMA with day_open baseline to stabilize early morning warmup uncoupled from overnight gaps
+        seed_p = float(d.get("day_open") or (candles_3m[0].get("o") if isinstance(candles_3m[0], dict) else candles_3m[0][1]) or 0.0)
         if seed_p > 0:
             ema10 = seed_p
         for c in candles_3m:
