@@ -1091,7 +1091,7 @@ def fetch_upstox_bulk_quotes(symbols, token):
         key_map[s] = s
 
     encoded_keys = urllib.parse.quote(",".join(inst_keys))
-    url = f"https://api.upstox.com/v2/market-quote/quotes?instrument_key={encoded_keys}"
+    url = f"https://api.upstox.com/v3/market-quote/quotes?instrument_key={encoded_keys}"
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json",
@@ -1159,7 +1159,7 @@ def fetch_upstox_symbol_data(symbol, token, prefetched_quote=None):
         # 1. Market Quote (Use prefetched bulk quote or query individual)
         d_quote = prefetched_quote
         if not d_quote:
-            quote_url = f"https://api.upstox.com/v2/market-quote/quotes?instrument_key={encoded_key}"
+            quote_url = f"https://api.upstox.com/v3/market-quote/quotes?instrument_key={encoded_key}"
             req_q = urllib.request.Request(quote_url, headers=headers)
             with urllib.request.urlopen(req_q, timeout=4) as resp:
                 q_json = json.loads(resp.read().decode('utf-8'))
@@ -3676,7 +3676,7 @@ def check_market_clock_offset():
         if not ikey:
             return 0.0
         enc = urllib.parse.quote(ikey, safe="")
-        url = f"https://api.upstox.com/v2/market-quote/quotes?instrument_key={enc}"
+        url = f"https://api.upstox.com/v3/market-quote/quotes?instrument_key={enc}"
         req = urllib.request.Request(url, headers={"Authorization": f"Bearer {tok}", "Accept": "application/json", "User-Agent": "Jarvis-ClockCheck"})
         t0 = time.time()
         with urllib.request.urlopen(req, timeout=4) as resp:
@@ -3844,17 +3844,17 @@ def run_upstox_scanner(once=False, auto_open_web=False):
     def check_and_run_day0_flatten_and_archive(curr_now=None):
         """
         Flatten and archive Day 0 positions/state before Nov 23, 2026.
-        Runs at 15:15 IST on Nov 20, 2026 (or any pre-Nov 23 session).
+        Runs at 15:45 IST on Nov 20, 2026 (strictly after 15:30 MTM snapshot and 15:35 EOD Report).
         """
         if curr_now is None:
             curr_now = get_ist_now()
         today_str = curr_now.strftime('%Y-%m-%d')
-        if today_str < "2026-11-23" and curr_now.weekday() < 5 and ((curr_now.hour == 15 and curr_now.minute >= 15) or curr_now.hour >= 16):
+        if today_str < "2026-11-23" and curr_now.weekday() < 5 and ((curr_now.hour == 15 and curr_now.minute >= 45) or curr_now.hour >= 16):
             if _last_day0_reset_date[0] != today_str:
                 _last_day0_reset_date[0] = today_str
                 try:
                     from shadow_execution_engine import reset_and_archive_day0_state
-                    print(f"\n{YELLOW}🛑 15:15 PM IST: Day 0 Shakedown Reset & Flatten Active -> Archiving state for Nov 23 Clean Launch...{RESET}")
+                    print(f"\n{YELLOW}🛑 15:45 PM IST: Day 0 Shakedown Reset & Flatten Active -> Archiving state for Nov 23 Clean Launch...{RESET}")
                     reset_and_archive_day0_state(force=True)
                 except Exception as e:
                     print(f"Notice on Day 0 reset: {e}")
