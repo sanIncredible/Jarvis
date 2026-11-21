@@ -56,13 +56,6 @@ def read_watchlist_symbols() -> List[str]:
 
 def write_watchlist_symbols(symbols: List[str]) -> bool:
     """Writes list of symbols back to watchlist.txt with header."""
-    try:
-        from shadow_execution_engine import START_DATE_STR
-        if get_ist_now().strftime("%Y-%m-%d") >= START_DATE_STR:
-            print("🔒 [Watchlist Hygiene] Write blocked: Watchlist is frozen for Phase 1 30-Session Evaluation.")
-            return False
-    except Exception:
-        pass
 
     lines = [
         "# Upstox 3m ORB Scanner Watchlist",
@@ -231,13 +224,6 @@ def prune_watchlist(symbols_to_prune: Optional[List[str]] = None, sync_cloud: bo
     Returns: (pruned_symbols, remaining_symbols)
     """
     curr = read_watchlist_symbols()
-    try:
-        from shadow_execution_engine import START_DATE_STR
-        if get_ist_now().strftime("%Y-%m-%d") >= START_DATE_STR:
-            print("🔒 [Watchlist Hygiene] Pruning blocked: Watchlist is frozen for Phase 1 30-Session Evaluation.")
-            return [], curr
-    except Exception:
-        pass
 
     if symbols_to_prune is None:
         audit = audit_watchlist_hygiene()
