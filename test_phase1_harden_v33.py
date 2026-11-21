@@ -71,7 +71,7 @@ def run_tests():
     try:
         # TEST 1: Config Hash Verification
         print("\n--- TEST 1: Config Hash Verification ---")
-        expected_hash = "1813c808"
+        expected_hash = "8229eb94"
         report_test(
             "Config Hash Parity",
             see.CONFIG_HASH == expected_hash,
@@ -528,6 +528,11 @@ def run_tests():
             see.FROZEN_PARAMS.get("partial_counts_toward_target") is False,
             f"(partial_counts_toward_target: {see.FROZEN_PARAMS.get('partial_counts_toward_target')})"
         )
+        report_test(
+            "FROZEN_PARAMS Extension Cap & Stall Timeout: max 40 sessions & 45s stall threshold",
+            see.FROZEN_PARAMS.get("max_calendar_sessions_cap") == 40 and see.FROZEN_PARAMS.get("feed_stall_timeout_seconds") == 45.0,
+            f"(Cap: {see.FROZEN_PARAMS.get('max_calendar_sessions_cap')}, Stall Timeout: {see.FROZEN_PARAMS.get('feed_stall_timeout_seconds')}s)"
+        )
 
         # TEST 12: Downtime Tracker Restart Persistence
         print("\n--- TEST 12: Downtime Tracker Restart Persistence ---")
@@ -584,6 +589,30 @@ def run_tests():
             )
         finally:
             tb.get_ist_now = orig_tb_now
+
+        # TEST 14: Watchlist Hygiene Lock & Deprecated Sync Scripts Neutralization
+        print("\n--- TEST 14: Watchlist Hygiene Lock & Sync Neutralization ---")
+        import watchlist_hygiene as wh
+        orig_wh_now = wh.get_ist_now if hasattr(wh, "get_ist_now") else None
+        wh.get_ist_now = lambda: datetime(2026, 11, 25, 10, 0, tzinfo=see.IST)
+        try:
+            wh_write_ok = wh.write_watchlist_symbols(["INFY", "TCS"])
+            report_test(
+                "Watchlist Hygiene write_watchlist_symbols blocked during evaluation",
+                wh_write_ok is False,
+                f"(write_watchlist_symbols returned: {wh_write_ok})"
+            )
+            pruned_syms, rem_syms = wh.prune_watchlist(["CEMPRO"])
+            report_test(
+                "Watchlist Hygiene prune_watchlist blocked during evaluation",
+                len(pruned_syms) == 0,
+                f"(pruned: {pruned_syms})"
+            )
+        finally:
+            if orig_wh_now:
+                wh.get_ist_now = orig_wh_now
+            elif hasattr(wh, "get_ist_now"):
+                delattr(wh, "get_ist_now")
 
     finally:
         # Restore backups
