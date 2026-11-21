@@ -2,15 +2,12 @@
   "release_tag": "v3.3.0-strict",
   "config_version": "v3.3.0-strict",
   "config_hash": "8229eb94",
-  "release_code_sha": "8cc33380",
-  "git_head_commit_sha": "3ed92f0e",
   "watchlist_hash": "eeeb00af",
   "evaluated_files_count": 21,
-  "all_matched": true,
   "files": {
     "shadow_execution_engine.py": {
-      "local_sha256": "29e5d63fb8c21cbd2e15fa7aa118771fbcb5244b8cfab2c263e68da6c00a819c",
-      "oci_sha256": "29e5d63fb8c21cbd2e15fa7aa118771fbcb5244b8cfab2c263e68da6c00a819c",
+      "local_sha256": "34046d8c624393d30883ab3289d82f2e9d9c51450c5cde6696769b00d1c36cf2",
+      "oci_sha256": "34046d8c624393d30883ab3289d82f2e9d9c51450c5cde6696769b00d1c36cf2",
       "match": true
     },
     "upstox_tablet_scanner.py": {
@@ -29,8 +26,8 @@
       "match": true
     },
     "upstox_websocket_feed.py": {
-      "local_sha256": "a70f9191405acafab46e631af52d92aae675b0775935482e600c7609d10c28a8",
-      "oci_sha256": "a70f9191405acafab46e631af52d92aae675b0775935482e600c7609d10c28a8",
+      "local_sha256": "bf6c7a40d93998f550186035a9069a95c163b75accc609c207983e445a3c826e",
+      "oci_sha256": "bf6c7a40d93998f550186035a9069a95c163b75accc609c207983e445a3c826e",
       "match": true
     },
     "eod_hindsight_report.py": {
@@ -39,8 +36,8 @@
       "match": true
     },
     "test_phase1_harden_v33.py": {
-      "local_sha256": "60453cd401512836d81875ae52eb333a2e61bae4681853a548f7cb5332c7f600",
-      "oci_sha256": "60453cd401512836d81875ae52eb333a2e61bae4681853a548f7cb5332c7f600",
+      "local_sha256": "dc7229c0de77267f9de7d536620dc5edffa3633e65c0ac204a853e0f4e7522b7",
+      "oci_sha256": "dc7229c0de77267f9de7d536620dc5edffa3633e65c0ac204a853e0f4e7522b7",
       "match": true
     },
     "token_hub.py": {
@@ -64,8 +61,8 @@
       "match": true
     },
     "sync_github_updates.py": {
-      "local_sha256": "0350a5c35db0370c79e3edbca5587d73fa951f1272e950fe62a73ced6d5d432d",
-      "oci_sha256": "0350a5c35db0370c79e3edbca5587d73fa951f1272e950fe62a73ced6d5d432d",
+      "local_sha256": "0bd8ed2dd6980668527b03b44f4fdf45330d9be866b54818c569c9426cf8efad",
+      "oci_sha256": "0bd8ed2dd6980668527b03b44f4fdf45330d9be866b54818c569c9426cf8efad",
       "match": true
     },
     "sync_journal.py": {
@@ -74,13 +71,13 @@
       "match": true
     },
     "sync_to_cloud.py": {
-      "local_sha256": "24a029986a9343432da467d15060fef31de181ab881aae48f10441b36c844af5",
-      "oci_sha256": "24a029986a9343432da467d15060fef31de181ab881aae48f10441b36c844af5",
+      "local_sha256": "2db4ac98df415b4ab2a72b07be7e7ae997b0731698c0b0d7058bb6791c3eedfe",
+      "oci_sha256": "2db4ac98df415b4ab2a72b07be7e7ae997b0731698c0b0d7058bb6791c3eedfe",
       "match": true
     },
     "verify_phase1_post_close.py": {
-      "local_sha256": "41def6a37fd75d48b2b3917613638e094a103cb4a7b972f8d9670af5a017c3ca",
-      "oci_sha256": "41def6a37fd75d48b2b3917613638e094a103cb4a7b972f8d9670af5a017c3ca",
+      "local_sha256": "e9412418494e5a4a5809d7c0d80043f35a83325b931f4060fb2991d687840e4e",
+      "oci_sha256": "e9412418494e5a4a5809d7c0d80043f35a83325b931f4060fb2991d687840e4e",
       "match": true
     },
     "daily_swing_detector.py": {
