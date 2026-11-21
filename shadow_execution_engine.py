@@ -173,7 +173,8 @@ FROZEN_PARAMS = {
     "max_feed_downtime_minutes": 10.0,
     "session_status_valid": "VALID",
     "session_status_excluded": "NO_DATA_EXCLUDED",
-    "session_status_partial": "PARTIAL"
+    "session_status_partial": "PARTIAL",
+    "partial_counts_toward_target": False
 }
 CONFIG_HASH = hashlib.sha256(json.dumps(FROZEN_PARAMS, sort_keys=True).encode("utf-8")).hexdigest()[:8]
 snapshot_file = CONFIG_SNAPSHOTS_DIR / f"config_{CONFIG_HASH}.json"
@@ -1711,29 +1712,50 @@ def determine_automated_session_status(dt=None):
 
     # 2. Check automated feed health telemetry
     health_file = BASE_DIR / "data" / "feed_session_health.json"
-    if health_file.is_file():
-        try:
-            with open(health_file, "r", encoding="utf-8") as f:
-                health_data = json.load(f)
-            if health_data.get("date") == today_str:
-                down_min = float(health_data.get("downtime_minutes", 0.0))
-                max_down = float(FROZEN_PARAMS.get("max_feed_downtime_minutes", 10.0))
-                if down_min >= max_down:
-                    return "NO_DATA_EXCLUDED", f"Excessive feed downtime during 09:30-10:15 ({down_min:.1f}m >= {max_down:.1f}m limit)", health_data
-                elif down_min >= 5.0:
-                    return "PARTIAL", f"Sustained feed degradation during 09:30-10:15 ({down_min:.1f}m downtime)", health_data
-                return "VALID", "Feed health within normal operational parameters", health_data
-        except Exception:
-            pass
+    if not health_file.is_file():
+        send_phase1_telegram_alert(
+            f"🚨 <b>FAIL-CLOSED ALERT: Feed Telemetry Missing</b>\n"
+            f"• Date: {today_str}\n"
+            f"• File <code>data/feed_session_health.json</code> not found.\n"
+            f"• Missed-Session Protocol: Session defaulted to <b>NO_DATA_EXCLUDED</b> (Clock Paused).",
+            topic_name="risk"
+        )
+        return "NO_DATA_EXCLUDED", "Missing feed health telemetry file data/feed_session_health.json (Fail-Closed)", {}
 
-    return "VALID", "Normal operational session", {}
+    try:
+        with open(health_file, "r", encoding="utf-8") as f:
+            health_data = json.load(f)
+        if health_data.get("date") != today_str:
+            send_phase1_telegram_alert(
+                f"🚨 <b>FAIL-CLOSED ALERT: Stale Feed Telemetry</b>\n"
+                f"• Today: {today_str} | Telemetry Date: {health_data.get('date')}\n"
+                f"• Missed-Session Protocol: Session defaulted to <b>NO_DATA_EXCLUDED</b> (Clock Paused).",
+                topic_name="risk"
+            )
+            return "NO_DATA_EXCLUDED", f"Stale feed health telemetry (Date mismatch: {health_data.get('date')} != {today_str}) (Fail-Closed)", health_data
+
+        down_min = float(health_data.get("downtime_minutes", 0.0))
+        max_down = float(FROZEN_PARAMS.get("max_feed_downtime_minutes", 10.0))
+        if down_min >= max_down:
+            return "NO_DATA_EXCLUDED", f"Excessive feed downtime during 09:30-10:15 ({down_min:.1f}m >= {max_down:.1f}m limit)", health_data
+        elif down_min >= 5.0:
+            return "PARTIAL", f"Sustained feed degradation during 09:30-10:15 ({down_min:.1f}m downtime)", health_data
+        return "VALID", "Feed health within normal operational parameters", health_data
+    except Exception as exc:
+        send_phase1_telegram_alert(
+            f"🚨 <b>FAIL-CLOSED ALERT: Feed Telemetry Unreadable</b>\n"
+            f"• Date: {today_str} | Error: {str(exc)}\n"
+            f"• Missed-Session Protocol: Session defaulted to <b>NO_DATA_EXCLUDED</b> (Clock Paused).",
+            topic_name="risk"
+        )
+        return "NO_DATA_EXCLUDED", f"Unreadable feed health telemetry file ({str(exc)}) (Fail-Closed)", {}
 
 
 def generate_and_send_phase1_eod_report(notify=True, session_status=None, status_reason=None):
     """
     Compiles and dispatches the daily Phase 1 EOD Report strictly at 15:35 IST to Topic 11 ('reports').
     Features Day 30 Maturity Banner when 30 days are reached.
-    MISSED-SESSION PROTOCOL: If session_status is 'NO_DATA_EXCLUDED', the day is excluded
+    MISSED-SESSION PROTOCOL: If session_status is 'NO_DATA_EXCLUDED' or 'PARTIAL', the day is excluded
     from the 30-session evaluation denominator, and day_num is not incremented.
     """
     now = get_ist_now()
@@ -1764,12 +1786,12 @@ def generate_and_send_phase1_eod_report(notify=True, session_status=None, status
         effective_status = session_status if session_status is not None else auto_status
         effective_reason = status_reason if status_reason is not None else auto_reason
 
-        # De-duplicate past valid sessions by unique calendar date
+        # De-duplicate past valid sessions by unique calendar date (Strict: missing status does NOT default to VALID)
         valid_past_dates = sorted(list(set(
             h.get("date") for h in history
             if h.get("date") != today_str
             and h.get("date", "") >= START_DATE_STR
-            and h.get("status", "VALID") == "VALID"
+            and h.get("status") == "VALID"
         )))
 
         if effective_status == "NO_DATA_EXCLUDED":
@@ -1777,9 +1799,10 @@ def generate_and_send_phase1_eod_report(notify=True, session_status=None, status
             header_title = "⚠️ <b>SESSION INVALID / NO DATA — EXCLUDED FROM 30-DAY PILOT</b>"
             day_label = f"Session: {now.strftime('%d-%b-%Y')} | Reason: {effective_reason} | Evaluation Clock Paused (+1 Day)"
         elif effective_status == "PARTIAL":
-            day_num = len(valid_past_dates) + 1
-            header_title = "⚠️ <b>SESSION PARTIAL / DEGRADED FEED — FLAGGED</b>"
-            day_label = f"📅 <b>Day {day_num} of {EVALUATION_HORIZON_DAYS} (PARTIAL)</b> | Session: {now.strftime('%d-%b-%Y')} | {effective_reason}"
+            # PARTIAL sessions are excluded from the 30-day target count; clock pauses +1 day
+            day_num = len(valid_past_dates)
+            header_title = "⚠️ <b>SESSION PARTIAL / FEED DEGRADED — EXCLUDED FROM 30-DAY COUNT</b>"
+            day_label = f"Session: {now.strftime('%d-%b-%Y')} | Reason: {effective_reason} | Evaluation Clock Paused (+1 Day)"
         else:
             day_num = len(valid_past_dates) + 1
             header_title = "🤖 <b>PHASE 1 AUTONOMOUS SHADOW ENGINE — EOD REPORT</b>"
