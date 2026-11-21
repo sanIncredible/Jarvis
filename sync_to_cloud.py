@@ -3,7 +3,7 @@ import sys
 print("⛔ DEPRECATED: sync_to_cloud.py is strictly disabled during the Phase 1 30-Session Evaluation.")
 print("   All production code is frozen under Config Hash 8229eb94 / Release v3.3.0-strict.")
 print("   Auto-pull and remote deployment are neutralized to guarantee 100% execution integrity.")
-sys.exit(0)
+sys.exit(1)
 
 import os
 import sys
