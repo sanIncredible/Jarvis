@@ -1,10 +1,9 @@
-from datetime import datetime
-import shutil
 #!/usr/bin/env python3
-"""
-⚡ 1-Click Automated Cloud Sync (Dual-Mode: GitHub HTTPS + Direct OCI SSH)
-Guarantees 100% successful sync even if OCI SSH port 22 times out.
-"""
+import sys
+print("⛔ DEPRECATED: sync_to_cloud.py is strictly disabled during the Phase 1 30-Session Evaluation.")
+print("   All production code is frozen under Config Hash 8229eb94 / Release v3.3.0-strict.")
+print("   Auto-pull and remote deployment are neutralized to guarantee 100% execution integrity.")
+sys.exit(0)
 
 import os
 import sys
@@ -207,6 +206,8 @@ def main():
                 sync_file_to_github_api(gh_cfg, "orders_log.json", "Update active orders log")
             if (BASE_DIR / "eod_hindsight_report.py").is_file():
                 sync_file_to_github_api(gh_cfg, "eod_hindsight_report.py", "Update EOD hindsight simulation report engine")
+            if (BASE_DIR / "hindsight_history.json").is_file():
+                sync_file_to_github_api(gh_cfg, "hindsight_history.json", "Update 30-day strategy expectancy ledger")
             if (BASE_DIR / "exited_stocks_manager.py").is_file():
                 sync_file_to_github_api(gh_cfg, "exited_stocks_manager.py", "Update exited stocks re-entry manager")
             if (BASE_DIR / "exited_stocks.json").is_file():
@@ -245,6 +246,16 @@ def main():
                 sync_file_to_github_api(gh_cfg, "candidates_merged.json", "Update unified merged candidates json")
             if (BASE_DIR / "candidates_merged.txt").is_file():
                 sync_file_to_github_api(gh_cfg, "candidates_merged.txt", "Update unified merged candidates txt")
+            if (BASE_DIR / "pre_open_gap_sieve.json").is_file():
+                sync_file_to_github_api(gh_cfg, "pre_open_gap_sieve.json", "Update pre-open auction gap sieve")
+            if (BASE_DIR / "watchlist_hygiene.py").is_file():
+                sync_file_to_github_api(gh_cfg, "watchlist_hygiene.py", "Update watchlist hygiene engine")
+            if (BASE_DIR / "watchlist_meta.json").is_file():
+                sync_file_to_github_api(gh_cfg, "watchlist_meta.json", "Update watchlist lifecycle metadata")
+            if (BASE_DIR / "upstox_websocket_feed.py").is_file():
+                sync_file_to_github_api(gh_cfg, "upstox_websocket_feed.py", "Update Upstox V3 Market Data Feed WebSocket streamer")
+            if (BASE_DIR / "kill_switch.json").is_file():
+                sync_file_to_github_api(gh_cfg, "kill_switch.json", "Update daily drawdown kill switch state")
             if ok_w and ok_j:
                 print("   ✅ GitHub Cloud Sync: SUCCESS! (watchlist, data.json, dashboard & index.html live)")
                 github_ok = True
@@ -267,8 +278,40 @@ def main():
             "-o", "ConnectTimeout=5"
         ]
 
-        # 4a. Bidirectional Safety Sync: Pull orders_log.json & protect Journal.xlsx
+        # 4a. Bidirectional Safety Sync: Pull orders_log.json, Journal.xlsx & broker tokens from OCI VM
         remote_journal_is_newer = False
+        try:
+            # Check remote config_credentials.json to preserve Telegram /token and /dhan updates
+            ssh_cfg_cmd = ["ssh", "-i", str(KEY_FILE)] + ssh_opts + [
+                f"{SERVER_USER}@{SERVER_IP}",
+                "cat /home/opc/Jarvis/config_credentials.json 2>/dev/null || echo ''"
+            ]
+            res_cfg = subprocess.run(ssh_cfg_cmd, capture_output=True, text=True, timeout=8)
+            if res_cfg.returncode == 0 and res_cfg.stdout.strip().startswith("{"):
+                remote_cfg = json.loads(res_cfg.stdout.strip())
+                local_cfg = {}
+                if CONFIG_FILE.is_file():
+                    with open(CONFIG_FILE, "r", encoding="utf-8") as lf:
+                        local_cfg = json.load(lf)
+
+                # Merge tokens intelligently: NEVER overwrite remote tokens from Telegram
+                merged = False
+                for broker in ["upstox", "dhan", "zerodha"]:
+                    r_tok = remote_cfg.get(broker, {}).get("access_token", "").strip()
+                    l_tok = local_cfg.get(broker, {}).get("access_token", "").strip()
+                    if r_tok and r_tok != l_tok:
+                        local_cfg.setdefault(broker, {})["access_token"] = r_tok
+                        merged = True
+                    elif l_tok and not r_tok:
+                        remote_cfg.setdefault(broker, {})["access_token"] = l_tok
+
+                if merged:
+                    with open(CONFIG_FILE, "w", encoding="utf-8") as lf:
+                        json.dump(local_cfg, lf, indent=2)
+                    print("   📥 Pulled latest broker tokens from OCI VM (Telegram updates preserved!)")
+        except Exception as e:
+            print(f"   ℹ️ Credential sync note: {e}")
+
         try:
             # Check remote orders_log.json mtime vs local
             ssh_ord_cmd = ["ssh", "-i", str(KEY_FILE)] + ssh_opts + [
@@ -321,7 +364,6 @@ def main():
 
         scp_files = [
             str(WATCHLIST_FILE),
-            str(CONFIG_FILE),
             str(BASE_DIR / "upstox_tablet_scanner.py"),
             str(BASE_DIR / "index.html"),
             str(BASE_DIR / "scanner_dashboard.html"),
@@ -391,6 +433,18 @@ def main():
             scp_files.append(str(BASE_DIR / "Journal.xlsx"))
         if (BASE_DIR / "orders_log.json").is_file():
             scp_files.append(str(BASE_DIR / "orders_log.json"))
+        if (BASE_DIR / "pre_open_gap_sieve.json").is_file():
+            scp_files.append(str(BASE_DIR / "pre_open_gap_sieve.json"))
+        if (BASE_DIR / "watchlist_hygiene.py").is_file():
+            scp_files.append(str(BASE_DIR / "watchlist_hygiene.py"))
+        if (BASE_DIR / "watchlist_meta.json").is_file():
+            scp_files.append(str(BASE_DIR / "watchlist_meta.json"))
+        if (BASE_DIR / "upstox_websocket_feed.py").is_file():
+            scp_files.append(str(BASE_DIR / "upstox_websocket_feed.py"))
+        if (BASE_DIR / "hindsight_history.json").is_file():
+            scp_files.append(str(BASE_DIR / "hindsight_history.json"))
+        if (BASE_DIR / "kill_switch.json").is_file():
+            scp_files.append(str(BASE_DIR / "kill_switch.json"))
 
         scp_cmd = [
             "scp",
