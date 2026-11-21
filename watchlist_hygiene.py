@@ -25,6 +25,13 @@ WATCHLIST_META_FILE = BASE_DIR / "watchlist_meta.json"
 CONFIG_FILE = BASE_DIR / "config_credentials.json"
 
 
+def get_ist_now():
+    """Returns current datetime in Indian Standard Time (UTC+5:30)."""
+    from datetime import timezone
+    IST = timezone(timedelta(hours=5, minutes=30))
+    return datetime.now(timezone.utc).astimezone(IST)
+
+
 def load_config() -> Dict[str, Any]:
     """Loads credentials from config_credentials.json."""
     if not CONFIG_FILE.is_file():
@@ -49,6 +56,14 @@ def read_watchlist_symbols() -> List[str]:
 
 def write_watchlist_symbols(symbols: List[str]) -> bool:
     """Writes list of symbols back to watchlist.txt with header."""
+    try:
+        from shadow_execution_engine import START_DATE_STR
+        if get_ist_now().strftime("%Y-%m-%d") >= START_DATE_STR:
+            print("🔒 [Watchlist Hygiene] Write blocked: Watchlist is frozen for Phase 1 30-Session Evaluation.")
+            return False
+    except Exception:
+        pass
+
     lines = [
         "# Upstox 3m ORB Scanner Watchlist",
         "# Add or remove NSE stock tickers below (one per line, or space/comma separated)",
@@ -216,6 +231,14 @@ def prune_watchlist(symbols_to_prune: Optional[List[str]] = None, sync_cloud: bo
     Returns: (pruned_symbols, remaining_symbols)
     """
     curr = read_watchlist_symbols()
+    try:
+        from shadow_execution_engine import START_DATE_STR
+        if get_ist_now().strftime("%Y-%m-%d") >= START_DATE_STR:
+            print("🔒 [Watchlist Hygiene] Pruning blocked: Watchlist is frozen for Phase 1 30-Session Evaluation.")
+            return [], curr
+    except Exception:
+        pass
+
     if symbols_to_prune is None:
         audit = audit_watchlist_hygiene()
         symbols_to_prune = [s["symbol"] for s in audit["stale"]] + [s["symbol"] for s in audit["invalidated"]]
