@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import sys
-import json
-import base64
-import urllib.request
-from pathlib import Path
+print("⛔ DEPRECATED: sync_github_updates.py is strictly disabled during the Phase 1 30-Session Evaluation.")
+print("   All production code is frozen under Config Hash 8229eb94 / Release v3.3.0-strict.")
+print("   Auto-pull and remote deployment are neutralized to guarantee 100% execution integrity.")
+sys.exit(0)
 
 # Safe UTF-8 printing on Windows
 if sys.platform == "win32":
@@ -89,30 +89,20 @@ def main():
         return
 
     files_to_push = [
-        ".nojekyll",
-        "candidate_schema.py",
-        "enrich_candidates.py",
-        "scan_nr_momo.py",
-        "scan_nifty_ipo.py",
-        "scan_ems.py",
+        "git_commit.txt",
         "order_engine.py",
-        "telegram_bot.py",
         "upstox_tablet_scanner.py",
-        "index.html",
-        "data.json",
-        "candidates_merged.json",
-        "candidates_merged.txt",
-        "candidates_90d_nr.json",
-        "candidates_90d_nr.txt",
-        "candidates_nifty_ipo.json",
-        "candidates_nifty_ipo.txt",
-        "candidates_ems.json",
-        "candidates_ems.txt",
-        "candidates_exited.json",
+        "shadow_execution_engine.py",
+        "sync_earnings_calendar.py",
+        "data/earnings_calendar.json",
+        "test_phase1_harden_v33.py",
+        "shadow_mtm_equity_curve.json",
+        "config_snapshots/config_d5168bdf.json",
+        "JARVIS_SYSTEM_ARCHITECTURE_AND_SPECIFICATION.md",
         "eod_hindsight_report.py"
     ]
 
-    commit_msg = "Deploy 3-Check Sniper Sieve, Blue Sky radar, and unified confluence candidates"
+    commit_msg = "Hardening Release v3.3.0 (Hash: d5168bdf): expanded frozen params, git commit ledger stamping, watchlist feed sentinel"
     for f in files_to_push:
         push_file(gh_cfg, f, commit_msg)
 
