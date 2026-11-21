@@ -3938,6 +3938,59 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                 except Exception as ex:
                     print(f"Notice on Earnings Pre-flight audit: {ex}")
 
+    _last_manifest_audit_date = [None]
+    def check_and_run_manifest_parity_audit(curr_now=None):
+        """
+        Pre-flight Release Manifest Parity Audit:
+        Runs at 08:45 AM IST on trading days (Monday - Friday).
+        Hashes all operational .py files against config_snapshots/release_manifest_v330.json.
+        Alerts to Topic 9 ('risk') if any file deviates or is missing.
+        """
+        if curr_now is None:
+            curr_now = get_ist_now()
+        today_str = curr_now.strftime('%Y-%m-%d')
+        if curr_now.weekday() < 5 and ((curr_now.hour == 8 and curr_now.minute >= 45) or curr_now.hour >= 9):
+            if _last_manifest_audit_date[0] != today_str:
+                _last_manifest_audit_date[0] = today_str
+                try:
+                    import hashlib
+                    from shadow_execution_engine import BASE_DIR, send_phase1_telegram_alert
+                    manifest_file = BASE_DIR / "config_snapshots" / "release_manifest_v330.json"
+                    if not manifest_file.is_file():
+                        msg = "🚨 <b>[RELEASE MANIFEST AUDIT: MISSING]</b>\n• <code>config_snapshots/release_manifest_v330.json</code> not found!\n• Cannot verify production code integrity."
+                        print(f"\n{RED}{msg}{RESET}")
+                        send_phase1_telegram_alert(msg, topic_name="risk")
+                        return
+
+                    with open(manifest_file, "r", encoding="utf-8") as mf:
+                        mdata = json.load(mf)
+                    files_dict = mdata.get("files", {})
+                    mismatches = []
+                    for rel_name, f_info in files_dict.items():
+                        target_file = BASE_DIR / rel_name
+                        if not target_file.is_file():
+                            mismatches.append(f"{rel_name} (MISSING)")
+                            continue
+                        cur_hash = hashlib.sha256(target_file.read_bytes()).hexdigest()
+                        exp_hash = f_info.get("local_sha256")
+                        if cur_hash != exp_hash:
+                            mismatches.append(f"{rel_name} (Expected: {exp_hash[:8]} | Actual: {cur_hash[:8]})")
+
+                    if mismatches:
+                        msg = (
+                            f"🚨 <b>[CRITICAL: MANIFEST PARITY DRIFT DETECTED]</b>\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"• <b>Drift Count:</b> {len(mismatches)} file(s) modified\n"
+                            f"• <b>Mismatches:</b>\n" + "\n".join([f"  • {m}" for m in mismatches]) + "\n"
+                            f"• <b>Action:</b> Launch blocked! Restore files from release tag v3.3.0-strict."
+                        )
+                        print(f"\n{RED}{msg}{RESET}")
+                        send_phase1_telegram_alert(msg, topic_name="risk")
+                    else:
+                        print(f"\n{GREEN}✅ [RELEASE MANIFEST AUDIT: OK] All {len(files_dict)} core files bit-for-bit identical with release manifest.{RESET}")
+                except Exception as ex:
+                    print(f"Notice on Manifest Parity audit: {ex}")
+
     def check_and_run_monday_launch_gate(curr_now=None):
         """
         Pre-flight Launch Gate Assertion:
@@ -4038,6 +4091,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                 check_and_run_auto_gtt_rearm(now)
                 check_and_run_day0_flatten_and_archive(now)
                 check_and_run_earnings_preflight_audit(now)
+                check_and_run_manifest_parity_audit(now)
                 check_and_run_monday_launch_gate(now)
                 check_and_run_watchlist_feed_sentinel(now)
                 check_and_run_phase1_eod_report(now)
@@ -4082,6 +4136,7 @@ def run_upstox_scanner(once=False, auto_open_web=False):
                     check_and_run_orphan_sentry(cur_loop_now)
                     check_and_run_auto_gtt_rearm(cur_loop_now)
                     check_and_run_day0_flatten_and_archive(cur_loop_now)
+                    check_and_run_manifest_parity_audit(cur_loop_now)
                     check_and_run_phase1_eod_report(cur_loop_now)
                     try:
                         from shadow_execution_engine import update_shadow_trailing_and_exits
