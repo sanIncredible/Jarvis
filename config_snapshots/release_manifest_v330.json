@@ -5,7 +5,7 @@
   "git_commit_sha": "37f6b188",
   "watchlist_hash": "eeeb00af",
   "evaluated_files_count": 20,
-  "all_matched": false,
+  "all_matched": true,
   "files": {
     "shadow_execution_engine.py": {
       "local_sha256": "1d27284ee9111cac2042919fc25a91ac101c7c669593b43701f35669d03fb36b",
@@ -64,8 +64,8 @@
     },
     "sync_github_updates.py": {
       "local_sha256": "a7e0ba949fb02a36f081a2d4c76c7ad76b723bbc035184c0b268b51bb22c2dc6",
-      "oci_sha256": "f749181abdffecba95480e302d788b39298a18167badc55dc2b99bf11b7c06f2",
-      "match": false
+      "oci_sha256": "a7e0ba949fb02a36f081a2d4c76c7ad76b723bbc035184c0b268b51bb22c2dc6",
+      "match": true
     },
     "sync_journal.py": {
       "local_sha256": "10ed4c192b289a9e8b885e09bd169d718121828eae3fa82e079da8f5084f4086",
@@ -74,8 +74,8 @@
     },
     "sync_to_cloud.py": {
       "local_sha256": "d11113abcedc776e3e23e2de3f14ec8561a39f8526bcc5adcf57f2164f055d6c",
-      "oci_sha256": "7401a2cd4dbf7d7bf923a9fff6b0ef9dd8dc57373f83032dbbc7a9217086f20e",
-      "match": false
+      "oci_sha256": "d11113abcedc776e3e23e2de3f14ec8561a39f8526bcc5adcf57f2164f055d6c",
+      "match": true
     },
     "daily_swing_detector.py": {
       "local_sha256": "d61a849d38958d68e184a87ebdf9803ea17097bfafc858ed469d275336515fff",
