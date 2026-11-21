@@ -619,7 +619,10 @@ def run_tests():
         for fn in state_files:
             b_src = backup_dir / fn
             if b_src.is_file():
-                shutil.copy2(b_src, BASE_DIR / fn)
+                try:
+                    shutil.copy2(b_src, BASE_DIR / fn)
+                except Exception:
+                    pass
         # Clean up simulated test telemetry so no test state is left behind
         test_health_f = BASE_DIR / "data" / "feed_session_health.json"
         if test_health_f.is_file():
