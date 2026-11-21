@@ -9,62 +9,62 @@
   "files": {
     "shadow_execution_engine.py": {
       "local_sha256": "1d27284ee9111cac2042919fc25a91ac101c7c669593b43701f35669d03fb36b",
-      "oci_sha256": "2f1a361e26e5e935860aeb89f5b5035cf0e711e01bb24d2039e28cb61782929d",
-      "match": false
+      "oci_sha256": "1d27284ee9111cac2042919fc25a91ac101c7c669593b43701f35669d03fb36b",
+      "match": true
     },
     "upstox_tablet_scanner.py": {
       "local_sha256": "1ed2880f0938fa57425ba0afe0589e0bdf0b97600894a732e417836cd5387039",
-      "oci_sha256": "6d0d77702fe40a3ca211b7a98423db761ec9ea0cd0b66740e75b616bdfb1a68e",
-      "match": false
+      "oci_sha256": "1ed2880f0938fa57425ba0afe0589e0bdf0b97600894a732e417836cd5387039",
+      "match": true
     },
     "telegram_bot.py": {
       "local_sha256": "578dbc9fb46a3165253846545d624bb852a11ec7d5580422cc0e39c0f356192e",
-      "oci_sha256": "02a27de94257d2a61b2c4d36da6d7f21e7b9fe98119c22b5afd05894f78397be",
-      "match": false
+      "oci_sha256": "578dbc9fb46a3165253846545d624bb852a11ec7d5580422cc0e39c0f356192e",
+      "match": true
     },
     "order_engine.py": {
       "local_sha256": "4f26e5520cca24a9cf8a4838201db44774005bf15b4058e6986e1b226883c7a1",
-      "oci_sha256": "b0a469b6983c1fd1c50815b3aeb4d9ba5e637b7c831204f7acad61878186fc22",
-      "match": false
+      "oci_sha256": "4f26e5520cca24a9cf8a4838201db44774005bf15b4058e6986e1b226883c7a1",
+      "match": true
     },
     "upstox_websocket_feed.py": {
       "local_sha256": "7497f80ad1d512d669f468332da6674636631ae6f6f972b9627ecfb74ef9f32e",
-      "oci_sha256": "NOT_ON_REMOTE",
-      "match": false
+      "oci_sha256": "7497f80ad1d512d669f468332da6674636631ae6f6f972b9627ecfb74ef9f32e",
+      "match": true
     },
     "eod_hindsight_report.py": {
       "local_sha256": "f97d7df79bef9c9228ec1f8c0130d4892f5438b1a319630363e849368305cfef",
-      "oci_sha256": "NOT_ON_REMOTE",
-      "match": false
+      "oci_sha256": "f97d7df79bef9c9228ec1f8c0130d4892f5438b1a319630363e849368305cfef",
+      "match": true
     },
     "test_phase1_harden_v33.py": {
       "local_sha256": "d49dad2e324ad48b9b0065859bc6358053604e84444c719f75433426980d778d",
-      "oci_sha256": "NOT_ON_REMOTE",
-      "match": false
+      "oci_sha256": "d49dad2e324ad48b9b0065859bc6358053604e84444c719f75433426980d778d",
+      "match": true
     },
     "token_hub.py": {
       "local_sha256": "4445341c17f08b4a7f5e216a53ea86a713197c4b51912354ec44209d37b8016a",
-      "oci_sha256": "NOT_ON_REMOTE",
-      "match": false
+      "oci_sha256": "4445341c17f08b4a7f5e216a53ea86a713197c4b51912354ec44209d37b8016a",
+      "match": true
     },
     "candidate_scanner.py": {
       "local_sha256": "ac37872e680c67b0f69d1d5d3b967f3f77727ff37875a273f51d6b093acd1967",
-      "oci_sha256": "NOT_ON_REMOTE",
-      "match": false
+      "oci_sha256": "ac37872e680c67b0f69d1d5d3b967f3f77727ff37875a273f51d6b093acd1967",
+      "match": true
     },
     "watchlist_hygiene.py": {
       "local_sha256": "6abff6f1a9390aaee1e84426ea0b44de4ba480534bd23a2f4b634d30220755ae",
-      "oci_sha256": "NOT_ON_REMOTE",
-      "match": false
+      "oci_sha256": "6abff6f1a9390aaee1e84426ea0b44de4ba480534bd23a2f4b634d30220755ae",
+      "match": true
     },
     "sync_earnings_calendar.py": {
       "local_sha256": "6f99b03798b6d8092b1357f4b3c41560dba351c9e0c6e9f80143d4e655bf5307",
-      "oci_sha256": "NOT_ON_REMOTE",
-      "match": false
+      "oci_sha256": "6f99b03798b6d8092b1357f4b3c41560dba351c9e0c6e9f80143d4e655bf5307",
+      "match": true
     },
     "sync_github_updates.py": {
       "local_sha256": "a7e0ba949fb02a36f081a2d4c76c7ad76b723bbc035184c0b268b51bb22c2dc6",
-      "oci_sha256": "NOT_ON_REMOTE",
+      "oci_sha256": "f749181abdffecba95480e302d788b39298a18167badc55dc2b99bf11b7c06f2",
       "match": false
     },
     "sync_journal.py": {
@@ -74,33 +74,33 @@
     },
     "sync_to_cloud.py": {
       "local_sha256": "d11113abcedc776e3e23e2de3f14ec8561a39f8526bcc5adcf57f2164f055d6c",
-      "oci_sha256": "NOT_ON_REMOTE",
+      "oci_sha256": "7401a2cd4dbf7d7bf923a9fff6b0ef9dd8dc57373f83032dbbc7a9217086f20e",
       "match": false
     },
     "daily_swing_detector.py": {
       "local_sha256": "d61a849d38958d68e184a87ebdf9803ea17097bfafc858ed469d275336515fff",
-      "oci_sha256": "NOT_ON_REMOTE",
-      "match": false
+      "oci_sha256": "d61a849d38958d68e184a87ebdf9803ea17097bfafc858ed469d275336515fff",
+      "match": true
     },
     "exited_stocks_manager.py": {
       "local_sha256": "7ec946e5ede6846d5fe0490e1f31cca94340f26ce69c4aee4f2edbe9b7fb1166",
-      "oci_sha256": "NOT_ON_REMOTE",
-      "match": false
+      "oci_sha256": "7ec946e5ede6846d5fe0490e1f31cca94340f26ce69c4aee4f2edbe9b7fb1166",
+      "match": true
     },
     "intraday_breadth_monitor.py": {
       "local_sha256": "960f3288563a32ff05dca4f223f3f08851c1e66d166c9516c5f7989c65deb14d",
-      "oci_sha256": "NOT_ON_REMOTE",
-      "match": false
+      "oci_sha256": "960f3288563a32ff05dca4f223f3f08851c1e66d166c9516c5f7989c65deb14d",
+      "match": true
     },
     "pre_flight_check.py": {
       "local_sha256": "420e31dc9a5dffef3da34228707725f7ad7a851dfc08974c1e4b2042483b8529",
-      "oci_sha256": "NOT_ON_REMOTE",
-      "match": false
+      "oci_sha256": "420e31dc9a5dffef3da34228707725f7ad7a851dfc08974c1e4b2042483b8529",
+      "match": true
     },
     "pre_market_summary.py": {
       "local_sha256": "6499b552b6443b07b93aa25498743052b91fc7e2d73c4fd19d5e70b5bce42ade",
-      "oci_sha256": "NOT_ON_REMOTE",
-      "match": false
+      "oci_sha256": "6499b552b6443b07b93aa25498743052b91fc7e2d73c4fd19d5e70b5bce42ade",
+      "match": true
     },
     "trade_post_mortem.py": {
       "local_sha256": "46ef5918f29cd3323d82557ea7c33e004ea81723c3244ea4024f2989f99b3e85",
