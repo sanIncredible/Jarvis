@@ -1,7 +1,6 @@
 # Upstox 3m ORB Scanner Watchlist
 # Add or remove NSE stock tickers below (one per line, or space/comma separated)
 
-CEMPRO
 AARTIDRUGS
 SYNGENE
 ADANIPOWER
