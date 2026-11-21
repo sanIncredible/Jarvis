@@ -60,7 +60,8 @@ def run_tests():
         "shadow_portfolio.json",
         "shadow_trade_log.json",
         "shadow_mtm_equity_curve.json",
-        "shadow_rejected_signals.json"
+        "shadow_rejected_signals.json",
+        "watchlist.txt"
     ]
     for fn in state_files:
         src = BASE_DIR / fn
@@ -70,7 +71,7 @@ def run_tests():
     try:
         # TEST 1: Config Hash Verification
         print("\n--- TEST 1: Config Hash Verification ---")
-        expected_hash = "15b6ea60"
+        expected_hash = "1813c808"
         report_test(
             "Config Hash Parity",
             see.CONFIG_HASH == expected_hash,
@@ -417,6 +418,11 @@ def run_tests():
             status_d0 == "DAY0_PRE_EVALUATION",
             f"(Status: {status_d0}, Reason: {reason_d0})"
         )
+        # Prepare healthy telemetry for Day 1
+        health_file_d1 = BASE_DIR / "data" / "feed_session_health.json"
+        health_file_d1.parent.mkdir(parents=True, exist_ok=True)
+        with open(health_file_d1, "w", encoding="utf-8") as hf:
+            json.dump({"date": "2026-11-23", "downtime_minutes": 0.0, "status": "VALID"}, hf)
         dt_day1 = datetime(2026, 11, 23, 15, 35, tzinfo=see.IST)
         status_d1, reason_d1, _ = see.determine_automated_session_status(dt_day1)
         report_test(
@@ -443,7 +449,7 @@ def run_tests():
             f"(Unique valid dates count: {len(unique_valid_dates)}, Dates: {unique_valid_dates})"
         )
 
-        # TEST 10: Automated Feed Downtime Tracker & Status Determination
+        # TEST 10: Automated Feed Downtime Tracker & Missed-Session Protocol
         print("\n--- TEST 10: Automated Feed Downtime Tracker & Missed-Session Protocol ---")
         health_file = BASE_DIR / "data" / "feed_session_health.json"
         # Simulate 12 minutes of feed downtime on Nov 25 (Exceeds 10m threshold)
@@ -461,6 +467,23 @@ def run_tests():
             status_down == "NO_DATA_EXCLUDED",
             f"(Status: {status_down}, Reason: {reason_down})"
         )
+
+        # Simulate 7.0 minutes of feed downtime (Degraded: 5m to 10m -> PARTIAL)
+        health_payload_partial = {
+            "date": "2026-11-25",
+            "downtime_minutes": 7.0,
+            "downtime_pct": 15.6,
+            "status": "PARTIAL"
+        }
+        with open(health_file, "w", encoding="utf-8") as hf:
+            json.dump(health_payload_partial, hf)
+        status_part, reason_part, _ = see.determine_automated_session_status(datetime(2026, 11, 25, 15, 35, tzinfo=see.IST))
+        report_test(
+            "Automated Feed Degradation Protocol: 5-10m downtime -> PARTIAL",
+            status_part == "PARTIAL",
+            f"(Status: {status_part}, Reason: {reason_part})"
+        )
+
         # Restore normal health
         health_payload_ok = {
             "date": "2026-11-25",
@@ -477,6 +500,16 @@ def run_tests():
             f"(Status: {status_ok})"
         )
 
+        # Simulate missing health file during evaluation -> FAIL-CLOSED to NO_DATA_EXCLUDED
+        if health_file.is_file():
+            health_file.unlink()
+        status_missing, reason_missing, _ = see.determine_automated_session_status(datetime(2026, 11, 25, 15, 35, tzinfo=see.IST))
+        report_test(
+            "Missing Feed Health File: FAIL-CLOSED -> NO_DATA_EXCLUDED",
+            status_missing == "NO_DATA_EXCLUDED",
+            f"(Status: {status_missing}, Reason: {reason_missing})"
+        )
+
         # TEST 11: Watchlist Hash Stamping Integrity
         print("\n--- TEST 11: Watchlist Hash Stamping Integrity ---")
         w_hash = see.get_watchlist_hash()
@@ -490,6 +523,67 @@ def run_tests():
             "session_target_days" in see.FROZEN_PARAMS and "entry_window_start" in see.FROZEN_PARAMS,
             f"(Target Days: {see.FROZEN_PARAMS.get('session_target_days')}, Window: {see.FROZEN_PARAMS.get('entry_window_start')}-{see.FROZEN_PARAMS.get('entry_window_end')})"
         )
+        report_test(
+            "FROZEN_PARAMS PARTIAL Policy: partial_counts_toward_target is False",
+            see.FROZEN_PARAMS.get("partial_counts_toward_target") is False,
+            f"(partial_counts_toward_target: {see.FROZEN_PARAMS.get('partial_counts_toward_target')})"
+        )
+
+        # TEST 12: Downtime Tracker Restart Persistence
+        print("\n--- TEST 12: Downtime Tracker Restart Persistence ---")
+        import upstox_tablet_scanner as uts
+        persist_payload = {
+            "date": "2026-11-25",
+            "downtime_seconds": 360.0,
+            "unhealthy_intervals": 6,
+            "status": "PARTIAL"
+        }
+        with open(health_file, "w", encoding="utf-8") as hf:
+            json.dump(persist_payload, hf)
+        # Force tracker to re-initialize from disk simulating a process crash & restart
+        uts._FEED_DOWNTIME_TRACKER["date"] = None
+        uts._FEED_DOWNTIME_TRACKER["downtime_seconds"] = 0.0
+        # Mock get_ist_now to return Nov 25
+        orig_uts_now = uts.get_ist_now
+        uts.get_ist_now = lambda: datetime(2026, 11, 25, 9, 45, tzinfo=see.IST)
+        try:
+            uts.init_feed_downtime_tracker()
+            restored_sec = uts._FEED_DOWNTIME_TRACKER.get("downtime_seconds", 0.0)
+            restored_int = uts._FEED_DOWNTIME_TRACKER.get("unhealthy_intervals", 0)
+            report_test(
+                "Restart Persistence: Downtime seconds restored from disk",
+                restored_sec == 360.0 and restored_int == 6,
+                f"(Restored: {restored_sec}s, intervals={restored_int})"
+            )
+        finally:
+            uts.get_ist_now = orig_uts_now
+
+        # TEST 13: Watchlist Lock Enforcement During Evaluation
+        print("\n--- TEST 13: Watchlist Lock Enforcement During Evaluation ---")
+        import telegram_bot as tb
+        orig_tb_now = tb.get_ist_now
+        tb.get_ist_now = lambda: datetime(2026, 11, 25, 10, 0, tzinfo=see.IST)
+        try:
+            frozen, hash_val = tb.is_phase1_watchlist_frozen()
+            report_test(
+                "Watchlist Lock State: Active on Nov 25",
+                frozen is True and hash_val == "eeeb00af",
+                f"(Frozen: {frozen}, Hash: {hash_val})"
+            )
+            add_resp = tb.handle_add_command("TATAMOTORS")
+            report_test(
+                "Watchlist /add Command Blocked During Evaluation",
+                "WATCHLIST FROZEN FOR PHASE 1 EVALUATION" in add_resp,
+                "(Add command rejected with frozen notice)"
+            )
+            rm_resp = tb.handle_remove_command("CEMPRO")
+            report_test(
+                "Watchlist /remove Command Blocked During Evaluation",
+                "WATCHLIST FROZEN FOR PHASE 1 EVALUATION" in rm_resp,
+                "(Remove command rejected with frozen notice)"
+            )
+        finally:
+            tb.get_ist_now = orig_tb_now
 
     finally:
         # Restore backups
