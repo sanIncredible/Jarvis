@@ -93,17 +93,11 @@ CONFIG_SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 EVALUATION_BASE_CAPITAL = 500000.0  # ₹5,00,000 maximum gross exposure base (5 slots x ₹100,000, 100% CNC Delivery, 0 Leverage)
 MAX_SYSTEM_SLOTS = 5
 
+RELEASE_GIT_COMMIT_SHA = "8cc33380"
+
 def get_git_commit_sha():
-    """Returns the current Git commit SHA (short 8-char), cached or from file."""
-    commit_file = BASE_DIR / "git_commit.txt"
-    if commit_file.is_file():
-        try:
-            val = commit_file.read_text(encoding="utf-8").strip()
-            if val:
-                return val[:8]
-        except Exception:
-            pass
-    return "bf105f23"
+    """Returns the immutable Phase 1 Release Git commit SHA (short 8-char), decoupled from moving HEAD."""
+    return RELEASE_GIT_COMMIT_SHA
 
 def get_watchlist_hash():
     """Returns SHA-256 (first 8 hex chars) of sorted normalized watchlist.txt symbols."""
@@ -168,9 +162,11 @@ FROZEN_PARAMS = {
     },
     "tod_knots": [[0, 0.01], [15, 0.10], [60, 0.25], [285, 0.65], [375, 1.00]],
     "session_target_days": 30,
+    "max_calendar_sessions_cap": 40,
     "entry_window_start": "09:30:00",
     "entry_window_end": "10:15:00",
     "max_feed_downtime_minutes": 10.0,
+    "feed_stall_timeout_seconds": 45.0,
     "session_status_valid": "VALID",
     "session_status_excluded": "NO_DATA_EXCLUDED",
     "session_status_partial": "PARTIAL",
