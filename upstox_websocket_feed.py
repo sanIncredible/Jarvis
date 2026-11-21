@@ -353,11 +353,20 @@ class UpstoxWebSocketFeed:
             return dict(self.latest_quotes)
 
     def is_healthy(self) -> bool:
-        """Returns True if WebSocket is connected and has received ticks within 15s or just connected."""
+        """
+        Returns True if WebSocket is connected and has received any feed message within timeout or just connected.
+        Note: Feed-level silence applies across all subscribed watchlist instruments simultaneously.
+        """
         if not self.is_connected:
             return False
         now = time.time()
-        return (now - self._last_tick_time < 15.0) or (now - self._last_connected_time < 15.0)
+        timeout = 45.0
+        try:
+            from shadow_execution_engine import FROZEN_PARAMS
+            timeout = float(FROZEN_PARAMS.get("feed_stall_timeout_seconds", 45.0))
+        except Exception:
+            pass
+        return (now - self._last_tick_time < timeout) or (now - self._last_connected_time < timeout)
 
 
 if __name__ == "__main__":
