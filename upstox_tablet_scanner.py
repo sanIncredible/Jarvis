@@ -284,6 +284,32 @@ _FEED_DOWNTIME_TRACKER = {
     "last_state": "HEALTHY"
 }
 
+def init_feed_downtime_tracker():
+    """
+    Restores feed downtime state from disk if today's file exists, preventing reset on scanner crash/restart.
+    """
+    now = get_ist_now()
+    today_str = now.strftime("%Y-%m-%d")
+    _FEED_DOWNTIME_TRACKER["date"] = today_str
+    _FEED_DOWNTIME_TRACKER["last_check_time"] = time.time()
+    if os.path.isfile(FEED_SESSION_HEALTH_FILE):
+        try:
+            with open(FEED_SESSION_HEALTH_FILE, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+            if saved.get("date") == today_str:
+                _FEED_DOWNTIME_TRACKER["downtime_seconds"] = float(saved.get("downtime_seconds", 0.0))
+                _FEED_DOWNTIME_TRACKER["unhealthy_intervals"] = int(saved.get("unhealthy_intervals", 0))
+                _FEED_DOWNTIME_TRACKER["last_state"] = saved.get("status", "HEALTHY")
+                return
+        except Exception:
+            pass
+    _FEED_DOWNTIME_TRACKER["downtime_seconds"] = 0.0
+    _FEED_DOWNTIME_TRACKER["unhealthy_intervals"] = 0
+    _FEED_DOWNTIME_TRACKER["last_state"] = "HEALTHY"
+
+init_feed_downtime_tracker()
+
+
 def update_feed_downtime_tracker(is_healthy: bool):
     """
     Accumulates feed downtime during the 09:30 - 10:15 AM IST momentum entry window.
@@ -296,11 +322,7 @@ def update_feed_downtime_tracker(is_healthy: bool):
     today_str = now.strftime("%Y-%m-%d")
 
     if _FEED_DOWNTIME_TRACKER["date"] != today_str:
-        _FEED_DOWNTIME_TRACKER["date"] = today_str
-        _FEED_DOWNTIME_TRACKER["downtime_seconds"] = 0.0
-        _FEED_DOWNTIME_TRACKER["unhealthy_intervals"] = 0
-        _FEED_DOWNTIME_TRACKER["last_check_time"] = time.time()
-        _FEED_DOWNTIME_TRACKER["last_state"] = "HEALTHY"
+        init_feed_downtime_tracker()
 
     if not ("09:30:00" <= t_str <= "10:15:00"):
         _FEED_DOWNTIME_TRACKER["last_check_time"] = time.time()
