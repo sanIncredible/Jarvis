@@ -93,11 +93,20 @@ CONFIG_SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 EVALUATION_BASE_CAPITAL = 500000.0  # ₹5,00,000 maximum gross exposure base (5 slots x ₹100,000, 100% CNC Delivery, 0 Leverage)
 MAX_SYSTEM_SLOTS = 5
 
-RELEASE_GIT_COMMIT_SHA = "8cc33380"
+def get_manifest_hash():
+    """Returns SHA-256 (first 8 hex chars) of config_snapshots/release_manifest_v330.json identifying exact file set."""
+    m_file = BASE_DIR / "config_snapshots" / "release_manifest_v330.json"
+    if m_file.is_file():
+        try:
+            return hashlib.sha256(m_file.read_bytes()).hexdigest()[:8]
+        except Exception:
+            pass
+    return "00000000"
+
 
 def get_git_commit_sha():
-    """Returns the immutable Phase 1 Release Git commit SHA (short 8-char), decoupled from moving HEAD."""
-    return RELEASE_GIT_COMMIT_SHA
+    """Returns the immutable release manifest hash identifying the exact frozen codebase."""
+    return get_manifest_hash()
 
 def get_watchlist_hash():
     """Returns SHA-256 (first 8 hex chars) of sorted normalized watchlist.txt symbols."""
@@ -944,6 +953,7 @@ def evaluate_and_record_shadow_entry(symbol, quote_data, trigger_price=None, day
         "symbol": sym,
         "config_version": CONFIG_VERSION,
         "config_hash": CONFIG_HASH,
+        "manifest_hash": get_manifest_hash(),
         "git_commit": get_git_commit_sha(),
         "watchlist_hash": get_watchlist_hash(),
         "entry_price": fill_price,
@@ -1394,6 +1404,7 @@ def update_shadow_trailing_and_exits(quotes_dict=None):
                 "symbol": sym,
                 "config_version": CONFIG_VERSION,
                 "config_hash": CONFIG_HASH,
+                "manifest_hash": pos.get("manifest_hash") or get_manifest_hash(),
                 "git_commit": pos.get("git_commit") or get_git_commit_sha(),
                 "watchlist_hash": pos.get("watchlist_hash") or get_watchlist_hash(),
                 "entry_date": entry_date,
@@ -1930,6 +1941,8 @@ def generate_and_send_phase1_eod_report(notify=True, session_status=None, status
         "date": today_str,
         "day_num": day_num,
         "status": snapshot_status,
+        "config_hash": CONFIG_HASH,
+        "manifest_hash": get_manifest_hash(),
         "watchlist_hash": get_watchlist_hash(),
         "open_count": len(portfolio),
         "unrealized_r": unrealized_r,
