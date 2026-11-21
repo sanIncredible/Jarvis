@@ -591,15 +591,7 @@ def update_broker_token(broker_name, token):
 # Command Handlers
 # ---------------------------------------------------------
 def is_phase1_watchlist_frozen(dt=None):
-    """Returns (True, hash) if Phase 1 30-session evaluation is active, locking watchlist modifications."""
-    try:
-        from shadow_execution_engine import START_DATE_STR, get_watchlist_hash
-        now = dt if dt is not None else get_ist_now()
-        today_str = now.strftime("%Y-%m-%d")
-        if today_str >= START_DATE_STR:
-            return True, get_watchlist_hash()
-    except Exception:
-        pass
+    """User has full dynamic control over watchlist during evaluation."""
     return False, ""
 
 
