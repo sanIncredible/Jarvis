@@ -590,8 +590,30 @@ def update_broker_token(broker_name, token):
 # ---------------------------------------------------------
 # Command Handlers
 # ---------------------------------------------------------
+def is_phase1_watchlist_frozen(dt=None):
+    """Returns (True, hash) if Phase 1 30-session evaluation is active, locking watchlist modifications."""
+    try:
+        from shadow_execution_engine import START_DATE_STR, get_watchlist_hash
+        now = dt if dt is not None else get_ist_now()
+        today_str = now.strftime("%Y-%m-%d")
+        if today_str >= START_DATE_STR:
+            return True, get_watchlist_hash()
+    except Exception:
+        pass
+    return False, ""
+
+
 def handle_add_command(args_text):
     """Handles /add <SYMBOL...>"""
+    is_frozen, wl_hash = is_phase1_watchlist_frozen()
+    if is_frozen:
+        return (
+            f"🔒 <b>WATCHLIST FROZEN FOR PHASE 1 EVALUATION</b>\n\n"
+            f"Modifications via <code>/add</code> are strictly locked during the 30-session evaluation to preserve statistical baseline integrity.\n"
+            f"• <b>Watchlist Hash:</b> <code>{wl_hash}</code>\n"
+            f"• <b>Active Symbols:</b> {len(read_watchlist_symbols())} stocks (Read-Only)"
+        )
+
     if not args_text.strip():
         return (
             "⚠️ <b>Usage:</b> <code>/add &lt;SYMBOL&gt;</code>\n"
@@ -658,6 +680,15 @@ def handle_add_command(args_text):
 
 def handle_remove_command(args_text):
     """Handles /remove or /del <SYMBOL...>"""
+    is_frozen, wl_hash = is_phase1_watchlist_frozen()
+    if is_frozen:
+        return (
+            f"🔒 <b>WATCHLIST FROZEN FOR PHASE 1 EVALUATION</b>\n\n"
+            f"Modifications via <code>/remove</code> are strictly locked during the 30-session evaluation to preserve statistical baseline integrity.\n"
+            f"• <b>Watchlist Hash:</b> <code>{wl_hash}</code>\n"
+            f"• <b>Active Symbols:</b> {len(read_watchlist_symbols())} stocks (Read-Only)"
+        )
+
     if not args_text.strip():
         return (
             "⚠️ <b>Usage:</b> <code>/remove &lt;SYMBOL&gt;</code>\n"
@@ -2475,6 +2506,11 @@ def handle_callback_query(cq):
         edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
 
     elif cq_data in ("cand_add_top5", "cand_add_top5_qm"):
+        is_frozen, wl_hash = is_phase1_watchlist_frozen()
+        if is_frozen:
+            answer_callback_query(cq_id, f"🔒 Watchlist locked for Phase 1 Evaluation (Hash: {wl_hash})", show_alert=True)
+            return
+
         cand_merged_file = SCRIPT_DIR / "candidates_merged.json"
         cand_file = SCRIPT_DIR / "candidates.json"
         top5_syms = []
@@ -2536,6 +2572,11 @@ def handle_callback_query(cq):
                 answer_callback_query(cq_id, "All top 5 candidates are already in your watchlist!", show_alert=True)
 
     elif cq_data.startswith("cand_add:"):
+        is_frozen, wl_hash = is_phase1_watchlist_frozen()
+        if is_frozen:
+            answer_callback_query(cq_id, f"🔒 Watchlist locked for Phase 1 Evaluation (Hash: {wl_hash})", show_alert=True)
+            return
+
         sym = cq_data.split(":")[1].upper()
         curr_syms = read_watchlist_symbols()
         if sym in curr_syms:
@@ -2568,6 +2609,11 @@ def handle_callback_query(cq):
         edit_telegram_msg(chat_id, msg_id, text, reply_markup=markup)
 
     elif cq_data.startswith("wl_rm:"):
+        is_frozen, wl_hash = is_phase1_watchlist_frozen()
+        if is_frozen:
+            answer_callback_query(cq_id, f"🔒 Watchlist locked for Phase 1 Evaluation (Hash: {wl_hash})", show_alert=True)
+            return
+
         sym = cq_data.split(":")[1].upper()
         curr_syms = read_watchlist_symbols()
         if sym not in curr_syms:
