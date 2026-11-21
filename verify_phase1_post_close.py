@@ -17,7 +17,7 @@ from datetime import datetime, timezone, timedelta
 BASE_DIR = Path(__file__).resolve().parent
 IST = timezone(timedelta(hours=5, minutes=30))
 
-EXPECTED_CONFIG_HASH = "1813c808"
+EXPECTED_CONFIG_HASH = "8229eb94"
 EXPECTED_WATCHLIST_HASH = "eeeb00af"
 
 def run_post_close_audit(check_date="2026-11-23"):
