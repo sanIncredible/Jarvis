@@ -188,7 +188,6 @@ class UpstoxWebSocketFeed:
     def _on_ws_message(self, message: Dict[str, Any], *args):
         now_t = time.time()
         self.last_feed_msg_epoch = now_t
-        self._last_tick_time = now_t
         feeds = message.get("feeds", {}) if isinstance(message, dict) else {}
         for key, val in feeds.items():
             sym = self.key_to_symbol.get(key)
@@ -201,7 +200,9 @@ class UpstoxWebSocketFeed:
                 continue
 
             tick = self._extract_tick_data(key, val)
-            if tick and tick["ltp"] > 0:
+            if tick and tick.get("ltp", 0.0) > 0:
+                # Strictly update _last_tick_time ONLY when genuine market data arrives (not on ping/heartbeat/empty control packets)
+                self._last_tick_time = now_t
                 exch_t = float(tick.get("exchange_tick_time") or 0.0)
                 if exch_t > 0:
                     self.last_feed_exchange_epoch = max(self.last_feed_exchange_epoch, exch_t)
