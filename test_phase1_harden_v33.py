@@ -60,13 +60,15 @@ def run_tests():
         "shadow_portfolio.json",
         "shadow_trade_log.json",
         "shadow_mtm_equity_curve.json",
-        "shadow_rejected_signals.json",
-        "watchlist.txt"
+        "shadow_rejected_signals.json"
     ]
     for fn in state_files:
         src = BASE_DIR / fn
         if src.is_file():
-            shutil.copy2(src, backup_dir / fn)
+            try:
+                shutil.copy2(src, backup_dir / fn)
+            except Exception:
+                pass
 
     try:
         # TEST 1: Config Hash Verification
