@@ -36,8 +36,8 @@
       "match": true
     },
     "test_phase1_harden_v33.py": {
-      "local_sha256": "747d2a811fc9ea055ed553b4f00e4ceaecb6c15a2be0c34fc791bc27aa06f8ef",
-      "oci_sha256": "747d2a811fc9ea055ed553b4f00e4ceaecb6c15a2be0c34fc791bc27aa06f8ef",
+      "local_sha256": "459ea70fc4473d08697dab3fafbb1e7ec30e2551df6ba8852d8ba0d2bd6ac733",
+      "oci_sha256": "459ea70fc4473d08697dab3fafbb1e7ec30e2551df6ba8852d8ba0d2bd6ac733",
       "match": true
     },
     "token_hub.py": {
