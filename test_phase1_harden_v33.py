@@ -84,9 +84,9 @@ def run_tests():
             f"({snapshot_file.name} present)"
         )
         report_test(
-            "Git Commit SHA Stamped",
-            bool(see.get_git_commit_sha() and len(see.get_git_commit_sha()) == 8),
-            f"(Git SHA: {see.get_git_commit_sha()})"
+            "Release Manifest Hash Stamped",
+            bool(see.get_manifest_hash() and len(see.get_manifest_hash()) == 8),
+            f"(Manifest Hash: {see.get_manifest_hash()})"
         )
 
         # TEST 2: Monday 09:00 Launch Gate vs In-Flight Multi-Trade Execution
@@ -620,6 +620,13 @@ def run_tests():
             b_src = backup_dir / fn
             if b_src.is_file():
                 shutil.copy2(b_src, BASE_DIR / fn)
+        # Clean up simulated test telemetry so no test state is left behind
+        test_health_f = BASE_DIR / "data" / "feed_session_health.json"
+        if test_health_f.is_file():
+            try:
+                test_health_f.unlink()
+            except Exception:
+                pass
 
     print("\n" + "=" * 70)
     print(f"📊 TEST SUMMARY: {PASSED_COUNT} PASSED | {FAILED_COUNT} FAILED")
