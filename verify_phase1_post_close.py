@@ -125,21 +125,23 @@ def run_post_close_audit(check_date="2026-11-23"):
 
     # Check portfolio
     try:
+        from shadow_execution_engine import get_manifest_hash
+        exp_mh = get_manifest_hash()
         with open(port_file, "r", encoding="utf-8") as f:
             port = json.load(f)
         for sym, pos in port.items():
             ch = pos.get("config_hash")
             wh = pos.get("watchlist_hash")
-            gc = pos.get("git_commit")
+            mh = pos.get("manifest_hash") or pos.get("git_commit")
             if ch != EXPECTED_CONFIG_HASH:
                 c4_ok = False
                 c4_notes.append(f"Port {sym}: config_hash {ch} != {EXPECTED_CONFIG_HASH}")
             if wh != EXPECTED_WATCHLIST_HASH:
                 c4_ok = False
                 c4_notes.append(f"Port {sym}: watchlist_hash {wh} != {EXPECTED_WATCHLIST_HASH}")
-            if not gc:
+            if mh != exp_mh:
                 c4_ok = False
-                c4_notes.append(f"Port {sym}: missing git_commit")
+                c4_notes.append(f"Port {sym}: manifest_hash {mh} != {exp_mh}")
     except Exception as e:
         c4_notes.append(f"Error reading portfolio: {e}")
 
@@ -152,21 +154,21 @@ def run_post_close_audit(check_date="2026-11-23"):
             sym = t.get("symbol")
             ch = t.get("config_hash")
             wh = t.get("watchlist_hash")
-            gc = t.get("git_commit")
+            mh = t.get("manifest_hash") or t.get("git_commit")
             if ch != EXPECTED_CONFIG_HASH:
                 c4_ok = False
                 c4_notes.append(f"Trade {sym}: config_hash {ch} != {EXPECTED_CONFIG_HASH}")
             if wh != EXPECTED_WATCHLIST_HASH:
                 c4_ok = False
                 c4_notes.append(f"Trade {sym}: watchlist_hash {wh} != {EXPECTED_WATCHLIST_HASH}")
-            if not gc:
+            if mh != exp_mh:
                 c4_ok = False
-                c4_notes.append(f"Trade {sym}: missing git_commit")
+                c4_notes.append(f"Trade {sym}: manifest_hash {mh} != {exp_mh}")
     except Exception as e:
         c4_notes.append(f"Error reading trade log: {e}")
 
     if not c4_notes:
-        c4_msg = f"PASS: All records stamped with config_hash={EXPECTED_CONFIG_HASH}, watchlist_hash={EXPECTED_WATCHLIST_HASH}, git_commit"
+        c4_msg = f"PASS: All records stamped with config_hash={EXPECTED_CONFIG_HASH}, watchlist_hash={EXPECTED_WATCHLIST_HASH}, manifest_hash={exp_mh}"
     else:
         c4_msg = "; ".join(c4_notes)
 
