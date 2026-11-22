@@ -1,7 +1,5 @@
-# Upstox 3m ORB Scanner Watchlist Snapshot (Phase 1 Baseline)
-# Watchlist Hash: eeeb00af
-# Evaluation Start Date: 2026-11-23
-# Stocks (14): 63MOONS, AARTIDRUGS, AARTIPHARM, ADANIPOWER, BELRISE, CEMPRO, ELEVATE, GHCLTEXTIL, GODREJIND, MANKIND, MOLBIO, SUDEEPPHRM, SUNTV, SYNGENE
+# Upstox 3m ORB Scanner Watchlist
+# Add or remove NSE stock tickers below (one per line, or space/comma separated)
 
 CEMPRO
 AARTIDRUGS
@@ -17,3 +15,4 @@ GODREJIND
 BELRISE
 MOLBIO
 AARTIPHARM
+GLASSWALL
