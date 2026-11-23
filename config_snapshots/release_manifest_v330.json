@@ -87,8 +87,8 @@
       "match": true
     },
     "trade_post_mortem.py": {
-      "local_sha256": "cb45e6ae9c329bafcc80fad24381950081778d7985d595ffb14ef38b34ddd9b7",
-      "oci_sha256": "cb45e6ae9c329bafcc80fad24381950081778d7985d595ffb14ef38b34ddd9b7",
+      "local_sha256": "fc02b4eafee1c5ebc0bccad3ecc35a1804ce0637e0ea76c4829b9c4d44c09f03",
+      "oci_sha256": "fc02b4eafee1c5ebc0bccad3ecc35a1804ce0637e0ea76c4829b9c4d44c09f03",
       "match": true
     },
     "upstox_tablet_scanner.py": {
