@@ -7,8 +7,8 @@
   "all_matched": true,
   "files": {
     "candidate_scanner.py": {
-      "local_sha256": "ac37872e680c67b0f69d1d5d3b967f3f77727ff37875a273f51d6b093acd1967",
-      "oci_sha256": "ac37872e680c67b0f69d1d5d3b967f3f77727ff37875a273f51d6b093acd1967",
+      "local_sha256": "0f3001262e7c277c087a9a17684770c48699477bd3fec74673421ab23e38bc51",
+      "oci_sha256": "0f3001262e7c277c087a9a17684770c48699477bd3fec74673421ab23e38bc51",
       "match": true
     },
     "daily_swing_detector.py": {
