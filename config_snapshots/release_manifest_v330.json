@@ -1,7 +1,7 @@
 {
   "release_tag": "v3.3.0-strict",
   "config_version": "v3.3.0-strict",
-  "config_hash": "8229eb94",
+  "config_hash": "82a0168d",
   "watchlist_hash": "3472a7cf",
   "evaluated_files_count": 21,
   "all_matched": true,
@@ -32,8 +32,8 @@
       "match": true
     },
     "order_engine.py": {
-      "local_sha256": "27800db06e462f34d61207195393edc2c42323f61e0e0c51f34a09aaedc24bb7",
-      "oci_sha256": "27800db06e462f34d61207195393edc2c42323f61e0e0c51f34a09aaedc24bb7",
+      "local_sha256": "06fac351d59fe991890b6e5063a7e155e05dbae8ea94b67d18c3b4f950b15d41",
+      "oci_sha256": "06fac351d59fe991890b6e5063a7e155e05dbae8ea94b67d18c3b4f950b15d41",
       "match": true
     },
     "pre_flight_check.py": {
@@ -47,8 +47,8 @@
       "match": true
     },
     "shadow_execution_engine.py": {
-      "local_sha256": "0e5b76bc4f7daefb6cfe65347fa000e25c6353f3e8de5564b80ff7f76f2b7dff",
-      "oci_sha256": "0e5b76bc4f7daefb6cfe65347fa000e25c6353f3e8de5564b80ff7f76f2b7dff",
+      "local_sha256": "9bcd0ec969a662da079710eb2b9e9b10d0726829e3fac2331754a7e25e413391",
+      "oci_sha256": "9bcd0ec969a662da079710eb2b9e9b10d0726829e3fac2331754a7e25e413391",
       "match": true
     },
     "sync_earnings_calendar.py": {
@@ -72,13 +72,13 @@
       "match": true
     },
     "telegram_bot.py": {
-      "local_sha256": "f4eea05424e944419ed2c36ebbde11cc92eca3446f6b241e74c26dcfe7336b8d",
-      "oci_sha256": "f4eea05424e944419ed2c36ebbde11cc92eca3446f6b241e74c26dcfe7336b8d",
+      "local_sha256": "ed21c7be01aae7be4c631fb1dbd50c2beeaa40fb71fc982533a2f89dc8506970",
+      "oci_sha256": "ed21c7be01aae7be4c631fb1dbd50c2beeaa40fb71fc982533a2f89dc8506970",
       "match": true
     },
     "test_phase1_harden_v33.py": {
-      "local_sha256": "72f072d2b67ddd785d7687df341b49e45113728f61bb53eda2dc30201f14b9e4",
-      "oci_sha256": "72f072d2b67ddd785d7687df341b49e45113728f61bb53eda2dc30201f14b9e4",
+      "local_sha256": "d8a6072521762af0e0e6519a8b9e0755fc717b7229a611dff0f5c896fdd85b82",
+      "oci_sha256": "d8a6072521762af0e0e6519a8b9e0755fc717b7229a611dff0f5c896fdd85b82",
       "match": true
     },
     "token_hub.py": {
@@ -92,8 +92,8 @@
       "match": true
     },
     "upstox_tablet_scanner.py": {
-      "local_sha256": "c3f6fb163b3be5dcb2c09f303b8e5a0a1c1660d607c2853c98b6a824417370b2",
-      "oci_sha256": "c3f6fb163b3be5dcb2c09f303b8e5a0a1c1660d607c2853c98b6a824417370b2",
+      "local_sha256": "29d52219a6631f1d8bb15c4e863061ae6a8d47b5192bba7ed0873c2389a01ef6",
+      "oci_sha256": "29d52219a6631f1d8bb15c4e863061ae6a8d47b5192bba7ed0873c2389a01ef6",
       "match": true
     },
     "upstox_websocket_feed.py": {
