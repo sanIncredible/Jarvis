@@ -32,8 +32,8 @@
       "match": true
     },
     "order_engine.py": {
-      "local_sha256": "84ee4b7d1adece7741f4315a15a5364b7470a055db6629514b94a1466957634b",
-      "oci_sha256": "84ee4b7d1adece7741f4315a15a5364b7470a055db6629514b94a1466957634b",
+      "local_sha256": "8dc844d2e814620f08105e82cf658b6d9f8436d941edf2ff1668be49e34b0098",
+      "oci_sha256": "8dc844d2e814620f08105e82cf658b6d9f8436d941edf2ff1668be49e34b0098",
       "match": true
     },
     "pre_flight_check.py": {
@@ -72,8 +72,8 @@
       "match": true
     },
     "telegram_bot.py": {
-      "local_sha256": "24664fbbe49ea870404411a4374017562d2bc7187616af9e73d5bc4440f36d37",
-      "oci_sha256": "24664fbbe49ea870404411a4374017562d2bc7187616af9e73d5bc4440f36d37",
+      "local_sha256": "9763cc6082767a918ebb467791e73d7b157e643828fa1898aaf118ac483f5b5c",
+      "oci_sha256": "9763cc6082767a918ebb467791e73d7b157e643828fa1898aaf118ac483f5b5c",
       "match": true
     },
     "test_phase1_harden_v33.py": {
