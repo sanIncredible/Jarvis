@@ -4,55 +4,51 @@
   "config_hash": "8229eb94",
   "watchlist_hash": "eeeb00af",
   "evaluated_files_count": 21,
+  "all_matched": true,
   "files": {
-    "shadow_execution_engine.py": {
-      "local_sha256": "34046d8c624393d30883ab3289d82f2e9d9c51450c5cde6696769b00d1c36cf2",
-      "oci_sha256": "34046d8c624393d30883ab3289d82f2e9d9c51450c5cde6696769b00d1c36cf2",
-      "match": true
-    },
-    "upstox_tablet_scanner.py": {
-      "local_sha256": "b5e8233e7b43e94e9fb0a0aa7ad984f2f62ea3bd560073641d7aac952854ac24",
-      "oci_sha256": "b5e8233e7b43e94e9fb0a0aa7ad984f2f62ea3bd560073641d7aac952854ac24",
-      "match": true
-    },
-    "telegram_bot.py": {
-      "local_sha256": "f79483b2f172f50b69851c3eccc49fdb18c60035e83e30a97c25f704caffa708",
-      "oci_sha256": "f79483b2f172f50b69851c3eccc49fdb18c60035e83e30a97c25f704caffa708",
-      "match": true
-    },
-    "order_engine.py": {
-      "local_sha256": "4f26e5520cca24a9cf8a4838201db44774005bf15b4058e6986e1b226883c7a1",
-      "oci_sha256": "4f26e5520cca24a9cf8a4838201db44774005bf15b4058e6986e1b226883c7a1",
-      "match": true
-    },
-    "upstox_websocket_feed.py": {
-      "local_sha256": "bf6c7a40d93998f550186035a9069a95c163b75accc609c207983e445a3c826e",
-      "oci_sha256": "bf6c7a40d93998f550186035a9069a95c163b75accc609c207983e445a3c826e",
-      "match": true
-    },
-    "eod_hindsight_report.py": {
-      "local_sha256": "f97d7df79bef9c9228ec1f8c0130d4892f5438b1a319630363e849368305cfef",
-      "oci_sha256": "f97d7df79bef9c9228ec1f8c0130d4892f5438b1a319630363e849368305cfef",
-      "match": true
-    },
-    "test_phase1_harden_v33.py": {
-      "local_sha256": "eb591cbca6f28c7f845e7e7504d8bda86fcba48ad93c0572d795e23abdeb4f98",
-      "oci_sha256": "eb591cbca6f28c7f845e7e7504d8bda86fcba48ad93c0572d795e23abdeb4f98",
-      "match": true
-    },
-    "token_hub.py": {
-      "local_sha256": "4445341c17f08b4a7f5e216a53ea86a713197c4b51912354ec44209d37b8016a",
-      "oci_sha256": "4445341c17f08b4a7f5e216a53ea86a713197c4b51912354ec44209d37b8016a",
-      "match": true
-    },
     "candidate_scanner.py": {
       "local_sha256": "ac37872e680c67b0f69d1d5d3b967f3f77727ff37875a273f51d6b093acd1967",
       "oci_sha256": "ac37872e680c67b0f69d1d5d3b967f3f77727ff37875a273f51d6b093acd1967",
       "match": true
     },
-    "watchlist_hygiene.py": {
-      "local_sha256": "68d0cb7556fb3cce17db08ddd39bfc7d0937f58bb3822c70fcbc82bef696eb91",
-      "oci_sha256": "68d0cb7556fb3cce17db08ddd39bfc7d0937f58bb3822c70fcbc82bef696eb91",
+    "daily_swing_detector.py": {
+      "local_sha256": "d61a849d38958d68e184a87ebdf9803ea17097bfafc858ed469d275336515fff",
+      "oci_sha256": "d61a849d38958d68e184a87ebdf9803ea17097bfafc858ed469d275336515fff",
+      "match": true
+    },
+    "eod_hindsight_report.py": {
+      "local_sha256": "c2ad90f226ecc51d4e8c52037267184eb80e71fc643034932c1ca284ffdb6ded",
+      "oci_sha256": "c2ad90f226ecc51d4e8c52037267184eb80e71fc643034932c1ca284ffdb6ded",
+      "match": true
+    },
+    "exited_stocks_manager.py": {
+      "local_sha256": "7ec946e5ede6846d5fe0490e1f31cca94340f26ce69c4aee4f2edbe9b7fb1166",
+      "oci_sha256": "7ec946e5ede6846d5fe0490e1f31cca94340f26ce69c4aee4f2edbe9b7fb1166",
+      "match": true
+    },
+    "intraday_breadth_monitor.py": {
+      "local_sha256": "960f3288563a32ff05dca4f223f3f08851c1e66d166c9516c5f7989c65deb14d",
+      "oci_sha256": "960f3288563a32ff05dca4f223f3f08851c1e66d166c9516c5f7989c65deb14d",
+      "match": true
+    },
+    "order_engine.py": {
+      "local_sha256": "f9aff1010a97d5acd2dfb930eaefc45b92104b2cf7db3576ea89876f0fc84255",
+      "oci_sha256": "f9aff1010a97d5acd2dfb930eaefc45b92104b2cf7db3576ea89876f0fc84255",
+      "match": true
+    },
+    "pre_flight_check.py": {
+      "local_sha256": "420e31dc9a5dffef3da34228707725f7ad7a851dfc08974c1e4b2042483b8529",
+      "oci_sha256": "420e31dc9a5dffef3da34228707725f7ad7a851dfc08974c1e4b2042483b8529",
+      "match": true
+    },
+    "pre_market_summary.py": {
+      "local_sha256": "6499b552b6443b07b93aa25498743052b91fc7e2d73c4fd19d5e70b5bce42ade",
+      "oci_sha256": "6499b552b6443b07b93aa25498743052b91fc7e2d73c4fd19d5e70b5bce42ade",
+      "match": true
+    },
+    "shadow_execution_engine.py": {
+      "local_sha256": "0e5b76bc4f7daefb6cfe65347fa000e25c6353f3e8de5564b80ff7f76f2b7dff",
+      "oci_sha256": "0e5b76bc4f7daefb6cfe65347fa000e25c6353f3e8de5564b80ff7f76f2b7dff",
       "match": true
     },
     "sync_earnings_calendar.py": {
@@ -75,39 +71,44 @@
       "oci_sha256": "2db4ac98df415b4ab2a72b07be7e7ae997b0731698c0b0d7058bb6791c3eedfe",
       "match": true
     },
-    "verify_phase1_post_close.py": {
-      "local_sha256": "e9412418494e5a4a5809d7c0d80043f35a83325b931f4060fb2991d687840e4e",
-      "oci_sha256": "e9412418494e5a4a5809d7c0d80043f35a83325b931f4060fb2991d687840e4e",
+    "telegram_bot.py": {
+      "local_sha256": "edf162d669864b7a4ae221c0a2519f41f9d3bf455c4707f42323b3f8585fb15f",
+      "oci_sha256": "edf162d669864b7a4ae221c0a2519f41f9d3bf455c4707f42323b3f8585fb15f",
       "match": true
     },
-    "daily_swing_detector.py": {
-      "local_sha256": "d61a849d38958d68e184a87ebdf9803ea17097bfafc858ed469d275336515fff",
-      "oci_sha256": "d61a849d38958d68e184a87ebdf9803ea17097bfafc858ed469d275336515fff",
+    "test_phase1_harden_v33.py": {
+      "local_sha256": "72f072d2b67ddd785d7687df341b49e45113728f61bb53eda2dc30201f14b9e4",
+      "oci_sha256": "72f072d2b67ddd785d7687df341b49e45113728f61bb53eda2dc30201f14b9e4",
       "match": true
     },
-    "exited_stocks_manager.py": {
-      "local_sha256": "7ec946e5ede6846d5fe0490e1f31cca94340f26ce69c4aee4f2edbe9b7fb1166",
-      "oci_sha256": "7ec946e5ede6846d5fe0490e1f31cca94340f26ce69c4aee4f2edbe9b7fb1166",
-      "match": true
-    },
-    "intraday_breadth_monitor.py": {
-      "local_sha256": "960f3288563a32ff05dca4f223f3f08851c1e66d166c9516c5f7989c65deb14d",
-      "oci_sha256": "960f3288563a32ff05dca4f223f3f08851c1e66d166c9516c5f7989c65deb14d",
-      "match": true
-    },
-    "pre_flight_check.py": {
-      "local_sha256": "420e31dc9a5dffef3da34228707725f7ad7a851dfc08974c1e4b2042483b8529",
-      "oci_sha256": "420e31dc9a5dffef3da34228707725f7ad7a851dfc08974c1e4b2042483b8529",
-      "match": true
-    },
-    "pre_market_summary.py": {
-      "local_sha256": "6499b552b6443b07b93aa25498743052b91fc7e2d73c4fd19d5e70b5bce42ade",
-      "oci_sha256": "6499b552b6443b07b93aa25498743052b91fc7e2d73c4fd19d5e70b5bce42ade",
+    "token_hub.py": {
+      "local_sha256": "4445341c17f08b4a7f5e216a53ea86a713197c4b51912354ec44209d37b8016a",
+      "oci_sha256": "4445341c17f08b4a7f5e216a53ea86a713197c4b51912354ec44209d37b8016a",
       "match": true
     },
     "trade_post_mortem.py": {
       "local_sha256": "46ef5918f29cd3323d82557ea7c33e004ea81723c3244ea4024f2989f99b3e85",
       "oci_sha256": "46ef5918f29cd3323d82557ea7c33e004ea81723c3244ea4024f2989f99b3e85",
+      "match": true
+    },
+    "upstox_tablet_scanner.py": {
+      "local_sha256": "f40d13d97f3551bb21f7a3979a6eb68c6d7fe40438da0704056723744231bc14",
+      "oci_sha256": "f40d13d97f3551bb21f7a3979a6eb68c6d7fe40438da0704056723744231bc14",
+      "match": true
+    },
+    "upstox_websocket_feed.py": {
+      "local_sha256": "bf6c7a40d93998f550186035a9069a95c163b75accc609c207983e445a3c826e",
+      "oci_sha256": "bf6c7a40d93998f550186035a9069a95c163b75accc609c207983e445a3c826e",
+      "match": true
+    },
+    "verify_phase1_post_close.py": {
+      "local_sha256": "e9412418494e5a4a5809d7c0d80043f35a83325b931f4060fb2991d687840e4e",
+      "oci_sha256": "e9412418494e5a4a5809d7c0d80043f35a83325b931f4060fb2991d687840e4e",
+      "match": true
+    },
+    "watchlist_hygiene.py": {
+      "local_sha256": "68d0cb7556fb3cce17db08ddd39bfc7d0937f58bb3822c70fcbc82bef696eb91",
+      "oci_sha256": "68d0cb7556fb3cce17db08ddd39bfc7d0937f58bb3822c70fcbc82bef696eb91",
       "match": true
     }
   }
