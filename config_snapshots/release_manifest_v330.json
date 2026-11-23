@@ -7,8 +7,8 @@
   "all_matched": true,
   "files": {
     "candidate_scanner.py": {
-      "local_sha256": "842a8e05364cc1b9f169bc828a198655060f8c09a7c773ee1e180426a9c39678",
-      "oci_sha256": "842a8e05364cc1b9f169bc828a198655060f8c09a7c773ee1e180426a9c39678",
+      "local_sha256": "a1bcfab260225a7a8aa901d3bf8ac2ed8aac6710d0bd5ffc80104930a32d7373",
+      "oci_sha256": "a1bcfab260225a7a8aa901d3bf8ac2ed8aac6710d0bd5ffc80104930a32d7373",
       "match": true
     },
     "daily_swing_detector.py": {
@@ -72,8 +72,8 @@
       "match": true
     },
     "telegram_bot.py": {
-      "local_sha256": "ed21c7be01aae7be4c631fb1dbd50c2beeaa40fb71fc982533a2f89dc8506970",
-      "oci_sha256": "ed21c7be01aae7be4c631fb1dbd50c2beeaa40fb71fc982533a2f89dc8506970",
+      "local_sha256": "321df3872050ec280f8de6319a51b3deb0d019443cfb61769811fb5e35658a5e",
+      "oci_sha256": "321df3872050ec280f8de6319a51b3deb0d019443cfb61769811fb5e35658a5e",
       "match": true
     },
     "test_phase1_harden_v33.py": {
@@ -107,8 +107,8 @@
       "match": true
     },
     "watchlist_hygiene.py": {
-      "local_sha256": "68d0cb7556fb3cce17db08ddd39bfc7d0937f58bb3822c70fcbc82bef696eb91",
-      "oci_sha256": "68d0cb7556fb3cce17db08ddd39bfc7d0937f58bb3822c70fcbc82bef696eb91",
+      "local_sha256": "48f9afaa0a75cf1709093c623f91102be6120122e3dbe742b2fae53aef6f5a04",
+      "oci_sha256": "48f9afaa0a75cf1709093c623f91102be6120122e3dbe742b2fae53aef6f5a04",
       "match": true
     }
   }
