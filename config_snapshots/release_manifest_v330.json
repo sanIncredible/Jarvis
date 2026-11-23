@@ -32,8 +32,8 @@
       "match": true
     },
     "order_engine.py": {
-      "local_sha256": "39346650c583ee9c2a85a58eb5eb2f781fd89804031e69c6a388ffd50534f243",
-      "oci_sha256": "39346650c583ee9c2a85a58eb5eb2f781fd89804031e69c6a388ffd50534f243",
+      "local_sha256": "84ee4b7d1adece7741f4315a15a5364b7470a055db6629514b94a1466957634b",
+      "oci_sha256": "84ee4b7d1adece7741f4315a15a5364b7470a055db6629514b94a1466957634b",
       "match": true
     },
     "pre_flight_check.py": {
@@ -47,8 +47,8 @@
       "match": true
     },
     "shadow_execution_engine.py": {
-      "local_sha256": "9bcd0ec969a662da079710eb2b9e9b10d0726829e3fac2331754a7e25e413391",
-      "oci_sha256": "9bcd0ec969a662da079710eb2b9e9b10d0726829e3fac2331754a7e25e413391",
+      "local_sha256": "a656e0a6cd8bd8f1d508f3278eee00a9b501d5ef56b80eda8ebb5c493811dd83",
+      "oci_sha256": "a656e0a6cd8bd8f1d508f3278eee00a9b501d5ef56b80eda8ebb5c493811dd83",
       "match": true
     },
     "sync_earnings_calendar.py": {
@@ -72,8 +72,8 @@
       "match": true
     },
     "telegram_bot.py": {
-      "local_sha256": "b149445ebb44623ed9e70c6dd76aae756a7352c5ee2e927ccdaf90c20d90e14e",
-      "oci_sha256": "b149445ebb44623ed9e70c6dd76aae756a7352c5ee2e927ccdaf90c20d90e14e",
+      "local_sha256": "24664fbbe49ea870404411a4374017562d2bc7187616af9e73d5bc4440f36d37",
+      "oci_sha256": "24664fbbe49ea870404411a4374017562d2bc7187616af9e73d5bc4440f36d37",
       "match": true
     },
     "test_phase1_harden_v33.py": {
@@ -87,8 +87,8 @@
       "match": true
     },
     "trade_post_mortem.py": {
-      "local_sha256": "5ceed49ac9efafe4087a3cea8f5fa967cc3a65a3aaae39fa5f94962a064b2921",
-      "oci_sha256": "5ceed49ac9efafe4087a3cea8f5fa967cc3a65a3aaae39fa5f94962a064b2921",
+      "local_sha256": "cb45e6ae9c329bafcc80fad24381950081778d7985d595ffb14ef38b34ddd9b7",
+      "oci_sha256": "cb45e6ae9c329bafcc80fad24381950081778d7985d595ffb14ef38b34ddd9b7",
       "match": true
     },
     "upstox_tablet_scanner.py": {
