@@ -2,7 +2,7 @@
   "release_tag": "v3.3.0-strict",
   "config_version": "v3.3.0-strict",
   "config_hash": "8229eb94",
-  "watchlist_hash": "eeeb00af",
+  "watchlist_hash": "3472a7cf",
   "evaluated_files_count": 21,
   "all_matched": true,
   "files": {
@@ -32,8 +32,8 @@
       "match": true
     },
     "order_engine.py": {
-      "local_sha256": "f9aff1010a97d5acd2dfb930eaefc45b92104b2cf7db3576ea89876f0fc84255",
-      "oci_sha256": "f9aff1010a97d5acd2dfb930eaefc45b92104b2cf7db3576ea89876f0fc84255",
+      "local_sha256": "e7714fa573768c5f941dc2c7612d2a5f5f633036a445f555d1b0aed79d3c5cb4",
+      "oci_sha256": "e7714fa573768c5f941dc2c7612d2a5f5f633036a445f555d1b0aed79d3c5cb4",
       "match": true
     },
     "pre_flight_check.py": {
@@ -72,8 +72,8 @@
       "match": true
     },
     "telegram_bot.py": {
-      "local_sha256": "edf162d669864b7a4ae221c0a2519f41f9d3bf455c4707f42323b3f8585fb15f",
-      "oci_sha256": "edf162d669864b7a4ae221c0a2519f41f9d3bf455c4707f42323b3f8585fb15f",
+      "local_sha256": "f4eea05424e944419ed2c36ebbde11cc92eca3446f6b241e74c26dcfe7336b8d",
+      "oci_sha256": "f4eea05424e944419ed2c36ebbde11cc92eca3446f6b241e74c26dcfe7336b8d",
       "match": true
     },
     "test_phase1_harden_v33.py": {
@@ -92,13 +92,13 @@
       "match": true
     },
     "upstox_tablet_scanner.py": {
-      "local_sha256": "f40d13d97f3551bb21f7a3979a6eb68c6d7fe40438da0704056723744231bc14",
-      "oci_sha256": "f40d13d97f3551bb21f7a3979a6eb68c6d7fe40438da0704056723744231bc14",
+      "local_sha256": "c3f6fb163b3be5dcb2c09f303b8e5a0a1c1660d607c2853c98b6a824417370b2",
+      "oci_sha256": "c3f6fb163b3be5dcb2c09f303b8e5a0a1c1660d607c2853c98b6a824417370b2",
       "match": true
     },
     "upstox_websocket_feed.py": {
-      "local_sha256": "bf6c7a40d93998f550186035a9069a95c163b75accc609c207983e445a3c826e",
-      "oci_sha256": "bf6c7a40d93998f550186035a9069a95c163b75accc609c207983e445a3c826e",
+      "local_sha256": "227923997f8d45b612ae473ae631e40a722edec71fa01d7c1334f38bc7dc6d0d",
+      "oci_sha256": "227923997f8d45b612ae473ae631e40a722edec71fa01d7c1334f38bc7dc6d0d",
       "match": true
     },
     "verify_phase1_post_close.py": {
