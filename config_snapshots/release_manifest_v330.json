@@ -12,8 +12,8 @@
       "match": true
     },
     "daily_swing_detector.py": {
-      "local_sha256": "d61a849d38958d68e184a87ebdf9803ea17097bfafc858ed469d275336515fff",
-      "oci_sha256": "d61a849d38958d68e184a87ebdf9803ea17097bfafc858ed469d275336515fff",
+      "local_sha256": "314282991bccca744080ed976b3d2ab8f6cc04459984ec370250917e20ebfa16",
+      "oci_sha256": "314282991bccca744080ed976b3d2ab8f6cc04459984ec370250917e20ebfa16",
       "match": true
     },
     "eod_hindsight_report.py": {
@@ -27,8 +27,8 @@
       "match": true
     },
     "intraday_breadth_monitor.py": {
-      "local_sha256": "fc387de23b1e16eaf0fbad8a939d38646f8a0a7bc6a38f387e59f49eb4538df9",
-      "oci_sha256": "fc387de23b1e16eaf0fbad8a939d38646f8a0a7bc6a38f387e59f49eb4538df9",
+      "local_sha256": "9c52d78de5c595b573c3647013e5c9ff64eb5c3ac3a85b71ae6856846fac765a",
+      "oci_sha256": "9c52d78de5c595b573c3647013e5c9ff64eb5c3ac3a85b71ae6856846fac765a",
       "match": true
     },
     "order_engine.py": {
@@ -42,8 +42,8 @@
       "match": true
     },
     "pre_market_summary.py": {
-      "local_sha256": "24c08bff1a71f7b51e883f70e524600d07e774404e472935d24702a3517d155e",
-      "oci_sha256": "24c08bff1a71f7b51e883f70e524600d07e774404e472935d24702a3517d155e",
+      "local_sha256": "9d223c4f8d25549edbc720d0bf5d1c5fdc828435c10fb5bcbfa96671b16ab5c0",
+      "oci_sha256": "9d223c4f8d25549edbc720d0bf5d1c5fdc828435c10fb5bcbfa96671b16ab5c0",
       "match": true
     },
     "shadow_execution_engine.py": {
