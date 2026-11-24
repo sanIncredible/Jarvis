@@ -87,13 +87,13 @@
       "match": true
     },
     "trade_post_mortem.py": {
-      "local_sha256": "fc02b4eafee1c5ebc0bccad3ecc35a1804ce0637e0ea76c4829b9c4d44c09f03",
-      "oci_sha256": "fc02b4eafee1c5ebc0bccad3ecc35a1804ce0637e0ea76c4829b9c4d44c09f03",
+      "local_sha256": "c6ef2509ac7816f96a55e24653b78652d77642c89f0588073607d3e77860be8c",
+      "oci_sha256": "c6ef2509ac7816f96a55e24653b78652d77642c89f0588073607d3e77860be8c",
       "match": true
     },
     "upstox_tablet_scanner.py": {
-      "local_sha256": "eaa5aa4afffa80ddcb07223cad1ee2783294ec6c8380a1c94b8d09c7dfc9999e",
-      "oci_sha256": "eaa5aa4afffa80ddcb07223cad1ee2783294ec6c8380a1c94b8d09c7dfc9999e",
+      "local_sha256": "5ac11875a65b1142c5958dcbdc5f680c52fe7b942ac16a840bfdbad5d9cc139e",
+      "oci_sha256": "5ac11875a65b1142c5958dcbdc5f680c52fe7b942ac16a840bfdbad5d9cc139e",
       "match": true
     },
     "upstox_websocket_feed.py": {
