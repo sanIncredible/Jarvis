@@ -1,0 +1,35 @@
+================================================================================
+JARVIS PHASE 1 (30-SESSION EVALUATION) — OPERATOR LOG
+Evaluation Start Date: 2026-11-23 | Target: 30 VALID Sessions (Max Cap: 40)
+Config Hash: 82a0168d | Manifest Hash: 1543b91b | Watchlist Hash: 3472a7cf (Dynamic)
+Git Release Tag: v3.3.0-strict | Git Commit SHA: 577332f1
+NOTE ON STAMP PARITY & WATCHLIST CONTROL:
+The 'git_commit' audit field on trade/signal records intentionally outputs
+the manifest hash ('1543b91b') to ensure immutable bit-for-bit file set
+verification across runtime data.json commits. The underlying git release
+commit is 577332f1 (tag v3.3.0-strict).
+Watchlist is in Dynamic Operator Control mode: the operator may /add or /remove
+stocks anytime. The trade engine re-hashes watchlist.txt on every cycle and
+stamps the exact active watchlist_hash on every trade.
+================================================================================
+
+STANDBY OPERATIONAL RULES (PRE-FROZEN):
+1. TOKEN SYNC CUTOFF & RETRY RULE:
+   - Primary token sync window: 08:00 - 08:30 IST.
+   - If token sync fails at 08:30, retries are permitted strictly until 09:00 IST.
+   - Note on 08:45-09:00 retries: If a retry restart occurs in this window, the 08:45 audits were executed by the prior process. Log the occurrence and retain the earlier 08:45 Telegram alert screenshot as evidence.
+   - After 09:00 IST: DO NOT restart scanner, sync tokens, or alter processes. If token remains invalid, allow the session to run unmolested. Fail-closed telemetry guarantees the day will be classified as NO_DATA_EXCLUDED (whether feed health file is missing or records 45m downtime).
+
+2. INTERVENTION POLICY:
+   - Paper trading evaluation carries no capital risk. There are NO valid intraday emergencies.
+   - Under no circumstances will any manual restart, script modification, or process termination occur between 09:00 and 10:15 IST.
+   - Observe and log only. Any corrective action must wait until after 10:15 IST (or post-close at 15:30 IST).
+
+3. LOG FORMAT:
+   [YYYY-MM-DD HH:MM:SS IST] | [OPERATOR_ACTION] | [REASON / CONTEXT] | [OBSERVED_OUTCOME]
+
+--------------------------------------------------------------------------------
+LOG ENTRIES:
+2026-11-21 11:15:00 IST | SYSTEM_FREEZE | Phase 1 Hardening v3.3.0 Final Deployment | All 21 core files match manifest 97bb5543. Git tag v3.3.0-strict points to commit 202effbb. 44/44 tests passed on OCI VM. State clean.
+2026-11-21 12:21:00 IST | WATCHLIST_UNLOCK | Dynamic Operator Control Enabled | Unlocked watchlist.txt (chmod 664, chattr -i). Re-enabled Telegram /add & /remove. 44/44 tests passed on OCI VM. Manifest: df6d7663. Release commit: 6d31b63e. State clean.
+2026-11-24 16:30:00 IST | DEPLOY_BREADTH | Breadth Regime & UH/LH Net Score | All 21 core files match manifest 1543b91b. Git tag v3.3.0-strict points to commit 577332f1. 44/44 tests passed on OCI VM. State clean.
