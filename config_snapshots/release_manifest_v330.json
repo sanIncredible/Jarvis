@@ -92,8 +92,8 @@
       "match": true
     },
     "upstox_tablet_scanner.py": {
-      "local_sha256": "a6734160cc664939e80512c832e2a46f68f192ad8c87c092f2ad453305658cb9",
-      "oci_sha256": "a6734160cc664939e80512c832e2a46f68f192ad8c87c092f2ad453305658cb9",
+      "local_sha256": "eaa5aa4afffa80ddcb07223cad1ee2783294ec6c8380a1c94b8d09c7dfc9999e",
+      "oci_sha256": "eaa5aa4afffa80ddcb07223cad1ee2783294ec6c8380a1c94b8d09c7dfc9999e",
       "match": true
     },
     "upstox_websocket_feed.py": {
