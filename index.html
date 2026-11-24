@@ -2687,6 +2687,11 @@
         structBadges += `<span style="font-size:10px; font-weight:800; color:#2dd4bf; background:rgba(45,212,191,0.18); border:1px solid rgba(45,212,191,0.45); padding:1px 5px; border-radius:4px;" title="Trend Coil: +${tc.gain_20d_pct}% 20d, ${tc.ext_20ema_pct}% over 20EMA, 5d close spread ${tc.close_spread_5d_pct}%, range ratio ${tc.range_ratio_5v10}, vol ratio ${tc.volume_ratio_5v10}">📈 TC +${Math.round(tc.gain_20d_pct)}% <b style="color:${boCol(tc.bo_state)}">${tc.bo_state}</b></span>`;
       }
 
+      if (c.is_illiquid) {
+        const tv = (c.turnover_20d_cr !== null && c.turnover_20d_cr !== undefined) ? c.turnover_20d_cr : '?';
+        structBadges += `<span style="font-size:10px; font-weight:800; color:#f87171; background:rgba(248,113,113,0.15); border:1px solid rgba(248,113,113,0.45); padding:1px 5px; border-radius:4px;" title="20-day average turnover ₹${tv} Cr (below ₹10 Cr liquidity floor)">⚠️ Illiq ₹${tv}Cr</span>`;
+      }
+
       let sniperBadge = '';
       if (c.is_sniper || c.grade === 'A+') {
         sniperBadge = `<span style="font-size:10px; font-weight:800; color:#fff; background:#ef4444; border:1px solid #f87171; padding:1px 6px; border-radius:4px; box-shadow:0 0 6px rgba(239,68,68,0.5);">🎯 A+ SNIPER</span>`;
