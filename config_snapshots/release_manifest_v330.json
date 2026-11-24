@@ -72,8 +72,8 @@
       "match": true
     },
     "telegram_bot.py": {
-      "local_sha256": "a7459ef241c12e28fd9cc68eb2c519359997d0f6b74e3fde9655720b6bce01be",
-      "oci_sha256": "a7459ef241c12e28fd9cc68eb2c519359997d0f6b74e3fde9655720b6bce01be",
+      "local_sha256": "a8aa5e5163ed890f5d54b4473bdd709f2a2832bad70b7b1a70d051fd5d4abc5b",
+      "oci_sha256": "a8aa5e5163ed890f5d54b4473bdd709f2a2832bad70b7b1a70d051fd5d4abc5b",
       "match": true
     },
     "test_phase1_harden_v33.py": {
@@ -92,8 +92,8 @@
       "match": true
     },
     "upstox_tablet_scanner.py": {
-      "local_sha256": "af68c548504a9375f551f35b463b296bec6478a0698be47ba2fa4b210e952915",
-      "oci_sha256": "af68c548504a9375f551f35b463b296bec6478a0698be47ba2fa4b210e952915",
+      "local_sha256": "a6734160cc664939e80512c832e2a46f68f192ad8c87c092f2ad453305658cb9",
+      "oci_sha256": "a6734160cc664939e80512c832e2a46f68f192ad8c87c092f2ad453305658cb9",
       "match": true
     },
     "upstox_websocket_feed.py": {
