@@ -1,13 +1,13 @@
 ================================================================================
 JARVIS PHASE 1 (30-SESSION EVALUATION) — OPERATOR LOG
 Evaluation Start Date: 2026-11-23 | Target: 30 VALID Sessions (Max Cap: 40)
-Config Hash: 82a0168d | Manifest Hash: 409bbed2 | Watchlist Hash: 3472a7cf (Dynamic)
-Git Release Tag: v3.3.0-strict | Git Commit SHA: 73dcafd7
+Config Hash: 82a0168d | Manifest Hash: 21bfbc52 | Watchlist Hash: 3472a7cf (Dynamic)
+Git Release Tag: v3.3.0-strict | Git Commit SHA: dfa22edd
 NOTE ON STAMP PARITY & WATCHLIST CONTROL:
 The 'git_commit' audit field on trade/signal records intentionally outputs
-the manifest hash ('409bbed2') to ensure immutable bit-for-bit file set
+the manifest hash ('21bfbc52') to ensure immutable bit-for-bit file set
 verification across runtime data.json commits. The underlying git release
-commit is 73dcafd7 (tag v3.3.0-strict).
+commit is dfa22edd (tag v3.3.0-strict).
 Watchlist is in Dynamic Operator Control mode: the operator may /add or /remove
 stocks anytime. The trade engine re-hashes watchlist.txt on every cycle and
 stamps the exact active watchlist_hash on every trade.
@@ -34,3 +34,4 @@ LOG ENTRIES:
 2026-11-21 12:21:00 IST | WATCHLIST_UNLOCK | Dynamic Operator Control Enabled | Unlocked watchlist.txt (chmod 664, chattr -i). Re-enabled Telegram /add & /remove. 44/44 tests passed on OCI VM. Manifest: df6d7663. Release commit: 6d31b63e. State clean.
 2026-11-24 16:30:00 IST | DEPLOY_BREADTH | Breadth Regime & UH/LH Net Score | All 21 core files match manifest 1543b91b. Git tag v3.3.0-strict points to commit 577332f1. 44/44 tests passed on OCI VM. State clean.
 2026-11-24 18:20:00 IST | DEPLOY_EMS_TAGS | Confluence EMS Base & Trend Coil Tags | All 21 core files match manifest 409bbed2. Git tag v3.3.0-strict points to commit 73dcafd7. Parity matched. State clean.
+2026-11-24 18:46:00 IST | DEPLOY_WATCHDOG | Position Watchdog & Trade Log Fixes | All 21 core files match manifest 21bfbc52. Git tag v3.3.0-strict points to commit dfa22edd. Parity matched. 7 positions verified (0 findings). State clean.
