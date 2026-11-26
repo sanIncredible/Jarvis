@@ -97,8 +97,8 @@
       "match": true
     },
     "upstox_websocket_feed.py": {
-      "local_sha256": "551b1b56132a920a02bf4b3dbc4a0917750332d6aae2a44159d52562f64f6248",
-      "oci_sha256": "551b1b56132a920a02bf4b3dbc4a0917750332d6aae2a44159d52562f64f6248",
+      "local_sha256": "eb99cd9bb9cb5a39a1df3bea91e31b50aff7f31c540d56e754f1e0ae762d3e77",
+      "oci_sha256": "eb99cd9bb9cb5a39a1df3bea91e31b50aff7f31c540d56e754f1e0ae762d3e77",
       "match": true
     },
     "verify_phase1_post_close.py": {
