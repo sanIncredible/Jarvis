@@ -14,9 +14,11 @@ Automated 09:14 AM IST Pre-Market Pulse, Index RS & Stockbee Breadth Dispatcher.
 """
 
 import os
+import re
 import sys
 import json
 import time
+import html as html_lib
 import urllib.request
 import urllib.parse
 from datetime import datetime, date, timedelta
@@ -317,6 +319,285 @@ def classify_bonde_multi_day_state(history: List[Dict[str, Any]]) -> Dict[str, A
     }
 
 
+def _parse_sheet_date(s: str) -> Optional[datetime]:
+    for fmt in ("%d-%b-%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(str(s)[:11].strip(), fmt)
+        except Exception:
+            continue
+    return None
+
+
+def _pctile(vals: List[float], v: float) -> float:
+    """Share (0-100) of vals strictly below v."""
+    vals = [x for x in vals if x is not None]
+    return 100.0 * sum(1 for x in vals if x < v) / len(vals) if vals else 50.0
+
+
+def _kedia_day_flags(x: Dict[str, Any], ref: List[Dict[str, Any]]) -> Tuple[bool, bool]:
+    """(strong breadth day, breakdown day) for one session vs ~1y of prior sessions."""
+    p4 = _pctile([y["up_4_pct"] for y in ref], x["up_4_pct"])
+    pd4 = _pctile([y["dn_4_pct"] for y in ref], x["dn_4_pct"])
+    strong = p4 >= 80.0 and x.get("bo_sf_ratio", 0) > 1.0 and x.get("vol_ratio", 0) >= 0.5
+    brk = pd4 >= 80.0 and x.get("net_breadth", 0) < 0 and x.get("bd_sf_ratio", 0) > 1.0
+    return strong, brk
+
+
+def _kedia_stance(h: List[Dict[str, Any]]) -> str:
+    """Sticky stance as of the last row of h (POSITIVE / WATCH_FOLLOW_THROUGH / STEP_ASIDE / SELECTIVE)."""
+    ref = h[-251:-1]
+    flags = [_kedia_day_flags(x, ref) for x in h[-3:]]
+    if flags[-1][1]:
+        return "STEP_ASIDE"
+    n_strong = sum(1 for f in flags if f[0])
+    if n_strong >= 2:
+        return "POSITIVE"
+    # Backtest 2024-26 vs his notes: he turns positive on rising breadth + one decent 4% day, even with volume
+    # 0.3-0.5 (10 of 12 right), and waits on weak, dry bounces in a weak market (5 of 7 right).
+    a = [x.get("pct_ab_10") for x in h[-6:]]
+    if ref and all(v is not None for v in a):
+        p80 = sorted(y["up_4_pct"] for y in ref)[int(len(ref) * 0.8)]
+        mx20 = max((x.get("pct_ab_10") or 0.0) for x in h[-20:])
+        if a[-1] >= 55.0 and a[-1] >= 0.85 * mx20:
+            return "POSITIVE"                                   # trend / lockout: don't fight it
+        if a[-1] >= 35.0 and a[-1] - min(a) >= 10.0 and a[-1] >= a[-2] - 2.0 \
+                and any(x["up_4_pct"] >= p80 for x in h[-3:]):
+            return "POSITIVE"                                   # rising breadth + a decent demand day
+        if a[-1] < 30.0 and h[-1].get("vol_ratio", 1.0) < 0.5 \
+                and not any(x["up_4_pct"] >= p80 for x in h[-5:]):
+            return "WAIT"                                       # weak, dry bounce in a weak market
+    if flags[-1][0]:
+        return "WATCH_FOLLOW_THROUGH"
+    return "SELECTIVE"
+
+
+def kedia_sa_read(history: List[Dict[str, Any]], today: Optional[datetime] = None) -> Dict[str, Any]:
+    """
+    Chhirag Kedia-style #SituationalAwareness read of the MBM V2.0 sheet (27 Nov 2026).
+    Reads the last few sessions as a SEQUENCE and anticipates the next one, as he does:
+      - where we are in the swing (decline leg / bounce day N / trend) from % above 10-DEMA (fallback: net 4% breadth)
+      - thrust of each bounce day (4% breakouts), and whether volume did what it SHOULD have done
+      - how far from an extreme (his 10-DEMA extremes ~4-6%; we use our own 1y low decile), i.e. room left
+      - what today can look like (scenarios a/b) and the exact readings that would change the stance
+    Stance is sticky and anchored to the session it was set. Pure function: facts + HTML lines.
+    """
+    out = {"available": False, "lines": []}
+    h = [x for x in (history or []) if x.get("date")]
+    if len(h) < 25:
+        return out
+    cur, prev = h[-1], h[-2]
+    look = h[-251:-1]
+    nxt = today or datetime.now()
+    d_cur = _parse_sheet_date(cur["date"])
+
+    # ---------- stance (sticky, anchored)
+    code = _kedia_stance(h)
+    since = cur["date"]
+    for j in range(len(h) - 1, max(len(h) - 40, 25), -1):
+        if _kedia_stance(h[:j]) != code:
+            break
+        since = h[j - 1]["date"]
+    since_txt = f"No change in stance since {since}" if since != cur["date"] else f"Stance changes today ({cur['date']})"
+
+    # ---------- where are we in the swing
+    has10 = all(x.get("pct_ab_10") is not None for x in h[-25:])
+    if has10:
+        ser = [x["pct_ab_10"] for x in h]
+    else:
+        ser, c = [], 0.0
+        for x in h:
+            c += x.get("net_breadth", 0.0)
+            ser.append(c)
+    n = len(h)
+    lo_i = min(range(n - 15, n), key=lambda i: ser[i])
+    hi_i = max(range(max(0, lo_i - 25), lo_i + 1), key=lambda i: ser[i])
+    bounce_days = n - 1 - lo_i
+    near_top = has10 and ser[-1] >= 55.0 and ser[-1] >= 0.85 * max(ser[-20:])
+    # his explicit extremes for stocks above the 10-DEMA: 5-6% (13% "is not an extreme yet"); 15% or below = approaching
+    EXT, NEAR = 7.5, 15.0
+    at_extreme = has10 and ser[lo_i] <= EXT
+    near_extreme = has10 and ser[lo_i] <= NEAR
+
+    up4s = sorted(x["up_4_pct"] for x in look)
+    p80 = up4s[int(len(look) * 0.8)]
+    # breadth-thrust bar on his ~2,500-stock sheet: he called "10% Monday, 17% Tuesday" a weak thrust (28-10-2026)
+    p97 = max(25.0, up4s[min(len(look) - 1, int(len(look) * 0.97))])
+    vr, vp = cur.get("vol_ratio", 0.0), prev.get("vol_ratio", 0.0)
+    sf = cur.get("bo_sf_ratio", 0.0)
+
+    lines_view, scen, setups = [], [], ""
+    if has10:
+        lines_view.append(
+            f"Stocks above the 10-DEMA: <b>{ser[-1]:.0f}%</b>, down from {ser[hi_i]:.0f}% on {h[hi_i]['date']}"
+            + (f", swing low {ser[lo_i]:.0f}% on {h[lo_i]['date']}." if bounce_days else ".")
+            + (" That low is a genuine extreme (5-6% territory)." if at_extreme else
+               " Approaching extremes, but not there yet: for a meaningful extreme we're looking at 5-6% or lower." if near_extreme else
+               " This is a pullback, not an extreme: don't treat it as oversold.")
+        )
+
+    if near_top:
+        phase = "TREND"
+        lines_view.append("Breadth is near its recent highs. In a trend, don't anticipate pullbacks; let the market throw you out with a breakdown day.")
+        scen = ["a) Gap-down or early dip: in a healthy trend these are entries in leaders.",
+                "b) Gap-up: fine, but avoid chasing extended names in the first minutes; use alternative entries."]
+        setups = "Breakouts and continuation in leaders; gap-downs in leaders are entries."
+    elif bounce_days == 0:
+        phase = "DECLINE"
+        k = 0
+        for i in range(n - 1, 0, -1):
+            if ser[i] < ser[i - 1]:
+                k += 1
+            else:
+                break
+        lines_view.append(f"The decline continues: day {k} of falling breadth. No bounce attempt yet.")
+        if at_extreme:
+            scen = ["a) Sell-off in the first hour followed by a reversal: the ideal, highest-probability outcome from an extreme. This is where I'd act.",
+                    "b) Muted or gap-up start: the spoiler. A premature bounce from here usually leads to another leg down."]
+            setups = "Parabolic longs, momentum suppression and delayed EPs: enter quickly and trail to breakeven fast."
+        else:
+            scen = ["a) Further decline: likely, as readings are not at extremes. It creates the room a real bounce needs.",
+                    "b) A pause or weak bounce: treat it as a trap. It only creates room for another leg down."]
+            setups = "Wait and watch. EPs only, on their own strength; parabolic longs only once readings reach extremes."
+    else:
+        phase = f"BOUNCE_D{bounce_days}"
+        legs = h[lo_i + 1:]
+        thrust = ", ".join(f"{x['up_4_pct']:.1f}% on {x['date'][:6]}" for x in legs[-4:])
+        thrust_any = any(x["up_4_pct"] >= p97 for x in legs)
+        decent_any = any(x["up_4_pct"] >= p80 for x in legs)
+        vol_conf = vr >= max(0.5, h[lo_i + 1].get("vol_ratio", 0.0) + 0.05)
+        strong_any = thrust_any and vol_conf
+        lines_view.append(
+            f"Day {bounce_days} of the bounce from the {h[lo_i]['date']} low. 4% breakouts: {thrust}. "
+            + ("That is a breadth thrust." if thrust_any else
+               f"Decent, but not a breadth thrust: that needs {p97:.0f}% or more." if decent_any else
+               f"The thrust is weak: no day reached {p80:.1f}%, let alone the {p97:.0f}% a breadth thrust needs.")
+        )
+        if bounce_days == 1:
+            scen = ["a) Follow-through: a second day of 4% breakouts, ideally above " + f"{p80:.1f}%, with volume rising. That makes the bounce real.",
+                    "b) Fade or muted start: the rally attempt stalls. As long as the low holds, it stays a test, not a failure."]
+            setups = "Don't chase the first day. Leaders that held up best during the pullback go first; EPs on their own strength."
+        elif not strong_any:
+            lines_view.append("As the initial bounce begins to exhaust, the real test starts now.")
+            scen = [f"a) Pause or retest that holds above the swing low ({ser[lo_i]:.0f}% above 10-DEMA): constructive, and a better entry than chasing.",
+                    "b) Breaking the swing low: the bounce has failed and the decline resumes. Expect it to be faster."]
+            setups = "The initial oversold bounce is exhausting. Trade light, focus on leaders, and bring positions to risk-free quickly."
+        else:
+            scen = ["a) Gap-down or early dip: in a bounce with thrust, these are entries.",
+                    "b) Extended gap-up: let it settle; FOMO buyers get trapped in the first minutes."]
+            setups = "Breakouts in leaders and theme stocks; get more active as long as volume keeps confirming."
+
+    # ---------- volume: what it did vs what it should have done
+    if phase.startswith("BOUNCE") and bounce_days >= 2:
+        v0 = h[lo_i + 1].get("vol_ratio", 0.0)
+        if vr <= v0:
+            lines_view.append(f"Volume, which should have picked up with the bounce, instead went from {v0:.2f} to <b>{vr:.2f}</b>. Participants lack confidence.")
+        else:
+            lines_view.append(f"Volume is picking up with the bounce ({v0:.2f} to <b>{vr:.2f}</b>): that is the confirmation I want.")
+    else:
+        move = "rose" if vr > vp + 0.02 else ("dropped" if vr < vp - 0.02 else "held")
+        tail = ""
+        if vr < 0.5:
+            st = None
+            for x in reversed(h):
+                if x.get("vol_ratio", 1.0) < 0.5:
+                    st = x
+                else:
+                    break
+            if st is not None and st is not cur:
+                tail = f", below 0.5 since {st['date']}"
+        elif vr >= 1.0:
+            tail = ", above 1: significant participation"
+        note = (" Volume rose on a down day: that is selling pressure, not demand." if move == "rose" and cur.get("net_breadth", 0) < 0
+                else " Low demand: small upticks mean little; I want 0.5 or more." if vr < 0.5 else "")
+        lines_view.append(f"Volume {move} from {vp:.2f} to <b>{vr:.2f}</b>{tail}.{note}")
+    lines_view.append(f"Breakout Success/Failure: <b>{sf:.2f}</b>" + (", above 1: breakouts held." if sf > 1.0 else ", below 1: breakouts are not being rewarded."))
+
+    if cur.get("nifty_chg", 0.0) >= 0.3 and (cur["up_4_pct"] < p80 or vr < 0.5):
+        lines_view.append("The index is up, but breadth and volume aren't: a handful of stocks are masking the lack of broad participation.")
+
+    # ---------- calendar context
+    ctx = []
+    if d_cur is not None:
+        gap_days = (nxt.date() - d_cur.date()).days
+        if gap_days >= 3 and nxt.weekday() != 0:
+            ctx.append("First session after a holiday: a gap-up can turn into a trap. Let the market settle before initiating trades.")
+        elif gap_days >= 3:
+            ctx.append("Start of the week: a strong move in either direction can set the tone for the next few days.")
+    m, dd = nxt.month, nxt.day
+    if m == 11 or (m == 12 and dd <= 15):
+        ctx.append("Seasonality: November to mid-December is usually favourable. If the bounce is going to get support, this is the window.")
+    elif m == 12:
+        ctx.append("Seasonality: the last two weeks of December are usually thin, with holiday-season volume.")
+    elif m in (1, 2):
+        ctx.append("Seasonality: January and February often bring trend shifts (Budget season).")
+    elif m == 3:
+        ctx.append("Seasonality: March often leads to capitulation; early April can bring a bull swing.")
+
+    # ---------- what changes it (concrete next-session readings)
+    watch_up = f"4% breakouts at {p80:.1f}% or more, Success/Failure above 1 and volume at {max(0.5, vr + 0.1):.2f} or more"
+    watch_dn = (f"stocks above the 10-DEMA back below {ser[lo_i]:.0f}%" if has10 and bounce_days else "a breakdown day (widespread 4% declines)")
+    change = f"Turns positive on: {watch_up}, preferably on more than one day. Steps aside on: {watch_dn}."
+
+    stance_txt = {
+        "POSITIVE": "Shift towards a positive bias and get more active.",
+        "WATCH_FOLLOW_THROUGH": "A strong breadth day, but only one. I want follow-through before changing stance.",
+        "STEP_ASIDE": "Breakdown day: step aside from fresh breakouts and protect open positions.",
+        "SELECTIVE": "Be selective: large caps and strong themes, avoid small caps.",
+        "WAIT": "A weak, dry bounce in a weak market. Wait and watch: no fresh breakouts until thrust or volume shows up; EPs only on their own strength.",
+    }[code]
+
+    lines = ["🧭 <b>KEDIA-STYLE #SituationalAwareness</b> <i>(MBM V2.0, session " + str(cur["date"]) + ")</i>",
+             "<b>OVERALL VIEW:</b>",
+             f"• {since_txt}. {stance_txt}"]
+    lines += [f"• {x}" for x in lines_view]
+    lines += [f"• {x}" for x in ctx]
+    lines += ["<b>HOW TODAY CAN PLAY OUT:</b>"] + [f"• {x}" for x in scen]
+    lines += [f"<b>SETUPS:</b> {setups}", f"<b>WHAT CHANGES IT:</b> <i>{change}</i>"]
+    out.update({"available": True, "stance_code": code, "stance_since": since, "phase": phase,
+                "bounce_days": bounce_days, "at_extreme": bool(at_extreme),
+                "pct_ab_10": ser[-1] if has10 else None, "swing_low_pct_ab_10": ser[lo_i] if has10 else None,
+                "up4_p80_1y": p80, "bo_sf_ratio": sf, "vol_ratio": vr, "lines": lines})
+    return out
+
+
+def classify_trend_regime(a50: Optional[float], a200: Optional[float], net10: Optional[float],
+                          up4_pct: float = 0.0, dn4_pct: float = 0.0) -> Dict[str, Any]:
+    """
+    Trend-health regime from Market Breadth V2.0 history (2004-2026, 5,665 sessions).
+    a50/a200 = % of universe above 50/200 DEMA; net10 = 10-session mean of Net Breadth (pct pts).
+    Stats are historical 20-session forward Nifty returns (descriptive, overlapping windows).
+    """
+    if a200 is None or a50 is None:
+        return {"trend_regime": "UNAVAILABLE", "trend_edge": "", "trend_overlay": ""}
+
+    if a200 <= 20.0 or a50 <= 15.0:
+        regime = "WASHOUT"
+        edge = "Nifty +1.7% / Smallcap +3.8% avg next 20d; wait for thrust to turn (net10 >= -3: Nifty +2.1% to +3.1%)"
+    elif a200 < 40.0:
+        regime = "DEAD ZONE"
+        edge = "No edge: Nifty -0.2% / Smallcap -1.3% avg next 20d (55% / 47% positive); size down"
+        if net10 is not None and net10 > 3.0:
+            edge += "; thrust > +3 lifts Nifty to ~+1.0%"
+    elif a200 < 60.0:
+        regime = "REBUILD"
+        edge = "Mildly positive, unstable across eras; trade selectively"
+    else:
+        regime = "STRONG"
+        edge = "Nifty +0.7% / Smallcap +1.7% avg next 20d"
+        if a50 >= 80.0:
+            regime = "STRONG (a50 >= 80)"
+            edge = "Nifty +1.9% / Smallcap +3.1% avg next 20d (68% / 79% positive)"
+
+    overlay = ""
+    if up4_pct >= 30.0:
+        overlay = "Exhaustion: >=30% stocks up 4% (Nifty -0.6% next 20d); do not chase"
+    elif dn4_pct >= 30.0:
+        overlay = "Capitulation not a floor yet: >=30% stocks down 4% (Nifty -0.3% next 20d)"
+    return {"trend_regime": regime, "trend_edge": edge, "trend_overlay": overlay,
+            "pct_ab_50": round(a50, 1), "pct_ab_200": round(a200, 1),
+            "net_breadth_10d": None if net10 is None else round(net10, 2)}
+
+
 def extract_bonde_breadth_metrics(file_path: Path) -> Optional[Dict[str, Any]]:
     """
     Parses Chhirag Kedia's Market Breadth V2.0.xlsm (Stockbee / Pradeep Bonde SA Engine).
@@ -399,6 +680,24 @@ def extract_bonde_breadth_metrics(file_path: Path) -> Optional[Dict[str, Any]]:
             wb.close()
             return None
 
+        # % of universe above 10/20/50 DEMA per session (Data sheet), for the Kedia sequence read
+        try:
+            ws_dq = wb['Data']
+            hdr_q = [str(c).strip() for c in next(ws_dq.iter_rows(min_row=1, max_row=1, values_only=True))]
+            iq = {k: hdr_q.index(f'Above {k} DEMA') for k in (10, 20, 50) if f'Above {k} DEMA' in hdr_q}
+            dmap = {}
+            for r in ws_dq.iter_rows(min_row=5590, max_row=7000, values_only=True):
+                if hasattr(r[0], 'strftime') and r[3]:
+                    u = float(r[3])
+                    dmap[r[0].strftime("%d-%b-%Y")] = {k: float(r[i] or 0.0) / u * 100.0 for k, i in iq.items()}
+            for hh in history:
+                q = dmap.get(hh["date"])
+                if q:
+                    for k, v in q.items():
+                        hh[f"pct_ab_{k}"] = v
+        except Exception as e:
+            print(f"⚠️ DEMA breadth history unavailable: {e}")
+
         last_item = history[-1]
         last_idx = last_item["row_idx"]
 
@@ -432,6 +731,37 @@ def extract_bonde_breadth_metrics(file_path: Path) -> Optional[Dict[str, Any]]:
             map_row = r
             break
 
+        # % above 50/200 DEMA from Data sheet (Breadth row N maps to Data row N-1)
+        a50_pct = a200_pct = None
+        high_vol_cnt = low_vol_cnt = None
+        try:
+            ws_d = wb['Data']
+            hdr_d = [str(c).strip() for c in next(ws_d.iter_rows(min_row=1, max_row=1, values_only=True))]
+            i50, i200 = hdr_d.index('Above 50 DEMA'), hdr_d.index('Above 200 DEMA')
+            ihv = hdr_d.index('High Vol') if 'High Vol' in hdr_d else None
+            ilv = hdr_d.index('Low Vol') if 'Low Vol' in hdr_d else None
+            for r in ws_d.iter_rows(min_row=last_idx - 1, max_row=last_idx - 1, values_only=True):
+                univ_d = float(r[3] or 0.0)
+                if univ_d > 0 and hasattr(r[0], 'strftime') and r[0].strftime("%d-%b-%Y") == last_item["date"]:
+                    a50_pct = float(r[i50] or 0.0) / univ_d * 100.0
+                    a200_pct = float(r[i200] or 0.0) / univ_d * 100.0
+                    # stock counts above / below average volume (same date-checked row)
+                    if ihv is not None and r[ihv] is not None:
+                        high_vol_cnt = int(r[ihv])
+                    if ilv is not None and r[ilv] is not None:
+                        low_vol_cnt = int(r[ilv])
+        except Exception as e:
+            print(f"⚠️ Trend regime inputs unavailable: {e}")
+        # fall back to the Breadth-sheet percentages when the Data-sheet counts are unavailable
+        if high_vol_cnt is None:
+            high_vol_cnt = int(round(last_item["above_vol_pct"] * last_item["universe"] / 100.0))
+        if low_vol_cnt is None:
+            low_vol_cnt = int(round(last_item["below_vol_pct"] * last_item["universe"] / 100.0))
+        last_item["high_vol_cnt"] = high_vol_cnt
+        last_item["low_vol_cnt"] = low_vol_cnt
+        recent_vr = [h["vol_ratio"] for h in history[-5:]]
+        last_item["vol_ratio_5d_avg"] = round(sum(recent_vr) / len(recent_vr), 2) if recent_vr else None
+
         wb.close()
 
         nh_pct = float(map_row[6] or 0.0) * 100.0 if map_row else 0.0
@@ -461,6 +791,18 @@ def extract_bonde_breadth_metrics(file_path: Path) -> Optional[Dict[str, Any]]:
         # Run Multi-Day State Machine
         st_data = classify_bonde_multi_day_state(history)
         last_item.update(st_data)
+        try:
+            last_item["kedia_sa"] = kedia_sa_read(history)
+        except Exception as e:
+            print(f"⚠️ Kedia SA read unavailable: {e}")
+            last_item["kedia_sa"] = {"available": False, "lines": []}
+
+        net10 = None
+        if len(history) >= 10:
+            net10 = sum(h["net_breadth"] for h in history[-10:]) / 10.0
+        last_item.update(classify_trend_regime(a50_pct, a200_pct, net10,
+                                               last_item["up_4_pct"], last_item["dn_4_pct"]))
+        last_item["uh_lh_net"] = last_item["uh_lh_ratio"]  # sheet value is a net score (UH%-LH%)*100, not a ratio
 
         return last_item
     except Exception as e:
@@ -902,6 +1244,12 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
             vix_regime = "High Risk Spike 🚨"
         lines.append(f"🌊 <b>India VIX Volatility:</b> <code>{vix_val:.2f}</code> ({vix_chg:+.1f}% | {vix_regime})")
 
+    # Chhirag Kedia-style #SituationalAwareness read (MBM V2.0 sheet)
+    ksa = (bonde or {}).get("kedia_sa") or {}
+    if ksa.get("available") and ksa.get("lines"):
+        lines.append("")
+        lines.extend(ksa["lines"])
+
     # Stockbee / Pradeep Bonde Market Breadth Section
     if bonde:
         lines.append("")
@@ -911,6 +1259,11 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
         lines.append(f"💼 <b>Swing Capital Allocation:</b> <b>{bonde.get('allocation_pct', 0)}% Risk</b>")
         lines.append(f"🎯 <b>Action:</b> {bonde.get('state_action', '')}")
         lines.append(f"📈 <b>Trajectory:</b> {bonde.get('trajectory_context', '')}")
+        if bonde.get("trend_regime") and bonde["trend_regime"] != "UNAVAILABLE":
+            lines.append(f"🧭 <b>Trend Regime:</b> <b>{bonde['trend_regime']}</b> (50DMA {bonde['pct_ab_50']:.0f}% | 200DMA {bonde['pct_ab_200']:.0f}% | 10d net {bonde['net_breadth_10d']:+.1f})")
+            lines.append(f"   <i>{bonde['trend_edge']}</i>")
+            if bonde.get("trend_overlay"):
+                lines.append(f"   ⚠️ {bonde['trend_overlay']}")
         if bonde.get("strip_badge"):
             lines.append(f"🧬 <b>Session Breadth Strip:</b> {bonde['strip_badge']}")
         lines.append("")
@@ -929,10 +1282,19 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
         lines.append(f"• <b>Short-Term Cycle Pulse:</b> 1-Month Net: <code>{bonde.get('net_30_hl', 0.0):+.2f}%</code> | 15-Day Net: <code>{bonde.get('net_15_hl', 0.0):+.2f}%</code>")
         lines.append(f"• <b>Breakout Quality:</b> {bonde['bo_sustained']:.1f}% Sustained | <b>{bonde['bo_failure']:.1f}% Failed</b> (S/F: {bonde['bo_sf_ratio']:.2f})")
         lines.append(f"• <b>Breakdown Quality:</b> {bonde['bd_sustained']:.1f}% Sustained | {bonde['bd_failure']:.1f}% Failed (S/F: {bonde['bd_sf_ratio']:.2f})")
-        lines.append(f"• <b>Close UH/LH:</b> {bonde['close_uh_pct']:.1f}% Upper | {bonde['close_lh_pct']:.1f}% Lower (UH/LH: {bonde['uh_lh_ratio']:+.1f}%)")
+        lines.append(f"• <b>Close UH/LH:</b> {bonde['close_uh_pct']:.1f}% Upper | {bonde['close_lh_pct']:.1f}% Lower (UH/LH net score: {bonde['uh_lh_net']:+.1f}, range -100..+100)")
         vol_r = bonde.get('vol_ratio', 0.0)
         vol_state = "Capitulation Blowout 💥" if vol_r >= 1.50 and bonde.get('dn_4_cnt', 0) >= 300 else ("Institutional Surge 🚀" if vol_r >= 1.20 else ("Subdued / Dry 💤" if vol_r < 0.40 else "Normal Baseline ⚖️"))
-        lines.append(f"• <b>Vol Ratio (Inst. Participation):</b> <code>{vol_r:.2f}</code> ({bonde['above_vol_pct']:.1f}% High / {bonde['below_vol_pct']:.1f}% Low | {vol_state})")
+        vr5 = bonde.get('vol_ratio_5d_avg')
+        vr5_txt = ""
+        if vr5:
+            vr5_trend = "building ↑" if vol_r > vr5 * 1.10 else ("drying up ↓" if vol_r < vr5 * 0.90 else "steady →")
+            vr5_txt = f" · 5-day avg {vr5:.2f} ({vr5_trend})"
+        hv_c, lv_c = bonde.get('high_vol_cnt'), bonde.get('low_vol_cnt')
+        hv_txt = f"{hv_c} stocks above avg vol ({bonde['above_vol_pct']:.1f}%)" if hv_c is not None else f"{bonde['above_vol_pct']:.1f}% above avg vol"
+        lv_txt = f"{lv_c} below ({bonde['below_vol_pct']:.1f}%)" if lv_c is not None else f"{bonde['below_vol_pct']:.1f}% below"
+        lines.append(f"• 📦 <b>Volume:</b> {hv_txt} · {lv_txt}")
+        lines.append(f"   Vol ratio <code>{vol_r:.2f}</code> — {vol_state}{vr5_txt}")
 
         # Top 10 Subsector / Industry Leaders based on Fresh High Clusters (Breadth Ledger)
         cluster_leaders = []
@@ -1081,6 +1443,48 @@ def compile_pre_market_summary() -> Tuple[Dict[str, Any], str]:
     return summary_data, msg_html
 
 
+_SA_SEP = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+
+def _tg_visible_len(html_text: str) -> int:
+    """Length Telegram counts against its 4096 limit: text after tags/entities are parsed, in UTF-16 units."""
+    visible = html_lib.unescape(re.sub(r"<[^>]+>", "", html_text))
+    return len(visible.encode("utf-16-le")) // 2
+
+
+def chunk_telegram_html(msg_html: str, limit: int = 3800) -> List[str]:
+    """Split an HTML card into messages of at most `limit` visible chars (Telegram max 4096).
+
+    Packs whole lines (each card line closes its own tags) and, when a message is full, cuts at its last ━━━
+    separator, else its last blank line, else the last line — as long as the message is at least half full,
+    so no tiny leftover messages. A card that fits is sent unchanged.
+    """
+    if _tg_visible_len(msg_html) <= limit:
+        return [msg_html]
+
+    def best_cut(cur: List[str]) -> int:
+        for marker in (lambda l: l.strip() == _SA_SEP, lambda l: not l.strip()):
+            for i in range(len(cur) - 1, 0, -1):
+                if marker(cur[i]) and _tg_visible_len("\n".join(cur[:i])) >= limit // 2:
+                    return i
+        return len(cur)
+
+    chunks: List[str] = []
+    cur: List[str] = []
+    for line in msg_html.split("\n"):
+        if cur and _tg_visible_len("\n".join(cur + [line])) > limit:
+            cut = best_cut(cur)
+            chunks.append("\n".join(cur[:cut]))
+            rest = cur[cut:]
+            if rest and rest[0].strip() == _SA_SEP:   # the separator at the cut is not repeated on the next message
+                rest = rest[1:]
+            cur = rest
+        cur.append(line)
+    if cur:
+        chunks.append("\n".join(cur))
+    return [c.strip() for c in chunks if c.strip()]
+
+
 def send_telegram_alert(msg_html: str, config: Dict[str, Any]) -> Tuple[bool, str]:
     """Dispatches the pre-market summary to Telegram chat, safely chunking if > 4000 chars."""
     tg_cfg = config.get("telegram", {})
@@ -1099,23 +1503,8 @@ def send_telegram_alert(msg_html: str, config: Dict[str, Any]) -> Tuple[bool, st
 
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
-    # Telegram hard limit: 4096 chars. Chunk safely if needed.
-    chunks = []
-    if len(msg_html) <= 4000:
-        chunks = [msg_html]
-    else:
-        parts = msg_html.split("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        cur = ""
-        for p in parts:
-            cand = (cur + "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" + p) if cur else p
-            if len(cand) > 3800:
-                if cur:
-                    chunks.append(cur.strip())
-                cur = p
-            else:
-                cur = cand
-        if cur:
-            chunks.append(cur.strip())
+    # Telegram hard limit: 4096 chars per message. Chunk safely if needed.
+    chunks = chunk_telegram_html(msg_html)
 
     all_ok = True
     last_err = ""
@@ -1141,6 +1530,12 @@ def send_telegram_alert(msg_html: str, config: Dict[str, Any]) -> Tuple[bool, st
         except Exception as e:
             all_ok = False
             last_err = str(e)
+            try:  # keep Telegram's own reason (e.g. "message is too long", "can't parse entities")
+                if hasattr(e, "read"):
+                    last_err += " — " + e.read().decode("utf-8", "replace")[:300]
+            except Exception:
+                pass
+            last_err += f" [chunk {chunks.index(c) + 1}/{len(chunks)}, {_tg_visible_len(c)} visible chars]"
 
     if all_ok:
         return True, "Delivered"
@@ -1149,6 +1544,9 @@ def send_telegram_alert(msg_html: str, config: Dict[str, Any]) -> Tuple[bool, st
 
 def main():
     if "--pre-open-sieve" in sys.argv or "--gap-sieve" in sys.argv:
+        if not is_market_day(datetime.now()) and "--force" not in sys.argv and "--test" not in sys.argv:
+            print("ℹ️ Gap sieve skipped: weekend or NSE holiday (no pre-open session). Use --force to override.")
+            return
         print("=" * 65)
         print("🎯 JARVIS 09:12 AM SNIPER GAP & LIQUIDITY SIEVE")
         print("=" * 65)
@@ -1197,6 +1595,9 @@ def main():
         print(f"   • 5D / 10D Ratio: {bonde['ratio_5d']:.2f} / {bonde['ratio_10d']:.2f}")
         print(f"   • 52W NH / NL   : {bonde['nh_cnt']} Highs | {bonde['nl_cnt']} Lows (Net: {bonde['net_nh_nl']:+.2f}%)")
         print(f"   • BO Failure %  : {bonde['bo_failure']:.1f}%")
+        print(f"   • Volume        : {bonde.get('high_vol_cnt', '?')} above avg ({bonde['above_vol_pct']:.1f}%) | "
+              f"{bonde.get('low_vol_cnt', '?')} below ({bonde['below_vol_pct']:.1f}%) | ratio {bonde.get('vol_ratio', 0.0):.2f}"
+              + (f" (5D avg {bonde['vol_ratio_5d_avg']:.2f})" if bonde.get('vol_ratio_5d_avg') else ""))
 
     if summary["top_sector"]:
         print(f"\n🚀 Leading Sector : {summary['top_sector']}")
@@ -1238,7 +1639,9 @@ def main():
             "intraday_risk_per_trade": risk_cfg.get("intraday", {}).get("max_risk_per_trade", 1000),
             "intraday_max_daily_loss": risk_cfg.get("intraday", {}).get("max_daily_loss", 2000),
             "intraday_max_open_trades": risk_cfg.get("intraday", {}).get("max_open_trades", 2),
-            "fakeout_warning": "HIGH FAKEOUT RISK: 80%+ of long breakouts fail in this regime." if alloc_pct == 0 else "NORMAL EXECUTION",
+            "fakeout_warning": (f"HIGH FAKEOUT RISK: {float(bonde.get('bo_failure', 0.0) or 0.0):.0f}% of recent long breakouts failed "
+                                f"(S/F {float(bo_sf_r):.2f})." if bonde else "HIGH FAKEOUT RISK: breakout failure rate unavailable.")
+                               if alloc_pct == 0 else "NORMAL EXECUTION",
             "breakout_quality": {
                 "bo_sf_ratio": bo_sf_r,
                 "bo_sustained_pct": bonde.get("bo_sustained", 0.0) if bonde else 0.0,
