@@ -48,6 +48,19 @@ OUT_IPO_JSON = BASE_DIR / "candidates_nifty_ipo.json"
 OUT_IPO_TXT = BASE_DIR / "candidates_nifty_ipo.txt"
 
 IST = timezone(timedelta(hours=5, minutes=30))
+_FETCH_FAILED: List[str] = []  # symbols whose Yahoo history could not be fetched in the current scan
+_FILTER_DEFAULTS = {"min_price": 50.0, "min_avg_turnover_cr": 5.0, "require_above_ema20": True}
+_FILTERS: Dict[str, Any] = dict(_FILTER_DEFAULTS)
+
+
+def load_ipo_filters() -> Dict[str, Any]:
+    """config_credentials.json -> candidate_filters: ipo_min_price, ipo_min_avg_turnover_cr, ipo_require_above_ema20."""
+    cf = (load_config().get("candidate_filters") or {})
+    return {
+        "min_price": float(cf.get("ipo_min_price", _FILTER_DEFAULTS["min_price"])),
+        "min_avg_turnover_cr": float(cf.get("ipo_min_avg_turnover_cr", _FILTER_DEFAULTS["min_avg_turnover_cr"])),
+        "require_above_ema20": bool(cf.get("ipo_require_above_ema20", _FILTER_DEFAULTS["require_above_ema20"])),
+    }
 
 
 def get_ist_now() -> datetime:
@@ -107,10 +120,48 @@ def fetch_ipo_constituents() -> List[Dict[str, str]]:
     return []
 
 
+def load_scan_universe() -> List[Dict[str, Any]]:
+    """
+    Last-3-year mainline IPOs (ipo_universe.py, NSE past issues) UNION Nifty IPO Index constituents.
+    Refreshes the Nifty IPO constituents cache first so the union stays current; falls back to the index alone.
+    """
+    index_list = fetch_ipo_constituents()
+    try:
+        from ipo_universe import load_universe
+        uni = load_universe(years=3)
+    except Exception as e:
+        print(f"Warning: IPO universe unavailable ({e}); scanning Nifty IPO Index only.", file=sys.stderr)
+        uni = []
+    by_sym: Dict[str, Dict[str, Any]] = {s["symbol"]: dict(s) for s in uni if s.get("symbol")}
+    for c in index_list:
+        s = by_sym.setdefault(c["symbol"], dict(c))
+        s["in_nifty_ipo"] = True
+        s.setdefault("industry", c.get("industry"))
+    return list(by_sym.values())
+
+
+def fetch_nifty_regime() -> Optional[bool]:
+    """True when Nifty 50 closes above its 50-day SMA. Backtest (Nov-23..Nov-26): IPO day-high breaks and NR7
+    doorsteps roughly halve their edge when this is False."""
+    try:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/%5ENSEI?interval=1d&range=6mo"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            closes = [c for c in json.loads(resp.read().decode("utf-8"))["chart"]["result"][0]["indicators"]["quote"][0]["close"] if c]
+        if len(closes) < 51:
+            return None
+        return closes[-1] > sum(closes[-51:-1]) / 50.0
+    except Exception:
+        return None
+
+
 def fetch_daily_candles_yahoo(symbol: str) -> Optional[List[Dict[str, Any]]]:
-    """Fetches last 3-month daily candles from Yahoo Finance."""
+    """
+    Fetches up to 5 years of daily candles from Yahoo Finance (Nifty IPO constituents are listed within ~3 years,
+    so this covers the full listed history and 'ATH' is a true all-time high, not a 3-month high).
+    """
     clean_sym = symbol.upper().replace(".NS", "").replace("NSE:", "")
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{clean_sym}.NS?interval=1d&range=3mo"
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{clean_sym}.NS?interval=1d&range=5y"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     req = urllib.request.Request(url, headers=headers)
     try:
@@ -124,22 +175,11 @@ def fetch_daily_candles_yahoo(symbol: str) -> Optional[List[Dict[str, Any]]]:
             lows = indicators.get("low", [])
             closes = indicators.get("close", [])
             volumes = indicators.get("volume", [])
+            stamps = result[0].get("timestamp", []) or [None] * len(closes)
 
-            candles = []
-            for h, l, c, v in zip(highs, lows, closes, volumes):
-                if h is not None and l is not None and c is not None and c > 0:
-                    h_val, l_val, c_val = float(h), float(l), float(c)
-                    rng = h_val - l_val
-                    # Filter out zero-range, flat, or unformed bars
-                    if rng > 0 and (rng / c_val) >= 0.002:
-                        candles.append({
-                            "high": h_val,
-                            "low": l_val,
-                            "close": c_val,
-                            "volume": float(v) if v else 0.0,
-                            "range": rng
-                        })
-            return candles
+            # Keeps tight days (shared rule with the NR90 scanner; see build_daily_candles)
+            from scan_nr_momo import build_daily_candles
+            return build_daily_candles(stamps, highs, lows, closes, volumes)
     except Exception:
         return None
 
@@ -153,10 +193,28 @@ def analyze_ipo_setup(stock: Dict[str, str]) -> Optional[Dict[str, Any]]:
         return None
 
     candles = fetch_daily_candles_yahoo(sym)
-    if not candles or len(candles) < 7:
+    if candles is None:
+        _FETCH_FAILED.append(sym)
+        return None
+    ld = stock.get("listing_date")
+    if ld:  # drop any pre-listing bars Yahoo occasionally carries (would corrupt listing-day high / age)
+        trimmed = [c for c in candles if not c.get("date") or str(c["date"]) >= ld]
+        if trimmed:
+            candles = trimmed
+    if len(candles) < 7:
         return None
 
     curr = candles[-1]
+    # ── Listing-day-high (LDH) state: the IPO-day-high pivot ─────────────────────────────────────────────
+    # Backtest (303 mainline IPOs, Nov-23..Nov-26): first close above the listing-day high was the best IPO
+    # setup (PF ~1.7-2.0 with Nifty > 50 SMA); strongest when the stock based 60-250 sessions first (PF ~3.5, n=21).
+    age = len(candles) - 1
+    ldh = candles[0]["high"]
+    prior_closes = [c["close"] for c in candles[:-1]]
+    never_closed_above_ldh = all(c <= ldh for c in prior_closes[1:]) if len(prior_closes) > 1 else True
+    ldh_break_today = never_closed_above_ldh and curr["close"] > ldh and age >= 5
+    dist_ldh_pct = round((ldh - curr["close"]) / ldh * 100.0, 2)
+    ldh_watch = never_closed_above_ldh and not ldh_break_today and 0 <= dist_ldh_pct <= 5.0 and age >= 10
     prev = candles[-2]
     curr_close = curr["close"]
     curr_range = curr["range"]
@@ -175,10 +233,12 @@ def analyze_ipo_setup(stock: Dict[str, str]) -> Optional[Dict[str, Any]]:
     is_inside = (curr["high"] <= prev["high"] * 1.001) and (curr["low"] >= prev["low"] * 0.999)
     is_tight = 0.25 <= range_pct <= 2.50
 
-    # All-Time High / 3M High
+    # True All-Time High (full listed history) and 52-week high (last ~250 sessions)
     all_highs = [c["high"] for c in candles]
     ath = max(all_highs)
     dist_ath_pct = round(((ath - curr_close) / ath) * 100.0, 2)
+    high_52w = max(all_highs[-250:])
+    dist_52w_pct = round(((high_52w - curr_close) / high_52w) * 100.0, 2)
 
     # 10 EMA & 20 EMA
     k10 = 2.0 / (10.0 + 1.0)
@@ -194,12 +254,13 @@ def analyze_ipo_setup(stock: Dict[str, str]) -> Optional[Dict[str, Any]]:
     # Day Change %
     change_pct = round(((curr_close - prev["close"]) / prev["close"]) * 100.0, 2)
     # Non-extended move: Avoid chasing already expanded runners (> 4.5% or heavy dump < -3.5%)
-    if not (-3.5 <= change_pct <= 4.5):
+    # (an IPO-day-high break day may run up to +10%: that bar IS the trigger)
+    if not (-3.5 <= change_pct <= (10.0 if ldh_break_today else 4.5)):
         return None
 
     # Contraction requirement: Stocks beyond doorstep (dist > 3.5%) MUST show volatility contraction
     has_contraction = is_nr7 or is_nr4 or is_inside or is_tight
-    if not has_contraction and dist_ath_pct > 3.5:
+    if not has_contraction and dist_ath_pct > 3.5 and not (ldh_break_today or ldh_watch):
         return None
 
     # Volume character: Relative volume vs. 20-day baseline
@@ -209,14 +270,38 @@ def analyze_ipo_setup(stock: Dict[str, str]) -> Optional[Dict[str, Any]]:
     rvol = round(curr_vol / avg_vol, 2) if avg_vol > 0 else 1.0
     is_vdu = rvol <= 0.70
 
+    # Liquidity floor (was promised in the docstring but never enforced). Uses the 20-day AVERAGE turnover:
+    # NR/VDU days are low-volume by design, so a single-day figure would wrongly reject the best coils.
+    avg_turnover_cr = round((avg_vol * curr_close) / 10000000.0, 2) if curr_close > 0 else 0.0
+    if curr_close < _FILTERS["min_price"] or avg_turnover_cr < _FILTERS["min_avg_turnover_cr"]:
+        return None
+    # Trend gate: the setup requires price holding its 20 EMA (previously only a score bonus)
+    if _FILTERS["require_above_ema20"] and curr_close < ema20:
+        return None
+
     tags = []
     priority_score = 0
+    ipo_setup = None
+    if ldh_break_today:
+        ipo_setup = "LDH_BREAK"
+        tags.append("🚪 IPO Day-High BREAK")
+        priority_score += 50
+    elif ldh_watch:
+        ipo_setup = "LDH_WATCH"
+        tags.append(f"👀 IPO Day-High -{dist_ldh_pct:.1f}%")
+        priority_score += 35
+    if ipo_setup and 60 <= age <= 250:
+        tags.append(f"🏗️ IPO Base {age}d")
+        priority_score += 15
+
+    # Backtest: NR7-near-ATH only paid in the first ~60 sessions after listing (PF ~2.0); older IPOs ~breakeven.
+    young = age <= 60
     if is_nr7:
         tags.append("🎯 NR7 (7D Squeeze)")
-        priority_score += 40
+        priority_score += 40 if young else 20
     elif is_nr4:
         tags.append("📦 NR4 (4D Coil)")
-        priority_score += 25
+        priority_score += 25 if young else 12
 
     if is_inside:
         tags.append("🔒 Inside Day")
@@ -263,20 +348,31 @@ def analyze_ipo_setup(stock: Dict[str, str]) -> Optional[Dict[str, Any]]:
     return {
         "symbol": sym,
         "name": stock.get("name", sym),
-        "industry": stock.get("industry", "Equity"),
+        "industry": stock.get("industry") or "Equity",
+        "in_nifty_ipo": bool(stock.get("in_nifty_ipo")),
+        "listing_date": stock.get("listing_date"),
+        "issue_price": stock.get("issue_price"),
+        "above_issue": (None if not stock.get("issue_price") else curr_close >= float(stock["issue_price"])),
+        "age_sessions": age,
+        "listing_day_high": round(ldh, 2),
+        "dist_ldh_pct": dist_ldh_pct,
+        "ipo_setup": ipo_setup,
         "series": stock.get("series", "EQ"),
         "isin": stock.get("isin", ""),
         "ltp": round(curr_close, 2),
         "vol": curr_vol,
         "turnover_cr": to_cr,
+        "avg_turnover_cr": avg_turnover_cr,
         "day_high": round(curr["high"], 2),
         "day_low": round(curr["low"], 2),
         "prev_close": round(prev["close"], 2),
         "change_pct": change_pct,
         "daily_range_pct": range_pct,
-        "dist_52w_pct": dist_ath_pct,
+        "dist_52w_pct": dist_52w_pct,
         "dist_ath_pct": dist_ath_pct,
         "ath": round(ath, 2),
+        "high_52w": round(high_52w, 2),
+        "history_bars": len(candles),
         "ema10": round(ema10, 2),
         "ema20": round(ema20, 2),
         "rvol": rvol,
@@ -291,6 +387,7 @@ def analyze_ipo_setup(stock: Dict[str, str]) -> Optional[Dict[str, Any]]:
         "tier_order": tier,
         "tier_label": tier_label,
         "priority_score": priority_score,
+        "bar_date": curr.get("date"),
         "curr_close": round(curr_close, 2),
         "curr_high": round(curr["high"], 2),
         "curr_low": round(curr["low"], 2)
@@ -304,11 +401,15 @@ def scan_nifty_ipo_candidates(max_workers: int = 20) -> Dict[str, Any]:
     now_ist = get_ist_now()
     now_str = now_ist.strftime("%d %b %Y, %H:%M IST")
 
-    print(f"🚀 [JARVIS EOD] Fetching official Nifty IPO Index constituents...", file=sys.stderr)
-    constituents = fetch_ipo_constituents()
+    print(f"🚀 [JARVIS EOD] Loading IPO universe (3Y mainline IPOs + Nifty IPO Index)...", file=sys.stderr)
+    constituents = load_scan_universe()
     if not constituents:
-        return {"status": "error", "message": "Could not load Nifty IPO constituents"}
+        return {"status": "error", "message": "Could not load IPO universe"}
+    regime_on = fetch_nifty_regime()
 
+    _FETCH_FAILED.clear()
+    _FILTERS.clear()
+    _FILTERS.update(load_ipo_filters())
     print(f"🔍 Screening {len(constituents)} IPO constituents for Toby Crabel NR Contractions & ATH Doorsteps...", file=sys.stderr)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -322,9 +423,22 @@ def scan_nifty_ipo_candidates(max_workers: int = 20) -> Dict[str, Any]:
     t2 = [r for r in qualified if r["tier_order"] == 2]
     t3 = [r for r in qualified if r["tier_order"] == 3]
 
+    bar_dates = [r["bar_date"] for r in qualified if r.get("bar_date")]
+    n_fail = len(_FETCH_FAILED)
+    fail_pct = round(n_fail / len(constituents) * 100.0, 1) if constituents else 0.0
+    if fail_pct > 20.0:
+        print(f"⚠️ [IPO Scan] Yahoo history failed for {n_fail}/{len(constituents)} constituents ({fail_pct}%) — list INCOMPLETE.", file=sys.stderr)
     summary = {
         "as_of": now_str,
+        "data_as_of": max(bar_dates) if bar_dates else None,  # date of the latest daily bar actually used
+        "data_quality": {"history_failed": n_fail, "history_attempted": len(constituents),
+                         "history_failed_pct": fail_pct, "degraded": fail_pct > 20.0},
         "total_scanned": len(constituents),
+        "universe_nifty_ipo": sum(1 for s in constituents if s.get("in_nifty_ipo")),
+        "regime_on": regime_on,  # Nifty > 50 SMA; None = unknown
+        "ldh_break_count": sum(1 for r in qualified if r.get("ipo_setup") == "LDH_BREAK"),
+        "ldh_watch_count": sum(1 for r in qualified if r.get("ipo_setup") == "LDH_WATCH"),
+        "ldh_candidates": [r for r in qualified if r.get("ipo_setup")],
         "qualified_count": len(qualified),
         "tier1_doorstep_count": len(t1),
         "tier2_launchpad_count": len(t2),
@@ -357,11 +471,17 @@ def format_ipo_telegram_card(summary: Dict[str, Any], max_display: int = 8) -> t
     total = summary.get("qualified_count", 0)
     as_of = summary.get("as_of", "")
 
+    regime = summary.get("regime_on")
+    regime_line = ("🟢 Nifty &gt; 50 SMA — IPO breakouts in favour\n" if regime
+                   else "🔴 Nifty &lt; 50 SMA — IPO breakout edge ~halves, size down\n" if regime is False else "")
     header = (
-        "🚀 <b>NIFTY IPO INDEX: HIGH-TIGHT &amp; NR RADAR</b>\n"
+        "🚀 <b>IPO RADAR: 3Y MAINLINE + NIFTY IPO</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📅 <b>As Of:</b> {as_of}\n"
+        f"📅 <b>As Of:</b> {as_of} • {summary.get('total_scanned', 0)} IPOs scanned\n"
+        + regime_line +
         f"🎯 <b>Total Setups:</b> <b>{total}</b> ({len(t1)} Doorstep • {len(t2)} Launchpad)\n"
+        + (f"⚠️ <b>INCOMPLETE:</b> history failed for {summary['data_quality']['history_failed']} stocks\n"
+           if (summary.get("data_quality") or {}).get("degraded") else "") +
         "💡 <i>Zero overhead supply • Multi-day Toby Crabel NR Contractions</i>\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
     )
@@ -370,6 +490,14 @@ def format_ipo_telegram_card(summary: Dict[str, Any], max_display: int = 8) -> t
     keyboard = []
     cur_kb_row = []
 
+    ldh = summary.get("ldh_candidates", [])
+    if ldh:
+        lines.append("🚪 <b>IPO DAY-HIGH (listing-day high pivot):</b>")
+        for c in ldh[:6]:
+            what = "BROKE today" if c["ipo_setup"] == "LDH_BREAK" else f"-{c['dist_ldh_pct']:.1f}% below"
+            lines.append(f"  • <b>{c['symbol']}</b> (₹{c['ltp']}) • LDH ₹{c['listing_day_high']} <code>{what}</code> • {c['age_sessions']}d")
+        lines.append("")
+
     if t1:
         lines.append("🔥 <b>TIER 1: PIVOT DOORSTEP (≤3.5% from ATH):</b>")
         for idx, c in enumerate(t1[:max_display], 1):
@@ -377,7 +505,7 @@ def format_ipo_telegram_card(summary: Dict[str, Any], max_display: int = 8) -> t
             dist_str = f"-{c['dist_ath_pct']:.1f}%" if c['dist_ath_pct'] > 0 else "ATH"
             badge = c.get("nr_badge", "Coil")
             lines.append(f"  {idx}. <b>{sym}</b> (₹{c['ltp']}) • <code>{dist_str}</code> | {badge}")
-            cur_kb_row.append({"text": f"+ {sym}", "callback_data": f"add_wl:{sym}"})
+            cur_kb_row.append({"text": f"+ {sym}", "callback_data": f"cand_add:{sym}"})  # bot handles cand_add: (add_wl: had no handler)
             if len(cur_kb_row) == 3:
                 keyboard.append(cur_kb_row)
                 cur_kb_row = []
@@ -390,7 +518,7 @@ def format_ipo_telegram_card(summary: Dict[str, Any], max_display: int = 8) -> t
             badge = c.get("nr_badge", "Coil")
             lines.append(f"  • <b>{sym}</b> (₹{c['ltp']}) • <code>{dist_str}</code> | {badge}")
             if len(cur_kb_row) < 3:
-                cur_kb_row.append({"text": f"+ {sym}", "callback_data": f"add_wl:{sym}"})
+                cur_kb_row.append({"text": f"+ {sym}", "callback_data": f"cand_add:{sym}"})
             if len(cur_kb_row) == 3:
                 keyboard.append(cur_kb_row)
                 cur_kb_row = []
@@ -410,7 +538,18 @@ def main():
     parser.add_argument("--tv", action="store_true", help="Output comma-separated symbols for TradingView")
     parser.add_argument("--json", action="store_true", help="Output raw JSON")
     parser.add_argument("--notify", action="store_true", help="Send EOD summary to Telegram channel")
+    parser.add_argument("--force", action="store_true", help="Run the notify push even on a weekend / NSE holiday")
     args = parser.parse_args()
+
+    # Scheduled push (--notify) skips exchange holidays: it would only re-post the previous session's card
+    if args.notify and not args.force:
+        try:
+            from order_engine import is_trading_day
+            if not is_trading_day():
+                print("ℹ️ IPO scan push skipped: not an NSE trading day (use --force to override).", file=sys.stderr)
+                return
+        except Exception:
+            pass
 
     summary = scan_nifty_ipo_candidates()
 
@@ -427,8 +566,8 @@ def main():
         try:
             from telegram_bot import send_topic_alert
             text, markup = format_ipo_telegram_card(summary)
-            send_topic_alert("candidates", text, reply_markup=markup)
-            print("Telegram alert delivered to 'candidates' topic successfully.", file=sys.stderr)
+            send_topic_alert("reports", text, reply_markup=markup)
+            print("Telegram alert delivered to 'reports' topic successfully.", file=sys.stderr)
         except Exception as e:
             print(f"Telegram notification error: {e}", file=sys.stderr)
 
