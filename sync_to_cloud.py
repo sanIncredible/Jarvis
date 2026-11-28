@@ -228,6 +228,8 @@ def main():
                 sync_file_to_github_api(gh_cfg, "candidates_90d_nr.txt", "Update 90D momo candidates txt")
             if (BASE_DIR / "scan_nifty_ipo.py").is_file():
                 sync_file_to_github_api(gh_cfg, "scan_nifty_ipo.py", "Update Nifty IPO scanner")
+            if (BASE_DIR / "ipo_universe.py").is_file():
+                sync_file_to_github_api(gh_cfg, "ipo_universe.py", "Add 3Y mainline IPO universe")
             if (BASE_DIR / "candidates_nifty_ipo.json").is_file():
                 sync_file_to_github_api(gh_cfg, "candidates_nifty_ipo.json", "Update Nifty IPO candidates json")
             if (BASE_DIR / "candidates_nifty_ipo.txt").is_file():
@@ -405,6 +407,8 @@ def main():
             scp_files.append(str(BASE_DIR / "candidates_90d_nr.txt"))
         if (BASE_DIR / "scan_nifty_ipo.py").is_file():
             scp_files.append(str(BASE_DIR / "scan_nifty_ipo.py"))
+        if (BASE_DIR / "ipo_universe.py").is_file():
+            scp_files.append(str(BASE_DIR / "ipo_universe.py"))
         if (BASE_DIR / "candidates_nifty_ipo.json").is_file():
             scp_files.append(str(BASE_DIR / "candidates_nifty_ipo.json"))
         if (BASE_DIR / "candidates_nifty_ipo.txt").is_file():
